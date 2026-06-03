@@ -1,0 +1,70 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+}
+
+:root {
+  --background:         #09090b;
+  --surface:            #18181b;
+  --surface-2:          #262629;
+  --foreground:         #fafafa;
+  --muted-foreground:   #a1a1a6;
+  --primary:            #10b981;
+  --primary-foreground: #131316;
+  --border:             #3d3d42;
+  --border-strong:      #505055;
+  --ring:               #10b981;
+  --radius:             0.25rem;
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-[#09090b] text-[#fafafa]; }
+  ::selection { background: #10b981; color: #131316; }
+  html { scroll-behavior: smooth; }
+}
+
+/* ── Hero glow text ──────────────────────────── */
+@keyframes hero-glow-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%       { filter: brightness(1.22); }
+}
+
+.hero-glow {
+  animation: hero-glow-pulse 3.6s ease-in-out infinite;
+  text-shadow:
+    0 0 12px color-mix(in oklab, #10b981 72%, transparent),
+    0 0 34px color-mix(in oklab, #10b981 52%, transparent),
+    0 0 74px color-mix(in oklab, #10b981 32%, transparent);
+}
+
+/* ── Noise layer ─────────────────────────────── */
+.noise-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px;
+}
+
+/* ── Pulse dot ───────────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+.pulse-dot { animation: pulse-dot 2.5s ease-in-out infinite; }

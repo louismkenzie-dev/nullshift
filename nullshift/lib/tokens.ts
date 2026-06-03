@@ -1,0 +1,14 @@
+export const T = {
+  bg:        "#09090b",
+  surface:   "#18181b",
+  surface2:  "#262629",
+  fg:        "#fafafa",
+  muted:     "#a1a1a6",
+  primary:   "#10b981",
+  primaryFg: "#131316",
+  border:    "#3d3d42",
+  borderStr: "#505055",
+  display:   "var(--font-display), ui-sans-serif, sans-serif",
+  sans:      "var(--font-sans), ui-sans-serif, system-ui, sans-serif",
+  mono:      "var(--font-mono), ui-monospace, monospace",
+} as const;
