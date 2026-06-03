@@ -183,7 +183,7 @@ function CtaStrip() {
   );
 }
 
-export default function AboutPage() {
+export default function WhyUsPage() {
   return (
     <>
       <Nav />

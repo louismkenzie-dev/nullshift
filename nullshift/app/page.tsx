@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
@@ -30,80 +31,189 @@ function PrimaryBtn({ href, children }: { href: string; children: React.ReactNod
   );
 }
 
-/* ── HERO ───────────────────────────────────── */
-function Hero() {
+/* ── SERVICES CONTENT (shared by slide pane + static section) ── */
+const serviceCards = [
+  {
+    num: "01",
+    title: "Web Design & Development",
+    desc: "From strategy to launch — fast, beautiful websites built to convert visitors into customers.",
+    tag: "CUSTOM_BUILD / NO_TEMPLATES",
+  },
+  {
+    num: "02",
+    title: "Branding & Identity",
+    desc: "Logos, colour systems, and visual identity built for businesses ready to show up professionally.",
+    tag: "IDENTITY_SYSTEMS / SCALABLE",
+  },
+];
+
+function ServicesContent() {
   return (
-    <section id="hero" className="relative min-h-screen flex flex-col justify-end overflow-hidden">
-      <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }}>
-        <source src="/hero.mp4" type="video/mp4" />
-      </video>
-      <div className="absolute inset-0 z-[1]" style={{
-        background: `linear-gradient(to top, rgba(9,9,11,0.96) 0%, rgba(9,9,11,0.65) 35%, rgba(9,9,11,0.2) 65%, transparent 100%), linear-gradient(to right, rgba(9,9,11,0.45) 0%, transparent 55%), radial-gradient(ellipse 65% 50% at 20% 70%, color-mix(in oklab, ${T.primary} 9%, transparent) 0%, transparent 70%)`,
-      }} />
-      <div className="relative z-[2] px-8 md:px-16 pb-20 md:pb-28 max-w-5xl">
-        <div className="flex items-center gap-3 mb-6" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
-          <span className="size-1.5 rounded-full pulse-dot flex-shrink-0" style={{ background: T.primary }} />
-          <span>SYS_01 / WEB_STUDIO</span>
-        </div>
-        <h1 className="mb-8" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.2rem, 4.5vw, 4.8rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
-          WE BUILD<br />
-          <span style={{ color: T.muted }}>THE INTERNET</span><br />
-          PRESENCE<br />
-          <span className="hero-glow" style={{ color: T.primary }}>YOU DESERVE.</span>
-        </h1>
-        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-8 sm:gap-12">
-          <p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "clamp(0.9rem,1.3vw,1rem)", lineHeight: 1.65, color: T.muted, maxWidth: "38ch" }}>
-            Nullshift Studio helps established businesses make the move online — with websites and branding built to last.
-          </p>
-          <PrimaryBtn href="/book">Book a discovery call →</PrimaryBtn>
-        </div>
+    <div className="w-full flex flex-col justify-center px-12 md:px-24 py-16 max-w-6xl mx-auto">
+      <div className="flex items-center gap-3 mb-8">
+        <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: T.primary, fontWeight: 600 }}>
+          // 02 — Services
+        </span>
+        <span className="block w-8 h-px" style={{ background: `${T.primary}55` }} />
       </div>
-    </section>
+
+      <h2 className="mb-10" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.5rem,5vw,5.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
+        WHAT WE<br /><span style={{ color: T.muted }}>DO.</span>
+      </h2>
+
+      <div className="grid md:grid-cols-2 gap-3">
+        {serviceCards.map(card => (
+          <div
+            key={card.num}
+            className="p-8 grid grid-cols-[44px_1fr] gap-5 items-start"
+            style={{ border: `1px solid ${T.border}`, background: T.surface }}
+          >
+            <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1.1rem", lineHeight: 1, color: `${T.primary}50` }}>
+              {card.num}
+            </div>
+            <div className="flex flex-col gap-2">
+              <h3 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1rem,1.5vw,1.3rem)", letterSpacing: "0.01em", color: T.fg }}>
+                {card.title}
+              </h3>
+              <p style={{ fontFamily: T.sans, fontSize: "0.82rem", lineHeight: 1.7, color: T.muted }}>
+                {card.desc}
+              </p>
+              <span style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.primary }}>
+                — {card.tag}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8">
+        <a
+          href="/why-us"
+          className="inline-flex items-center gap-3 px-5 h-10 transition-opacity hover:opacity-90"
+          style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", background: T.primary, color: T.primaryFg, borderRadius: "2px" }}
+        >
+          Why us →
+        </a>
+      </div>
+    </div>
   );
 }
 
-/* ── SERVICES ───────────────────────────────── */
-function Services() {
-  const cards = [
-    { num: "01", title: "Web Design & Development", desc: "From strategy to launch, we design and build fast, beautiful websites that convert visitors into customers. Every pixel considered. Every line of code clean.", tag: "CUSTOM_BUILD / NO_TEMPLATES" },
-    { num: "02", title: "Branding & Identity", desc: "Logos, colour systems, and visual identity built for businesses ready to show up professionally online. We make sure your brand is unforgettable from the first glance.", tag: "IDENTITY_SYSTEMS / SCALABLE" },
-  ];
+/* ═══════════════════════════════════════════════
+   SCROLL-DRIVEN HERO → SERVICES TRANSITION
+   Single "glued" track: [hero card][gap][services]
+   slides left as one unit. Card exits stage-left
+   and does not reappear. Final frame == the static
+   <Services/> section below, so scroll continues
+   seamlessly with services full-bleed and solid.
+═══════════════════════════════════════════════ */
+function HeroScrollTransition() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"],
+  });
+
+  /* Phase 1 (0 → 0.24): hero shrinks in-place into a card, dead centre */
+  const heroScale        = useTransform(scrollYProgress, [0, 0.24], [1, 0.66]);
+  const heroBorderRadius = useTransform(scrollYProgress, [0.04, 0.24], [0, 18]);
+  const heroBoxShadow    = useTransform(
+    scrollYProgress,
+    [0.06, 0.24],
+    ["0px 0px 0px 0px rgba(0,0,0,0)", "0px 32px 80px 0px rgba(0,0,0,0.75)"]
+  );
+
+  /* Phase 2 (0.30 → 0.78): whole track slides left one full viewport.
+     Holds at -100vw afterward (useTransform clamps), so services stays
+     full-bleed and solid until the sticky releases into the static section. */
+  const trackX = useTransform(scrollYProgress, [0.30, 0.78], ["0vw", "-100vw"]);
+
+  /* Scroll hint fades on first movement */
+  const hintOpacity = useTransform(scrollYProgress, [0, 0.05], [1, 0]);
+
   return (
-    <section id="services" style={{ borderTop: `1px solid ${T.border}` }}>
-      <div className="grid md:grid-cols-[280px_1fr]">
-        <div className="p-10 md:py-20 md:px-10 flex flex-col justify-between gap-12" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <div>
-            <Label>// 02 — Services</Label>
-            <Reveal delay={0.1}>
-              <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,5.5vw,5.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
-                WHAT WE<br /><span style={{ color: T.muted }}>DO.</span>
-              </h2>
-            </Reveal>
-          </div>
-          <Reveal delay={0.2}><PrimaryBtn href="/book">Enquire now →</PrimaryBtn></Reveal>
-        </div>
-        <div style={{ borderLeft: `1px solid ${T.border}` }}>
-          {cards.map((card, i) => (
-            <Reveal key={card.num} delay={i * 0.08}>
-              <article className="group relative p-10 md:p-14 grid grid-cols-[48px_1fr] gap-8 items-start"
-                style={{ borderBottom: `1px solid ${T.border}`, transition: "background 0.2s" }}
-                onMouseEnter={e => (e.currentTarget.style.background = T.surface)}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                <span className="absolute top-0 left-0 h-px" style={{ width: 0, background: T.primary, transition: "width 0.5s cubic-bezier(.2,.8,.2,1)" }}
-                  ref={el => { if (!el) return; const art = el.parentElement!; art.addEventListener("mouseenter", () => { el.style.width = "100%"; }); art.addEventListener("mouseleave", () => { el.style.width = "0"; }); }} />
-                <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1.6rem", lineHeight: 1, color: `${T.primary}40`, paddingTop: "3px" }}>{card.num}</div>
-                <div className="flex flex-col gap-4">
-                  <h3 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.4rem,2.2vw,1.9rem)", letterSpacing: "0.01em", color: T.fg }}>{card.title}</h3>
-                  <p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "0.9rem", lineHeight: 1.75, color: T.muted, maxWidth: "46ch" }}>{card.desc}</p>
-                  <span className="flex items-center gap-2.5 mt-1" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.primary }}>
-                    <span className="h-px w-3 shrink-0" style={{ background: `${T.primary}80` }} />{card.tag}
-                  </span>
+    <div ref={containerRef} style={{ height: "340vh", position: "relative" }}>
+      <div className="sticky top-0 overflow-hidden" style={{ height: "100vh", background: T.bg }}>
+
+        {/* ── GLUED TRACK ── */}
+        <motion.div
+          className="flex h-full"
+          style={{ x: trackX, width: "200vw" }}
+        >
+          {/* PANE A — Hero (shrinks into a card) */}
+          <div className="relative shrink-0 flex items-center justify-center" style={{ width: "100vw", height: "100%" }}>
+            <motion.div
+              className="absolute inset-0 overflow-hidden"
+              style={{
+                scale: heroScale,
+                borderRadius: heroBorderRadius,
+                boxShadow: heroBoxShadow,
+              }}
+            >
+              <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }}>
+                <source src="/hero.mp4" type="video/mp4" />
+              </video>
+              <div className="absolute inset-0 z-[1]" style={{
+                background: `
+                  linear-gradient(to top, rgba(9,9,11,0.97) 0%, rgba(9,9,11,0.65) 35%, rgba(9,9,11,0.18) 65%, transparent 100%),
+                  linear-gradient(to right, rgba(9,9,11,0.45) 0%, transparent 55%),
+                  radial-gradient(ellipse 65% 50% at 20% 70%, color-mix(in oklab, ${T.primary} 9%, transparent) 0%, transparent 70%)
+                `,
+              }} />
+              <div className="absolute z-[2] px-8 md:px-16 pb-20 md:pb-28 bottom-0 max-w-5xl">
+                <div className="flex items-center gap-3 mb-6" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
+                  <span className="size-1.5 rounded-full pulse-dot flex-shrink-0" style={{ background: T.primary }} />
+                  <span>SYS_01 / WEB_STUDIO</span>
                 </div>
-              </article>
-            </Reveal>
-          ))}
-        </div>
+                <h1 className="mb-8" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.2rem, 4.5vw, 4.8rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
+                  WE BUILD<br />
+                  <span style={{ color: T.muted }}>THE INTERNET</span><br />
+                  PRESENCE<br />
+                  <span className="hero-glow" style={{ color: T.primary }}>YOU DESERVE.</span>
+                </h1>
+                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-8 sm:gap-12">
+                  <p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "clamp(0.9rem,1.3vw,1rem)", lineHeight: 1.65, color: T.muted, maxWidth: "38ch" }}>
+                    Nullshift Studio helps established businesses make the move online — with websites and branding built to last.
+                  </p>
+                  <PrimaryBtn href="/book">Book a discovery call →</PrimaryBtn>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* PANE B — Services (solid, full opacity, full-bleed) */}
+          <div className="shrink-0 flex items-center" style={{ width: "100vw", height: "100%", background: T.bg }}>
+            <ServicesContent />
+          </div>
+        </motion.div>
+
+        {/* Scroll hint */}
+        <motion.div
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+          style={{ opacity: hintOpacity, zIndex: 10 }}
+        >
+          <span style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: T.muted }}>
+            SCROLL
+          </span>
+          <motion.div
+            className="w-px h-8"
+            style={{ background: `linear-gradient(to bottom, ${T.primary}, transparent)` }}
+            animate={{ scaleY: [0.3, 1, 0.3], opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </motion.div>
       </div>
+    </div>
+  );
+}
+
+/* ── STATIC SERVICES — continues seamlessly after the sticky transition.
+   Visually identical to the sticky's final full-bleed frame, so scroll
+   carries on naturally with services solid and full-bleed. ── */
+function ServicesStatic() {
+  return (
+    <section id="services" className="min-h-screen flex items-center" style={{ background: T.bg }}>
+      <ServicesContent />
     </section>
   );
 }
@@ -279,8 +389,8 @@ export default function Page() {
     <>
       <Nav />
       <main>
-        <Hero />
-        <Services />
+        <HeroScrollTransition />
+        <ServicesStatic />
         <WhoWeHelp />
         <Process />
         <WhyNullshift />

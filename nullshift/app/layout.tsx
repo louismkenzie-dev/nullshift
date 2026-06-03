@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
+import { SmoothScroll } from "@/components/SmoothScroll";
 
 const ibmPlexSans = IBM_Plex_Sans({
   variable: "--font-sans",
@@ -39,7 +40,7 @@ export default function RootLayout({
       className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${barlowCondensed.variable} dark`}
     >
       <body className="min-h-full bg-[#09090b] text-[#fafafa] antialiased overflow-x-hidden" style={{ fontFamily: "var(--font-sans), ui-sans-serif, system-ui, sans-serif" }}>
-        {children}
+        <SmoothScroll>{children}</SmoothScroll>
       </body>
     </html>
   );

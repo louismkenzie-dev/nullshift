@@ -2,7 +2,7 @@ import Link from "next/link";
 import { T } from "@/lib/tokens";
 
 const navLinks = [
-  { label: "About",   href: "/about" },
+  { label: "Why us",  href: "/why-us" },
   { label: "Work",    href: "/work" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ",     href: "/faq" },

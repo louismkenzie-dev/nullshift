@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { T } from "@/lib/tokens";
 
 const links = [
-  { label: "About",   href: "/about" },
+  { label: "Why us",  href: "/why-us" },
   { label: "Work",    href: "/work" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ",     href: "/faq" },
