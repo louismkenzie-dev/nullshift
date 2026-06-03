@@ -114,19 +114,28 @@ function HeroScrollTransition() {
     offset: ["start start", "end end"],
   });
 
-  /* Phase 1 (0 → 0.24): hero shrinks in-place into a card, dead centre */
-  const heroScale        = useTransform(scrollYProgress, [0, 0.24], [1, 0.66]);
-  const heroBorderRadius = useTransform(scrollYProgress, [0.04, 0.24], [0, 18]);
-  const heroBoxShadow    = useTransform(
-    scrollYProgress,
-    [0.06, 0.24],
-    ["0px 0px 0px 0px rgba(0,0,0,0)", "0px 32px 80px 0px rgba(0,0,0,0.75)"]
-  );
+  /* ── Phase 1 (0 → 0.26): the hero VIDEO shrinks from full-bleed down into
+     the laptop's screen rectangle, revealing the photo (people + desk + laptop)
+     around it. Screen-rect values measured from public/laptop.png mapped
+     through object-cover. Video uses object-cover so non-uniform scale of the
+     container never distorts the footage. ── */
+  const SHRINK_END = 0.26;
+  // Laptop screen rect measured from public/laptop.png via object-cover (center 42%):
+  // x 29.7–70.3% (centre 50%, w 40.6%), y 10.4–57.4% (centre 33.9%, h 47%).
+  // Targets include ~1% overscan so the dark bezel frames the video with no gap.
+  const vScaleX = useTransform(scrollYProgress, [0, SHRINK_END], [1, 0.418]);
+  const vScaleY = useTransform(scrollYProgress, [0, SHRINK_END], [1, 0.485]);
+  const vX      = useTransform(scrollYProgress, [0, SHRINK_END], ["0vw", "0vw"]);
+  const vY      = useTransform(scrollYProgress, [0, SHRINK_END], ["0vh", "-16.1vh"]);
+  const vRadius = useTransform(scrollYProgress, [0.05, SHRINK_END], [0, 4]);
 
-  /* Phase 2 (0.30 → 0.78): whole track slides left one full viewport.
-     Holds at -100vw afterward (useTransform clamps), so services stays
-     full-bleed and solid until the sticky releases into the static section. */
-  const trackX = useTransform(scrollYProgress, [0.30, 0.78], ["0vw", "-100vw"]);
+  /* Hero text overlay fades out as the video shrinks into the screen */
+  const textOpacity = useTransform(scrollYProgress, [0, 0.18], [1, 0]);
+
+  /* ── Phase 2 (0.42 → 0.86): brief hold, then whole composite (photo + video)
+     slides left as one unit. Holds at -100vw afterward so services stays
+     full-bleed until the sticky releases into the static section. ── */
+  const trackX = useTransform(scrollYProgress, [0.42, 0.86], ["0vw", "-100vw"]);
 
   /* Scroll hint fades on first movement */
   const hintOpacity = useTransform(scrollYProgress, [0, 0.05], [1, 0]);
@@ -140,27 +149,50 @@ function HeroScrollTransition() {
           className="flex h-full"
           style={{ x: trackX, width: "200vw" }}
         >
-          {/* PANE A — Hero (shrinks into a card) */}
-          <div className="relative shrink-0 flex items-center justify-center" style={{ width: "100vw", height: "100%" }}>
+          {/* PANE A — Hero: laptop photo + video shrinking into its screen */}
+          <div className="relative shrink-0 overflow-hidden" style={{ width: "100vw", height: "100%" }}>
+
+            {/* Laptop photo — full-bleed background, revealed as the video shrinks */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/laptop.png"
+              alt="Two people at a desk viewing a laptop"
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ zIndex: 0, objectPosition: "center 42%" }}
+            />
+
+            {/* Video — starts full-bleed, scales down into the laptop screen rect */}
             <motion.div
               className="absolute inset-0 overflow-hidden"
               style={{
-                scale: heroScale,
-                borderRadius: heroBorderRadius,
-                boxShadow: heroBoxShadow,
+                zIndex: 1,
+                scaleX: vScaleX,
+                scaleY: vScaleY,
+                x: vX,
+                y: vY,
+                borderRadius: vRadius,
               }}
             >
-              <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }}>
+              <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover">
                 <source src="/hero.mp4" type="video/mp4" />
               </video>
-              <div className="absolute inset-0 z-[1]" style={{
+              {/* Subtle screen sheen so it reads as a display */}
+              <div className="absolute inset-0" style={{
+                background: `radial-gradient(ellipse 80% 60% at 30% 20%, rgba(255,255,255,0.06) 0%, transparent 60%)`,
+                pointerEvents: "none",
+              }} />
+            </motion.div>
+
+            {/* Hero text overlay — full-bleed at start, fades out as video shrinks */}
+            <motion.div className="absolute inset-0" style={{ zIndex: 2, opacity: textOpacity, pointerEvents: "none" }}>
+              <div className="absolute inset-0" style={{
                 background: `
-                  linear-gradient(to top, rgba(9,9,11,0.97) 0%, rgba(9,9,11,0.65) 35%, rgba(9,9,11,0.18) 65%, transparent 100%),
+                  linear-gradient(to top, rgba(9,9,11,0.97) 0%, rgba(9,9,11,0.6) 38%, rgba(9,9,11,0.12) 68%, transparent 100%),
                   linear-gradient(to right, rgba(9,9,11,0.45) 0%, transparent 55%),
                   radial-gradient(ellipse 65% 50% at 20% 70%, color-mix(in oklab, ${T.primary} 9%, transparent) 0%, transparent 70%)
                 `,
               }} />
-              <div className="absolute z-[2] px-8 md:px-16 pb-20 md:pb-28 bottom-0 max-w-5xl">
+              <div className="absolute px-8 md:px-16 pb-20 md:pb-28 bottom-0 max-w-5xl" style={{ pointerEvents: "auto" }}>
                 <div className="flex items-center gap-3 mb-6" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
                   <span className="size-1.5 rounded-full pulse-dot flex-shrink-0" style={{ background: T.primary }} />
                   <span>SYS_01 / WEB_STUDIO</span>
