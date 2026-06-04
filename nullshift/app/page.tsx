@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
+import HeroText from "@/components/HeroText";
+import { ShaderBackground } from "@/components/ShaderBackground";
 import { T } from "@/lib/tokens";
 
 /* ── Section label ──────────────────────────── */
@@ -31,37 +33,6 @@ function PrimaryBtn({ href, children }: { href: string; children: React.ReactNod
 }
 
 /* ── HERO ───────────────────────────────────── */
-function Hero() {
-  return (
-    <section id="hero" className="relative min-h-screen flex flex-col justify-end overflow-hidden">
-      <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ zIndex: 0 }}>
-        <source src="/hero.mp4" type="video/mp4" />
-      </video>
-      <div className="absolute inset-0 z-[1]" style={{
-        background: `linear-gradient(to top, rgba(9,9,11,0.96) 0%, rgba(9,9,11,0.65) 35%, rgba(9,9,11,0.2) 65%, transparent 100%), linear-gradient(to right, rgba(9,9,11,0.45) 0%, transparent 55%), radial-gradient(ellipse 65% 50% at 20% 70%, color-mix(in oklab, ${T.primary} 9%, transparent) 0%, transparent 70%)`,
-      }} />
-      <div className="relative z-[2] px-8 md:px-16 pb-20 md:pb-28 max-w-5xl">
-        <div className="flex items-center gap-3 mb-6" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
-          <span className="size-1.5 rounded-full pulse-dot flex-shrink-0" style={{ background: T.primary }} />
-          <span>SYS_01 / WEB_STUDIO</span>
-        </div>
-        <h1 className="mb-8" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.2rem, 4.5vw, 4.8rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
-          WE BUILD<br />
-          <span style={{ color: T.muted }}>THE INTERNET</span><br />
-          PRESENCE<br />
-          <span className="hero-glow" style={{ color: T.primary }}>YOU DESERVE.</span>
-        </h1>
-        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-8 sm:gap-12">
-          <p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "clamp(0.9rem,1.3vw,1rem)", lineHeight: 1.65, color: T.muted, maxWidth: "38ch" }}>
-            Nullshift Studio helps established businesses make the move online — with websites and branding built to last.
-          </p>
-          <PrimaryBtn href="/book">Book a discovery call →</PrimaryBtn>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ── SERVICES ───────────────────────────────── */
 function Services() {
   const cards = [
@@ -73,7 +44,7 @@ function Services() {
       <div className="grid md:grid-cols-[280px_1fr]">
         <div className="p-10 md:py-20 md:px-10 flex flex-col justify-between gap-12" style={{ borderBottom: `1px solid ${T.border}` }}>
           <div>
-            <Label>// 02 — Services</Label>
+            <Label>02 — Services</Label>
             <Reveal delay={0.1}>
               <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,5.5vw,5.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
                 WHAT WE<br /><span style={{ color: T.muted }}>DO.</span>
@@ -114,7 +85,7 @@ function WhoWeHelp() {
   return (
     <section id="clients" className="px-10 md:px-12 py-24 grid md:grid-cols-2 gap-16 md:gap-24 items-end" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
       <div>
-        <Label>// 03 — Clients</Label>
+        <Label>03 — Clients</Label>
         <Reveal delay={0.1}>
           <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,5.5vw,5.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
             BUILT FOR<br /><span style={{ color: T.muted }}>BUSINESSES</span><br /><span style={{ color: T.primary }}>DOING THE WORK.</span>
@@ -152,7 +123,7 @@ function Process() {
     <section id="process" style={{ borderTop: `1px solid ${T.border}` }}>
       <div className="px-10 md:px-12 pt-20 pb-12 flex flex-col md:flex-row items-start md:items-end justify-between gap-10">
         <div>
-          <Label>// 04 — How it works</Label>
+          <Label>04 — How it works</Label>
           <Reveal delay={0.1}><h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,5.5vw,5.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>THE <span style={{ color: T.muted }}>PROCESS.</span></h2></Reveal>
         </div>
         <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.75, color: T.muted, maxWidth: "36ch" }}>A clear, four-step process to get your business online with minimal friction.</p></Reveal>
@@ -188,7 +159,7 @@ function WhyNullshift() {
       <div className="relative z-10 px-10 md:px-12 pt-40 pb-32">
         <Reveal>
           <div className="flex items-center justify-center gap-3 mb-20" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.primary }}>
-            <span>// 05 — Why us</span><span className="h-px w-8" style={{ background: `${T.primary}55` }} />
+            <span>05 — Why us</span><span className="h-px w-8" style={{ background: `${T.primary}55` }} />
           </div>
         </Reveal>
         <Reveal delay={0.1}>
@@ -225,12 +196,12 @@ function Contact() {
   const inputStyle: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, borderTop: "none", padding: "8px 16px 14px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", fontWeight: 400, outline: "none", marginBottom: "2px" };
   return (
     <section id="contact" style={{ borderTop: `1px solid ${T.border}` }}>
-      <div className="grid md:grid-cols-2" style={{ minHeight: "78vh" }}>
-        <div className="p-10 md:px-12 md:py-24 flex flex-col justify-between gap-14" style={{ borderBottom: `1px solid ${T.border}` }}>
+      <div className="grid md:grid-cols-2">
+        <div className="p-10 md:px-12 md:py-10 flex flex-col justify-between gap-8" style={{ borderBottom: `1px solid ${T.border}` }}>
           <div>
-            <Label>// 06 — Get in touch</Label>
+            <Label>06 — Get in touch</Label>
             <Reveal delay={0.1}>
-              <h2 className="mb-7" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(3rem,6.5vw,7rem)", lineHeight: 0.92, letterSpacing: "-0.01em", color: T.fg }}>
+              <h2 className="mb-4" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.4rem,4.5vw,4.5rem)", lineHeight: 0.92, letterSpacing: "-0.01em", color: T.fg }}>
                 READY TO<br /><span className="hero-glow" style={{ color: T.primary }}>GO ONLINE?</span>
               </h2>
             </Reveal>
@@ -245,8 +216,8 @@ function Contact() {
             </div>
           </Reveal>
         </div>
-        <div className="p-10 md:px-12 md:py-24" style={{ borderLeft: `1px solid ${T.border}` }}>
-          <Reveal delay={0.2}>
+        <div className="p-10 md:px-12 md:py-10 flex items-center" style={{ borderLeft: `1px solid ${T.border}` }}>
+          <Reveal delay={0.2} className="w-full">
             <form className="flex flex-col gap-0.5" onSubmit={e => { e.preventDefault(); setSubmitted(true); }}>
               {fields.map(f => (
                 <div key={f.id} className="flex flex-col">
@@ -258,7 +229,7 @@ function Contact() {
               ))}
               <div className="flex flex-col">
                 <label htmlFor="message" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted, padding: "14px 16px 4px", background: T.surface, border: `1px solid ${T.border}`, borderBottom: "none" }}>PROJECT_BRIEF</label>
-                <textarea id="message" name="message" rows={5} required disabled={submitted} style={{ ...inputStyle, resize: "none", borderTop: "none" }}
+                <textarea id="message" name="message" rows={3} required disabled={submitted} style={{ ...inputStyle, resize: "none", borderTop: "none" }}
                   onFocus={e => { e.currentTarget.style.borderColor = `${T.primary}66`; e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${T.primary}44`; }}
                   onBlur={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = "none"; }} />
               </div>
@@ -274,19 +245,55 @@ function Contact() {
   );
 }
 
+/* Uniform frosted-glass card — every card is the same size so that when one
+   slides up and pins, it fully covers the identical card beneath it. */
+function StackCard({ children, z }: { children: React.ReactNode; z: number }) {
+  return (
+    /* Each card occupies one "stack slot" of scroll. The sticky child pins it
+       centred in the viewport; the next slot's card rises and covers it. */
+    <div className="stack-slot" style={{ zIndex: z }}>
+      <div className="sticky-stick px-3 sm:px-5 md:px-8">
+        <div
+          className="glass-card max-w-6xl mx-auto w-full overflow-hidden rounded-2xl flex items-center"
+          style={{
+            height: "var(--card-h)",
+            background: "rgba(11,11,14,0.86)",
+            backdropFilter: "blur(18px) saturate(120%)",
+            WebkitBackdropFilter: "blur(18px) saturate(120%)",
+            border: "1px solid rgba(245,242,238,0.08)",
+            boxShadow: "0 50px 120px -16px rgba(0,0,0,0.9)",
+          }}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   return (
     <>
+      <ShaderBackground />
       <Nav />
-      <main>
-        <Hero />
-        <Services />
-        <WhoWeHelp />
-        <Process />
-        <WhyNullshift />
-        <Contact />
+      {/* Hero stays full-bleed as the opening */}
+      <div className="relative z-10">
+        <HeroText />
+      </div>
+
+      {/* Uniform cards stack over one another. The first pins centred; each
+          subsequent card slides up, covers it, then pins in its place. */}
+      <main className="relative">
+        <StackCard z={1}><Services /></StackCard>
+        <StackCard z={2}><WhoWeHelp /></StackCard>
+        <StackCard z={3}><Process /></StackCard>
+        <StackCard z={4}><WhyNullshift /></StackCard>
+        <StackCard z={5}><Contact /></StackCard>
       </main>
-      <Footer />
+
+      <div className="relative" style={{ zIndex: 6 }}>
+        <Footer />
+      </div>
     </>
   );
 }

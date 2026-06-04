@@ -6,6 +6,7 @@ const navLinks = [
   { label: "Work",    href: "/work" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ",     href: "/faq" },
+  { label: "Brand",   href: "/brand" },
   { label: "Legal",   href: "/legal" },
 ];
 

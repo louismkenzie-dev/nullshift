@@ -32,9 +32,42 @@
 
 @layer base {
   * { @apply border-border; }
-  body { @apply bg-[#09090b] text-[#fafafa]; }
+  body {
+    @apply bg-[#09090b] text-[#fafafa];
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  }
   ::selection { background: #10b981; color: #131316; }
-  html { scroll-behavior: smooth; }
+}
+
+/* Lenis smooth scroll */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* ── Sticky-stacking uniform cards ───────────────────────────── */
+:root { --card-h: 80vh; }
+
+/* Each card occupies one viewport-tall scroll slot. */
+.stack-slot { position: relative; height: 100vh; }
+
+/* The card pins centred: (100vh - card height) / 2 from the top. */
+.sticky-stick {
+  position: sticky;
+  top: calc((100vh - var(--card-h)) / 2);
+}
+
+/* Glass cards: clear the inner section's own background + size it to fill the
+   uniform card height, with compact, consistent padding so every card matches. */
+.glass-card > section {
+  background-color: transparent !important;
+  width: 100%;
+  max-height: var(--card-h);
+}
+/* Normalise the big per-section vertical paddings so content fits the card. */
+.glass-card > section,
+.glass-card > section > div:first-child {
+  padding-top: clamp(20px, 3vh, 40px) !important;
+  padding-bottom: clamp(20px, 3vh, 40px) !important;
 }
 
 /* ── Hero glow text ──────────────────────────── */
