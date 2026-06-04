@@ -134,6 +134,80 @@ function HowWeBuild() {
   );
 }
 
+function Founder() {
+  const tags = ["Full-Stack Development", "Brand Creation", "Front-End Design", "Back-End Function", "Photo / Video", "AI Optimisation"];
+  return (
+    <section style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
+      <div className="grid md:grid-cols-2">
+        {/* Photo */}
+        <Reveal className="relative" >
+          <div className="relative h-full min-h-[420px] md:min-h-[600px]" style={{ borderBottom: `1px solid ${T.border}` }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/louis-mckenzie.jpg"
+              alt="Louis McKenzie — Lead Developer & Founder of Nullshift"
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ objectPosition: "center 25%" }}
+            />
+            {/* Brand wash + grain so the photo sits in the dark palette */}
+            <div className="absolute inset-0 pointer-events-none" style={{
+              background: `linear-gradient(to top, ${T.bg} 0%, transparent 45%), linear-gradient(to right, transparent 60%, color-mix(in oklab, ${T.bg} 70%, transparent) 100%)`,
+            }} />
+            {/* Name plate */}
+            <div className="absolute bottom-0 left-0 p-6 md:p-8">
+              <div className="flex items-center gap-2.5 mb-2" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.primary }}>
+                <span className="size-1.5 rounded-full pulse-dot" style={{ background: T.primary }} />
+                FOUNDER / LEAD_DEVELOPER
+              </div>
+              <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.8rem,3vw,2.6rem)", letterSpacing: "0.01em", color: T.fg, textTransform: "uppercase" }}>
+                Louis McKenzie
+              </div>
+            </div>
+          </div>
+        </Reveal>
+
+        {/* Bio */}
+        <div className="p-10 md:p-16 flex flex-col justify-center" style={{ borderBottom: `1px solid ${T.border}` }}>
+          <Reveal>
+            <div className="flex items-center gap-3 mb-8" style={{ fontFamily: T.mono, fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T.primary }}>
+              <span>// WHO BUILDS IT</span>
+              <span className="h-px w-8" style={{ background: `${T.primary}55` }} />
+            </div>
+          </Reveal>
+          <Reveal delay={0.05}>
+            <h2 className="mb-6" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.2rem,4vw,3.2rem)", lineHeight: 0.95, letterSpacing: "-0.01em", textTransform: "uppercase", color: T.fg }}>
+              MEET THE <span style={{ color: T.primary }}>MAKER.</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div className="flex flex-col gap-5" style={{ fontFamily: T.sans, fontSize: "0.98rem", lineHeight: 1.8, color: T.muted, maxWidth: "52ch" }}>
+              <p>
+                Nullshift is led by <span style={{ color: T.fg }}>Louis McKenzie</span> — a Newcastle University student with a rich background in brand creation and site development.
+              </p>
+              <p>
+                With a creative eye, Louis has worked with many brands to shoot video and photography for seamless, polished output — and has since made the switch to building full digital presences end to end.
+              </p>
+              <p>
+                He&apos;s a <span style={{ color: T.fg }}>full-stack developer</span> who takes care of both the front-end design and the back-end function — so your project is handled, start to finish, by one person who genuinely cares how it looks and how it works.
+              </p>
+            </div>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <div className="flex flex-wrap gap-2 mt-8">
+              {tags.map(tag => (
+                <span key={tag} className="px-3.5 py-2"
+                  style={{ fontFamily: T.mono, fontWeight: 500, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, border: `1px solid ${T.border}`, borderRadius: "2px" }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Commitment() {
   const stats = [
     { value: "100%", label: "Custom code", sub: "Every project written from scratch, no templates used." },
@@ -191,6 +265,7 @@ export default function AboutPage() {
         <PageHero />
         <TheProblem />
         <HowWeBuild />
+        <Founder />
         <Commitment />
         <CtaStrip />
       </main>

@@ -133,7 +133,7 @@ export interface CinematicHeroProps extends React.HTMLAttributes<HTMLDivElement>
 }
 
 export function CinematicHero({
-  eyebrow = "• SYS_01 / WEB_STUDIO",
+  eyebrow = "• SYS_01 / WEB_DEV",
   brandName = "",
   tagline1 = "BUILT FOR",
   tagline2 = "BUSINESSES\nDOING THE WORK.",
@@ -146,7 +146,7 @@ export function CinematicHero({
   metricValue = 365,
   metricLabel = "Days Online",
   ctaHeading = "Book a discovery call",
-  ctaDescription = "Nullshift Studio helps established businesses make the move online — with websites and branding built to last.",
+  ctaDescription = "Nullshift helps established businesses make the move online — with websites and branding built to last.",
   scrollLabel = "SCROLL",
   className,
   ...props

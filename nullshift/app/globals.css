@@ -47,27 +47,33 @@ html.lenis, html.lenis body { height: auto; }
 /* ── Sticky-stacking uniform cards ───────────────────────────── */
 :root { --card-h: 80vh; }
 
-/* Each card occupies one viewport-tall scroll slot. */
-.stack-slot { position: relative; height: 100vh; }
-
-/* The card pins centred: (100vh - card height) / 2 from the top. */
+/* Cards are sticky directly inside <main>; each pins centred and stays put
+   while later cards (higher z-index) slide up and cover it. The bottom margin
+   sets the scroll distance between one card pinning and the next covering it. */
 .sticky-stick {
   position: sticky;
   top: calc((100vh - var(--card-h)) / 2);
+  margin-bottom: 12vh;
 }
+.sticky-stick:last-of-type { margin-bottom: 0; }
 
-/* Glass cards: clear the inner section's own background + size it to fill the
-   uniform card height, with compact, consistent padding so every card matches. */
+/* Glass cards: clear the inner section's background and make it fill the
+   whole uniform card so content distributes edge-to-edge (no top gap, and
+   grid borders reach the card edges). */
 .glass-card > section {
   background-color: transparent !important;
   width: 100%;
-  max-height: var(--card-h);
+  height: 100%;
 }
-/* Normalise the big per-section vertical paddings so content fits the card. */
-.glass-card > section,
-.glass-card > section > div:first-child {
-  padding-top: clamp(20px, 3vh, 40px) !important;
-  padding-bottom: clamp(20px, 3vh, 40px) !important;
+
+/* On mobile the fixed-height sticky stack can't hold stacked content, so cards
+   flow naturally at their own height and scroll normally. */
+@media (max-width: 767px) {
+  :root { --card-h: auto; }
+  .sticky-stick {
+    position: static;
+    margin-bottom: 16px;
+  }
 }
 
 /* ── Hero glow text ──────────────────────────── */

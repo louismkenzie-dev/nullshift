@@ -20,7 +20,7 @@ function Privacy() {
   return (
     <div>
       <Section title="WHAT INFORMATION WE COLLECT">
-        <p>Nullshift Studio collects information you provide directly to us when you fill out our contact or booking forms. This includes your name, business name, email address, phone number (if provided), and any project details you share.</p>
+        <p>Nullshift collects information you provide directly to us when you fill out our contact or booking forms. This includes your name, business name, email address, phone number (if provided), and any project details you share.</p>
         <p className="mt-4">We do not collect any information about you unless you voluntarily provide it. We do not use cookies for tracking, advertising, or analytics beyond basic site performance.</p>
       </Section>
       <Section title="HOW WE USE YOUR INFORMATION">
@@ -32,7 +32,7 @@ function Privacy() {
         <p className="mt-4">We retain your data only as long as necessary to fulfil the purposes for which it was collected, or as required by applicable law.</p>
       </Section>
       <Section title="YOUR RIGHTS">
-        <p>You have the right to request access to the personal information we hold about you, request correction of inaccurate data, or request deletion of your data. To exercise any of these rights, contact us at <span style={{ color: T.primary }}>hello@nullshift.studio</span> (placeholder — update before going live).</p>
+        <p>You have the right to request access to the personal information we hold about you, request correction of inaccurate data, or request deletion of your data. To exercise any of these rights, contact us at <span style={{ color: T.primary }}>hello@nullshift.com</span> (placeholder — update before going live).</p>
       </Section>
       <Section title="CHANGES TO THIS POLICY">
         <p>We may update this Privacy Policy from time to time. Any changes will be posted on this page with an updated effective date. Continued use of our website after changes constitutes your acceptance of the revised policy.</p>
@@ -50,7 +50,7 @@ function Terms() {
   return (
     <div>
       <Section title="SCOPE OF SERVICES">
-        <p>Nullshift Studio provides web design, web development, and brand identity services as agreed in individual project proposals. The scope, deliverables, and timeline of each engagement are defined in a written proposal accepted by the client prior to commencement.</p>
+        <p>Nullshift provides web design, web development, and brand identity services as agreed in individual project proposals. The scope, deliverables, and timeline of each engagement are defined in a written proposal accepted by the client prior to commencement.</p>
         <p className="mt-4">Any work outside the agreed scope will be quoted separately and requires written approval before proceeding.</p>
       </Section>
       <Section title="PAYMENT TERMS">
@@ -58,15 +58,15 @@ function Terms() {
         <p className="mt-4">Invoices are payable within 14 days of issue. Late payments may result in work being paused until outstanding amounts are settled.</p>
       </Section>
       <Section title="INTELLECTUAL PROPERTY & OWNERSHIP">
-        <p>Upon receipt of full payment, the client receives full ownership of all custom code, design assets, and deliverables created specifically for their project. Nullshift Studio retains no ongoing rights to the work.</p>
+        <p>Upon receipt of full payment, the client receives full ownership of all custom code, design assets, and deliverables created specifically for their project. Nullshift retains no ongoing rights to the work.</p>
         <p className="mt-4">Third-party assets (fonts, stock images, plugins) remain subject to their respective licences, which will be disclosed at the time of use.</p>
-        <p className="mt-4">Nullshift Studio reserves the right to display completed work in its portfolio unless the client requests otherwise in writing.</p>
+        <p className="mt-4">Nullshift reserves the right to display completed work in its portfolio unless the client requests otherwise in writing.</p>
       </Section>
       <Section title="REVISIONS & CHANGES">
         <p>Each project tier includes a defined number of revision rounds as specified in the proposal. Revisions beyond the included allowance will be charged at an agreed hourly rate. Significant scope changes post-commencement may require a revised proposal.</p>
       </Section>
       <Section title="LIABILITY">
-        <p>Nullshift Studio is not liable for any indirect, incidental, or consequential damages arising from the use or inability to use the delivered work. Our total liability is limited to the amount paid for the project in question.</p>
+        <p>Nullshift is not liable for any indirect, incidental, or consequential damages arising from the use or inability to use the delivered work. Our total liability is limited to the amount paid for the project in question.</p>
         <p className="mt-4">The client is responsible for providing accurate information, obtaining any necessary permissions for content provided, and ensuring compliance with applicable laws for their business.</p>
       </Section>
       <Section title="TERMINATION">

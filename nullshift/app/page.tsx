@@ -41,37 +41,35 @@ function Services() {
   ];
   return (
     <section id="services" style={{ borderTop: `1px solid ${T.border}` }}>
-      <div className="grid md:grid-cols-[280px_1fr]">
-        <div className="p-10 md:py-20 md:px-10 flex flex-col justify-between gap-12" style={{ borderBottom: `1px solid ${T.border}` }}>
+      <div className="grid md:grid-cols-[300px_1fr] h-full">
+        <div className="p-8 md:p-10 flex flex-col justify-between gap-8" style={{ borderBottom: `1px solid ${T.border}` }}>
           <div>
             <Label>02 — Services</Label>
             <Reveal delay={0.1}>
-              <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,5.5vw,5.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
+              <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.4rem,4.5vw,4.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
                 WHAT WE<br /><span style={{ color: T.muted }}>DO.</span>
               </h2>
             </Reveal>
           </div>
-          <Reveal delay={0.2}><PrimaryBtn href="/book">Enquire now →</PrimaryBtn></Reveal>
+          <Reveal delay={0.2}><PrimaryBtn href="/about">About us →</PrimaryBtn></Reveal>
         </div>
-        <div style={{ borderLeft: `1px solid ${T.border}` }}>
+        <div className="grid grid-rows-1 md:grid-rows-2 h-full" style={{ borderLeft: `1px solid ${T.border}` }}>
           {cards.map((card, i) => (
-            <Reveal key={card.num} delay={i * 0.08}>
-              <article className="group relative p-10 md:p-14 grid grid-cols-[48px_1fr] gap-8 items-start"
-                style={{ borderBottom: `1px solid ${T.border}`, transition: "background 0.2s" }}
-                onMouseEnter={e => (e.currentTarget.style.background = T.surface)}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                <span className="absolute top-0 left-0 h-px" style={{ width: 0, background: T.primary, transition: "width 0.5s cubic-bezier(.2,.8,.2,1)" }}
-                  ref={el => { if (!el) return; const art = el.parentElement!; art.addEventListener("mouseenter", () => { el.style.width = "100%"; }); art.addEventListener("mouseleave", () => { el.style.width = "0"; }); }} />
-                <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1.6rem", lineHeight: 1, color: `${T.primary}40`, paddingTop: "3px" }}>{card.num}</div>
-                <div className="flex flex-col gap-4">
-                  <h3 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.4rem,2.2vw,1.9rem)", letterSpacing: "0.01em", color: T.fg }}>{card.title}</h3>
-                  <p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "0.9rem", lineHeight: 1.75, color: T.muted, maxWidth: "46ch" }}>{card.desc}</p>
-                  <span className="flex items-center gap-2.5 mt-1" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.primary }}>
-                    <span className="h-px w-3 shrink-0" style={{ background: `${T.primary}80` }} />{card.tag}
-                  </span>
-                </div>
-              </article>
-            </Reveal>
+            <article key={card.num} className="group relative p-8 md:p-12 grid grid-cols-[48px_1fr] gap-6 content-center"
+              style={{ borderBottom: i === 0 ? `1px solid ${T.border}` : "none", transition: "background 0.2s" }}
+              onMouseEnter={e => (e.currentTarget.style.background = T.surface)}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+              <span className="absolute top-0 left-0 h-px" style={{ width: 0, background: T.primary, transition: "width 0.5s cubic-bezier(.2,.8,.2,1)" }}
+                ref={el => { if (!el) return; const art = el.parentElement!; art.addEventListener("mouseenter", () => { el.style.width = "100%"; }); art.addEventListener("mouseleave", () => { el.style.width = "0"; }); }} />
+              <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1.6rem", lineHeight: 1, color: `${T.primary}40`, paddingTop: "3px" }}>{card.num}</div>
+              <div className="flex flex-col gap-3">
+                <h3 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.3rem,2vw,1.8rem)", letterSpacing: "0.01em", color: T.fg }}>{card.title}</h3>
+                <p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "0.9rem", lineHeight: 1.7, color: T.muted, maxWidth: "46ch" }}>{card.desc}</p>
+                <span className="flex items-center gap-2.5 mt-1" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.primary }}>
+                  <span className="h-px w-3 shrink-0" style={{ background: `${T.primary}80` }} />{card.tag}
+                </span>
+              </div>
+            </article>
           ))}
         </div>
       </div>
@@ -83,17 +81,18 @@ function Services() {
 function WhoWeHelp() {
   const tags = ["Retail", "Hospitality", "Trades", "Professional Services", "Health & Wellness"];
   return (
-    <section id="clients" className="px-10 md:px-12 py-24 grid md:grid-cols-2 gap-16 md:gap-24 items-end" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
+    <section id="clients" className="px-8 md:px-12 py-10 grid md:grid-cols-2 gap-12 md:gap-20 items-center h-full" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
       <div>
         <Label>03 — Clients</Label>
         <Reveal delay={0.1}>
-          <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,5.5vw,5.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
+          <h2 className="mb-7" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,5.5vw,5.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
             BUILT FOR<br /><span style={{ color: T.muted }}>BUSINESSES</span><br /><span style={{ color: T.primary }}>DOING THE WORK.</span>
           </h2>
         </Reveal>
+        <Reveal delay={0.2}><PrimaryBtn href="/work">View our work →</PrimaryBtn></Reveal>
       </div>
       <div className="flex flex-col gap-9">
-        <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "1rem", lineHeight: 1.75, color: T.muted, maxWidth: "44ch" }}>Nullshift works with small and medium-sized businesses — trades, retail, hospitality, services — who are ready to take their operation online without the jargon, the delays, or the inflated agency prices.</p></Reveal>
+        <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "1rem", lineHeight: 1.75, color: T.muted, maxWidth: "46ch" }}>We build more than websites. From bespoke booking systems and automated email campaigns to interactive courses and custom business workflows, we create digital solutions tailored to your brand that save time, improve customer experiences, and help your business grow.</p></Reveal>
         <Reveal delay={0.3}>
           <div className="flex flex-wrap gap-2">
             {tags.map(tag => (
@@ -120,28 +119,28 @@ function Process() {
     { num: "004", title: "Launch", desc: "We handle hosting, domain, deployment. You just go live — with ongoing support whenever you need us." },
   ];
   return (
-    <section id="process" style={{ borderTop: `1px solid ${T.border}` }}>
-      <div className="px-10 md:px-12 pt-20 pb-12 flex flex-col md:flex-row items-start md:items-end justify-between gap-10">
+    <section id="process" className="flex flex-col h-full" style={{ borderTop: `1px solid ${T.border}` }}>
+      <div className="px-8 md:px-12 pt-10 pb-8 flex flex-col md:flex-row items-start md:items-end justify-between gap-6 shrink-0">
         <div>
           <Label>04 — How it works</Label>
-          <Reveal delay={0.1}><h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,5.5vw,5.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>THE <span style={{ color: T.muted }}>PROCESS.</span></h2></Reveal>
+          <Reveal delay={0.1}><h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.4rem,4.5vw,4.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>THE <span style={{ color: T.muted }}>PROCESS.</span></h2></Reveal>
         </div>
         <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.75, color: T.muted, maxWidth: "36ch" }}>A clear, four-step process to get your business online with minimal friction.</p></Reveal>
       </div>
-      <div className="grid md:grid-cols-4" style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}` }}>
-        {steps.map((step, i) => (
-          <Reveal key={step.num} delay={i * 0.08}>
-            <article className="group relative flex flex-col gap-6 p-10 md:p-11" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
+      <Reveal delay={0.1} className="flex-1 min-h-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 h-full" style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}` }}>
+          {steps.map(step => (
+            <article key={step.num} className="group relative flex flex-col justify-center gap-5 p-8 md:p-10" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
               <span className="absolute bottom-0 left-0 h-0.5" style={{ width: 0, background: T.primary, transition: "width 0.5s cubic-bezier(.2,.8,.2,1)" }}
                 ref={el => { if (!el) return; const art = el.parentElement!; art.addEventListener("mouseenter", () => { el.style.width = "100%"; }); art.addEventListener("mouseleave", () => { el.style.width = "0"; }); }} />
-              <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "2.4rem", lineHeight: 1, color: `${T.primary}28` }}>{step.num}</div>
-              <h3 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.3rem,1.8vw,1.7rem)", letterSpacing: "0.01em", color: T.fg }}>{step.title}</h3>
+              <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "2.2rem", lineHeight: 1, color: `${T.primary}28` }}>{step.num}</div>
+              <h3 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.2rem,1.6vw,1.6rem)", letterSpacing: "0.01em", color: T.fg }}>{step.title}</h3>
               <div className="w-5 h-px" style={{ background: T.border }} />
-              <p style={{ fontFamily: T.sans, fontSize: "0.875rem", lineHeight: 1.75, color: T.muted }}>{step.desc}</p>
+              <p style={{ fontFamily: T.sans, fontSize: "0.84rem", lineHeight: 1.7, color: T.muted }}>{step.desc}</p>
             </article>
-          </Reveal>
-        ))}
-      </div>
+          ))}
+        </div>
+      </Reveal>
     </section>
   );
 }
@@ -154,28 +153,28 @@ function WhyNullshift() {
     { n: "03", title: "Ongoing support", desc: "We don't disappear after launch. Updates, changes, questions — we're always available." },
   ];
   return (
-    <section id="why" className="relative overflow-hidden" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
-      <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 60% 50% at 50% 50%, color-mix(in oklab, ${T.primary} 5%, transparent) 0%, transparent 70%)` }} />
-      <div className="relative z-10 px-10 md:px-12 pt-40 pb-32">
+    <section id="why" className="relative overflow-hidden w-full h-full" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 60% 50% at 50% 50%, color-mix(in oklab, ${T.primary} 6%, transparent) 0%, transparent 70%)` }} />
+      <div className="relative z-10 h-full px-8 md:px-12 py-10 flex flex-col items-center justify-center text-center">
         <Reveal>
-          <div className="flex items-center justify-center gap-3 mb-20" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.primary }}>
+          <div className="flex items-center justify-center gap-3 mb-10" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.primary }}>
             <span>05 — Why us</span><span className="h-px w-8" style={{ background: `${T.primary}55` }} />
           </div>
         </Reveal>
-        <Reveal delay={0.1}>
-          <div className="text-center mb-24" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(3.5rem,8vw,9.5rem)", lineHeight: 0.92, letterSpacing: "-0.01em" }}>
+        <Reveal delay={0.08}>
+          <div className="text-center mb-12" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,6vw,6.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em" }}>
             <span className="block" style={{ color: T.fg }}>NO TEMPLATES.</span>
             <span className="block" style={{ color: T.muted }}>NO BLOAT.</span>
             <span className="block hero-glow" style={{ color: T.primary }}>NO NONSENSE.</span>
           </div>
         </Reveal>
-        <Reveal delay={0.2}>
-          <div className="grid md:grid-cols-3" style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}` }}>
+        <Reveal delay={0.16}>
+          <div className="grid md:grid-cols-3 w-full max-w-5xl" style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}` }}>
             {props.map(p => (
-              <div key={p.n} className="p-10 md:p-12" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
-                <div className="mb-5" style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1.1rem", letterSpacing: "-0.02em", color: `${T.primary}70` }}>{p.n}</div>
-                <h3 className="mb-3" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.2rem", letterSpacing: "0.01em", color: T.fg }}>{p.title}</h3>
-                <p style={{ fontFamily: T.sans, fontSize: "0.875rem", lineHeight: 1.75, color: T.muted }}>{p.desc}</p>
+              <div key={p.n} className="p-8 text-left" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
+                <div className="mb-4" style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1rem", letterSpacing: "-0.02em", color: `${T.primary}70` }}>{p.n}</div>
+                <h3 className="mb-2" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.1rem", letterSpacing: "0.01em", color: T.fg }}>{p.title}</h3>
+                <p style={{ fontFamily: T.sans, fontSize: "0.82rem", lineHeight: 1.7, color: T.muted }}>{p.desc}</p>
               </div>
             ))}
           </div>
@@ -188,16 +187,39 @@ function WhyNullshift() {
 /* ── CONTACT ────────────────────────────────── */
 function Contact() {
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fields = [
     { id: "name",     label: "YOUR_NAME",     type: "text" },
     { id: "business", label: "BUSINESS_NAME", type: "text" },
     { id: "email",    label: "EMAIL_ADDRESS", type: "email" },
   ];
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (sending) return;
+    setSending(true);
+    setError(null);
+    const data = Object.fromEntries(new FormData(e.currentTarget).entries());
+    try {
+      const res = await fetch("/api/enquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, source: "contact" }),
+      });
+      if (!res.ok) throw new Error();
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please email us directly.");
+    } finally {
+      setSending(false);
+    }
+  }
   const inputStyle: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, borderTop: "none", padding: "8px 16px 14px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", fontWeight: 400, outline: "none", marginBottom: "2px" };
   return (
-    <section id="contact" style={{ borderTop: `1px solid ${T.border}` }}>
-      <div className="grid md:grid-cols-2">
-        <div className="p-10 md:px-12 md:py-10 flex flex-col justify-between gap-8" style={{ borderBottom: `1px solid ${T.border}` }}>
+    <section id="contact" className="h-full" style={{ borderTop: `1px solid ${T.border}` }}>
+      <div className="grid md:grid-cols-2 h-full">
+        <div className="p-8 md:px-12 md:py-10 flex flex-col justify-center gap-8" style={{ borderBottom: `1px solid ${T.border}` }}>
           <div>
             <Label>06 — Get in touch</Label>
             <Reveal delay={0.1}>
@@ -218,7 +240,7 @@ function Contact() {
         </div>
         <div className="p-10 md:px-12 md:py-10 flex items-center" style={{ borderLeft: `1px solid ${T.border}` }}>
           <Reveal delay={0.2} className="w-full">
-            <form className="flex flex-col gap-0.5" onSubmit={e => { e.preventDefault(); setSubmitted(true); }}>
+            <form className="flex flex-col gap-0.5" onSubmit={handleSubmit}>
               {fields.map(f => (
                 <div key={f.id} className="flex flex-col">
                   <label htmlFor={f.id} style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted, padding: "14px 16px 4px", background: T.surface, border: `1px solid ${T.border}`, borderBottom: "none" }}>{f.label}</label>
@@ -233,10 +255,11 @@ function Contact() {
                   onFocus={e => { e.currentTarget.style.borderColor = `${T.primary}66`; e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${T.primary}44`; }}
                   onBlur={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = "none"; }} />
               </div>
-              <button type="submit" disabled={submitted} className="mt-3 w-full flex items-center justify-between px-5 h-11 font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer"
+              <button type="submit" disabled={submitted || sending} className="mt-3 w-full flex items-center justify-between px-5 h-11 font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer"
                 style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0.06em", background: T.primary, color: T.primaryFg, borderRadius: "2px", boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)` }}>
-                <span>{submitted ? "MSG_SENT ✓" : "SEND_MESSAGE"}</span><span>→</span>
+                <span>{submitted ? "MSG_SENT ✓" : sending ? "SENDING…" : "SEND_MESSAGE"}</span><span>→</span>
               </button>
+              {error && <p style={{ fontFamily: T.mono, fontSize: "10px", color: "#f87171", marginTop: "8px" }}>{error}</p>}
             </form>
           </Reveal>
         </div>
@@ -249,23 +272,22 @@ function Contact() {
    slides up and pins, it fully covers the identical card beneath it. */
 function StackCard({ children, z }: { children: React.ReactNode; z: number }) {
   return (
-    /* Each card occupies one "stack slot" of scroll. The sticky child pins it
-       centred in the viewport; the next slot's card rises and covers it. */
-    <div className="stack-slot" style={{ zIndex: z }}>
-      <div className="sticky-stick px-3 sm:px-5 md:px-8">
-        <div
-          className="glass-card max-w-6xl mx-auto w-full overflow-hidden rounded-2xl flex items-center"
-          style={{
-            height: "var(--card-h)",
-            background: "rgba(11,11,14,0.86)",
-            backdropFilter: "blur(18px) saturate(120%)",
-            WebkitBackdropFilter: "blur(18px) saturate(120%)",
-            border: "1px solid rgba(245,242,238,0.08)",
-            boxShadow: "0 50px 120px -16px rgba(0,0,0,0.9)",
-          }}
-        >
-          {children}
-        </div>
+    /* Sticky directly within <main> so each card pins centred and STAYS while
+       the next card slides up and covers it. Higher z stacks over lower. */
+    <div className="sticky-stick px-3 sm:px-5 md:px-8" style={{ zIndex: z }}>
+      <div
+        className="glass-card max-w-6xl mx-auto w-full overflow-hidden rounded-2xl"
+        style={{
+          height: "var(--card-h)",
+          minHeight: "var(--card-h)",
+          background: "rgba(11,11,14,0.92)",
+          backdropFilter: "blur(18px) saturate(120%)",
+          WebkitBackdropFilter: "blur(18px) saturate(120%)",
+          border: "1px solid rgba(245,242,238,0.08)",
+          boxShadow: "0 50px 120px -16px rgba(0,0,0,0.9)",
+        }}
+      >
+        {children}
       </div>
     </div>
   );

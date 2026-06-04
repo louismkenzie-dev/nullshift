@@ -75,11 +75,11 @@ function BrandPrintable({ printRef }: { printRef: React.RefObject<HTMLDivElement
         </span>
       </div>
       <div style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted, marginBottom: "20px" }}>
-        // NULLSHIFT STUDIO — WEB DEVELOPMENT &amp; BRAND CREATION
+        // NULLSHIFT — WEB DEVELOPMENT &amp; BRAND CREATION
       </div>
       <div style={{ height: 1, background: T.border, marginBottom: "20px" }} />
       <p style={{ fontFamily: T.sans, fontSize: "13px", lineHeight: 1.7, color: T.muted, maxWidth: "62ch", marginBottom: "40px" }}>
-        This document is the single source of truth for Nullshift Studio&apos;s visual identity. It defines the
+        This document is the single source of truth for Nullshift&apos;s visual identity. It defines the
         typography, colour palette, logo usage, and design principles that keep every touchpoint consistent,
         recognisable, and intentional.
       </p>
@@ -123,7 +123,6 @@ function BrandPrintable({ printRef }: { printRef: React.RefObject<HTMLDivElement
             <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
               <span style={{ width: 11, height: 11, borderRadius: "50%", background: T.primary, display: "inline-block" }} />
               <span style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "18px", letterSpacing: "0.04em", color: T.fg }}>NULLSHIFT</span>
-              <span style={{ fontFamily: T.mono, fontSize: "12px", color: T.muted }}>/ STUDIO</span>
             </span>
           </div>
           {["Always maintain clear space around the logo", "Minimum width: 120px", "Use on dark backgrounds (near-black) only"].map((r) => (
@@ -156,7 +155,7 @@ function BrandPrintable({ printRef }: { printRef: React.RefObject<HTMLDivElement
       </div>
 
       <div style={{ height: 1, background: T.border, margin: "8px 0 14px" }} />
-      <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", color: `${T.muted}99` }}>© 2025 NULLSHIFT STUDIO — BUILT WITH INTENTION</div>
+      <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", color: `${T.muted}99` }}>© 2025 NULLSHIFT — BUILT WITH INTENTION</div>
     </div>
   );
 }
@@ -202,7 +201,7 @@ export default function BrandPage() {
             BRAND<br /><span className="hero-glow" style={{ color: T.primary }}>GUIDELINES.</span>
           </h1>
           <p className="mt-6 max-w-[52ch]" style={{ fontFamily: T.sans, fontSize: "1rem", lineHeight: 1.75, color: T.muted }}>
-            The single source of truth for Nullshift Studio&apos;s visual identity — typography, colour, logo usage, and the principles that keep every touchpoint consistent and intentional.
+            The single source of truth for Nullshift&apos;s visual identity — typography, colour, logo usage, and the principles that keep every touchpoint consistent and intentional.
           </p>
           <div className="mt-8"><DownloadBtn /></div>
         </section>
@@ -256,7 +255,6 @@ export default function BrandPage() {
                     <div className="flex items-center gap-2.5">
                       <span className="size-3 rounded-full" style={{ background: T.primary }} />
                       <span style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1.4rem", letterSpacing: "0.04em", color: T.fg }}>NULLSHIFT</span>
-                      <span style={{ fontFamily: T.mono, fontSize: "0.85rem", color: T.muted }}>/ STUDIO</span>
                     </div>
                   </div>
                   <ul className="space-y-2">

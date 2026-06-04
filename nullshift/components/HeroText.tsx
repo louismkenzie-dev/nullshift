@@ -65,7 +65,7 @@ export default function HeroText() {
         }}
       >
         <span className="size-1.5 rounded-full pulse-dot" style={{ background: T.primary }} />
-        <span>SYS_01 / WEB_STUDIO</span>
+        <span>SYS_01 / WEB_DEV</span>
       </div>
 
       {/* Main sliced text */}
@@ -132,7 +132,7 @@ export default function HeroText() {
           className="max-w-[42ch]"
           style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "clamp(0.9rem,1.3vw,1.05rem)", lineHeight: 1.65, color: T.muted }}
         >
-          Nullshift Studio helps established businesses make the move online — with websites and branding built to last.
+          Nullshift helps established businesses make the move online — with websites and branding built to last.
         </p>
         <a
           href="/book"

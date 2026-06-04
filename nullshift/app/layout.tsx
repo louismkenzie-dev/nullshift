@@ -24,9 +24,9 @@ const barlowCondensed = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "Nullshift Studio — Web Design & Development",
+  title: "Nullshift — Web Design & Development",
   description:
-    "Nullshift Studio helps small and medium-sized businesses make the move online — with websites and branding built to last.",
+    "Nullshift helps small and medium-sized businesses make the move online — with websites and branding built to last.",
 };
 
 export default function RootLayout({

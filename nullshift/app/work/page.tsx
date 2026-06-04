@@ -49,7 +49,7 @@ const testimonials = [
     status: "PLACEHOLDER",
   },
   {
-    quote: "Finally a web studio that speaks plain English. No jargon, clear pricing, and the end product is exactly what we asked for. Couldn't recommend Nullshift more.",
+    quote: "Finally a web developer that speaks plain English. No jargon, clear pricing, and the end product is exactly what we asked for. Couldn't recommend Nullshift more.",
     name: "CLIENT_NAME",
     business: "BUSINESS_NAME",
     industry: "Trades",

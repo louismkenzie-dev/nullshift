@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { T } from "@/lib/tokens";
+import { Logo } from "@/components/Logo";
 
 const links = [
   { label: "About",   href: "/about" },
@@ -20,14 +21,8 @@ export function Nav() {
       style={{ background: `${T.bg}e6`, borderColor: T.border, backdropFilter: "blur(12px)" }}
     >
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2.5">
-        <span className="size-2 shrink-0" style={{ background: T.primary }} />
-        <span style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "0.75rem", letterSpacing: "0.04em", color: T.fg }}>
-          NULLSHIFT
-        </span>
-        <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.04em", color: T.muted }}>
-          / STUDIO
-        </span>
+      <Link href="/" className="relative z-10">
+        <Logo markSize={24} />
       </Link>
 
       {/* Links */}

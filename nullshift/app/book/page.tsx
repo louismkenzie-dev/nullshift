@@ -28,6 +28,29 @@ const inputStyle = (T: { bg: string; border: string; fg: string; sans: string })
 
 export default function BookPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (sending) return;
+    setSending(true);
+    setError(null);
+    const data = Object.fromEntries(new FormData(e.currentTarget).entries());
+    try {
+      const res = await fetch("/api/enquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...data, source: "booking" }),
+      });
+      if (!res.ok) throw new Error();
+      setSubmitted(true);
+    } catch {
+      setError("Something went wrong. Please email us directly.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <>
@@ -102,7 +125,7 @@ export default function BookPage() {
             {/* Form */}
             <div className="p-10 md:px-12 md:py-20">
               <Reveal delay={0.1}>
-                <form className="flex flex-col gap-0.5" onSubmit={e => { e.preventDefault(); setSubmitted(true); }}>
+                <form className="flex flex-col gap-0.5" onSubmit={handleSubmit}>
                   {[
                     { id: "name",     label: "YOUR_NAME",     type: "text",  required: true },
                     { id: "business", label: "BUSINESS_NAME", type: "text",  required: true },
@@ -160,11 +183,12 @@ export default function BookPage() {
                     </select>
                   </div>
 
-                  <button type="submit" disabled={submitted} className="mt-4 w-full flex items-center justify-between px-5 h-12 font-semibold transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+                  <button type="submit" disabled={submitted || sending} className="mt-4 w-full flex items-center justify-between px-5 h-12 font-semibold transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
                     style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.08em", background: T.primary, color: T.primaryFg, borderRadius: "2px", boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)` }}>
-                    <span>{submitted ? "REQUEST_SENT ✓ — WE'LL BE IN TOUCH" : "REQUEST_A_CALL"}</span>
-                    {!submitted && <span>→</span>}
+                    <span>{submitted ? "REQUEST_SENT ✓ — WE'LL BE IN TOUCH" : sending ? "SENDING…" : "REQUEST_A_CALL"}</span>
+                    {!submitted && !sending && <span>→</span>}
                   </button>
+                  {error && <p style={{ fontFamily: T.mono, fontSize: "10px", color: "#f87171", marginTop: "8px" }}>{error}</p>}
                 </form>
               </Reveal>
             </div>
