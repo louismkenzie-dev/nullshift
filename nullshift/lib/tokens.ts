@@ -6,6 +6,8 @@ export const T = {
   muted:     "#a1a1a6",
   primary:   "#10b981",
   primaryFg: "#131316",
+  accent:    "#fb923c",
+  danger:    "#f87171",
   border:    "#3d3d42",
   borderStr: "#505055",
   display:   "var(--font-display), ui-sans-serif, sans-serif",

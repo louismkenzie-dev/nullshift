@@ -9,6 +9,7 @@ import { LogoMark } from "@/components/Logo";
 const links = [
   { label: "Enquiries", href: "/admin" },
   { label: "Clients", href: "/admin/clients" },
+  { label: "Calendar", href: "/admin/calendar" },
   { label: "Proposals", href: "/admin/proposals" },
 ];
 

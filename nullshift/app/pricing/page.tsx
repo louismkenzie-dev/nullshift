@@ -9,7 +9,7 @@ import Link from "next/link";
 const tiers = [
   {
     id: "STARTER",
-    price: "From $1,500",
+    price: "From £1,500",
     tagline: "For businesses going online for the first time.",
     features: [
       "Up to 5 pages",
@@ -26,7 +26,7 @@ const tiers = [
   },
   {
     id: "STANDARD",
-    price: "From $3,500",
+    price: "From £3,500",
     tagline: "For businesses ready to grow their online presence.",
     features: [
       "Up to 12 pages",
@@ -43,7 +43,7 @@ const tiers = [
   },
   {
     id: "PREMIUM",
-    price: "From $7,500",
+    price: "From £7,500",
     tagline: "For established businesses with complex requirements.",
     features: [
       "Unlimited pages",
@@ -132,7 +132,7 @@ export default function PricingPage() {
           </div>
           <Reveal>
             <p className="px-10 py-4 text-center" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: `${T.muted}88`, borderTop: `1px solid ${T.border}` }}>
-              ALL_PRICES_AUD / ESTIMATES_ONLY / FINAL_QUOTE_AFTER_DISCOVERY_CALL
+              ALL_PRICES_GBP / ESTIMATES_ONLY / FINAL_QUOTE_AFTER_DISCOVERY_CALL
             </p>
           </Reveal>
         </section>

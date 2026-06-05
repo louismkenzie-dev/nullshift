@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
@@ -186,36 +187,6 @@ function WhyNullshift() {
 
 /* ── CONTACT ────────────────────────────────── */
 function Contact() {
-  const [submitted, setSubmitted] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fields = [
-    { id: "name",     label: "YOUR_NAME",     type: "text" },
-    { id: "business", label: "BUSINESS_NAME", type: "text" },
-    { id: "email",    label: "EMAIL_ADDRESS", type: "email" },
-  ];
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (sending) return;
-    setSending(true);
-    setError(null);
-    const data = Object.fromEntries(new FormData(e.currentTarget).entries());
-    try {
-      const res = await fetch("/api/enquiries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, source: "contact" }),
-      });
-      if (!res.ok) throw new Error();
-      setSubmitted(true);
-    } catch {
-      setError("Something went wrong. Please email us directly.");
-    } finally {
-      setSending(false);
-    }
-  }
-  const inputStyle: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, borderTop: "none", padding: "8px 16px 14px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", fontWeight: 400, outline: "none", marginBottom: "2px" };
   return (
     <section id="contact" className="h-full" style={{ borderTop: `1px solid ${T.border}` }}>
       <div className="grid md:grid-cols-2 h-full">
@@ -234,33 +205,34 @@ function Contact() {
               <div className="flex items-center gap-2.5" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.muted }}>
                 <span className="size-1.5 rounded-full pulse-dot flex-shrink-0" style={{ background: T.primary }} />SYS_RESPONSE / 24H_MAX
               </div>
-              <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: `${T.muted}88`, paddingLeft: "20px" }}>COORD / AU — GLOBAL_REACH</div>
+              <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: `${T.muted}88`, paddingLeft: "20px" }}>COORD / UK — GLOBAL_REACH</div>
             </div>
           </Reveal>
         </div>
-        <div className="p-10 md:px-12 md:py-10 flex items-center" style={{ borderLeft: `1px solid ${T.border}` }}>
-          <Reveal delay={0.2} className="w-full">
-            <form className="flex flex-col gap-0.5" onSubmit={handleSubmit}>
-              {fields.map(f => (
-                <div key={f.id} className="flex flex-col">
-                  <label htmlFor={f.id} style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted, padding: "14px 16px 4px", background: T.surface, border: `1px solid ${T.border}`, borderBottom: "none" }}>{f.label}</label>
-                  <input id={f.id} name={f.id} type={f.type} required disabled={submitted} style={inputStyle}
-                    onFocus={e => { e.currentTarget.style.borderColor = `${T.primary}66`; e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${T.primary}44`; }}
-                    onBlur={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = "none"; }} />
-                </div>
-              ))}
-              <div className="flex flex-col">
-                <label htmlFor="message" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted, padding: "14px 16px 4px", background: T.surface, border: `1px solid ${T.border}`, borderBottom: "none" }}>PROJECT_BRIEF</label>
-                <textarea id="message" name="message" rows={3} required disabled={submitted} style={{ ...inputStyle, resize: "none", borderTop: "none" }}
-                  onFocus={e => { e.currentTarget.style.borderColor = `${T.primary}66`; e.currentTarget.style.boxShadow = `inset 0 0 0 1px ${T.primary}44`; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.boxShadow = "none"; }} />
+        <div className="p-10 md:px-12 md:py-10 flex items-center justify-center" style={{ borderLeft: `1px solid ${T.border}` }}>
+          <Reveal delay={0.2} className="w-full max-w-md">
+            <div className="flex flex-col gap-6">
+              <div>
+                <div className="mb-3" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: T.primary }}>// 5-STEP BRIEF</div>
+                <h3 className="mb-3" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.8rem", lineHeight: 1, letterSpacing: "-0.01em", color: T.fg, textTransform: "uppercase" }}>
+                  TELL US ABOUT<br />YOUR PROJECT.
+                </h3>
+                <p style={{ fontFamily: T.sans, fontSize: "0.92rem", lineHeight: 1.7, color: T.muted, maxWidth: "38ch" }}>
+                  A quick 2-minute brief — pages, style, budget, timeline. We&apos;ll send back a clear proposal.
+                </p>
               </div>
-              <button type="submit" disabled={submitted || sending} className="mt-3 w-full flex items-center justify-between px-5 h-11 font-semibold transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer"
-                style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0.06em", background: T.primary, color: T.primaryFg, borderRadius: "2px", boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)` }}>
-                <span>{submitted ? "MSG_SENT ✓" : sending ? "SENDING…" : "SEND_MESSAGE"}</span><span>→</span>
-              </button>
-              {error && <p style={{ fontFamily: T.mono, fontSize: "10px", color: "#f87171", marginTop: "8px" }}>{error}</p>}
-            </form>
+              <Link
+                href="/brief"
+                className="inline-flex items-center justify-between px-5 h-12 font-semibold transition-opacity hover:opacity-90"
+                style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px", boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)` }}
+              >
+                <span>TELL US MORE</span>
+                <span>→</span>
+              </Link>
+              <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: `${T.muted}88` }}>
+                ~ 2 MIN · NO COMMITMENT
+              </div>
+            </div>
           </Reveal>
         </div>
       </div>

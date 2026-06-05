@@ -102,7 +102,7 @@ export default function LegalPage() {
           <div className="mt-8 flex items-start gap-3 px-5 py-4 max-w-2xl" style={{ border: `1px solid #f87171`, background: "rgba(248,113,113,0.05)", borderRadius: "2px" }}>
             <span style={{ color: "#f87171", flexShrink: 0 }}>⚠</span>
             <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", lineHeight: 1.7, color: "#f87171" }}>
-              PLACEHOLDER CONTENT — The documents below are skeleton drafts for structural reference only. Replace with legally reviewed Privacy Policy and Terms of Service before this site goes live. Consult a qualified solicitor for compliance with Australian Consumer Law and any applicable international regulations (GDPR, etc.).
+              PLACEHOLDER CONTENT — The documents below are skeleton drafts for structural reference only. Replace with legally reviewed Privacy Policy and Terms of Service before this site goes live. Consult a qualified solicitor for compliance with UK consumer law and data protection regulations (UK GDPR, Data Protection Act 2018, etc.).
             </p>
           </div>
 

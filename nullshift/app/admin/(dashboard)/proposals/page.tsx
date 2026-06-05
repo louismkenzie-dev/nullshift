@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { T } from "@/lib/tokens";
+import { money, WEBSITE_BUILD_ITEMS } from "@/lib/format";
 
 type LineItem = { label: string; qty: number; unit_price: number };
 type Client = { id: string; name: string; business_name: string | null; email: string | null };
@@ -11,10 +13,17 @@ type Proposal = {
   line_items: LineItem[]; currency: string; total: number; status: string; sent_to: string | null;
 };
 
-const money = (n: number, c = "AUD") => new Intl.NumberFormat("en-AU", { style: "currency", currency: c }).format(n);
-
 export default function ProposalsPage() {
+  return (
+    <Suspense fallback={<p style={{ fontFamily: T.mono, fontSize: 12, color: T.muted }}>Loading…</p>}>
+      <ProposalsInner />
+    </Suspense>
+  );
+}
+
+function ProposalsInner() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState<Proposal[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,13 +50,32 @@ export default function ProposalsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Pre-fill the composer when arriving from a client's "Draft Proposal" action.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || loading) return;
+    const clientParam = searchParams.get("client");
+    if (!clientParam) return;
+    const client = clients.find(c => c.id === clientParam);
+    if (!client) return;
+    prefilled.current = true;
+    setCreating(true);
+    setClientId(client.id);
+    const who = client.business_name || client.name;
+    setTitle(`Website Build — ${who}`);
+    setSummary(`Proposal for ${who}. Standard website build with the scope below; extras can be added as needed.`);
+    if (searchParams.get("template") === "website") {
+      setItems(WEBSITE_BUILD_ITEMS.map(i => ({ ...i })));
+    }
+  }, [loading, clients, searchParams]);
+
   async function createProposal(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
     const client = clients.find(c => c.id === clientId);
     await supabase.from("proposals").insert({
       client_id: clientId || null, title, summary,
-      line_items: items.filter(i => i.label.trim()), total, currency: "AUD",
+      line_items: items.filter(i => i.label.trim()), total, currency: "GBP",
       status: "draft", sent_to: client?.email ?? null,
     });
     setTitle(""); setSummary(""); setItems([{ label: "", qty: 1, unit_price: 0 }]); setClientId(""); setCreating(false);
@@ -95,7 +123,7 @@ export default function ProposalsPage() {
               <div key={i} className="grid grid-cols-[1fr_80px_120px_100px_auto] gap-2 items-center">
                 <input placeholder="Description" style={input} value={it.label} onChange={e => { const a = [...items]; a[i] = { ...it, label: e.target.value }; setItems(a); }} />
                 <input type="number" min={0} placeholder="Qty" style={input} value={it.qty} onChange={e => { const a = [...items]; a[i] = { ...it, qty: +e.target.value }; setItems(a); }} />
-                <input type="number" min={0} placeholder="Unit $" style={input} value={it.unit_price} onChange={e => { const a = [...items]; a[i] = { ...it, unit_price: +e.target.value }; setItems(a); }} />
+                <input type="number" min={0} placeholder="Unit £" style={input} value={it.unit_price} onChange={e => { const a = [...items]; a[i] = { ...it, unit_price: +e.target.value }; setItems(a); }} />
                 <span className="text-right" style={{ fontFamily: T.mono, fontSize: "0.8rem", color: T.muted }}>{money((it.qty || 0) * (it.unit_price || 0))}</span>
                 <button type="button" onClick={() => setItems(items.filter((_, j) => j !== i))} style={{ color: "#f87171", fontFamily: T.mono, fontSize: 16 }}>×</button>
               </div>

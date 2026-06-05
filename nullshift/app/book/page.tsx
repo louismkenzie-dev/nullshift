@@ -116,7 +116,7 @@ export default function BookPage() {
                     PLATFORM / ZOOM — FREE_TO_JOIN
                   </div>
                   <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: `${T.muted}88`, paddingLeft: "20px" }}>
-                    COORD / AU — GLOBAL_REACH
+                    COORD / UK — GLOBAL_REACH
                   </div>
                 </div>
               </Reveal>
@@ -155,9 +155,9 @@ export default function BookPage() {
                       onFocus={e => { e.currentTarget.style.borderColor = `${T.primary}66`; }}
                       onBlur={e => { e.currentTarget.style.borderColor = T.border; }}>
                       <option value="">Select a time...</option>
-                      <option value="morning">Morning (9am–12pm AEST)</option>
-                      <option value="afternoon">Afternoon (12pm–5pm AEST)</option>
-                      <option value="evening">Evening (5pm–8pm AEST)</option>
+                      <option value="morning">Morning (9am–12pm London)</option>
+                      <option value="afternoon">Afternoon (12pm–5pm London)</option>
+                      <option value="evening">Evening (5pm–8pm London)</option>
                     </select>
                   </div>
 

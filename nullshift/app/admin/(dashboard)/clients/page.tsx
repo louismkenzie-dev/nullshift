@@ -20,7 +20,26 @@ export default function ClientsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.from("clients").select("*").order("created_at", { ascending: false });
-    setRows((data as Client[]) ?? []);
+    const clients = (data as Client[]) ?? [];
+
+    // Sync statuses from the proposal lifecycle: accepted → won, unsigned
+    // proposal older than 30 days → lost. Applied lazily on list load.
+    const { data: props } = await supabase.from("proposals").select("client_id, created_at, accepted_at");
+    const PROPOSAL_VALID_DAYS = 30;
+    const desiredFor: Record<string, string> = {};
+    for (const p of (props ?? []) as { client_id: string | null; created_at: string; accepted_at: string | null }[]) {
+      if (!p.client_id) continue;
+      if (p.accepted_at) { desiredFor[p.client_id] = "won"; continue; }
+      const expired = Date.now() - new Date(p.created_at).getTime() > PROPOSAL_VALID_DAYS * 86400000;
+      if (expired && desiredFor[p.client_id] !== "won") desiredFor[p.client_id] = "lost";
+    }
+    const updates = clients.filter(c => desiredFor[c.id] && desiredFor[c.id] !== c.status);
+    if (updates.length) {
+      await Promise.all(updates.map(c => supabase.from("clients").update({ status: desiredFor[c.id] }).eq("id", c.id)));
+      for (const c of clients) if (desiredFor[c.id]) c.status = desiredFor[c.id];
+    }
+
+    setRows(clients);
     setLoading(false);
   }, [supabase]);
 

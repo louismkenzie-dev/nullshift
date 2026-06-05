@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hasSupabaseBrowserConfig } from "@/lib/supabase/env";
 
 /**
  * Next.js 16 "proxy" (formerly middleware). Refreshes the Supabase auth
@@ -7,6 +8,19 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
+
+  // If Supabase isn't configured yet, keep the admin routes usable and send
+  // users to the login screen instead of crashing the request pipeline.
+  if (!hasSupabaseBrowserConfig()) {
+    if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/login";
+      url.searchParams.set("setup", "1");
+      return NextResponse.redirect(url);
+    }
+    return response;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,8 +44,6 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
   const isAdminArea = pathname.startsWith("/admin");
   const isLogin = pathname === "/admin/login";
 

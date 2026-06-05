@@ -44,6 +44,23 @@ html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
 .lenis.lenis-stopped { overflow: hidden; }
 
+/* ── Brief intake form inputs ───────────────────────────────── */
+.brief-input {
+  width: 100%;
+  background: #0b0a07;
+  color: #fafafa;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  border: 1px solid #3d3d42;
+  border-radius: 6px;
+  padding: 10px 14px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.brief-input::placeholder { color: rgba(161,161,166,0.5); }
+.brief-input:focus { border-color: rgba(16,185,129,0.55); box-shadow: 0 0 0 1px rgba(16,185,129,0.2); }
+.brief-input-err { border-color: rgba(248,113,113,0.55); }
+
 /* ── Sticky-stacking uniform cards ───────────────────────────── */
 :root { --card-h: 80vh; }
 

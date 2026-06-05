@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { T } from "@/lib/tokens";
+import { BriefViewer } from "@/components/BriefViewer";
+import type { BriefData } from "@/lib/brief";
 
 type Enquiry = {
   id: string;
@@ -16,6 +18,7 @@ type Enquiry = {
   preferred_date: string | null;
   preferred_time: string | null;
   referral: string | null;
+  brief_data: BriefData | null;
   status: string;
 };
 
@@ -32,7 +35,8 @@ export default function EnquiriesPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from("enquiries").select("*").order("created_at", { ascending: false });
+    // Converted enquiries live on as clients — keep them out of the inbox.
+    const { data } = await supabase.from("enquiries").select("*").neq("status", "converted").order("created_at", { ascending: false });
     setRows((data as Enquiry[]) ?? []);
     setLoading(false);
   }, [supabase]);
@@ -45,12 +49,17 @@ export default function EnquiriesPage() {
   }
 
   async function convertToClient(e: Enquiry) {
+    // Carry the enquiry's pipeline status onto the new client so it still shows.
+    const clientStatus = e.status === "new" ? "lead" : e.status;
     await supabase.from("clients").insert({
-      name: e.name, business_name: e.business_name, email: e.email, phone: e.phone, status: "lead",
+      name: e.name, business_name: e.business_name, email: e.email, phone: e.phone, status: clientStatus,
       notes: `Converted from ${e.source} enquiry.`,
+      requested_date: e.preferred_date, requested_time: e.preferred_time,
     });
-    await setStatus(e.id, "in_progress");
-    alert("Client created. See the Clients tab.");
+    // Mark the enquiry converted and remove it from the inbox immediately.
+    await supabase.from("enquiries").update({ status: "converted" }).eq("id", e.id);
+    setRows(r => r.filter(x => x.id !== e.id));
+    setOpen(null);
   }
 
   const newCount = rows.filter(r => r.status === "new").length;
@@ -94,6 +103,7 @@ export default function EnquiriesPage() {
                     {e.referral && <div><b style={{ color: T.fg }}>Heard via:</b> {e.referral}</div>}
                   </div>
                   {e.message && <p className="mb-4" style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.7, color: T.fg, whiteSpace: "pre-wrap" }}>{e.message}</p>}
+                  {e.brief_data && <div className="mb-4"><BriefViewer brief={e.brief_data} /></div>}
                   <div className="flex flex-wrap items-center gap-2">
                     <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted, marginRight: "4px" }}>STATUS:</span>
                     {STATUSES.map(s => (

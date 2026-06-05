@@ -41,13 +41,28 @@ export function Footer() {
         </ul>
       </nav>
 
-      <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", color: `${T.muted}88` }}>
-        © 2025 NULLSHIFT.{" "}
-        {/* Hidden admin entry point */}
-        <Link href="/admin" aria-label="Admin" className="hover:text-[#10b981] transition-colors" style={{ color: "inherit" }}>
-          BUILT_WITH_INTENTION
+      <div className="flex items-center gap-3">
+        <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", color: `${T.muted}88` }}>
+          © 2025 NULLSHIFT.
+        </span>
+        <Link
+          href="/admin/login"
+          aria-label="Admin login"
+          className="inline-flex items-center px-3 h-7 transition-colors hover:text-[#10b981]"
+          style={{
+            fontFamily: T.mono,
+            fontSize: "10px",
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: T.fg,
+            border: `1px solid ${T.border}`,
+            borderRadius: "999px",
+            background: `${T.bg}66`,
+          }}
+        >
+          Admin Login
         </Link>
-      </span>
+      </div>
     </footer>
   );
 }

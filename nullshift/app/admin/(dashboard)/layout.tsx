@@ -3,8 +3,38 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
 import { AdminNav } from "../AdminNav";
 import { T } from "@/lib/tokens";
+import { hasSupabaseServerConfig, getMissingSupabaseEnv } from "@/lib/supabase/env";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  if (!hasSupabaseServerConfig()) {
+    const missing = getMissingSupabaseEnv();
+    return (
+      <main className="min-h-screen flex items-center justify-center px-6" style={{ background: T.bg }}>
+        <div className="text-center max-w-lg">
+          <div
+            style={{
+              fontFamily: T.mono,
+              fontSize: "10px",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: "#f87171",
+              marginBottom: "16px",
+            }}
+          >
+            SUPABASE_SETUP_REQUIRED
+          </div>
+          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2rem", color: T.fg, marginBottom: "12px" }}>
+            ADMIN LOGIN ISN'T READY YET
+          </h1>
+          <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
+            Missing environment variables: <code>{missing.join(", ")}</code>. Add them to <code>.env.local</code>,
+            restart the dev server, then try the admin login again.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 

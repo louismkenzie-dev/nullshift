@@ -12,7 +12,7 @@ const projects = [
     title: "PROJECT_ALPHA",
     type: "Web Design & Development",
     tags: ["Retail", "E-Commerce", "Branding"],
-    desc: "A full bespoke e-commerce build for an Australian retail brand. Custom checkout flow, mobile-first design, zero platform fees.",
+    desc: "A full bespoke e-commerce build for a UK retail brand. Custom checkout flow, mobile-first design, zero platform fees.",
     status: "PLACEHOLDER — REPLACE WITH REAL PROJECT",
   },
   {
