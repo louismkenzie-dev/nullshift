@@ -51,11 +51,35 @@ export default function EnquiriesPage() {
   async function convertToClient(e: Enquiry) {
     // Carry the enquiry's pipeline status onto the new client so it still shows.
     const clientStatus = e.status === "new" ? "lead" : e.status;
-    await supabase.from("clients").insert({
+    const { data: newClient } = await supabase.from("clients").insert({
       name: e.name, business_name: e.business_name, email: e.email, phone: e.phone, status: clientStatus,
       notes: `Converted from ${e.source} enquiry.`,
       requested_date: e.preferred_date, requested_time: e.preferred_time,
-    });
+    }).select("id").single();
+
+    if (newClient) {
+      // Link any unattached brief submissions from this email to the new client
+      // (covers the common case: a visitor fills the brief publicly, then admin
+      // converts the resulting enquiry). Match by email — case-insensitive.
+      const emailMatch = (e.email || "").trim();
+      if (emailMatch) {
+        const { data: briefs } = await supabase
+          .from("enquiries")
+          .select("id, brief_data")
+          .eq("source", "brief")
+          .is("client_id", null)
+          .ilike("email", emailMatch);
+
+        if (briefs && briefs.length > 0) {
+          const ids = briefs.map(b => b.id);
+          await supabase.from("enquiries").update({ client_id: newClient.id }).in("id", ids);
+          // Stamp the most recent brief's completion onto the client so the
+          // dashboard card flips to "Brief received ✓" straight away.
+          await supabase.from("clients").update({ brief_completed_at: new Date().toISOString() }).eq("id", newClient.id);
+        }
+      }
+    }
+
     // Mark the enquiry converted and remove it from the inbox immediately.
     await supabase.from("enquiries").update({ status: "converted" }).eq("id", e.id);
     setRows(r => r.filter(x => x.id !== e.id));

@@ -37,6 +37,10 @@ export async function POST(request: Request) {
     message: brief.additionalNotes || null,
     brief_data: brief,
     client_id: clientId,
+    // If the brief came from an admin-sent invite link (clientId present),
+    // the client already exists — skip the inbox and treat as 'converted'
+    // so it only surfaces on that client's dashboard, not as a new enquiry.
+    status: clientId ? "converted" : "new",
   });
   if (error) {
     console.error("Supabase insert error:", error.message);

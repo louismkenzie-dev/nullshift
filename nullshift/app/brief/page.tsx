@@ -349,7 +349,7 @@ function StepFive({ form, errors, set }: { form: BriefData; errors: Errs; set: <
             style={{ left: `${pct}%`, background: T.primary, border: `2px solid ${T.bg}` }} />
         </div>
         <div className="flex justify-between" style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
-          <span>£500</span><span>£10k</span><span>£25k</span><span>£50k+</span>
+          <span>£500</span><span>£2.5k</span><span>£5k</span><span>£7.5k</span><span>£10k+</span>
         </div>
         {errors.budget && <FieldError msg={errors.budget} />}
       </div>

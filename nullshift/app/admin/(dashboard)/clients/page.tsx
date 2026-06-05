@@ -55,7 +55,7 @@ export default function ClientsPage() {
     load();
   }
 
-  const input: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, padding: "10px 12px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", outline: "none", borderRadius: "3px" };
+  const input: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, padding: "10px 12px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", outline: "none", borderRadius: "3px", minWidth: 0, width: "100%" };
 
   return (
     <div>
@@ -65,7 +65,7 @@ export default function ClientsPage() {
       </div>
 
       {/* Add client */}
-      <form onSubmit={addClient} className="grid md:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 mb-8 p-4 rounded-lg" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+      <form onSubmit={addClient} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 mb-8 p-4 rounded-lg" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
         <input placeholder="Name *" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={input} />
         <input placeholder="Business" value={form.business_name} onChange={e => setForm({ ...form, business_name: e.target.value })} style={input} />
         <input placeholder="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={input} />
@@ -83,12 +83,15 @@ export default function ClientsPage() {
       ) : (
         <div className="rounded-lg overflow-hidden" style={{ border: `1px solid ${T.border}` }}>
           {rows.map((c, i) => (
-            <Link key={c.id} href={`/admin/clients/${c.id}`} className="grid grid-cols-[1fr_1fr_120px_120px] gap-4 items-center px-5 py-4 hover:bg-[#1f1f23] transition-colors"
+            <Link key={c.id} href={`/admin/clients/${c.id}`} className="grid grid-cols-[1fr_100px_auto] md:grid-cols-[1fr_1fr_120px_120px] gap-3 md:gap-4 items-center px-4 sm:px-5 py-4 hover:bg-[#1f1f23] transition-colors"
               style={{ borderTop: i ? `1px solid ${T.border}` : "none", background: T.surface }}>
-              <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", color: T.fg }}>{c.name}</span>
-              <span style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}>{c.business_name || "—"}</span>
-              <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.primary }}>● {c.status}</span>
-              <span className="text-right" style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted }}>Brand form →</span>
+              <span className="min-w-0 truncate" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", color: T.fg }}>
+                {c.name}
+                {c.business_name && <span className="md:hidden" style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "0.78rem", color: T.muted, marginLeft: "8px" }}>· {c.business_name}</span>}
+              </span>
+              <span className="hidden md:inline min-w-0 truncate" style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}>{c.business_name || "—"}</span>
+              <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.primary, whiteSpace: "nowrap" }}>● {c.status}</span>
+              <span className="hidden md:inline text-right" style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted, whiteSpace: "nowrap" }}>Brand form →</span>
             </Link>
           ))}
         </div>

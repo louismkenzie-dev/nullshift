@@ -107,8 +107,32 @@ export default function ClientDetail() {
     }
 
     // Look up the latest submitted brief linked to this client (if any).
-    const { data: b } = await supabase.from("enquiries").select("brief_data").eq("client_id", id).eq("source", "brief").order("created_at", { ascending: false }).limit(1).maybeSingle();
-    setBrief((b?.brief_data as BriefData) ?? null);
+    const { data: linked } = await supabase.from("enquiries").select("id, brief_data").eq("client_id", id).eq("source", "brief").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    let briefRow = linked;
+    // Fallback: if no brief is linked yet but one exists from the same email,
+    // adopt it and stamp brief_completed_at. Covers clients converted before
+    // the auto-link fix landed, or briefs submitted after the client existed
+    // without using the /brief?client=<id> invite link.
+    if (!briefRow && cl_?.email) {
+      const { data: orphan } = await supabase
+        .from("enquiries")
+        .select("id, brief_data")
+        .eq("source", "brief")
+        .is("client_id", null)
+        .ilike("email", cl_.email.trim())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (orphan?.brief_data) {
+        await supabase.from("enquiries").update({ client_id: id }).eq("id", orphan.id);
+        if (!cl_.brief_completed_at) {
+          await supabase.from("clients").update({ brief_completed_at: new Date().toISOString() }).eq("id", id);
+          setClient({ ...cl_, brief_completed_at: new Date().toISOString() });
+        }
+        briefRow = orphan;
+      }
+    }
+    setBrief((briefRow?.brief_data as BriefData) ?? null);
 
     setLoading(false);
   }, [supabase, id]);

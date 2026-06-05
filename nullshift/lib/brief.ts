@@ -64,13 +64,15 @@ export const LOGO_STATES = [
 ] as const;
 
 export const BUDGET_MIN = 500;
-export const BUDGET_MAX = 50000;
-export const BUDGET_STEP = 500;
+export const BUDGET_MAX = 10000;
+export const BUDGET_STEP = 100;
 
 export function formatBudget(val: number): string {
-  if (val >= BUDGET_MAX) return "£50,000+";
+  if (val >= BUDGET_MAX) return "£10,000+";
   if (val < 1000) return `£${val}`;
-  return `£${(val / 1000).toFixed(val % 1000 === 0 ? 0 : 1)}k`;
+  // Show one decimal only when it isn't a clean round of £100s above £1k.
+  const k = val / 1000;
+  return `£${(k).toFixed(k % 1 === 0 ? 0 : 1)}k`;
 }
 
 /** Look up the human label for any option id, falling back to the raw id. */
