@@ -82,7 +82,7 @@ export default function HeroText() {
                   initial={{ opacity: 0, filter: "blur(10px)" }}
                   animate={{ opacity: 1, filter: "blur(0px)" }}
                   transition={{ delay: i * 0.04 + 0.3, duration: 0.8 }}
-                  className="text-[15vw] leading-none font-black"
+                  className="text-[17vw] md:text-[15vw] leading-none font-black"
                   style={{ ...bigText, color: T.fg }}
                 >
                   {char === " " ? " " : char}
@@ -93,7 +93,7 @@ export default function HeroText() {
                   initial={{ x: "-100%", opacity: 0 }}
                   animate={{ x: "100%", opacity: [0, 1, 0] }}
                   transition={{ duration: 0.7, delay: i * 0.04, ease: "easeInOut" }}
-                  className={`${sliceClass} text-[15vw]`}
+                  className={`${sliceClass} text-[17vw] md:text-[15vw]`}
                   style={{ ...bigText, color: T.primary, clipPath: "polygon(0 0, 100% 0, 100% 35%, 0 35%)" }}
                 >
                   {char === " " ? " " : char}
@@ -104,7 +104,7 @@ export default function HeroText() {
                   initial={{ x: "100%", opacity: 0 }}
                   animate={{ x: "-100%", opacity: [0, 1, 0] }}
                   transition={{ duration: 0.7, delay: i * 0.04 + 0.1, ease: "easeInOut" }}
-                  className={`${sliceClass} text-[15vw]`}
+                  className={`${sliceClass} text-[17vw] md:text-[15vw]`}
                   style={{ ...bigText, color: "#d4d4d8", clipPath: "polygon(0 35%, 100% 35%, 100% 65%, 0 65%)" }}
                 >
                   {char === " " ? " " : char}
@@ -115,7 +115,7 @@ export default function HeroText() {
                   initial={{ x: "-100%", opacity: 0 }}
                   animate={{ x: "100%", opacity: [0, 1, 0] }}
                   transition={{ duration: 0.7, delay: i * 0.04 + 0.2, ease: "easeInOut" }}
-                  className={`${sliceClass} text-[15vw]`}
+                  className={`${sliceClass} text-[17vw] md:text-[15vw]`}
                   style={{ ...bigText, color: T.primary, clipPath: "polygon(0 65%, 100% 65%, 100% 100%, 0 100%)" }}
                 >
                   {char === " " ? " " : char}

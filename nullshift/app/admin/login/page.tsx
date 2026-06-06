@@ -93,6 +93,10 @@ function AdminLogin() {
             </button>
           </form>
         )}
+        <a href="/" className="mt-4 h-10 flex items-center justify-center transition-opacity hover:opacity-80"
+          style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.muted }}>
+          ← Back to website
+        </a>
       </div>
     </main>
   );

@@ -10,7 +10,7 @@ import { BriefViewer } from "@/components/BriefViewer";
 import type { BriefData } from "@/lib/brief";
 
 type Client = { id: string; name: string; business_name: string | null; email: string | null; phone: string | null; status: string; notes: string | null; requested_date: string | null; requested_time: string | null; brief_completed_at: string | null };
-type Call = { id: string; client_id: string; call_date: string; call_time: string; duration_min: number; status: string };
+type Call = { id: string; client_id: string; call_date: string; call_time: string; duration_min: number; status: string; meeting_link: string | null; meeting_id: string | null; meeting_password: string | null };
 type LineItem = { label: string; qty: number; unit_price: number };
 type Phase = { phase: string; items: string[] };
 type Week = { week: string; title: string; description: string };
@@ -59,6 +59,14 @@ export default function ClientDetail() {
   const [bookTime, setBookTime] = useState("10:00");
   const [bookingBusy, setBookingBusy] = useState(false);
 
+  // Meeting details (zoom/link) for booked call
+  const [meetingOpen, setMeetingOpen] = useState(false);
+  const [meetingLink, setMeetingLink] = useState("");
+  const [meetingId, setMeetingId] = useState("");
+  const [meetingPassword, setMeetingPassword] = useState("");
+  const [meetingSaving, setMeetingSaving] = useState(false);
+  const [meetingCopied, setMeetingCopied] = useState(false);
+
   // Proposal (quote + document) for this client
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [docsOpen, setDocsOpen] = useState(false);
@@ -78,7 +86,13 @@ export default function ClientDetail() {
     const cl_ = c as Client;
     setClient(cl_);
     const { data: cl } = await supabase.from("calls").select("*").eq("client_id", id).eq("status", "confirmed").order("call_date").limit(1).maybeSingle();
-    setCall((cl as Call) ?? null);
+    const callRow = (cl as Call) ?? null;
+    setCall(callRow);
+    if (callRow) {
+      setMeetingLink(callRow.meeting_link ?? "");
+      setMeetingId(callRow.meeting_id ?? "");
+      setMeetingPassword(callRow.meeting_password ?? "");
+    }
     if (!cl) {
       if (cl_?.requested_date) setBookDate(cl_.requested_date);
       if (cl_?.requested_time) setBookTime(SLOT_TIME[cl_.requested_time] ?? cl_.requested_time);
@@ -155,8 +169,18 @@ export default function ClientDetail() {
     if (!call) return;
     await supabase.from("calls").update({ status: "cancelled" }).eq("id", call.id);
     setCall(null);
+    setMeetingLink(""); setMeetingId("");
   }
-  function draftProposal() { router.push(`/admin/proposals?client=${id}&template=website`); }
+
+  async function saveMeeting() {
+    if (!call) return;
+    setMeetingSaving(true);
+    await supabase.from("calls").update({ meeting_link: meetingLink || null, meeting_id: meetingId || null, meeting_password: meetingPassword || null }).eq("id", call.id);
+    setCall(c => c ? { ...c, meeting_link: meetingLink || null, meeting_id: meetingId || null, meeting_password: meetingPassword || null } : c);
+    setMeetingSaving(false);
+    setMeetingOpen(false);
+  }
+  function draftProposal() { router.push(`/admin/quotes?client=${id}&template=website`); }
 
   async function saveProposalDoc() {
     if (!proposal) return;
@@ -197,13 +221,14 @@ export default function ClientDetail() {
   const proposalUrl = proposal ? (typeof window !== "undefined" ? `${window.location.origin}/proposal/${proposal.id}` : `/proposal/${proposal.id}`) : "";
 
   // Workflow: Book Call → Draft Proposal → Send & Accept.
-  const done = [!!call, !!proposal, accepted];
+  const callComplete = !!call && !!call.meeting_link;
+  const done = [callComplete, !!brief, !!proposal, accepted];
   const nextIndex = done.findIndex(d => !d);
-  const stepCardStyle = (i: number): React.CSSProperties => {
-    const isDone = done[i], isNext = i === nextIndex;
+  const stepCardStyle = (i: number, locked = false): React.CSSProperties => {
+    const isDone = done[i], isNext = !locked && i === nextIndex;
     return {
       background: T.surface, border: `1px solid ${isNext ? T.accent : T.border}`, borderRadius: 14, padding: 18,
-      opacity: isDone ? 0.5 : 1,
+      opacity: isDone || locked ? 0.5 : 1,
       boxShadow: isNext ? `0 0 0 1px ${T.accent}, 0 0 26px -6px ${T.accent}` : "none",
       transition: "box-shadow .25s, opacity .25s, border-color .25s",
     };
@@ -268,13 +293,43 @@ export default function ClientDetail() {
       <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: "12px" }}>// WORKFLOW</div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         {/* 01 — Book Call */}
-        <div style={stepCardStyle(0)}>
+        <div style={{
+          background: T.surface, borderRadius: 14, padding: 18, opacity: 1,
+          transition: "box-shadow .25s, border-color .25s",
+          ...(callComplete
+            ? { border: `1px solid ${T.primary}`, boxShadow: `0 0 0 1px ${T.primary}, 0 0 28px -4px ${T.primary}` }
+            : { border: `1px solid ${T.accent}`,  boxShadow: `0 0 0 1px ${T.accent}, 0 0 26px -6px ${T.accent}` }
+          ),
+        }}>
           <StepHead i={0} label="Booked" />
           {call ? (
             <div className="flex flex-col gap-1">
               <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.05rem", color: T.fg }}>Call confirmed</span>
               <span style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.muted }}>{formatCallDate(call.call_date)}</span>
               <span style={{ fontFamily: T.mono, fontSize: "0.74rem", color: T.primary }}>{formatCallTime(call.call_time)} · {call.duration_min} min</span>
+
+              {/* Meeting set-up status */}
+              <div className="mt-2 pt-2 flex items-center justify-between" style={{ borderTop: `1px solid ${T.border}` }}>
+                <div>
+                  <span style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Meeting set up</span>
+                  <div style={{ fontFamily: T.mono, fontSize: "0.74rem", marginTop: 2, color: call.meeting_link ? T.primary : T.accent }}>
+                    {call.meeting_link ? "● Yes" : "○ No"}
+                  </div>
+                </div>
+                <button onClick={() => setMeetingOpen(v => !v)}
+                  style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted, border: `1px solid ${T.border}`, padding: "3px 8px", borderRadius: 3 }}>
+                  {call.meeting_link ? "Edit" : "Add"}
+                </button>
+              </div>
+
+              {call.meeting_link && (
+                <a href={call.meeting_link} target="_blank" rel="noreferrer"
+                  className="mt-1 inline-flex items-center gap-1.5 transition-opacity hover:opacity-80"
+                  style={{ fontFamily: T.mono, fontSize: "0.72rem", color: T.primary, letterSpacing: "0.04em" }}>
+                  Join meeting ↗
+                </a>
+              )}
+
               <button onClick={cancelBooking} className="self-start mt-2" style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.danger }}>Cancel booking</button>
             </div>
           ) : (
@@ -292,7 +347,7 @@ export default function ClientDetail() {
         </div>
 
         {/* 02 — Brief collection */}
-        <div style={stepCardStyle(brief ? 1 : 0)}>
+        <div style={stepCardStyle(1)}>
           <StepHead i={1} label={brief ? "Complete" : "Pending"} />
           <button onClick={() => brief ? setBriefViewerOpen(v => !v) : setBriefOpen(v => !v)} className="text-left w-full">
             <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.05rem", color: T.fg }}>
@@ -301,17 +356,23 @@ export default function ClientDetail() {
             <div style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted, marginTop: 4 }}>
               {brief ? "View the full brief the client submitted." : "Share the 5-step intake form link."}
             </div>
-            {client?.brief_completed_at && (
-              <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${T.border}` }}>
-                <span style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Submitted</span>
-                <div style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.accent ?? T.primary, marginTop: 2 }}>{new Date(client.brief_completed_at).toLocaleDateString()}</div>
+            {/* Brief status indicator */}
+            <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${T.border}` }}>
+              <span style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Brief status</span>
+              <div style={{ fontFamily: T.mono, fontSize: "0.74rem", marginTop: 2, color: brief ? T.primary : client?.brief_completed_at ? T.primary : T.accent }}>
+                {brief ? "● Submitted" : "○ Not submitted"}
               </div>
-            )}
+              {client?.brief_completed_at && (
+                <div style={{ fontFamily: T.sans, fontSize: "0.78rem", color: T.muted, marginTop: 2 }}>
+                  {new Date(client.brief_completed_at).toLocaleDateString("en-GB")}
+                </div>
+              )}
+            </div>
           </button>
         </div>
 
         {/* 03 — Draft Proposal */}
-        <div style={stepCardStyle(proposal ? 2 : 1)}>
+        <div style={stepCardStyle(2)}>
           <StepHead i={2} label="Drafted" />
           <button onClick={draftProposal} className="text-left w-full">
             <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.05rem", color: T.fg }}>Draft Proposal</div>
@@ -322,7 +383,7 @@ export default function ClientDetail() {
         </div>
 
         {/* 04 — Send Documents */}
-        <div style={stepCardStyle(3)}>
+        <div style={stepCardStyle(3, !proposal)}>
           <StepHead i={3} label="Accepted" />
           <button onClick={() => setDocsOpen(v => !v)} className="text-left w-full" disabled={!proposal} style={{ cursor: proposal ? "pointer" : "not-allowed" }}>
             <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.05rem", color: T.fg }}>Send Documents</div>
@@ -351,6 +412,61 @@ export default function ClientDetail() {
               <span style={{ letterSpacing: "0.1em" }}>{bookingBusy ? "Confirming…" : "Confirm booking"}</span>
               {!bookingBusy && <span aria-hidden style={{ fontSize: "1rem" }}>→</span>}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Meeting details panel */}
+      {meetingOpen && call && (
+        <div className="mb-4 p-6 rounded-lg" style={{ background: T.surface, border: `1px solid ${T.accent}` }}>
+          <div style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: T.muted, marginBottom: 10 }}>Zoom / meeting details</div>
+          <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted, marginBottom: 14, lineHeight: 1.6 }}>
+            Add the meeting link and ID so you can join directly from this page.
+          </p>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                placeholder="Meeting link (e.g. https://zoom.us/j/…)"
+                value={meetingLink}
+                onChange={e => setMeetingLink(e.target.value)}
+                style={{ ...input, flex: "1 1 320px", fontFamily: T.mono, fontSize: "0.78rem" }}
+              />
+              {meetingLink && (
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(meetingLink).catch(() => {}); setMeetingCopied(true); setTimeout(() => setMeetingCopied(false), 1500); }}
+                  className="px-4 h-10 transition-opacity hover:opacity-90"
+                  style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.fg, border: `1px solid ${T.border}`, borderRadius: "3px" }}>
+                  {meetingCopied ? "Copied ✓" : "Copy"}
+                </button>
+              )}
+            </div>
+            <input
+              placeholder="Meeting ID (optional, e.g. 123 456 7890)"
+              value={meetingId}
+              onChange={e => setMeetingId(e.target.value)}
+              style={{ ...input, fontFamily: T.mono, fontSize: "0.78rem" }}
+            />
+            <input
+              placeholder="Meeting password (optional)"
+              value={meetingPassword}
+              onChange={e => setMeetingPassword(e.target.value)}
+              style={{ ...input, fontFamily: T.mono, fontSize: "0.78rem" }}
+            />
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                onClick={saveMeeting}
+                disabled={meetingSaving}
+                className="px-5 h-10 transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.accent, color: T.primaryFg, borderRadius: "3px" }}>
+                {meetingSaving ? "Saving…" : "Save meeting details"}
+              </button>
+              <button
+                onClick={() => setMeetingOpen(false)}
+                className="px-5 h-10 transition-opacity hover:opacity-90"
+                style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted, border: `1px solid ${T.border}`, borderRadius: "3px" }}>
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -488,17 +604,41 @@ export default function ClientDetail() {
 
           <Card title="Investment — pulled from the quote">
             <div className="flex flex-col gap-2">
-              {proposal.line_items?.length ? proposal.line_items.map((li, i) => (
-                <div key={i} className="flex items-center justify-between py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
-                  <span style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.fg }}>{li.label}</span>
-                  <span style={{ fontFamily: T.mono, fontSize: "0.85rem", color: T.muted }}>{money((li.qty || 0) * (li.unit_price || 0), proposal.currency)}</span>
-                </div>
-              )) : <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}>No line items on the quote yet — add them in the Proposals tab.</p>}
-              <div className="flex items-center justify-between pt-3 mt-1">
-                <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.2rem", color: T.fg }}>TOTAL</span>
-                <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.4rem", color: T.primary }}>{money(proposal.total || 0, proposal.currency)}</span>
-              </div>
-              <Link href={`/admin/proposals?client=${id}`} style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, marginTop: 6 }}>Edit quote in Proposals →</Link>
+              {(() => {
+                const lineItems = proposal.line_items ?? [];
+                const regularItems = lineItems.filter(li => (li.unit_price || 0) >= 0);
+                const discountItem = lineItems.find(li => (li.unit_price || 0) < 0);
+                const subtotal = regularItems.reduce((s, li) => s + (li.qty || 0) * (li.unit_price || 0), 0);
+                const discountPct = discountItem ? Math.abs(discountItem.unit_price) : 0;
+                const discountAmount = subtotal * (discountPct / 100);
+                return (
+                  <>
+                    {regularItems.length ? regularItems.map((li, i) => (
+                      <div key={i} className="flex items-center justify-between py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
+                        <span style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.fg }}>{li.label}</span>
+                        <span style={{ fontFamily: T.mono, fontSize: "0.85rem", color: T.muted }}>{money((li.qty || 0) * (li.unit_price || 0), proposal.currency)}</span>
+                      </div>
+                    )) : <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}>No line items on the quote yet — add them in the Quotes tab.</p>}
+                    {discountItem && (
+                      <>
+                        <div className="flex items-center justify-between py-2 mt-1" style={{ borderBottom: `1px solid ${T.border}` }}>
+                          <span style={{ fontFamily: T.mono, fontSize: "0.85rem", color: T.muted }}>Subtotal</span>
+                          <span style={{ fontFamily: T.mono, fontSize: "0.85rem", color: T.muted }}>{money(subtotal, proposal.currency)}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2" style={{ borderBottom: `1px solid ${T.border}` }}>
+                          <span style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.accent }}>{discountItem.label || "Discount"} <span style={{ fontFamily: T.mono, fontSize: "0.78rem" }}>(−{discountPct}%)</span></span>
+                          <span style={{ fontFamily: T.mono, fontSize: "0.85rem", color: T.accent }}>−{money(discountAmount, proposal.currency)}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex items-center justify-between pt-3 mt-1">
+                      <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.2rem", color: T.fg }}>TOTAL</span>
+                      <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.4rem", color: T.primary }}>{money(proposal.total || 0, proposal.currency)}</span>
+                    </div>
+                  </>
+                );
+              })()}
+              <Link href={`/admin/quotes?client=${id}`} style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, marginTop: 6 }}>Edit quote in Quotes →</Link>
             </div>
           </Card>
         </>
