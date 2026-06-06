@@ -6,10 +6,11 @@ import { T } from "@/lib/tokens";
 import { Logo } from "@/components/Logo";
 
 const links = [
-  { label: "About",   href: "/about" },
-  { label: "Work",    href: "/work" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "FAQ",     href: "/faq" },
+  { label: "About",       href: "/about" },
+  { label: "Work",        href: "/work" },
+  { label: "Systems Lab", href: "/systems-lab" },
+  { label: "Pricing",     href: "/pricing" },
+  { label: "FAQ",         href: "/faq" },
 ];
 
 export function Nav() {

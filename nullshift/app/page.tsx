@@ -90,7 +90,7 @@ function WhoWeHelp() {
             BUILT FOR<br /><span style={{ color: T.muted }}>BUSINESSES</span><br /><span style={{ color: T.primary }}>DOING THE WORK.</span>
           </h2>
         </Reveal>
-        <Reveal delay={0.2}><PrimaryBtn href="/work">View our work →</PrimaryBtn></Reveal>
+        <Reveal delay={0.2}><PrimaryBtn href="/systems-lab">What we create →</PrimaryBtn></Reveal>
       </div>
       <div className="flex flex-col gap-9">
         <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "1rem", lineHeight: 1.75, color: T.muted, maxWidth: "46ch" }}>We build more than websites. From bespoke booking systems and automated email campaigns to interactive courses and custom business workflows, we create digital solutions tailored to your brand that save time, improve customer experiences, and help your business grow.</p></Reveal>
@@ -284,6 +284,31 @@ export default function Page() {
         <StackCard z={4}><WhyNullshift /></StackCard>
         <StackCard z={5}><Contact /></StackCard>
       </main>
+
+      {/* Systems Lab promo */}
+      <div className="relative" style={{ zIndex: 6, marginTop: "12vh", borderTop: `1px solid ${T.border}`, background: T.surface, padding: "64px 24px" }}>
+        <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }} className="md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <span style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: T.primary }}>New — Systems Lab</span>
+              <span style={{ display: "block", width: 24, height: 1, background: `${T.primary}55` }} />
+            </div>
+            <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.8rem,3.5vw,3rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
+              EXPERIENCE OUR SYSTEMS<br /><span style={{ color: T.muted }}>BEFORE YOU BUILD.</span>
+            </h2>
+            <p style={{ fontFamily: T.sans, fontSize: "0.95rem", lineHeight: 1.7, color: T.muted, maxWidth: "50ch", marginTop: 12 }}>
+              12 live interactive demos — booking systems, CRMs, client portals, AI chatbots and more. Click around and see exactly what we build.
+            </p>
+          </div>
+          <Link
+            href="/systems-lab"
+            className="inline-flex items-center gap-3 px-6 h-11 font-semibold transition-opacity hover:opacity-90 shrink-0"
+            style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: 2, boxShadow: `0 0 24px ${T.primary}40`, outline: `1px solid ${T.primary}66` }}
+          >
+            Enter Systems Lab →
+          </Link>
+        </div>
+      </div>
 
       <div className="relative" style={{ zIndex: 6 }}>
         <Footer />
