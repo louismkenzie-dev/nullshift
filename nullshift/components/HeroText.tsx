@@ -40,11 +40,11 @@ const PHASES = [
 const phaseEnter = { opacity: 0, filter: "blur(20px)", y: 24 };
 const phaseVisible = (fast: boolean) => ({
   opacity: 1, filter: "blur(0px)", y: 0,
-  transition: { duration: fast ? 0.5 : 1.1, ease: [0.2, 0.6, 0.2, 1] },
+  transition: { duration: fast ? 0.5 : 1.1, ease: [0.2, 0.6, 0.2, 1] as const },
 });
 const phaseExit = (fast: boolean) => ({
   opacity: 0, filter: "blur(12px)", y: -18,
-  transition: { duration: fast ? 0.35 : 0.6, ease: [0.4, 0, 1, 1] },
+  transition: { duration: fast ? 0.35 : 0.6, ease: [0.4, 0, 1, 1] as const },
 });
 
 function AnimatedHeadline() {
