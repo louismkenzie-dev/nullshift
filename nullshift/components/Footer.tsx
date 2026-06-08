@@ -13,15 +13,14 @@ const navLinks = [
 export function Footer() {
   return (
     <footer
-      className="flex flex-col md:flex-row items-center justify-between gap-4 px-6 md:px-12 h-auto md:h-14 py-4 md:py-0"
-      style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}
+      className="flex flex-col md:flex-row items-center justify-between gap-4 px-6 md:px-12 py-5 md:py-0"
+      style={{ minHeight: 64, borderTop: `1px solid ${T.border}`, background: T.surface }}
     >
-      <Link href="/" className="flex items-center gap-3">
-        {/* Brand pill badge (dark, paths-only SVG) */}
+      <Link href="/" className="flex items-center gap-2.5">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logos/nullshift-pill-dark.svg" alt="Nullshift" width={30} height={30} style={{ borderRadius: 7 }} />
-        <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "0.95rem", letterSpacing: "0.02em", color: T.fg }}>
-          NULLSHIFT
+        <img src="/logos/nullshift-pill-dark.svg" alt="Nullshift" width={28} height={28} style={{ borderRadius: 7 }} />
+        <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.9375rem", letterSpacing: "-0.01em", color: T.fg }}>
+          Nullshift
         </span>
       </Link>
 
@@ -31,8 +30,10 @@ export function Footer() {
             <li key={href}>
               <Link
                 href={href}
-                className="transition-colors hover:text-[#10b981]"
-                style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.muted }}
+                className="transition-colors"
+                style={{ fontFamily: T.sans, fontSize: "0.8125rem", fontWeight: 400, letterSpacing: "-0.003em", color: T.muted, textDecoration: "none" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = T.fg}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = T.muted}
               >
                 {label}
               </Link>
@@ -42,25 +43,27 @@ export function Footer() {
       </nav>
 
       <div className="flex items-center gap-3">
-        <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", color: `${T.muted}88` }}>
-          © 2025 NULLSHIFT.
+        <span style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0em", color: `${T.muted}88` }}>
+          © 2025 Nullshift.
         </span>
         <Link
           href="/admin/login"
           aria-label="Admin login"
-          className="inline-flex items-center px-3 h-7 transition-colors hover:text-[#10b981]"
+          className="inline-flex items-center px-3 h-7 transition-colors"
           style={{
-            fontFamily: T.mono,
-            fontSize: "10px",
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: T.fg,
+            fontFamily: T.sans,
+            fontSize: "0.75rem",
+            fontWeight: 500,
+            letterSpacing: "-0.003em",
+            color: T.muted,
             border: `1px solid ${T.border}`,
             borderRadius: "999px",
             background: `${T.bg}66`,
           }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = T.fg}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = T.muted}
         >
-          Admin Login
+          Admin
         </Link>
       </div>
     </footer>

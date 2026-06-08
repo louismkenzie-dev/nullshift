@@ -6,28 +6,37 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import HeroText from "@/components/HeroText";
-import { ShaderBackground } from "@/components/ShaderBackground";
 import { T } from "@/lib/tokens";
 
-/* ── Section label ──────────────────────────── */
+/* ── Section label (Halo eyebrow) ───────────── */
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <Reveal>
-      <div className="flex items-center gap-3 mb-8">
-        <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: T.primary, fontWeight: 600 }}>
+      <div className="flex items-center gap-2 mb-8">
+        <span
+          className="inline-flex items-center gap-2"
+          style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}
+        >
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primary}20`, flexShrink: 0, display: "inline-block" }} />
           {children}
         </span>
-        <span className="block w-8 h-px" style={{ background: `${T.primary}55` }} />
       </div>
     </Reveal>
   );
 }
 
-/* ── Primary button ─────────────────────────── */
+/* ── Primary button (Halo btn-primary) ──────── */
 function PrimaryBtn({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <a href={href} className="inline-flex items-center gap-3 px-5 h-10 font-medium transition-opacity hover:opacity-90"
-      style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.04em", background: T.primary, color: T.primaryFg, borderRadius: "2px", boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 30%, transparent)`, outline: `1px solid ${T.primary}66` }}>
+    <a href={href} className="inline-flex items-center gap-2 font-medium transition-opacity hover:opacity-90"
+      style={{
+        fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em",
+        height: 40, paddingInline: 18,
+        background: T.primary, color: T.primaryFg,
+        borderRadius: "10px",
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 20px ${T.primary}30`,
+        textDecoration: "none",
+      }}>
       {children}
     </a>
   );
@@ -47,8 +56,8 @@ function Services() {
           <div>
             <Label>02 — Services</Label>
             <Reveal delay={0.1}>
-              <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.4rem,4.5vw,4.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
-                WHAT WE<br /><span style={{ color: T.muted }}>DO.</span>
+              <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.2rem,4.5vw,4rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+                What we<br /><span style={{ color: T.muted }}>do.</span>
               </h2>
             </Reveal>
           </div>
@@ -56,18 +65,18 @@ function Services() {
         </div>
         <div className="grid grid-rows-1 md:grid-rows-2 h-full" style={{ borderLeft: `1px solid ${T.border}` }}>
           {cards.map((card, i) => (
-            <article key={card.num} className="group relative p-8 md:p-12 grid grid-cols-[48px_1fr] gap-6 content-center"
-              style={{ borderBottom: i === 0 ? `1px solid ${T.border}` : "none", transition: "background 0.2s" }}
-              onMouseEnter={e => (e.currentTarget.style.background = T.surface)}
+            <article key={card.num} className="group relative p-8 md:p-10 grid grid-cols-[48px_1fr] gap-5 content-center"
+              style={{ borderBottom: i === 0 ? `1px solid ${T.border}` : "none", transition: `background ${T.ease} 150ms, border-color 150ms` }}
+              onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-              <span className="absolute top-0 left-0 h-px" style={{ width: 0, background: T.primary, transition: "width 0.5s cubic-bezier(.2,.8,.2,1)" }}
+              <span className="absolute top-0 left-0 h-px" style={{ width: 0, background: T.primary, transition: "width 500ms cubic-bezier(.2,.8,.2,1)" }}
                 ref={el => { if (!el) return; const art = el.parentElement!; art.addEventListener("mouseenter", () => { el.style.width = "100%"; }); art.addEventListener("mouseleave", () => { el.style.width = "0"; }); }} />
-              <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1.6rem", lineHeight: 1, color: `${T.primary}40`, paddingTop: "3px" }}>{card.num}</div>
+              <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1.5rem", lineHeight: 1, color: `${T.primary}38`, paddingTop: "3px" }}>{card.num}</div>
               <div className="flex flex-col gap-3">
-                <h3 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.3rem,2vw,1.8rem)", letterSpacing: "0.01em", color: T.fg }}>{card.title}</h3>
-                <p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "0.9rem", lineHeight: 1.7, color: T.muted, maxWidth: "46ch" }}>{card.desc}</p>
-                <span className="flex items-center gap-2.5 mt-1" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.primary }}>
-                  <span className="h-px w-3 shrink-0" style={{ background: `${T.primary}80` }} />{card.tag}
+                <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.125rem,2vw,1.5rem)", letterSpacing: "-0.015em", lineHeight: 1.2, color: T.fg }}>{card.title}</h3>
+                <p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "46ch" }}>{card.desc}</p>
+                <span className="flex items-center gap-2 mt-1" style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.primary }}>
+                  <span style={{ height: 1, width: 12, background: `${T.primary}70`, flexShrink: 0, display: "inline-block" }} />{card.tag}
                 </span>
               </div>
             </article>
@@ -86,21 +95,21 @@ function WhoWeHelp() {
       <div>
         <Label>03 — Clients</Label>
         <Reveal delay={0.1}>
-          <h2 className="mb-7" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,5.5vw,5.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
-            BUILT FOR<br /><span style={{ color: T.muted }}>BUSINESSES</span><br /><span style={{ color: T.primary }}>DOING THE WORK.</span>
+          <h2 className="mb-7" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.2rem,5.5vw,4.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+            Built for<br /><span style={{ color: T.muted }}>businesses</span><br /><span style={{ color: T.primary }}>doing the work.</span>
           </h2>
         </Reveal>
         <Reveal delay={0.2}><PrimaryBtn href="/systems-lab">What we create →</PrimaryBtn></Reveal>
       </div>
       <div className="flex flex-col gap-9">
-        <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "1rem", lineHeight: 1.75, color: T.muted, maxWidth: "46ch" }}>We build more than websites. From bespoke booking systems and automated email campaigns to interactive courses and custom business workflows, we create digital solutions tailored to your brand that save time, improve customer experiences, and help your business grow.</p></Reveal>
+        <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "46ch" }}>We build more than websites. From bespoke booking systems and automated email campaigns to interactive courses and custom business workflows, we create digital solutions tailored to your brand that save time, improve customer experiences, and help your business grow.</p></Reveal>
         <Reveal delay={0.3}>
           <div className="flex flex-wrap gap-2">
             {tags.map(tag => (
-              <span key={tag} className="px-4 py-2 transition-colors cursor-default"
-                style={{ fontFamily: T.mono, fontWeight: 500, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, border: `1px solid ${T.border}`, borderRadius: "2px" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = `${T.primary}88`; (e.currentTarget as HTMLElement).style.color = T.primary; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = T.border; (e.currentTarget as HTMLElement).style.color = T.muted; }}>
+              <span key={tag} className="inline-flex items-center cursor-default transition-colors"
+                style={{ fontFamily: T.mono, fontWeight: 500, fontSize: "0.75rem", letterSpacing: "0em", height: 28, paddingInline: 12, background: `${T.primary}14`, color: T.primary, borderRadius: "999px", border: `1px solid ${T.primary}30`, transition: "background 150ms, border-color 150ms" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${T.primary}22`; (e.currentTarget as HTMLElement).style.borderColor = `${T.primary}55`; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = `${T.primary}14`; (e.currentTarget as HTMLElement).style.borderColor = `${T.primary}30`; }}>
                 {tag}
               </span>
             ))}
@@ -124,20 +133,22 @@ function Process() {
       <div className="px-8 md:px-12 pt-10 pb-8 flex flex-col md:flex-row items-start md:items-end justify-between gap-6 shrink-0">
         <div>
           <Label>04 — How it works</Label>
-          <Reveal delay={0.1}><h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.4rem,4.5vw,4.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>THE <span style={{ color: T.muted }}>PROCESS.</span></h2></Reveal>
+          <Reveal delay={0.1}><h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.2rem,4.5vw,4rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>The <span style={{ color: T.muted }}>process.</span></h2></Reveal>
         </div>
-        <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.75, color: T.muted, maxWidth: "36ch" }}>A clear, four-step process to get your business online with minimal friction.</p></Reveal>
+        <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "36ch" }}>A clear, four-step process to get your business online with minimal friction.</p></Reveal>
       </div>
       <Reveal delay={0.1} className="flex-1 min-h-0">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 h-full" style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}` }}>
           {steps.map(step => (
-            <article key={step.num} className="group relative flex flex-col justify-center gap-5 p-8 md:p-10" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
-              <span className="absolute bottom-0 left-0 h-0.5" style={{ width: 0, background: T.primary, transition: "width 0.5s cubic-bezier(.2,.8,.2,1)" }}
+            <article key={step.num} className="group relative flex flex-col justify-center gap-4 p-8 md:p-10" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, transition: `background 150ms` }}
+              onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+              <span className="absolute bottom-0 left-0 h-px" style={{ width: 0, background: T.primary, transition: "width 500ms cubic-bezier(.2,.8,.2,1)" }}
                 ref={el => { if (!el) return; const art = el.parentElement!; art.addEventListener("mouseenter", () => { el.style.width = "100%"; }); art.addEventListener("mouseleave", () => { el.style.width = "0"; }); }} />
-              <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "2.2rem", lineHeight: 1, color: `${T.primary}28` }}>{step.num}</div>
-              <h3 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.2rem,1.6vw,1.6rem)", letterSpacing: "0.01em", color: T.fg }}>{step.title}</h3>
+              <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "2rem", lineHeight: 1, color: `${T.primary}25` }}>{step.num}</div>
+              <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.125rem,1.6vw,1.5rem)", letterSpacing: "-0.015em", lineHeight: 1.2, color: T.fg }}>{step.title}</h3>
               <div className="w-5 h-px" style={{ background: T.border }} />
-              <p style={{ fontFamily: T.sans, fontSize: "0.84rem", lineHeight: 1.7, color: T.muted }}>{step.desc}</p>
+              <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.55, letterSpacing: "-0.003em", color: T.muted }}>{step.desc}</p>
             </article>
           ))}
         </div>
@@ -158,24 +169,27 @@ function WhyNullshift() {
       <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 60% 50% at 50% 50%, color-mix(in oklab, ${T.primary} 6%, transparent) 0%, transparent 70%)` }} />
       <div className="relative z-10 h-full px-8 md:px-12 py-10 flex flex-col items-center justify-center text-center">
         <Reveal>
-          <div className="flex items-center justify-center gap-3 mb-10" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.primary }}>
-            <span>05 — Why us</span><span className="h-px w-8" style={{ background: `${T.primary}55` }} />
+          <div className="flex items-center justify-center gap-2 mb-10">
+            <span className="inline-flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primary}20`, flexShrink: 0, display: "inline-block" }} />
+              05 — Why us
+            </span>
           </div>
         </Reveal>
         <Reveal delay={0.08}>
-          <div className="text-center mb-12" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.8rem,6vw,6.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em" }}>
-            <span className="block" style={{ color: T.fg }}>NO TEMPLATES.</span>
-            <span className="block" style={{ color: T.muted }}>NO BLOAT.</span>
-            <span className="block hero-glow" style={{ color: T.primary }}>NO NONSENSE.</span>
+          <div className="text-center mb-12" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.5rem,6vw,5.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em" }}>
+            <span className="block" style={{ color: T.fg }}>No templates.</span>
+            <span className="block" style={{ color: T.muted }}>No bloat.</span>
+            <span className="block hero-glow" style={{ color: T.primary }}>No nonsense.</span>
           </div>
         </Reveal>
         <Reveal delay={0.16}>
           <div className="grid md:grid-cols-3 w-full max-w-5xl" style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}` }}>
             {props.map(p => (
               <div key={p.n} className="p-8 text-left" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
-                <div className="mb-4" style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1rem", letterSpacing: "-0.02em", color: `${T.primary}70` }}>{p.n}</div>
-                <h3 className="mb-2" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.1rem", letterSpacing: "0.01em", color: T.fg }}>{p.title}</h3>
-                <p style={{ fontFamily: T.sans, fontSize: "0.82rem", lineHeight: 1.7, color: T.muted }}>{p.desc}</p>
+                <div className="mb-4" style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1rem", letterSpacing: "-0.02em", color: `${T.primary}60` }}>{p.n}</div>
+                <h3 className="mb-2" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.125rem", letterSpacing: "-0.01em", lineHeight: 1.3, color: T.fg }}>{p.title}</h3>
+                <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.55, letterSpacing: "-0.003em", color: T.muted }}>{p.desc}</p>
               </div>
             ))}
           </div>
@@ -194,18 +208,18 @@ function Contact() {
           <div>
             <Label>06 — Get in touch</Label>
             <Reveal delay={0.1}>
-              <h2 className="mb-4" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.4rem,4.5vw,4.5rem)", lineHeight: 0.92, letterSpacing: "-0.01em", color: T.fg }}>
-                READY TO<br /><span className="hero-glow" style={{ color: T.primary }}>GO ONLINE?</span>
+              <h2 className="mb-4" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.2rem,4.5vw,4rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+                Ready to<br /><span className="hero-glow" style={{ color: T.primary }}>go online?</span>
               </h2>
             </Reveal>
-            <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontSize: "0.95rem", lineHeight: 1.75, color: T.muted, maxWidth: "40ch" }}>Tell us about your business and we&apos;ll be in touch within 24 hours. No commitment required.</p></Reveal>
+            <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "40ch" }}>Tell us about your business and we&apos;ll be in touch within 24 hours. No commitment required.</p></Reveal>
           </div>
           <Reveal delay={0.3}>
             <div className="flex flex-col gap-3 pt-10" style={{ borderTop: `1px solid ${T.border}` }}>
-              <div className="flex items-center gap-2.5" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.muted }}>
-                <span className="size-1.5 rounded-full pulse-dot flex-shrink-0" style={{ background: T.primary }} />SYS_RESPONSE / 24H_MAX
+              <div className="flex items-center gap-2.5" style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.04em", color: T.muted }}>
+                <span className="size-1.5 rounded-full pulse-dot flex-shrink-0" style={{ background: T.primary }} />Response within 24 hours
               </div>
-              <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: `${T.muted}88`, paddingLeft: "20px" }}>COORD / UK — GLOBAL_REACH</div>
+              <div style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0.04em", color: `${T.muted}88`, paddingLeft: "20px" }}>UK-based — Global reach</div>
             </div>
           </Reveal>
         </div>
@@ -213,24 +227,27 @@ function Contact() {
           <Reveal delay={0.2} className="w-full max-w-md">
             <div className="flex flex-col gap-6">
               <div>
-                <div className="mb-3" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: T.primary }}>// 5-STEP BRIEF</div>
-                <h3 className="mb-3" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.8rem", lineHeight: 1, letterSpacing: "-0.01em", color: T.fg, textTransform: "uppercase" }}>
-                  TELL US ABOUT<br />YOUR PROJECT.
+                <div className="flex items-center gap-2 mb-4">
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primary}20`, flexShrink: 0, display: "inline-block" }} />
+                  <span style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>5-step brief</span>
+                </div>
+                <h3 className="mb-3" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.75rem", lineHeight: 1.08, letterSpacing: "-0.025em", color: T.fg }}>
+                  Tell us about<br />your project.
                 </h3>
-                <p style={{ fontFamily: T.sans, fontSize: "0.92rem", lineHeight: 1.7, color: T.muted, maxWidth: "38ch" }}>
+                <p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "38ch" }}>
                   A quick 2-minute brief — pages, style, budget, timeline. We&apos;ll send back a clear proposal.
                 </p>
               </div>
               <Link
                 href="/brief"
-                className="inline-flex items-center justify-between px-5 h-12 font-semibold transition-opacity hover:opacity-90"
-                style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px", boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)` }}
+                className="inline-flex items-center justify-between font-medium transition-opacity hover:opacity-90"
+                style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em", height: 48, paddingInline: 20, background: T.primary, color: T.primaryFg, borderRadius: "10px", boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 24px ${T.primary}30` }}
               >
-                <span>TELL US MORE</span>
+                <span>Tell us more</span>
                 <span>→</span>
               </Link>
-              <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: `${T.muted}88` }}>
-                ~ 2 MIN · NO COMMITMENT
+              <div style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.04em", color: `${T.muted}70` }}>
+                ~2 min · no commitment
               </div>
             </div>
           </Reveal>
@@ -252,11 +269,11 @@ function StackCard({ children, z }: { children: React.ReactNode; z: number }) {
         style={{
           height: "var(--card-h)",
           minHeight: "var(--card-h)",
-          background: "rgba(11,11,14,0.92)",
-          backdropFilter: "blur(18px) saturate(120%)",
-          WebkitBackdropFilter: "blur(18px) saturate(120%)",
-          border: "1px solid rgba(245,242,238,0.08)",
-          boxShadow: "0 50px 120px -16px rgba(0,0,0,0.9)",
+          background: "rgba(10,10,14,0.94)",
+          backdropFilter: "blur(20px) saturate(130%)",
+          WebkitBackdropFilter: "blur(20px) saturate(130%)",
+          border: `1px solid #3d3d42`,
+          boxShadow: "0 0 0 1px rgba(255,255,255,0.03) inset, 0 50px 120px -16px rgba(0,0,0,0.9)",
         }}
       >
         {children}
@@ -268,7 +285,6 @@ function StackCard({ children, z }: { children: React.ReactNode; z: number }) {
 export default function Page() {
   return (
     <>
-      <ShaderBackground />
       <Nav />
       {/* Hero stays full-bleed as the opening */}
       <div className="relative z-10">
@@ -286,24 +302,26 @@ export default function Page() {
       </main>
 
       {/* Systems Lab promo */}
-      <div className="relative" style={{ zIndex: 6, marginTop: "12vh", borderTop: `1px solid ${T.border}`, background: T.surface, padding: "64px 24px" }}>
-        <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }} className="md:flex-row md:items-center md:justify-between">
+      <div className="relative" style={{ zIndex: 6, marginTop: "12vh", borderTop: `1px solid ${T.border}`, background: T.surface, padding: "72px 24px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }} className="md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <span style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: T.primary }}>New — Systems Lab</span>
-              <span style={{ display: "block", width: 24, height: 1, background: `${T.primary}55` }} />
+            <div className="flex items-center gap-2 mb-5">
+              <span className="inline-flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primary}20`, flexShrink: 0, display: "inline-block" }} />
+                New — Systems Lab
+              </span>
             </div>
-            <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.8rem,3.5vw,3rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
-              EXPERIENCE OUR SYSTEMS<br /><span style={{ color: T.muted }}>BEFORE YOU BUILD.</span>
+            <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.75rem,3.5vw,2.75rem)", lineHeight: 1.08, letterSpacing: "-0.025em", color: T.fg }}>
+              Experience our systems<br /><span style={{ color: T.muted }}>before you build.</span>
             </h2>
-            <p style={{ fontFamily: T.sans, fontSize: "0.95rem", lineHeight: 1.7, color: T.muted, maxWidth: "50ch", marginTop: 12 }}>
+            <p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "50ch", marginTop: 16 }}>
               12 live interactive demos — booking systems, CRMs, client portals, AI chatbots and more. Click around and see exactly what we build.
             </p>
           </div>
           <Link
             href="/systems-lab"
-            className="inline-flex items-center gap-3 px-6 h-11 font-semibold transition-opacity hover:opacity-90 shrink-0"
-            style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: 2, boxShadow: `0 0 24px ${T.primary}40`, outline: `1px solid ${T.primary}66` }}
+            className="inline-flex items-center gap-3 font-medium transition-opacity hover:opacity-90 shrink-0"
+            style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em", height: 44, paddingInline: 22, background: T.primary, color: T.primaryFg, borderRadius: 10, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 24px ${T.primary}35` }}
           >
             Enter Systems Lab →
           </Link>
