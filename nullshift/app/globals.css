@@ -59,6 +59,8 @@
   --container-pad: clamp(20px, 4vw, 48px);
 
   /* Halo font refs */
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
   --font-display: var(--font-sans);
 }
 
