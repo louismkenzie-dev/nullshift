@@ -1,6 +1,6 @@
 <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
   <!-- Dark brand background -->
-  <rect width="160" height="160" fill="#0a0b0d"/>
+  <rect width="160" height="160" rx="20" fill="#0a0b0d"/>
   <!-- Left pill — light grey, slightly taller, starts higher -->
   <rect x="44.69" y="33.95" width="31.42" height="81.96" rx="10" fill="#d6d6d6"/>
   <!-- Right pill — brand green, offset down -->
