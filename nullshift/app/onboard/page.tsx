@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { T } from "@/lib/tokens";
@@ -20,8 +20,23 @@ export default function OnboardPage() {
   );
 }
 
+/** Returns true if the signed-in user has an active subscription. */
+async function checkHasActiveSubscription(): Promise<boolean> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  return !!data;
+}
+
 function OnboardFlow() {
   const params = useSearchParams();
+  const router = useRouter();
   const rawPlan = params.get("plan") ?? "core";
   const plan: Plan = (rawPlan.toLowerCase() in PLAN_META_ONBOARD ? rawPlan.toLowerCase() : "core") as Plan;
   const meta = PLAN_META_ONBOARD[plan];
@@ -384,47 +399,195 @@ function OnboardFlow() {
 
         {/* ── Step 4: Check Email ── */}
         {step === 4 && (
-          <div className="flex flex-col gap-6 items-center text-center">
-            <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
-              CHECK YOUR<br /><span style={{ color: T.primary }}>EMAIL</span>
-            </h1>
-            <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
-              We&apos;ve sent a confirmation link to <strong>{email}</strong>. Please click the link to activate your account.
-            </p>
-            <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted, textAlign: "center" }}>
-              Didn&apos;t receive it? Check your spam folder or{" "}
-              <button
-                type="button"
-                onClick={resendConfirmationEmail}
-                disabled={resendBusy}
-                style={{
-                  color: T.primary,
-                  background: "none",
-                  border: "none",
-                  cursor: resendBusy ? "default" : "pointer",
-                  fontFamily: T.mono,
-                  fontSize: "10px",
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  opacity: resendBusy ? 0.6 : 1,
-                }}
-              >
-                {resendBusy ? "sending…" : "resend email"}
-              </button>
-              .
-            </p>
-            {resendMessage && (
-              <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
-                {resendMessage}
-              </p>
-            )}
-          </div>
+          <CheckEmailStep
+            email={email}
+            plan={plan}
+            resendBusy={resendBusy}
+            resendMessage={resendMessage}
+            onResend={resendConfirmationEmail}
+            onAdvance={(hasSubscription) => {
+              if (hasSubscription) {
+                router.replace("/learn");
+              } else {
+                setStep(3);
+              }
+            }}
+          />
         )}
 
       </div>
     </main>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 4: Check email + inline sign-in after verification
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface CheckEmailStepProps {
+  email: string;
+  plan: Plan;
+  resendBusy: boolean;
+  resendMessage: string | null;
+  onResend: (e: React.MouseEvent) => void;
+  /** Called once sign-in succeeds. Pass true if user already has a subscription. */
+  onAdvance: (hasSubscription: boolean) => void;
+}
+
+function CheckEmailStep({ email, plan, resendBusy, resendMessage, onResend, onAdvance }: CheckEmailStepProps) {
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const inputStyle: React.CSSProperties = {
+    background: T.bg,
+    border: `1px solid ${T.border}`,
+    padding: "12px 16px",
+    color: T.fg,
+    fontFamily: T.sans,
+    fontSize: "0.9375rem",
+    letterSpacing: "-0.005em",
+    outline: "none",
+    borderRadius: T.r.sm,
+    width: "100%",
+  };
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setLoginBusy(true);
+    setLoginError(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password: loginPassword });
+      if (error) throw error;
+      const hasSub = await checkHasActiveSubscription();
+      onAdvance(hasSub);
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : "Sign in failed.");
+      setLoginBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Heading */}
+      <div className="text-center">
+        <div className="mb-2" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
+          STEP 02 COMPLETE
+        </div>
+        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+          CHECK YOUR<br /><span style={{ color: T.primary }}>EMAIL</span>
+        </h1>
+      </div>
+
+      {/* Info card */}
+      <div className="rounded-xl p-6 flex flex-col gap-3" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+        <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.6, color: T.muted }}>
+          We&apos;ve sent a confirmation link to{" "}
+          <span style={{ color: T.fg, fontWeight: 600 }}>{email || "your email"}</span>.
+          Click the link in that email to verify your account, then come back here and sign in.
+        </p>
+        <div className="h-px" style={{ background: T.border }} />
+        <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted }}>
+          Didn&apos;t receive it? Check your spam folder or{" "}
+          <button
+            type="button"
+            onClick={onResend}
+            disabled={resendBusy}
+            style={{ color: T.primary, background: "none", border: "none", cursor: resendBusy ? "default" : "pointer", fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", opacity: resendBusy ? 0.6 : 1 }}
+          >
+            {resendBusy ? "sending…" : "resend email"}
+          </button>
+          .
+        </p>
+        {resendMessage && (
+          <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>{resendMessage}</p>
+        )}
+      </div>
+
+      {/* CTA — reveal sign-in form */}
+      {!showLogin ? (
+        <button
+          onClick={() => setShowLogin(true)}
+          className="w-full h-12 flex items-center justify-between px-5 transition-opacity hover:opacity-90"
+          style={{
+            fontFamily: T.mono,
+            fontSize: "0.78rem",
+            fontWeight: 600,
+            letterSpacing: "0.06em",
+            background: T.primary,
+            color: T.primaryFg,
+            borderRadius: T.r.md,
+            boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)`,
+          }}
+        >
+          <span>I&apos;ve verified my email — sign in</span>
+          <span>→</span>
+        </button>
+      ) : (
+        <form onSubmit={handleLogin} className="flex flex-col gap-4 rounded-xl p-6" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: T.primary }}>
+            SIGN IN TO CONTINUE
+          </div>
+
+          {/* Email — read-only, pre-filled */}
+          <div className="flex flex-col gap-1.5">
+            <label style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>Email</label>
+            <input
+              type="email"
+              value={email}
+              readOnly
+              style={{ ...inputStyle, opacity: 0.6, cursor: "not-allowed" }}
+            />
+          </div>
+
+          {/* Password */}
+          <div className="flex flex-col gap-1.5">
+            <label style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>Password</label>
+            <input
+              type="password"
+              required
+              autoFocus
+              value={loginPassword}
+              onChange={e => setLoginPassword(e.target.value)}
+              placeholder="Your password"
+              style={inputStyle}
+              autoComplete="current-password"
+            />
+          </div>
+
+          {loginError && (
+            <p style={{ fontFamily: T.mono, fontSize: "11px", color: "#f87171" }}>{loginError}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loginBusy}
+            className="mt-1 w-full h-11 flex items-center justify-between px-5 transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{
+              fontFamily: T.mono,
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              background: T.primary,
+              color: T.primaryFg,
+              borderRadius: T.r.md,
+              boxShadow: loginBusy ? "none" : `0 0 20px color-mix(in oklab, ${T.primary} 22%, transparent)`,
+            }}
+          >
+            <span>{loginBusy ? "Signing in…" : "Sign in & continue to payment"}</span>
+            {!loginBusy && <span>→</span>}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 3: Stripe checkout redirect
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface StripeCheckoutRedirectProps {
   plan: Plan;

@@ -83,9 +83,31 @@ function LearnLogin() {
     setError(null);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      router.replace(next);
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+
+      // Check whether this user already has an active subscription.
+      // If not, route them to the checkout for the plan stored in their profile
+      // (or a generic plan selection page) before they can access the portal.
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", user?.id ?? "")
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (!sub) {
+        // No active subscription — send them to onboarding checkout.
+        // Use the tier stored in app_metadata if available, otherwise pricing page.
+        const tier = (user?.app_metadata?.subscription_tier as string | undefined) ?? "";
+        const dest = tier
+          ? `/onboard?plan=${encodeURIComponent(tier)}&confirmed=true`
+          : "/pricing";
+        router.replace(dest);
+      } else {
+        router.replace(next);
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed.");
