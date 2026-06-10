@@ -3,7 +3,6 @@
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { createClient } from "@/lib/supabase/client";
 import { T } from "@/lib/tokens";
 import { LogoMark } from "@/components/Logo";
@@ -429,101 +428,186 @@ function OnboardFlow() {
 
 interface StripeCheckoutRedirectProps {
   plan: Plan;
-  email: string; // Pass the email for potential pre-fill
+  email: string; // may be empty if coming from a fresh email confirmation link
 }
 
-function StripeCheckoutRedirect({ plan, email }: StripeCheckoutRedirectProps) {
-  const [loading, setLoading] = useState(true);
+function StripeCheckoutRedirect({ plan, email: emailProp }: StripeCheckoutRedirectProps) {
   const [error, setError] = useState<string | null>(null);
-  const [stripe, setStripe] = useState<Stripe | null>(null);
+  // "waiting" → resolving session, "redirecting" → hitting Stripe API, "failed" → show manual button
+  const [phase, setPhase] = useState<"waiting" | "redirecting" | "failed">("waiting");
+  const [resolvedEmail, setResolvedEmail] = useState(emailProp);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY) {
-      loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY).then(stripeInstance => {
-        setStripe(stripeInstance);
-      });
-    }
-  }, []); // Only run once on mount
+    let cancelled = false;
 
-  useEffect(() => {
-    async function redirectToCheckout() {
-      setLoading(true);
-      setError(null);
-      if (!stripe) {
-        // Stripe.js is not yet loaded, wait for the other useEffect to set it.
-        return;
-      }
-
+    async function resolveAndCheckout(attempts = 0): Promise<void> {
+      // --- 1. Resolve session (retry up to 5× every 900 ms) ---
       const supabase = createClient();
-      const { data: { user } = {} } = await supabase.auth.getUser(); // Destructure with default empty object
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
 
       if (!user?.id) {
-        setError("User not authenticated.");
-        setLoading(false);
+        if (attempts < 5) {
+          setTimeout(() => resolveAndCheckout(attempts + 1), 900);
+          return;
+        }
+        // After all retries, fall through to manual button
+        setPhase("failed");
+        setError("Session not detected. Please use the button below or sign in.");
         return;
       }
 
+      const uid = user.id;
+      const email = resolvedEmail || user.email || "";
+      setUserId(uid);
+      if (!resolvedEmail && user.email) setResolvedEmail(user.email);
+      setPhase("redirecting");
+
+      // --- 2. Create Stripe checkout session and redirect ---
       try {
-        const response = await fetch('/api/stripe/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ plan: plan, userId: user.id, userEmail: email }),
+        const response = await fetch("/api/stripe/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan, userId: uid, userEmail: email }),
         });
-
+        if (cancelled) return;
         const sessionData = await response.json();
-
-        if (!response.ok) {
-          throw new Error(sessionData.error || 'Failed to create Stripe Checkout session.');
-        }
-
+        if (!response.ok) throw new Error(sessionData.error || "Failed to create checkout session.");
         const { url } = sessionData;
-        if (url) {
-          window.location.href = url;
-        } else {
-          throw new Error("No checkout URL returned from Stripe.");
-        }
+        if (!url) throw new Error("No checkout URL returned from Stripe.");
+        window.location.href = url;
       } catch (err) {
+        if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to initiate payment.");
-        setLoading(false);
+        setPhase("failed");
       }
     }
 
-    if (stripe) { // Only attempt redirect if Stripe.js is loaded
-        redirectToCheckout();
-    }
-  }, [stripe, plan, email]); // Depend on stripe, plan, and email
+    resolveAndCheckout();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  if (error) {
+  // Manual retry / fallback button handler
+  async function handleManualCheckout() {
+    setPhase("redirecting");
+    setError(null);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      const uid = userId || user?.id;
+      const email = resolvedEmail || user?.email || "";
+      if (!uid) {
+        setError("Session not found. Please sign in first.");
+        setPhase("failed");
+        return;
+      }
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, userId: uid, userEmail: email }),
+      });
+      const sessionData = await response.json();
+      if (!response.ok) throw new Error(sessionData.error || "Failed to create checkout session.");
+      const { url } = sessionData;
+      if (!url) throw new Error("No checkout URL returned from Stripe.");
+      window.location.href = url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to initiate payment.");
+      setPhase("failed");
+    }
+  }
+
+  // --- Waiting for session ---
+  if (phase === "waiting") {
     return (
-      <div className="flex flex-col gap-6 items-center text-center">
+      <div className="flex flex-col gap-4 items-center text-center">
+        <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
+          EMAIL CONFIRMED ✓
+        </div>
         <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
-          PAYMENT ERROR
+          VERIFYING<br /><span style={{ color: T.primary }}>YOUR SESSION</span>
         </h1>
         <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
-          {error} Please try again or contact support.
+          Just a moment while we confirm your account…
         </p>
-        <Link href="/pricing" className="mt-4" style={{ color: T.primary, textDecoration: "none" }}>
-          Go back to pricing
-        </Link>
       </div>
     );
   }
 
-  if (loading) {
+  // --- Redirecting to Stripe ---
+  if (phase === "redirecting") {
     return (
-      <div className="flex flex-col gap-6 items-center text-center">
+      <div className="flex flex-col gap-4 items-center text-center">
+        <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
+          EMAIL CONFIRMED ✓
+        </div>
         <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
           REDIRECTING<br /><span style={{ color: T.primary }}>TO CHECKOUT</span>
         </h1>
         <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
-          Please wait while we securely redirect you to Stripe for payment.
+          Taking you to Stripe to complete your subscription…
         </p>
-        {/* Optional: Add a spinner or loading animation here */}
       </div>
     );
   }
 
-  return null; // Should not reach here if redirection is successful, or display final state if not loading
+  // --- Failed / manual fallback ---
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <div className="mb-2" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
+          EMAIL CONFIRMED ✓
+        </div>
+        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+          PROCEED TO<br /><span style={{ color: T.primary }}>PAYMENT</span>
+        </h1>
+      </div>
+
+      <div className="rounded-xl p-5 flex flex-col gap-3" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+        {error ? (
+          <p style={{ fontFamily: T.mono, fontSize: "11px", color: "#f87171" }}>{error}</p>
+        ) : (
+          <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
+            Your email is confirmed. Click below to complete your subscription via Stripe.
+          </p>
+        )}
+        {!userId && (
+          <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
+            No session?{" "}
+            <Link href="/learn/login" style={{ color: T.primary, textDecoration: "none" }}>
+              Sign in →
+            </Link>{" "}
+            then return to this page.
+          </p>
+        )}
+      </div>
+
+      <button
+        onClick={handleManualCheckout}
+        className="w-full h-12 flex items-center justify-between px-5 transition-opacity hover:opacity-90"
+        style={{
+          fontFamily: T.mono,
+          fontSize: "0.78rem",
+          fontWeight: 600,
+          letterSpacing: "0.06em",
+          background: T.primary,
+          color: T.primaryFg,
+          borderRadius: T.r.md,
+          boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)`,
+        }}
+      >
+        <span>Proceed to payment</span>
+        <span>→</span>
+      </button>
+
+      <Link
+        href="/pricing"
+        style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, textAlign: "center", textDecoration: "none" }}
+      >
+        ← Change plan
+      </Link>
+    </div>
+  );
 }
