@@ -71,7 +71,7 @@ export default function BookPage() {
 
           {/* ── Right: CTA card ───────────────────────────────── */}
           <div
-            className="flex items-center justify-center px-3 py-6 sm:px-8 sm:py-14 lg:w-[480px] lg:shrink-0 lg:px-6 lg:py-20"
+            className="flex items-center justify-center px-3 py-6 sm:py-14 lg:w-[480px] lg:shrink-0 lg:px-6 lg:py-20"
             style={{ borderLeft: "none" }}
           >
             <div
@@ -81,7 +81,6 @@ export default function BookPage() {
                 border: `1px solid ${T.border}`,
                 borderRadius: T.r.xl,
                 boxShadow: T.shadow.md,
-                maxWidth: 480,
                 width: "100%",
               }}
             >
