@@ -41,7 +41,8 @@ function OnboardFlow() {
   const plan: Plan = (rawPlan.toLowerCase() in PLAN_META_ONBOARD ? rawPlan.toLowerCase() : "core") as Plan;
   const meta = PLAN_META_ONBOARD[plan];
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  // null = still checking auth; 1-4 = known step
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -51,13 +52,17 @@ function OnboardFlow() {
   const [resendBusy, setResendBusy] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
 
-  // If the user somehow lands here already signed in with a confirmed email,
-  // skip straight to the payment step.
+  // On mount: check if already signed in + email confirmed → go straight to
+  // payment step (avoids flash of step 1 for users arriving from login page).
   useEffect(() => {
-    if (!hasSupabaseBrowserConfig()) return;
+    if (!hasSupabaseBrowserConfig()) { setStep(1); return; }
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.email_confirmed_at) setStep(3);
+      if (user?.email_confirmed_at) {
+        setStep(3);
+      } else {
+        setStep(1);
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -137,6 +142,11 @@ function OnboardFlow() {
   }
 
   const isConfigured = hasSupabaseBrowserConfig();
+
+  // Still resolving session — show blank dark screen, no flash of step 1
+  if (step === null) {
+    return <div style={{ minHeight: "100vh", background: T.bg }} />;
+  }
 
   return (
     <main
