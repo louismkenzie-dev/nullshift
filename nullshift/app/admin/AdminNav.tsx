@@ -9,6 +9,7 @@ import { LogoMark } from "@/components/Logo";
 
 const links = [
   { label: "Dashboard",  href: "/admin",            icon: "○" },
+  { label: "Users",      href: "/admin/users",      icon: "◫" },
   { label: "Enquiries",  href: "/admin/enquiries",   icon: "◈" },
   { label: "Clients",    href: "/admin/clients",     icon: "◇" },
   { label: "Calendar",   href: "/admin/calendar",    icon: "◻" },
@@ -20,9 +21,6 @@ export function AdminNav({ email }: { email: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-
-  // Close drawer on route change
-  useEffect(() => { setOpen(false); }, [pathname]);
 
   // Lock body scroll while drawer is open
   useEffect(() => {
@@ -47,7 +45,7 @@ export function AdminNav({ email }: { email: string }) {
         style={{ background: `${T.bg}f0`, borderColor: T.border, backdropFilter: "blur(14px)" }}>
 
         {/* Logo */}
-        <Link href="/admin" className="flex items-center gap-2.5">
+        <Link href="/admin" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
           <LogoMark size={20} />
           <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", letterSpacing: "0.02em", color: T.fg }}>NULLSHIFT</span>
           <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", color: T.primary, textTransform: "uppercase" }}>/ admin</span>
@@ -103,6 +101,7 @@ export function AdminNav({ email }: { email: string }) {
               <Link
                 key={l.href}
                 href={l.href}
+                onClick={() => setOpen(false)}
                 className="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors"
                 style={{
                   background: active ? `${T.primary}18` : "transparent",
@@ -123,6 +122,7 @@ export function AdminNav({ email }: { email: string }) {
         <div className="px-6 py-5 shrink-0 flex flex-col gap-3" style={{ borderTop: `1px solid ${T.border}` }}>
           <div style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted, letterSpacing: "0.06em" }}>{email}</div>
           <Link href="/" className="w-full h-10 inline-flex items-center justify-center transition-opacity hover:opacity-90"
+            onClick={() => setOpen(false)}
             style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.fg, border: `1px solid ${T.border}`, borderRadius: "6px" }}>
             ← View website
           </Link>

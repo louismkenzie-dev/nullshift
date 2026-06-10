@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { T } from "@/lib/tokens";
 import { LogoMark } from "@/components/Logo";
@@ -46,6 +47,23 @@ function LearnLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!hasSupabaseBrowserConfig()) return;
+
+    const supabase = createClient();
+    let cancelled = false;
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!cancelled && user) {
+        router.replace(next);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [next, router]);
 
   const inputStyle: React.CSSProperties = {
     background: T.bg,
@@ -154,18 +172,18 @@ function LearnLogin() {
         </form>
 
         <div className="mt-6 text-center flex flex-col gap-3">
-          <a
+          <Link
             href="/pricing"
             style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.primary }}
           >
             Don&apos;t have a subscription? View plans →
-          </a>
-          <a
+          </Link>
+          <Link
             href="/"
             style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted }}
           >
             ← Back to website
-          </a>
+          </Link>
         </div>
       </div>
     </main>

@@ -1,5 +1,7 @@
-import { notFound } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { hasSupabaseBrowserConfig } from "@/lib/supabase/env";
 import { T } from "@/lib/tokens";
 
 const COURSES: Record<string, {
@@ -101,133 +103,186 @@ export default async function CoursePage({ params }: { params: Promise<{ course:
   const course = COURSES[courseSlug];
   if (!course) notFound();
 
+  if (!hasSupabaseBrowserConfig()) {
+    return <SetupScreen />;
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(`/learn/login?next=${encodeURIComponent(`/learn/${courseSlug}`)}`);
+  }
+
   const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
 
   return (
-    <div className="px-8 md:px-12 py-10 max-w-3xl">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-8" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", color: T.muted }}>
-        <Link href="/learn" style={{ color: T.muted, textDecoration: "none" }}>LEARN</Link>
-        <span>/</span>
-        <span style={{ color: T.primary }}>{course.title.toUpperCase().replace(/ /g, "_")}</span>
-      </div>
+    <div
+      className="px-6 md:px-10 py-10"
+      style={{
+        background:
+          "radial-gradient(circle at top right, color-mix(in oklab, var(--color-primary) 10%, transparent) 0%, transparent 28%), radial-gradient(circle at left 22%, color-mix(in oklab, var(--color-info) 8%, transparent) 0%, transparent 26%)",
+      }}
+    >
+      <div className="max-w-5xl">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 mb-8" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", color: T.muted }}>
+          <Link href="/learn" style={{ color: T.muted, textDecoration: "none" }}>Learn</Link>
+          <span>/</span>
+          <span style={{ color: T.primary }}>{course.title.toUpperCase().replace(/ /g, "_")}</span>
+        </div>
 
-      {/* Header */}
-      <h1
-        style={{
-          fontFamily: T.display,
-          fontWeight: 900,
-          fontSize: "clamp(2.2rem,4.5vw,3.5rem)",
-          lineHeight: 0.95,
-          letterSpacing: "-0.02em",
-          color: T.fg,
-          marginBottom: "1rem",
-        }}
-      >
-        {course.title.toUpperCase()}
-      </h1>
-      <p
-        style={{
-          fontFamily: T.sans,
-          fontSize: "0.9375rem",
-          lineHeight: 1.65,
-          letterSpacing: "-0.005em",
-          color: T.muted,
-          maxWidth: "56ch",
-          marginBottom: "0.75rem",
-        }}
-      >
-        {course.description}
-      </p>
-      <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted }}>
-        {course.modules.length} modules · {totalLessons} lessons
-      </div>
+        <div className="rounded-3xl p-8 md:p-10 mb-8" style={{ background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.shadow.md }}>
+          <div className="inline-flex items-center gap-2 mb-5 px-3 py-1.5 rounded-full" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.primary, background: `${T.primary}12`, border: `1px solid ${T.primary}24` }}>
+            <span className="size-1.5 rounded-full" style={{ background: T.primary }} />
+            <span>Course overview</span>
+          </div>
+          <h1
+            style={{
+              fontFamily: T.display,
+              fontWeight: 600,
+              fontSize: "clamp(2.2rem,4.5vw,3.8rem)",
+              lineHeight: 1.02,
+              letterSpacing: "-0.03em",
+              color: T.fg,
+              marginBottom: "1rem",
+            }}
+          >
+            {course.title}
+          </h1>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.9375rem",
+              lineHeight: 1.7,
+              letterSpacing: "-0.005em",
+              color: T.muted,
+              maxWidth: "60ch",
+              marginBottom: "1.2rem",
+            }}
+          >
+            {course.description}
+          </p>
+          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted }}>
+            {course.modules.length} modules · {totalLessons} lessons
+          </div>
+        </div>
 
-      {/* Divider */}
-      <div className="my-8 h-px" style={{ background: T.border }} />
-
-      {/* Modules */}
-      <div className="flex flex-col gap-8">
-        {course.modules.map((mod, mi) => (
-          <div key={mi}>
-            <div
-              className="mb-3"
-              style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.primary }}
-            >
-              {mod.title}
-            </div>
-            <div className="flex flex-col rounded-xl overflow-hidden" style={{ border: `1px solid ${T.border}` }}>
-              {mod.lessons.map((lesson, li) => (
-                <Link
-                  key={lesson.slug}
-                  href={`/learn/${courseSlug}/${lesson.slug}`}
-                  className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-zinc-900"
+        {/* Modules */}
+        <div className="flex flex-col gap-6">
+          {course.modules.map((mod, mi) => (
+            <section key={mi} className="rounded-2xl overflow-hidden" style={{ background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.shadow.sm }}>
+              <div className="px-6 py-4 border-b" style={{ borderColor: T.border }}>
+                <div
                   style={{
-                    borderTop: li > 0 ? `1px solid ${T.border}` : "none",
-                    background: "transparent",
-                    textDecoration: "none",
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    color: T.primary,
                   }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="size-6 rounded-full grid place-content-center shrink-0"
-                      style={{ background: T.surface2, border: `1px solid ${T.border}` }}
-                    >
-                      <span style={{ fontFamily: T.mono, fontSize: "9px", color: T.muted }}>
-                        {String(li + 1).padStart(2, "0")}
-                      </span>
-                    </span>
-                    <span style={{ fontFamily: T.sans, fontSize: "0.875rem", letterSpacing: "-0.005em", color: T.fg }}>
-                      {lesson.title}
-                    </span>
-                    {lesson.free && (
+                  {mod.title}
+                </div>
+              </div>
+              <div className="divide-y" style={{ borderColor: T.border }}>
+                {mod.lessons.map((lesson, li) => (
+                  <Link
+                    key={lesson.slug}
+                    href={`/learn/${courseSlug}/${lesson.slug}`}
+                    className="flex items-center justify-between gap-4 px-6 py-4 transition-colors"
+                    style={{
+                      background: "transparent",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
                       <span
-                        style={{
-                          fontFamily: T.mono,
-                          fontSize: "9px",
-                          letterSpacing: "0.1em",
-                          textTransform: "uppercase",
-                          color: T.primary,
-                          background: `${T.primary}15`,
-                          border: `1px solid ${T.primary}30`,
-                          padding: "1px 6px",
-                          borderRadius: T.r.full,
-                        }}
+                        className="size-7 rounded-full grid place-content-center shrink-0"
+                        style={{ background: T.elevated, border: `1px solid ${T.borderStr}` }}
                       >
-                        preview
+                        <span style={{ fontFamily: T.mono, fontSize: "9px", color: T.muted }}>
+                          {String(li + 1).padStart(2, "0")}
+                        </span>
                       </span>
-                    )}
-                  </div>
-                  <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", color: T.muted }}>
-                    {lesson.duration}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+                      <span style={{ fontFamily: T.sans, fontSize: "0.9375rem", letterSpacing: "-0.005em", color: T.fg }}>
+                        {lesson.title}
+                      </span>
+                      {lesson.free && (
+                        <span
+                          style={{
+                            fontFamily: T.mono,
+                            fontSize: "9px",
+                            letterSpacing: "0.1em",
+                            textTransform: "uppercase",
+                            color: T.primary,
+                            background: `${T.primary}12`,
+                            border: `1px solid ${T.primary}24`,
+                            padding: "2px 8px",
+                            borderRadius: T.r.full,
+                          }}
+                        >
+                          Preview
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", color: T.muted }}>
+                      {lesson.duration}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
 
-      {/* Start CTA */}
-      <div className="mt-10">
-        <Link
-          href={`/learn/${courseSlug}/${course.modules[0].lessons[0].slug}`}
-          className="inline-flex items-center gap-3 px-6 h-12 transition-opacity hover:opacity-90"
-          style={{
-            fontFamily: T.mono,
-            fontSize: "0.78rem",
-            fontWeight: 600,
-            letterSpacing: "0.06em",
-            background: T.primary,
-            color: T.primaryFg,
-            borderRadius: T.r.md,
-            boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)`,
-            textDecoration: "none",
-          }}
-        >
-          Start from lesson 1 →
-        </Link>
+        {/* Start CTA */}
+        <div className="mt-10">
+          <Link
+            href={`/learn/${courseSlug}/${course.modules[0].lessons[0].slug}`}
+            className="inline-flex items-center gap-3 px-6 h-12 transition-opacity hover:opacity-90"
+            style={{
+              fontFamily: T.mono,
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              background: T.primary,
+              color: T.primaryFg,
+              borderRadius: T.r.md,
+              boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 22%, transparent)`,
+              textDecoration: "none",
+            }}
+          >
+            Start from lesson 1 →
+          </Link>
+        </div>
       </div>
     </div>
+  );
+}
+
+function SetupScreen() {
+  return (
+    <main className="min-h-screen flex items-center justify-center px-6" style={{ background: T.bg }}>
+      <div className="text-center max-w-md">
+        <div
+          style={{
+            fontFamily: T.mono,
+            fontSize: "10px",
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            color: "#f87171",
+            marginBottom: "16px",
+          }}
+        >
+          SETUP_REQUIRED
+        </div>
+        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2rem", color: T.fg, marginBottom: "12px" }}>
+          NOT CONFIGURED
+        </h1>
+        <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
+          Supabase environment variables are missing. Add them to <code>.env.local</code> and restart.
+        </p>
+      </div>
+    </main>
   );
 }

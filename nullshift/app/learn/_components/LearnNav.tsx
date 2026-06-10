@@ -29,8 +29,13 @@ export function LearnNav({ tier, email }: LearnNavProps) {
 
   return (
     <aside
-      className="flex flex-col h-screen sticky top-0 w-64 shrink-0"
-      style={{ background: T.surface, borderRight: `1px solid ${T.border}` }}
+      className="flex flex-col h-screen sticky top-0 w-72 shrink-0"
+      style={{
+        background:
+          "linear-gradient(180deg, color-mix(in oklab, var(--color-surface) 96%, transparent) 0%, color-mix(in oklab, var(--color-background) 18%, var(--color-surface)) 100%)",
+        borderRight: `1px solid ${T.border}`,
+        boxShadow: T.shadow.md,
+      }}
     >
       {/* Logo */}
       <div
@@ -46,18 +51,18 @@ export function LearnNav({ tier, email }: LearnNavProps) {
       </div>
 
       {/* Tier badge */}
-      <div className="px-6 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
+      <div className="px-6 py-5" style={{ borderBottom: `1px solid ${T.border}` }}>
         <div className="flex items-center gap-2">
           <span
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full"
             style={{
               fontFamily: T.mono,
-              fontSize: "9px",
+              fontSize: "10px",
               letterSpacing: "0.14em",
               textTransform: "uppercase",
               color: T.primary,
-              background: `${T.primary}15`,
-              border: `1px solid ${T.primary}30`,
+              background: `${T.primary}12`,
+              border: `1px solid ${T.primary}24`,
             }}
           >
             <span className="size-1.5 rounded-full" style={{ background: T.primary }} />
@@ -65,7 +70,7 @@ export function LearnNav({ tier, email }: LearnNavProps) {
           </span>
         </div>
         <p
-          className="mt-1.5 truncate"
+          className="mt-2 truncate"
           style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.04em", color: T.muted }}
         >
           {email}
@@ -73,9 +78,9 @@ export function LearnNav({ tier, email }: LearnNavProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-y-auto px-4 py-4">
         <div
-          className="px-3 mb-2"
+          className="px-2 mb-2"
           style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", color: T.muted }}
         >
           COURSES
@@ -86,18 +91,19 @@ export function LearnNav({ tier, email }: LearnNavProps) {
             <Link
               key={course.slug}
               href={`/learn/${course.slug}`}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg mb-1 transition-colors"
+              className="flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-colors"
               style={{
                 fontFamily: T.sans,
                 fontSize: "0.875rem",
-                fontWeight: active ? 500 : 400,
+                fontWeight: active ? 600 : 400,
                 color: active ? T.fg : T.muted,
                 background: active ? T.surface2 : "transparent",
+                border: active ? `1px solid ${T.border}` : "1px solid transparent",
                 letterSpacing: "-0.005em",
               }}
             >
               <span
-                className="size-1.5 rounded-full shrink-0"
+                className="size-2 rounded-full shrink-0"
                 style={{ background: active ? T.primary : T.border }}
               />
               {course.title}
@@ -106,22 +112,24 @@ export function LearnNav({ tier, email }: LearnNavProps) {
         })}
 
         <div
-          className="px-3 mt-6 mb-2"
+          className="px-2 mt-6 mb-2"
           style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", color: T.muted }}
         >
           ACCOUNT
         </div>
         <Link
           href="/learn"
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg mb-1 transition-colors"
+          className="flex items-center gap-3 px-3 py-3 rounded-xl mb-1 transition-colors"
           style={{
             fontFamily: T.sans,
             fontSize: "0.875rem",
+            fontWeight: pathname === "/learn" ? 600 : 400,
             color: pathname === "/learn" ? T.fg : T.muted,
             background: pathname === "/learn" ? T.surface2 : "transparent",
+            border: pathname === "/learn" ? `1px solid ${T.border}` : "1px solid transparent",
           }}
         >
-          <span className="size-1.5 rounded-full shrink-0" style={{ background: pathname === "/learn" ? T.primary : T.border }} />
+          <span className="size-2 rounded-full shrink-0" style={{ background: pathname === "/learn" ? T.primary : T.border }} />
           Dashboard
         </Link>
       </nav>
@@ -131,14 +139,15 @@ export function LearnNav({ tier, email }: LearnNavProps) {
         <form action="/api/auth/signout" method="post">
           <button
             type="submit"
-            className="w-full flex items-center justify-between px-4 h-9 rounded-lg transition-opacity hover:opacity-80"
+            className="w-full flex items-center justify-between px-4 h-10 rounded-lg transition-opacity hover:opacity-80"
             style={{
               fontFamily: T.mono,
               fontSize: "10px",
               letterSpacing: "0.1em",
               textTransform: "uppercase",
               color: T.muted,
-              border: `1px solid ${T.border}`,
+              border: `1px solid ${T.borderStr}`,
+              background: T.surface,
             }}
           >
             <span>Sign out</span>

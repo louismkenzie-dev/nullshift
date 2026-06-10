@@ -1,0 +1,46 @@
+// nullshift/app/error/page.tsx
+
+"use client";
+
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { T } from '@/lib/tokens';
+
+export default function ErrorPage() {
+  const searchParams = useSearchParams();
+  const message = searchParams.get('message') || 'An unexpected error occurred.';
+
+  return (
+    <main
+      className="min-h-screen flex flex-col items-center justify-center px-6 py-16 text-center"
+      style={{ background: T.bg }}
+    >
+      <div className="flex flex-col gap-6">
+        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+          ERROR<br /><span style={{ color: T.primary }}>OCCURRED</span>
+        </h1>
+        <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
+          {message}
+        </p>
+        <Link
+          href="/"
+          className="inline-flex items-center justify-center px-5 h-11 transition-opacity hover:opacity-90"
+          style={{
+            fontFamily: T.mono,
+            fontSize: "0.78rem",
+            fontWeight: 600,
+            letterSpacing: "0.06em",
+            background: T.primary,
+            color: T.primaryFg,
+            borderRadius: T.r.md,
+            boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)`,
+            textDecoration: "none",
+            marginTop: "24px",
+          }}
+        >
+          Go to Home
+        </Link>
+      </div>
+    </main>
+  );
+}

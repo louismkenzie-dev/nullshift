@@ -1,9 +1,14 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { hasSupabaseBrowserConfig } from "@/lib/supabase/env";
 import { T } from "@/lib/tokens";
 
 // Minimal lesson metadata — in production this would come from a CMS or DB
-const LESSON_META: Record<string, Record<string, { title: string; description: string; duration: string; next?: string; prev?: string }>> = {
+const LESSON_META: Record<
+  string,
+  Record<string, { title: string; description: string; duration: string; next?: string; prev?: string; free?: boolean }>
+> = {
   "ai-fundamentals": {
     "what-is-a-language-model": {
       title: "What is a language model?",
@@ -103,106 +108,128 @@ export default async function LessonPage({
   const lesson = courseLessons[lessonSlug];
   if (!lesson) notFound();
 
+  if (!hasSupabaseBrowserConfig()) {
+    return <SetupScreen />;
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(`/learn/login?next=${encodeURIComponent(`/learn/${courseSlug}/${lessonSlug}`)}`);
+  }
+
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Breadcrumb */}
-      <div
-        className="flex items-center gap-2 px-8 md:px-12 pt-8 pb-4"
-        style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", color: T.muted }}
-      >
-        <Link href="/learn" style={{ color: T.muted, textDecoration: "none" }}>LEARN</Link>
-        <span>/</span>
-        <Link href={`/learn/${courseSlug}`} style={{ color: T.muted, textDecoration: "none" }}>
-          {courseSlug.replace(/-/g, "_").toUpperCase()}
-        </Link>
-        <span>/</span>
-        <span style={{ color: T.primary }}>{lessonSlug.replace(/-/g, "_").toUpperCase()}</span>
-      </div>
-
-      <div className="px-8 md:px-12 pb-12 max-w-4xl">
-        {/* Lesson header */}
-        <div className="mb-6">
-          <div
-            className="flex items-center gap-2 mb-3"
-            style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.primary }}
-          >
-            <span className="size-1.5 rounded-full" style={{ background: T.primary }} />
-            <span>{lesson.duration}</span>
-          </div>
-          <h1
-            style={{
-              fontFamily: T.display,
-              fontWeight: 900,
-              fontSize: "clamp(1.8rem,3.5vw,2.8rem)",
-              lineHeight: 1,
-              letterSpacing: "-0.02em",
-              color: T.fg,
-            }}
-          >
-            {lesson.title.toUpperCase()}
-          </h1>
-        </div>
-
-        {/* Video player placeholder */}
+    <div
+      className="min-h-screen"
+      style={{
+        background:
+          "radial-gradient(circle at top right, color-mix(in oklab, var(--color-primary) 10%, transparent) 0%, transparent 28%), radial-gradient(circle at left 20%, color-mix(in oklab, var(--color-info) 8%, transparent) 0%, transparent 24%)",
+      }}
+    >
+      <div className="px-6 md:px-10 pt-8 pb-12 max-w-5xl">
+        {/* Breadcrumb */}
         <div
-          className="w-full rounded-xl mb-6 flex flex-col items-center justify-center gap-4"
-          style={{
-            aspectRatio: "16/9",
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-          }}
+          className="flex items-center gap-2 mb-6"
+          style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", color: T.muted }}
         >
-          <div
-            className="size-14 rounded-full grid place-content-center"
-            style={{ background: `${T.primary}18`, border: `1px solid ${T.primary}35` }}
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M6 4l12 6-12 6V4z" fill={T.primary} />
-            </svg>
-          </div>
-          <span
-            style={{
-              fontFamily: T.mono,
-              fontSize: "10px",
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              color: T.muted,
-            }}
-          >
-            VIDEO_PLACEHOLDER / {lesson.duration.toUpperCase()}
-          </span>
+          <Link href="/learn" style={{ color: T.muted, textDecoration: "none" }}>Learn</Link>
+          <span>/</span>
+          <Link href={`/learn/${courseSlug}`} style={{ color: T.muted, textDecoration: "none" }}>
+            {courseSlug.replace(/-/g, "_").toUpperCase()}
+          </Link>
+          <span>/</span>
+          <span style={{ color: T.primary }}>{lessonSlug.replace(/-/g, "_").toUpperCase()}</span>
         </div>
 
-        {/* Lesson description */}
-        <p
-          style={{
-            fontFamily: T.sans,
-            fontSize: "0.9375rem",
-            lineHeight: 1.75,
-            letterSpacing: "-0.005em",
-            color: T.muted,
-            maxWidth: "64ch",
-            marginBottom: "2rem",
-          }}
-        >
-          {lesson.description}
-        </p>
+        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <div>
+            {/* Lesson header */}
+            <div className="rounded-3xl p-8 md:p-10 mb-6" style={{ background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.shadow.md }}>
+              <div
+                className="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full"
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "10px",
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: T.primary,
+                  background: `${T.primary}12`,
+                  border: `1px solid ${T.primary}24`,
+                }}
+              >
+                <span className="size-1.5 rounded-full" style={{ background: T.primary }} />
+                <span>{lesson.duration}</span>
+              </div>
+              <h1
+                style={{
+                  fontFamily: T.display,
+                  fontWeight: 600,
+                  fontSize: "clamp(1.9rem,3.7vw,3rem)",
+                  lineHeight: 1.04,
+                  letterSpacing: "-0.03em",
+                  color: T.fg,
+                  marginBottom: "1rem",
+                }}
+              >
+                {lesson.title}
+              </h1>
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.9375rem",
+                  lineHeight: 1.7,
+                  letterSpacing: "-0.005em",
+                  color: T.muted,
+                  maxWidth: "62ch",
+                }}
+              >
+                {lesson.description}
+              </p>
+            </div>
 
-        {/* Divider */}
-        <div className="h-px mb-6" style={{ background: T.border }} />
+            {/* Video player placeholder */}
+            <div
+              className="w-full rounded-3xl mb-6 flex flex-col items-center justify-center gap-4"
+              style={{
+                aspectRatio: "16/9",
+                background: T.surface,
+                border: `1px solid ${T.border}`,
+                boxShadow: T.shadow.sm,
+              }}
+            >
+              <div
+                className="size-16 rounded-full grid place-content-center"
+                style={{ background: `${T.primary}12`, border: `1px solid ${T.primary}24` }}
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M6 4l12 6-12 6V4z" fill={T.primary} />
+                </svg>
+              </div>
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "10px",
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: T.muted,
+                }}
+              >
+                Video placeholder / {lesson.duration.toUpperCase()}
+              </span>
+            </div>
 
-        {/* Lesson nav */}
-        <div className="flex items-center justify-between gap-4">
+            {/* Lesson nav */}
+            <div className="flex items-center justify-between gap-4">
           {lesson.prev ? (
             <Link
               href={`/learn/${courseSlug}/${lesson.prev}`}
               className="flex items-center gap-2 px-5 h-11 rounded-lg transition-opacity hover:opacity-80"
               style={{
                 fontFamily: T.mono,
-                fontSize: "0.7rem",
+                fontSize: "0.75rem",
                 letterSpacing: "0.06em",
                 color: T.fg,
-                border: `1px solid ${T.border}`,
+                border: `1px solid ${T.borderStr}`,
                 background: T.surface,
                 textDecoration: "none",
               }}
@@ -218,13 +245,13 @@ export default async function LessonPage({
               className="flex items-center gap-2 px-5 h-11 rounded-lg transition-opacity hover:opacity-90"
               style={{
                 fontFamily: T.mono,
-                fontSize: "0.7rem",
+                fontSize: "0.75rem",
                 fontWeight: 600,
                 letterSpacing: "0.06em",
                 background: T.primary,
                 color: T.primaryFg,
                 borderRadius: T.r.md,
-                boxShadow: `0 0 16px color-mix(in oklab, ${T.primary} 20%, transparent)`,
+                boxShadow: `0 0 20px color-mix(in oklab, ${T.primary} 18%, transparent)`,
                 textDecoration: "none",
               }}
             >
@@ -236,13 +263,13 @@ export default async function LessonPage({
               className="flex items-center gap-2 px-5 h-11 rounded-lg transition-opacity hover:opacity-90"
               style={{
                 fontFamily: T.mono,
-                fontSize: "0.7rem",
+                fontSize: "0.75rem",
                 fontWeight: 600,
                 letterSpacing: "0.06em",
                 background: T.primary,
                 color: T.primaryFg,
                 borderRadius: T.r.md,
-                boxShadow: `0 0 16px color-mix(in oklab, ${T.primary} 20%, transparent)`,
+                boxShadow: `0 0 20px color-mix(in oklab, ${T.primary} 18%, transparent)`,
                 textDecoration: "none",
               }}
             >
@@ -250,7 +277,69 @@ export default async function LessonPage({
             </Link>
           )}
         </div>
+          </div>
+
+          <aside className="rounded-3xl p-6 md:p-7 h-fit" style={{ background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.shadow.sm }}>
+            <div
+              style={{
+                fontFamily: T.mono,
+                fontSize: "10px",
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color: T.muted,
+                marginBottom: "12px",
+              }}
+            >
+              Lesson details
+            </div>
+            <div className="space-y-4">
+              <Metric label="Duration" value={lesson.duration} />
+              <Metric label="Course" value={courseSlug.replace(/-/g, " ").toUpperCase()} />
+              <Metric label="Mode" value={lesson.free ? "Preview" : "Members only"} />
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl p-4" style={{ background: T.elevated, border: `1px solid ${T.border}` }}>
+      <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted, marginBottom: "8px" }}>
+        {label}
+      </div>
+      <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.05rem", letterSpacing: "-0.02em", color: T.fg }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function SetupScreen() {
+  return (
+    <main className="min-h-screen flex items-center justify-center px-6" style={{ background: T.bg }}>
+      <div className="text-center max-w-md">
+        <div
+          style={{
+            fontFamily: T.mono,
+            fontSize: "10px",
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            color: "#f87171",
+            marginBottom: "16px",
+          }}
+        >
+          SETUP_REQUIRED
+        </div>
+        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2rem", color: T.fg, marginBottom: "12px" }}>
+          NOT CONFIGURED
+        </h1>
+        <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
+          Supabase environment variables are missing. Add them to <code>.env.local</code> and restart.
+        </p>
+      </div>
+    </main>
   );
 }

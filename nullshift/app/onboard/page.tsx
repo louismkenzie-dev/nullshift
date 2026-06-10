@@ -1,31 +1,17 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { createClient } from "@/lib/supabase/client";
 import { T } from "@/lib/tokens";
 import { LogoMark } from "@/components/Logo";
 import { hasSupabaseBrowserConfig } from "@/lib/supabase/env";
 
-type Plan = "core" | "grow" | "pro";
+import { PLAN_META_ONBOARD, PricingPlan } from "@/lib/pricingPlans";
 
-const PLAN_META: Record<Plan, { label: string; price: string; features: string[] }> = {
-  core: {
-    label: "Core",
-    price: "£19.99 / month",
-    features: ["Full video library", "AI tool tutorials", "New content monthly", "Self-paced learning"],
-  },
-  grow: {
-    label: "Grow",
-    price: "£49 / month",
-    features: ["Everything in Core", "Email support", "Live chat assistance", "Priority response"],
-  },
-  pro: {
-    label: "Pro",
-    price: "£249 / month",
-    features: ["Everything in Grow", "All resources", "Bespoke 1-to-1 call support", "Workflow strategy"],
-  },
-};
+type Plan = PricingPlan["tier"];
 
 export default function OnboardPage() {
   return (
@@ -38,16 +24,35 @@ export default function OnboardPage() {
 function OnboardFlow() {
   const params = useSearchParams();
   const rawPlan = params.get("plan") ?? "core";
-  const plan: Plan = rawPlan in PLAN_META ? (rawPlan as Plan) : "core";
-  const meta = PLAN_META[plan];
+  const plan: Plan = (rawPlan.toLowerCase() in PLAN_META_ONBOARD ? rawPlan.toLowerCase() : "core") as Plan;
+  const meta = PLAN_META_ONBOARD[plan];
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const router = useRouter();
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const isConfirmed = params.get("confirmed") === "true";
+    if (isConfirmed) {
+      setStep(3);
+      return;
+    }
+
+    if (!hasSupabaseBrowserConfig()) return;
+
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email_confirmed_at) {
+        setStep(3);
+      }
+    });
+  }, [params]);
 
   const inputStyle: React.CSSProperties = {
     background: T.bg,
@@ -75,14 +80,51 @@ function OnboardFlow() {
     setBusy(true);
     setError(null);
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
-      setStep(3);
+      const response = await fetch('/api/auth/signup-with-plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password, plan: plan }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create account.');
+      }
+
+      setStep(4); // Move to awaiting email confirmation
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign up failed.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function resendConfirmationEmail(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!email || resendBusy) return;
+
+    setResendBusy(true);
+    setResendMessage(null);
+    try {
+      const response = await fetch("/api/auth/resend-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Could not resend confirmation email.");
+      }
+      setResendMessage(data.message || "Confirmation email sent.");
+    } catch (err) {
+      setResendMessage(
+        err instanceof Error ? err.message : "Could not resend confirmation email."
+      );
+    } finally {
+      setResendBusy(false);
     }
   }
 
@@ -94,12 +136,12 @@ function OnboardFlow() {
       style={{ background: T.bg }}
     >
       {/* Logo */}
-      <a href="/" className="flex items-center gap-2.5 mb-12">
+      <Link href="/" className="flex items-center gap-2.5 mb-12">
         <LogoMark size={24} />
         <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.1rem", letterSpacing: "0.04em", color: T.fg }}>
           NULLSHIFT
         </span>
-      </a>
+      </Link>
 
       {/* Step indicator */}
       <div className="flex items-center gap-3 mb-10">
@@ -142,7 +184,7 @@ function OnboardFlow() {
                 STEP 01 / YOUR PLAN
               </div>
               <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
-                YOU'VE CHOSEN<br /><span style={{ color: T.primary }}>{meta.label.toUpperCase()}</span>
+                YOU&apos;VE CHOSEN<br /><span style={{ color: T.primary }}>{meta.label.toUpperCase()}</span>
               </h1>
             </div>
 
@@ -159,12 +201,12 @@ function OnboardFlow() {
                     {meta.price}
                   </div>
                 </div>
-                <a
+                <Link
                   href="/pricing"
                   style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, textDecoration: "none" }}
                 >
                   Change plan
-                </a>
+                </Link>
               </div>
               <div className="h-px" style={{ background: T.border }} />
               <ul className="flex flex-col gap-2.5">
@@ -244,6 +286,20 @@ function OnboardFlow() {
               <form onSubmit={createAccount} className="flex flex-col gap-4 rounded-xl p-6" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
                 <div className="flex flex-col gap-1.5">
                   <label style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    placeholder="Your name"
+                    style={{ ...inputStyle, color: T.fg }}
+                    autoComplete="name"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>
                     Email
                   </label>
                   <input
@@ -317,86 +373,158 @@ function OnboardFlow() {
 
             <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", color: T.muted, textAlign: "center" }}>
               Already have an account?{" "}
-              <a href="/learn/login" style={{ color: T.primary, textDecoration: "none" }}>Sign in →</a>
+              <Link href="/learn/login" style={{ color: T.primary, textDecoration: "none" }}>Sign in →</Link>
             </p>
           </div>
         )}
 
-        {/* ── Step 3: Payment placeholder ── */}
+        {/* ── Step 3: Payment ── */}
         {step === 3 && (
-          <div className="flex flex-col gap-6">
-            <div>
-              <div
-                className="mb-2"
-                style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}
-              >
-                STEP 03 / PAYMENT
-              </div>
-              <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
-                ALMOST<br /><span style={{ color: T.primary }}>THERE</span>
-              </h1>
-            </div>
+          <StripeCheckoutRedirect plan={plan} email={email} />
+        )}
 
-            <div
-              className="rounded-xl p-8 flex flex-col items-center gap-4 text-center"
-              style={{ background: T.surface, border: `1px solid ${T.border}` }}
-            >
-              {/* Placeholder icon */}
-              <div
-                className="size-14 rounded-full grid place-content-center"
-                style={{ background: `${T.primary}15`, border: `1px solid ${T.primary}30` }}
-              >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <rect x="2" y="5" width="20" height="14" rx="2" stroke={T.primary} strokeWidth="1.5" />
-                  <path d="M2 10h20" stroke={T.primary} strokeWidth="1.5" />
-                  <path d="M6 15h4" stroke={T.primary} strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div>
-                <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.primary, marginBottom: "8px" }}>
-                  PAYMENT_INTEGRATION / COMING_SOON
-                </div>
-                <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.65, color: T.muted, maxWidth: "36ch" }}>
-                  Stripe payment is being wired up. Your account has been created — we'll email you at <span style={{ color: T.fg }}>{email || "your address"}</span> when billing goes live.
-                </p>
-              </div>
-              <div className="w-full h-px" style={{ background: T.border }} />
-              <div className="w-full flex flex-col gap-2 text-left">
-                <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted }}>
-                  SELECTED PLAN
-                </div>
-                <div className="flex items-center justify-between">
-                  <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>{meta.label}</span>
-                  <span style={{ fontFamily: T.display, fontWeight: 700, fontSize: "1rem", color: T.primary }}>{meta.price}</span>
-                </div>
-              </div>
-            </div>
-
-            <a
-              href="/learn"
-              className="w-full h-12 flex items-center justify-between px-5 transition-opacity hover:opacity-90"
-              style={{
-                fontFamily: T.mono,
-                fontSize: "0.78rem",
-                fontWeight: 600,
-                letterSpacing: "0.06em",
-                background: T.primary,
-                color: T.primaryFg,
-                borderRadius: T.r.md,
-                boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)`,
-                textDecoration: "none",
-              }}
-            >
-              <span>Go to my dashboard</span>
-              <span>→</span>
-            </a>
-
-            <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted, textAlign: "center" }}>
-              Questions? <a href="/book" style={{ color: T.primary, textDecoration: "none" }}>Book a call →</a>
+        {/* ── Step 4: Check Email ── */}
+        {step === 4 && (
+          <div className="flex flex-col gap-6 items-center text-center">
+            <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+              CHECK YOUR<br /><span style={{ color: T.primary }}>EMAIL</span>
+            </h1>
+            <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
+              We&apos;ve sent a confirmation link to <strong>{email}</strong>. Please click the link to activate your account.
             </p>
+            <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted, textAlign: "center" }}>
+              Didn&apos;t receive it? Check your spam folder or{" "}
+              <button
+                type="button"
+                onClick={resendConfirmationEmail}
+                disabled={resendBusy}
+                style={{
+                  color: T.primary,
+                  background: "none",
+                  border: "none",
+                  cursor: resendBusy ? "default" : "pointer",
+                  fontFamily: T.mono,
+                  fontSize: "10px",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  opacity: resendBusy ? 0.6 : 1,
+                }}
+              >
+                {resendBusy ? "sending…" : "resend email"}
+              </button>
+              .
+            </p>
+            {resendMessage && (
+              <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
+                {resendMessage}
+              </p>
+            )}
           </div>
         )}
+
       </div>
     </main>
   );
+}
+
+interface StripeCheckoutRedirectProps {
+  plan: Plan;
+  email: string; // Pass the email for potential pre-fill
+}
+
+function StripeCheckoutRedirect({ plan, email }: StripeCheckoutRedirectProps) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stripe, setStripe] = useState<Stripe | null>(null);
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY) {
+      loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY).then(stripeInstance => {
+        setStripe(stripeInstance);
+      });
+    }
+  }, []); // Only run once on mount
+
+  useEffect(() => {
+    async function redirectToCheckout() {
+      setLoading(true);
+      setError(null);
+      if (!stripe) {
+        // Stripe.js is not yet loaded, wait for the other useEffect to set it.
+        return;
+      }
+
+      const supabase = createClient();
+      const { data: { user } = {} } = await supabase.auth.getUser(); // Destructure with default empty object
+
+      if (!user?.id) {
+        setError("User not authenticated.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ plan: plan, userId: user.id, userEmail: email }),
+        });
+
+        const sessionData = await response.json();
+
+        if (!response.ok) {
+          throw new Error(sessionData.error || 'Failed to create Stripe Checkout session.');
+        }
+
+        const { sessionId } = sessionData;
+        const { error: stripeRedirectError } = await stripe.redirectToCheckout({ sessionId });
+
+        if (stripeRedirectError) {
+          setError(stripeRedirectError.message || 'Failed to redirect to Stripe Checkout.');
+          setLoading(false);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to initiate payment.");
+        setLoading(false);
+      }
+    }
+
+    if (stripe) { // Only attempt redirect if Stripe.js is loaded
+        redirectToCheckout();
+    }
+  }, [stripe, plan, email]); // Depend on stripe, plan, and email
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6 items-center text-center">
+        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+          PAYMENT ERROR
+        </h1>
+        <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
+          {error} Please try again or contact support.
+        </p>
+        <Link href="/pricing" className="mt-4" style={{ color: T.primary, textDecoration: "none" }}>
+          Go back to pricing
+        </Link>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 items-center text-center">
+        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+          REDIRECTING<br /><span style={{ color: T.primary }}>TO CHECKOUT</span>
+        </h1>
+        <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
+          Please wait while we securely redirect you to Stripe for payment.
+        </p>
+        {/* Optional: Add a spinner or loading animation here */}
+      </div>
+    );
+  }
+
+  return null; // Should not reach here if redirection is successful, or display final state if not loading
 }

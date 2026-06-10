@@ -5,80 +5,10 @@ import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import { PricingCard } from "@/components/PricingCard";
 import { T } from "@/lib/tokens";
+import { pricingPlans } from "@/lib/pricingPlans";
 import Link from "next/link";
 
-const tiers = [
-  {
-    tier: "Core",
-    price: "£19.99/mo",
-    bestFor: "Start learning on your own terms.",
-    CTA: "Get started",
-    href: "/onboard?plan=core",
-    highlighted: false,
-    benefits: [
-      { text: "Full library of support videos", checked: true },
-      { text: "Step-by-step AI tool tutorials", checked: true },
-      { text: "New content added monthly", checked: true },
-      { text: "Self-paced learning", checked: true },
-      { text: "Email support", checked: false },
-      { text: "Live chat assistance", checked: false },
-      { text: "1-to-1 call support", checked: false },
-      { text: "Bespoke workflow strategy", checked: false },
-    ],
-  },
-  {
-    tier: "Grow",
-    price: "£49/mo",
-    bestFor: "Learn faster with direct guidance.",
-    CTA: "Get started",
-    href: "/onboard?plan=grow",
-    highlighted: false,
-    benefits: [
-      { text: "Full library of support videos", checked: true },
-      { text: "Step-by-step AI tool tutorials", checked: true },
-      { text: "New content added monthly", checked: true },
-      { text: "Self-paced learning", checked: true },
-      { text: "Email support", checked: true },
-      { text: "Live chat assistance", checked: true },
-      { text: "1-to-1 call support", checked: false },
-      { text: "Bespoke workflow strategy", checked: false },
-    ],
-  },
-  {
-    tier: "Pro",
-    price: "£249/mo",
-    bestFor: "Full access and hands-on support.",
-    CTA: "Get started",
-    href: "/onboard?plan=pro",
-    highlighted: true,
-    benefits: [
-      { text: "Full library of support videos", checked: true },
-      { text: "Step-by-step AI tool tutorials", checked: true },
-      { text: "New content added monthly", checked: true },
-      { text: "Self-paced learning", checked: true },
-      { text: "Email support", checked: true },
-      { text: "Live chat assistance", checked: true },
-      { text: "1-to-1 call support", checked: true },
-      { text: "Bespoke workflow strategy", checked: true },
-    ],
-  },
-  {
-    tier: "Partner",
-    price: "£749/mo",
-    bestFor: "We build it. We teach you to own it. Min. 12-month contract.",
-    CTA: "Book a call",
-    href: "/book",
-    highlighted: false,
-    benefits: [
-      { text: "Everything in Pro", checked: true },
-      { text: "We build your site or system", checked: true },
-      { text: "12-month guided handover", checked: true },
-      { text: "Monthly training sessions", checked: true },
-      { text: "Goal: full independence by month 12", checked: true },
-      { text: "Optional maintenance add-on (£249/mo)", checked: true },
-    ],
-  },
-];
+const tiers = pricingPlans;
 
 const faqs = [
   {

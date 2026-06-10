@@ -1,8 +1,9 @@
 export const T = {
-  // Colors — unchanged Nullshift palette
+  // Preserve the original brand color scheme
   bg:        "#09090b",
   surface:   "#18181b",
   surface2:  "#262629",
+  elevated:  "#262629",
   fg:        "#fafafa",
   muted:     "#a1a1a6",
   primary:   "#10b981",
@@ -12,9 +13,9 @@ export const T = {
   border:    "#3d3d42",
   borderStr: "#505055",
 
-  // Fonts — Halo: Inter + JetBrains Mono
-  display:   "var(--font-sans), Inter, -apple-system, BlinkMacSystemFont, sans-serif",
-  sans:      "var(--font-sans), Inter, -apple-system, BlinkMacSystemFont, sans-serif",
+  // Halo typography
+  display:   "var(--font-sans), Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  sans:      "var(--font-sans), Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   mono:      "var(--font-mono), 'JetBrains Mono', ui-monospace, monospace",
 
   // Halo radius scale
