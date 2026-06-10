@@ -44,10 +44,12 @@ export async function sendConfirmationEmail({
   to,
   name,
   confirmUrl,
+  idempotencyKey,
 }: {
   to: string;
   name: string;
   confirmUrl: string;
+  idempotencyKey?: string;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -58,12 +60,27 @@ export async function sendConfirmationEmail({
     process.env.RESEND_FROM_EMAIL || "Nullshift <onboarding@resend.dev>";
   const resend = new Resend(apiKey);
 
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from,
     to: [to],
-    subject: "Confirm your email address",
-    html: `<p>Hello ${name},</p><p>Please confirm your email address by clicking <a href="${confirmUrl}">here</a>.</p>`,
+    subject: "Confirm your Nullshift account",
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#09090b;color:#fafafa;border-radius:12px;">
+        <p style="font-size:13px;letter-spacing:0.12em;text-transform:uppercase;color:#10b981;margin-bottom:24px;">NULLSHIFT / EMAIL CONFIRMATION</p>
+        <h1 style="font-size:28px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;">Confirm your email</h1>
+        <p style="color:#a1a1a6;font-size:15px;line-height:1.65;margin:0 0 32px;">Hi ${name}, click the button below to confirm your email address and activate your account.</p>
+        <a href="${confirmUrl}" style="display:inline-block;background:#10b981;color:#131316;font-weight:700;font-size:13px;letter-spacing:0.06em;padding:12px 24px;border-radius:8px;text-decoration:none;">Confirm email →</a>
+        <p style="color:#3d3d42;font-size:12px;margin-top:32px;">If you didn't create an account, you can safely ignore this email.</p>
+      </div>
+    `,
+    ...(idempotencyKey ? { idempotencyKey } : {}),
   });
+
+  if (error) {
+    throw new Error(`Resend error: ${error.message}`);
+  }
+
+  return data;
 }
 
 export async function findUserByEmail(

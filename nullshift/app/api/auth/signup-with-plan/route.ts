@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     const confirmUrl = buildConfirmUrl(siteUrl, tokenHash, "signup", redirectTo);
 
     try {
-      await sendConfirmationEmail({ to: email, name, confirmUrl });
+      await sendConfirmationEmail({ to: email, name, confirmUrl, idempotencyKey: `signup-confirm/${userId}` });
     } catch (emailError) {
       console.error("Resend confirmation email failed:", emailError);
       return NextResponse.json(
