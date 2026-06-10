@@ -1,3 +1,5 @@
+"use client";
+
 import { T } from "@/lib/tokens";
 import Link from "next/link";
 
