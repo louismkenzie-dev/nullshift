@@ -1,67 +1,16 @@
-"use client";
-
-import { useState } from "react";
+import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import { T } from "@/lib/tokens";
 
 const steps = [
-  { n: "01", title: "Tell us about your project", desc: "Fill in the form with details about your business and what you want to build. No brief too big or too small." },
-  { n: "02", title: "We ask the right questions", desc: "We'll review your submission and reach out to confirm the call — with focused questions to make the most of our time together." },
+  { n: "01", title: "Create your account", desc: "Sign up with your details, preferred call date, and time slot. Takes under two minutes." },
+  { n: "02", title: "Complete your brief", desc: "Answer five short questions about your project — pages, style, goals, and budget. We use this to make the call count." },
   { n: "03", title: "You get a clear proposal", desc: "Within 48 hours of our call, you'll receive a fixed-price proposal with full scope, timeline, and deliverables. No surprises." },
 ];
 
-const fieldStyle: React.CSSProperties = {
-  width: "100%",
-  background: T.surface,
-  color: T.fg,
-  fontFamily: T.sans,
-  fontSize: "0.9375rem",
-  letterSpacing: "-0.005em",
-  border: `1px solid ${T.border}`,
-  borderRadius: T.r.md,
-  padding: "10px 14px",
-  outline: "none",
-  height: 44,
-  transition: `border-color ${T.duration.base} ${T.ease}, box-shadow ${T.duration.base} ${T.ease}`,
-};
-
 export default function BookPage() {
-  const [submitted, setSubmitted] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (sending) return;
-    setSending(true);
-    setError(null);
-    const data = Object.fromEntries(new FormData(e.currentTarget).entries());
-    try {
-      const res = await fetch("/api/enquiries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, source: "booking" }),
-      });
-      if (!res.ok) throw new Error();
-      setSubmitted(true);
-    } catch {
-      setError("Something went wrong. Please email us directly.");
-    } finally {
-      setSending(false);
-    }
-  }
-
-  function onFocus(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
-    e.currentTarget.style.borderColor = T.primary;
-    e.currentTarget.style.boxShadow = T.shadow.focus;
-  }
-  function onBlur(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
-    e.currentTarget.style.borderColor = T.border;
-    e.currentTarget.style.boxShadow = "none";
-  }
-
   return (
     <>
       <Nav />
@@ -107,95 +56,68 @@ export default function BookPage() {
           </div>
         </section>
 
-        {/* Booking form */}
+        {/* CTA */}
         <section style={{ borderTop: `1px solid ${T.border}` }}>
           <div className="grid md:grid-cols-[1fr_480px]">
-            {/* Left info */}
+            {/* Left */}
             <div className="p-10 md:px-16 md:py-20 flex flex-col gap-8" style={{ borderRight: `1px solid ${T.border}` }}>
               <Reveal>
                 <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.5rem, 5vw, 4.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
-                  Request<br />a <span style={{ color: T.primary }}>call.</span>
+                  Ready to<br /><span style={{ color: T.primary }}>start?</span>
                 </h2>
               </Reveal>
               <Reveal delay={0.1}>
                 <p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.65, letterSpacing: "-0.005em", color: T.muted, maxWidth: "36ch" }}>
-                  Fill in the form and we&apos;ll confirm your preferred time within a few hours. All calls are via Zoom.
+                  Create your client account in under two minutes. Pick your preferred date and time, then we&apos;ll take you straight to your project brief.
                 </p>
               </Reveal>
               <Reveal delay={0.2}>
                 <div className="flex flex-col gap-3 pt-8" style={{ borderTop: `1px solid ${T.border}` }}>
-                  <div className="flex items-center gap-2.5" style={{ fontFamily: T.sans, fontSize: "0.8125rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
-                    <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: T.primary, display: "inline-block", flexShrink: 0 }} />
-                    Same-day response
-                  </div>
-                  <div style={{ fontFamily: T.sans, fontSize: "0.8125rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.faint, paddingLeft: "22px" }}>
-                    Platform — Zoom, free to join
-                  </div>
-                  <div style={{ fontFamily: T.sans, fontSize: "0.8125rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.faint, paddingLeft: "22px" }}>
-                    UK-based — global reach
-                  </div>
+                  {[
+                    "Same-day response",
+                    "Platform — Zoom, free to join",
+                    "UK-based — global reach",
+                  ].map((t, i) => (
+                    <div key={t} className="flex items-center gap-2.5" style={{ fontFamily: T.sans, fontSize: "0.8125rem", fontWeight: i === 0 ? 500 : 400, letterSpacing: "0.08em", textTransform: "uppercase", color: i === 0 ? T.muted : T.faint }}>
+                      {i === 0 && <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: T.primary, display: "inline-block", flexShrink: 0 }} />}
+                      {i > 0 && <span style={{ width: 6, height: 6, flexShrink: 0 }} />}
+                      {t}
+                    </div>
+                  ))}
                 </div>
               </Reveal>
             </div>
 
-            {/* Form */}
-            <div className="p-10 md:px-12 md:py-20">
-              <Reveal delay={0.1}>
-                <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-                  {[
-                    { id: "name",     label: "Your name",     type: "text",  required: true },
-                    { id: "business", label: "Business name", type: "text",  required: true },
-                    { id: "email",    label: "Email address", type: "email", required: true },
-                    { id: "phone",    label: "Phone (optional)", type: "tel", required: false },
-                  ].map(f => (
-                    <div key={f.id} className="flex flex-col gap-1.5">
-                      <label htmlFor={f.id} style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>{f.label}</label>
-                      <input id={f.id} name={f.id} type={f.type} required={f.required} disabled={submitted} style={fieldStyle} onFocus={onFocus} onBlur={onBlur} />
-                    </div>
-                  ))}
-
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="date" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Preferred date</label>
-                    <input id="date" name="date" type="date" required disabled={submitted} style={{ ...fieldStyle, colorScheme: "dark" }} onFocus={onFocus} onBlur={onBlur} />
+            {/* Right — CTA card */}
+            <div className="p-10 md:px-12 md:py-20 flex items-start">
+              <Reveal delay={0.1} className="w-full">
+                <div className="flex flex-col gap-6 p-8 rounded-2xl" style={{ background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.shadow.md }}>
+                  <div>
+                    <p style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, marginBottom: 8 }}>What happens next</p>
+                    <ol className="flex flex-col gap-3">
+                      {["Create your account — 2 min", "Complete your project brief", "We book your call and confirm"].map((s, i) => (
+                        <li key={s} className="flex items-center gap-3" style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.muted }}>
+                          <span style={{ width: 22, height: 22, borderRadius: "50%", background: T.primarySoft, border: `1px solid ${T.primary}44`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: T.mono, fontSize: "10px", fontWeight: 600, color: T.primary }}>{i + 1}</span>
+                          {s}
+                        </li>
+                      ))}
+                    </ol>
                   </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="time" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Preferred time</label>
-                    <select id="time" name="time" required disabled={submitted} style={{ ...fieldStyle, appearance: "none" }} onFocus={onFocus} onBlur={onBlur}>
-                      <option value="">Select a time…</option>
-                      <option value="morning">Morning (9am–12pm London)</option>
-                      <option value="afternoon">Afternoon (12pm–5pm London)</option>
-                      <option value="evening">Evening (5pm–8pm London)</option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="brief" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Project brief</label>
-                    <textarea id="brief" name="brief" rows={4} required disabled={submitted} style={{ ...fieldStyle, height: "auto", resize: "none", padding: "12px 14px", lineHeight: 1.55 }} onFocus={onFocus} onBlur={onBlur} />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="referral" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>How did you find us</label>
-                    <select id="referral" name="referral" disabled={submitted} style={{ ...fieldStyle, appearance: "none" }} onFocus={onFocus} onBlur={onBlur}>
-                      <option value="">Select an option…</option>
-                      <option value="google">Google search</option>
-                      <option value="referral">Word of mouth / referral</option>
-                      <option value="social">Social media</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={submitted || sending}
-                    className="mt-2 w-full flex items-center justify-between px-5 font-medium cursor-pointer"
-                    style={{ height: 48, fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", background: submitted ? T.surface2 : T.primary, color: submitted ? T.muted : T.primaryFg, borderRadius: T.r.md, boxShadow: submitted ? "none" : `inset 0 1px 0 rgba(255,255,255,0.18)`, border: "none", transition: `background ${T.duration.base} ${T.ease}`, opacity: sending ? 0.7 : 1 }}
+                  <div className="h-px" style={{ background: T.border }} />
+                  <Link
+                    href="/client-signup"
+                    className="w-full flex items-center justify-between px-5 font-medium"
+                    style={{ height: 48, fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", background: T.primary, color: T.primaryFg, borderRadius: T.r.md, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`, textDecoration: "none", transition: `background ${T.duration.base} ${T.ease}` }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.primaryHover}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = T.primary}
                   >
-                    <span>{submitted ? "Request sent — we'll be in touch" : sending ? "Sending…" : "Request a call"}</span>
-                    {!submitted && !sending && <span>→</span>}
-                  </button>
-                  {error && <p style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.danger, marginTop: 4 }}>{error}</p>}
-                </form>
+                    <span>Get started</span>
+                    <span>→</span>
+                  </Link>
+                  <p className="text-center" style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.faint }}>
+                    Free · No obligation · 30-minute call
+                  </p>
+                </div>
               </Reveal>
             </div>
           </div>

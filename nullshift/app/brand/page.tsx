@@ -91,7 +91,7 @@ function BrandPrintable({ printRef }: { printRef: React.RefObject<HTMLDivElement
         {TYPE.map((t) => (
           <div key={t.role} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "18px 20px" }}>
             <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, fontWeight: 600, marginBottom: "6px" }}>{t.role}</div>
-            <div style={{ fontFamily: `var(${t.cssVar})`, fontSize: "26px", fontWeight: t.cssVar === "--font-display" ? 900 : 600, color: T.fg, textTransform: t.cssVar === "--font-display" ? "uppercase" : "none", marginBottom: "4px" }}>{t.font}</div>
+            <div style={{ fontFamily: `var(${t.cssVar})`, fontSize: "26px", fontWeight: 600, color: T.fg, marginBottom: "4px" }}>{t.font}</div>
             <div style={{ fontFamily: T.mono, fontSize: "11px", color: T.primary }}>{t.weights} &nbsp; var({t.cssVar})</div>
             <div style={{ fontFamily: T.sans, fontSize: "12px", color: T.muted, marginTop: "8px" }}>{t.usage}</div>
           </div>
@@ -179,7 +179,7 @@ export default function BrandPage() {
       onClick={handleDownload}
       disabled={busy}
       className={`inline-flex items-center gap-3 px-6 h-12 font-semibold transition-opacity hover:opacity-90 cursor-pointer disabled:opacity-60 ${className}`}
-      style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.md, boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 30%, transparent)`, whiteSpace: "nowrap" }}
+      style={{ fontFamily: T.sans, fontSize: "0.875rem", letterSpacing: "-0.005em", background: T.primary, color: T.primaryFg, borderRadius: T.r.md, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`, whiteSpace: "nowrap" }}
     >
       {busy ? "Generating…" : "Download PDF"}
       {!busy && <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1V9M7 9L4 6M7 9L10 6M2 12H12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>}
@@ -193,12 +193,12 @@ export default function BrandPage() {
       <main>
         {/* Header */}
         <section className="pt-28 pb-16 px-8 md:px-16" style={{ borderBottom: `1px solid ${T.border}`, backgroundImage: `radial-gradient(ellipse 50% 60% at 75% 30%, color-mix(in oklab, ${T.primary} 5%, transparent) 0%, transparent 70%)` }}>
-          <div className="flex items-center gap-3 mb-5">
-            <span className="size-2 rounded-full" style={{ background: T.primary }} />
-            <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>SYS_08 / BRAND</span>
+          <div className="flex items-center gap-2 mb-5">
+            <span className="size-2 rounded-full" style={{ background: T.primary, boxShadow: `0 0 0 3px ${T.primarySoft}` }} />
+            <span style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Brand guidelines</span>
           </div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(3rem,8vw,8rem)", lineHeight: 1.04, letterSpacing: "-0.01em", textTransform: "uppercase", color: T.fg }}>
-            BRAND<br /><span className="hero-glow" style={{ color: T.primary }}>GUIDELINES.</span>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(3rem,8vw,8rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+            Brand<br /><span className="hero-glow" style={{ color: T.primary }}>guidelines.</span>
           </h1>
           <p className="mt-6 max-w-[52ch]" style={{ fontFamily: T.sans, fontSize: "1rem", lineHeight: 1.75, color: T.muted }}>
             The single source of truth for Nullshift&apos;s visual identity — typography, colour, logo usage, and the principles that keep every touchpoint consistent and intentional.
@@ -217,7 +217,7 @@ export default function BrandPage() {
                 <Reveal key={t.role} delay={i * 0.06}>
                   <div className="p-6 rounded-lg border h-full" style={{ background: T.surface, borderColor: T.border }}>
                     <div style={{ fontFamily: T.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, fontWeight: 600 }}>{t.role}</div>
-                    <div className="mt-2 mb-1" style={{ fontFamily: `var(${t.cssVar})`, fontSize: "1.6rem", fontWeight: t.cssVar === "--font-display" ? 900 : 600, color: T.fg, textTransform: t.cssVar === "--font-display" ? "uppercase" : "none" }}>{t.font}</div>
+                    <div className="mt-2 mb-1" style={{ fontFamily: `var(${t.cssVar})`, fontSize: "1.6rem", fontWeight: 600, color: T.fg }}>{t.font}</div>
                     <div style={{ fontFamily: T.mono, fontSize: "0.68rem", color: T.primary }}>{t.weights}</div>
                     <div style={{ fontFamily: T.mono, fontSize: "0.66rem", color: `${T.muted}99`, marginTop: "2px" }}>var({t.cssVar})</div>
                     <p className="mt-4" style={{ fontFamily: T.sans, fontSize: "0.8rem", lineHeight: 1.6, color: T.muted }}>{t.usage}</p>
@@ -296,6 +296,109 @@ export default function BrandPage() {
                 </Reveal>
               ))}
             </div>
+          </section>
+
+          {/* 05 — UI System */}
+          <section className="py-20" style={{ borderTop: `1px solid ${T.border}` }}>
+            <Reveal><SectionTag>// 05 — UI System</SectionTag></Reveal>
+            <Reveal delay={0.05}><H2>Halo UI System</H2></Reveal>
+            <p className="mb-12 max-w-[52ch]" style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.65, color: T.muted }}>
+              Every interface is built on three surface tiers, a single brand signal, and typography that carries hierarchy without colour.
+            </p>
+
+            {/* Surface tiers */}
+            <Reveal>
+              <div className="mb-3" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Surface tiers</div>
+            </Reveal>
+            <div className="grid md:grid-cols-3 gap-3 mb-10">
+              {[
+                { label: "Background", color: T.bg, token: "bg", desc: "Page canvas. Nothing sits below this tier." },
+                { label: "Surface", color: T.surface, token: "surface", desc: "Cards, panels, nav, and inputs live here." },
+                { label: "Elevated", color: T.elevated, token: "elevated", desc: "Modals, dropdowns, and active tabs rise to this tier." },
+              ].map((s, i) => (
+                <Reveal key={s.token} delay={i * 0.06}>
+                  <div className="p-6 rounded-lg border" style={{ background: T.surface, borderColor: T.border }}>
+                    <div className="h-12 rounded mb-4" style={{ background: s.color, border: `1px solid ${T.borderStr}` }} />
+                    <div className="flex items-center justify-between mb-1">
+                      <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.875rem", color: T.fg }}>{s.label}</span>
+                      <span style={{ fontFamily: T.mono, fontSize: "0.7rem", color: T.primary }}>T.{s.token}</span>
+                    </div>
+                    <p style={{ fontFamily: T.sans, fontSize: "0.8rem", lineHeight: 1.55, color: T.muted }}>{s.desc}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+            {/* Eyebrow pattern + radius */}
+            <div className="grid md:grid-cols-2 gap-3 mb-3">
+              <Reveal>
+                <div className="p-6 rounded-lg border h-full" style={{ background: T.surface, borderColor: T.border }}>
+                  <div className="mb-3" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Eyebrow pattern</div>
+                  <div className="flex items-center gap-2 mb-6">
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 3px ${T.primarySoft}`, display: "inline-block", flexShrink: 0 }} />
+                    <span style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Section label</span>
+                  </div>
+                  <ul className="space-y-2">
+                    {[
+                      "8px dot in T.primary + T.primarySoft ring",
+                      "label-sm: 0.75rem · weight 500 · 0.08em tracking",
+                      "Uppercase · T.sans (not mono)",
+                      "Used once per section to name the topic",
+                    ].map(r => (
+                      <li key={r} className="flex gap-2.5" style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted }}>
+                        <span style={{ color: T.primary, flexShrink: 0 }}>—</span>{r}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Reveal>
+              <Reveal delay={0.06}>
+                <div className="p-6 rounded-lg border h-full" style={{ background: T.surface, borderColor: T.border }}>
+                  <div className="mb-3" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Radius scale</div>
+                  <div className="flex flex-col gap-3">
+                    {[
+                      { label: "sm — 6px", r: T.r.sm, usage: "Badges, inline tags" },
+                      { label: "md — 10px", r: T.r.md, usage: "Inputs, buttons, chips" },
+                      { label: "lg — 16px", r: T.r.lg, usage: "Cards, modals, panels" },
+                      { label: "xl — 24px", r: T.r.xl, usage: "Hero cards, large containers" },
+                    ].map(({ label, r, usage }) => (
+                      <div key={label} className="flex items-center gap-4">
+                        <div style={{ width: 36, height: 22, background: T.primarySoft, border: `1px solid ${T.primary}44`, borderRadius: r, flexShrink: 0 }} />
+                        <div>
+                          <span style={{ fontFamily: T.mono, fontSize: "0.72rem", color: T.fg }}>{label}</span>
+                          <span style={{ fontFamily: T.sans, fontSize: "0.75rem", color: T.muted, marginLeft: 8 }}>{usage}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Reveal>
+            </div>
+
+            {/* Button anatomy */}
+            <Reveal delay={0.08}>
+              <div className="p-6 rounded-lg border" style={{ background: T.surface, borderColor: T.border }}>
+                <div className="mb-4" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Button anatomy</div>
+                <div className="flex flex-wrap items-center gap-4 mb-6">
+                  <button style={{ height: 48, padding: "0 20px", fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", background: T.primary, color: T.primaryFg, borderRadius: T.r.md, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`, border: "none", cursor: "default" }}>Primary action</button>
+                  <button style={{ height: 40, padding: "0 16px", fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em", background: "transparent", color: T.fg, borderRadius: T.r.md, border: `1px solid ${T.borderStr}`, cursor: "default" }}>Secondary</button>
+                  <button style={{ height: 40, padding: "0 16px", fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em", background: "transparent", color: T.danger, borderRadius: T.r.md, border: `1px solid ${T.danger}44`, cursor: "default" }}>Destructive</button>
+                </div>
+                <ul className="flex flex-wrap gap-x-8 gap-y-2">
+                  {[
+                    "T.sans — never mono on buttons",
+                    "40–48px height",
+                    "T.r.md radius (10px)",
+                    "inset 0 1px 0 rgba(255,255,255,0.18) top-light",
+                    "One brand colour for primary; no outlines or glows",
+                  ].map(r => (
+                    <li key={r} className="flex gap-2" style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted }}>
+                      <span style={{ color: T.primary }}>·</span>{r}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Reveal>
           </section>
 
           {/* Footer download CTA */}

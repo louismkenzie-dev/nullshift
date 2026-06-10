@@ -1,28 +1,68 @@
 import { T } from "@/lib/tokens";
 
-/* Brand data — single source mirrored by the on-page guidelines + printable */
+/* Brand data — single source of truth for on-page guidelines + printable PDF.
+   Updated to reflect the Halo UI design system (Nullshift edition, 2025).     */
+
+// ── Colour palette ────────────────────────────────────────────────────────────
 export const COLORS = [
-  { name: "Background", token: "bg", hex: T.bg, role: "Page background (cool near-black)" },
-  { name: "Surface", token: "surface", hex: T.surface, role: "Cards, alternating sections, inputs" },
-  { name: "Surface 2", token: "surface2", hex: T.surface2, role: "Tertiary surface / placeholders" },
-  { name: "Foreground", token: "fg", hex: T.fg, role: "Primary text (off-white)" },
-  { name: "Muted", token: "muted", hex: T.muted, role: "Secondary / body text (grey)" },
-  { name: "Primary", token: "primary", hex: T.primary, role: "Emerald accent — buttons, glows, hovers" },
-  { name: "Primary FG", token: "primaryFg", hex: T.primaryFg, role: "Text on the emerald accent" },
-  { name: "Border", token: "border", hex: T.border, role: "Standard borders / dividers" },
-  { name: "Border Strong", token: "borderStr", hex: T.borderStr, role: "Stronger borders" },
+  // Surfaces
+  { name: "Background",    token: "bg",         hex: T.bg,         role: "Page canvas — cool near-black. Nothing sits below this." },
+  { name: "Surface",       token: "surface",    hex: T.surface,    role: "Cards, panels, inputs, nav bar." },
+  { name: "Elevated",      token: "elevated",   hex: T.elevated,   role: "Modals, dropdowns, active tab fill." },
+  // Foreground
+  { name: "Foreground",    token: "fg",         hex: T.fg,         role: "Primary text — off-white, not pure white." },
+  { name: "Muted",         token: "muted",      hex: T.muted,      role: "Secondary / supporting text." },
+  { name: "Faint",         token: "faint",      hex: T.faint,      role: "Placeholders, captions, helper text." },
+  // Brand
+  { name: "Primary",       token: "primary",    hex: T.primary,    role: "Emerald — CTAs, focus rings, active states, brand dot." },
+  { name: "Primary FG",    token: "primaryFg",  hex: T.primaryFg,  role: "Text/icon colour on emerald backgrounds." },
+  // Borders
+  { name: "Border",        token: "border",     hex: T.border,     role: "Hairline dividers, default card outlines." },
+  { name: "Border Strong", token: "borderStr",  hex: T.borderStr,  role: "Inputs, secondary buttons, strong dividers." },
+  // Signal
+  { name: "Danger",        token: "danger",     hex: T.danger,     role: "Errors, destructive actions — never decorative." },
+  { name: "Warning",       token: "warning",    hex: T.warning,    role: "Warnings, soft alerts — never decorative." },
 ];
 
+// ── Typography ────────────────────────────────────────────────────────────────
 export const TYPE = [
-  { role: "Display", font: "Barlow Condensed", weights: "700 / 800 / 900", cssVar: "--font-display", usage: "Large headlines — uppercase, weight 900, tight tracking" },
-  { role: "Body / UI", font: "IBM Plex Sans", weights: "400 / 500 / 600 / 700", cssVar: "--font-sans", usage: "Paragraphs, descriptions, navigation, sub-text" },
-  { role: "Mono", font: "IBM Plex Mono", weights: "400 / 500 / 600", cssVar: "--font-mono", usage: "Labels, section markers, coordinate tags, buttons" },
+  {
+    role: "Display / Headings",
+    font: "Inter",
+    weights: "600 (semibold) — max weight",
+    cssVar: "--font-sans",
+    usage: "All headings — sentence case, weight 600, -0.03em tracking, 1.04 line-height. Never weight 900.",
+  },
+  {
+    role: "Body / UI",
+    font: "Inter",
+    weights: "400 / 500 / 600",
+    cssVar: "--font-sans",
+    usage: "Paragraphs, labels, nav, descriptions. 0.9375rem base, -0.005em tracking, 1.55 line-height.",
+  },
+  {
+    role: "Mono",
+    font: "JetBrains Mono",
+    weights: "400 / 500 / 600",
+    cssVar: "--font-mono",
+    usage: "Code, admin labels, reference IDs, system markers. Never used on public-facing buttons.",
+  },
 ];
 
+// ── Design principles ─────────────────────────────────────────────────────────
 export const PRINCIPLES = [
-  { title: "BOLD & UNAPOLOGETIC", desc: "Strong display headlines, high contrast, confident positioning. Never timid." },
-  { title: "TECHNICAL PRECISION", desc: "Monospace labels, coordinate tags, structured layouts. Everything has a purpose." },
-  { title: "RESTRAINED COLOUR", desc: "A single emerald accent against near-black. Used sparingly, never decoratively." },
+  {
+    title: "Dark architectural system",
+    desc: "Three surface tiers: background → surface → elevated. Components live at their tier. No arbitrary depth or shadow stacking — only modals get drop shadows.",
+  },
+  {
+    title: "One brand colour, used precisely",
+    desc: "Emerald #10b981 is reserved for actions: CTAs, focus rings, active states, the brand dot. Signal colours (danger, warning, success) are for status only — never as decoration.",
+  },
+  {
+    title: "Typography as structure",
+    desc: "Inter 600 for all headings — sentence case, -0.03em tracking, 1.04 line-height. Hairline 1px borders define geometry. Layout communicates hierarchy before colour does.",
+  },
 ];
 
 /**

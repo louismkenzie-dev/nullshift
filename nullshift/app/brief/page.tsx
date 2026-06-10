@@ -1,11 +1,13 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Check, ChevronRight, AlertCircle } from "lucide-react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { T } from "@/lib/tokens";
+import { createClient } from "@/lib/supabase/client";
+import { hasSupabaseBrowserConfig } from "@/lib/supabase/env";
 import {
   PAGE_OPTIONS, DESIGN_STYLES, PURPOSES, TIMELINES, LOGO_STATES,
   BUDGET_MIN, BUDGET_MAX, BUDGET_STEP, formatBudget, labelFor,
@@ -30,10 +32,31 @@ export default function BriefPage() {
 
 function BriefInner() {
   const params = useSearchParams();
-  const clientId = params.get("client"); // present when admin invites an existing client
+  const clientId = params.get("client"); // present when admin invites OR from client-signup
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<BriefData>(emptyBrief);
   const [errors, setErrors] = useState<Errs>({});
+
+  // Pre-populate Step 1 fields when arriving via the client-signup flow
+  useEffect(() => {
+    if (!clientId || !hasSupabaseBrowserConfig()) return;
+    const supabase = createClient();
+    supabase
+      .from("clients")
+      .select("name, email, business_name")
+      .eq("id", clientId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        setForm(f => ({
+          ...f,
+          clientName:  data.name        || f.clientName,
+          clientEmail: data.email       || f.clientEmail,
+          companyName: data.business_name || f.companyName,
+        }));
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);

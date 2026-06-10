@@ -24,7 +24,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
   const accepted = !!p.accepted_at;
 
   const wrap: React.CSSProperties = { minHeight: "100vh", background: T.bg, padding: "48px 24px" };
-  const sectionTitle: React.CSSProperties = { fontFamily: T.display, fontWeight: 800, fontSize: "1.5rem", letterSpacing: "0.02em", textTransform: "uppercase", color: T.fg };
+  const sectionTitle: React.CSSProperties = { fontFamily: T.display, fontWeight: 600, fontSize: "1.5rem", letterSpacing: "0.02em", textTransform: "uppercase", color: T.fg };
   const card: React.CSSProperties = { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, padding: 28 };
   const mono: React.CSSProperties = { fontFamily: T.mono };
 
@@ -53,7 +53,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
           <div className="flex justify-between items-end gap-6 flex-wrap">
             <div>
               <p style={{ ...mono, fontSize: "0.8rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, marginBottom: 6 }}>Web Design &amp; Development</p>
-              <h2 style={{ fontFamily: T.display, fontWeight: 800, fontSize: "1.9rem", textTransform: "uppercase", color: T.fg }}>{p.project_name || p.title || "Project Proposal"}</h2>
+              <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.9rem", textTransform: "uppercase", color: T.fg }}>{p.project_name || p.title || "Project Proposal"}</h2>
             </div>
             <div style={{ textAlign: "right" }}>
               <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}>Prepared for</p>
@@ -153,7 +153,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
               ))}
             </div>
             <div className="flex items-center justify-between" style={{ paddingTop: 24, marginTop: 8, borderTop: `2px solid ${T.primary}` }}>
-              <span style={{ fontFamily: T.display, fontWeight: 800, fontSize: "1.25rem", textTransform: "uppercase", color: T.fg }}>Total Investment</span>
+              <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.25rem", textTransform: "uppercase", color: T.fg }}>Total Investment</span>
               <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2rem", color: T.primary }}>{money(p.total || 0, p.currency || "GBP")}</span>
             </div>
           </div>
