@@ -1,6 +1,21 @@
 {
   "version": 1,
   "skills": {
+    "stripe-best-practices": {
+      "source": "docs.stripe.com",
+      "sourceType": "well-known",
+      "computedHash": "fb13b7be4f97ea94cd0719ce9c1dd6247e4a25c7f345ccfd189dfb951be32de6"
+    },
+    "stripe-directory": {
+      "source": "docs.stripe.com",
+      "sourceType": "well-known",
+      "computedHash": "87b461e836d17c7bd8491af0ac4dede7f5f44bdeb8562a6514ad8e500526e890"
+    },
+    "stripe-projects": {
+      "source": "docs.stripe.com",
+      "sourceType": "well-known",
+      "computedHash": "63da9119cf20b5c5b722d7a6d49d4f7d984a10f29f5d44a68e59839e4da9b68f"
+    },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
@@ -12,6 +27,11 @@
       "sourceType": "github",
       "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
       "computedHash": "efc547df91cc56b69792532db54607027884cb5873718c7ca1ebf6d6f1e4cb53"
+    },
+    "upgrade-stripe": {
+      "source": "docs.stripe.com",
+      "sourceType": "well-known",
+      "computedHash": "a0f0bf709f65ba8d7aa8d55322d030e6b3f16756cb6f0be80463395306305ef3"
     }
   }
 }
