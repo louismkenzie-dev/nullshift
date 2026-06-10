@@ -49,7 +49,7 @@ export default function LearnComingSoon() {
 
         {/* Sign in link for existing subscribers */}
         <Link
-          href="/learn/login"
+          href="/portal/login"
           className="inline-flex items-center justify-center transition-opacity hover:opacity-90"
           style={{
             fontFamily: T.mono,

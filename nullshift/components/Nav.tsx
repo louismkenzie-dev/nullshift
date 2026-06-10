@@ -11,7 +11,6 @@ const links = [
   { label: "About",       href: "/about" },
   { label: "Work",        href: "/work" },
   { label: "Systems Lab", href: "/systems-lab" },
-  { label: "Pricing",     href: "/pricing" },
   { label: "FAQ",         href: "/faq" },
 ];
 
@@ -83,7 +82,7 @@ export function Nav() {
         {/* Right: CTA + hamburger */}
         <div className="flex items-center gap-3">
           <Link
-            href="/learn"
+            href="/portal"
             className="hidden md:inline-flex items-center font-medium transition-opacity hover:opacity-80"
             style={{
               fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500,
@@ -182,7 +181,7 @@ export function Nav() {
         {/* Footer */}
         <div className="px-6 py-5 shrink-0 flex flex-col gap-2" style={{ borderTop: `1px solid ${T.border}` }}>
           <Link
-            href="/learn"
+            href="/portal"
             className="w-full h-11 inline-flex items-center justify-center gap-2 transition-opacity hover:opacity-80"
             style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em", background: "transparent", color: T.muted, borderRadius: "10px", border: `1px solid ${T.border}` }}
           >
