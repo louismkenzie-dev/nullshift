@@ -239,7 +239,7 @@ function Contact() {
                 </p>
               </div>
               <Link
-                href="/brief"
+                href="/book"
                 className="inline-flex items-center justify-between font-medium transition-opacity hover:opacity-90"
                 style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em", height: 48, paddingInline: 20, background: T.primary, color: T.primaryFg, borderRadius: "10px", boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 24px ${T.primary}30` }}
               >
