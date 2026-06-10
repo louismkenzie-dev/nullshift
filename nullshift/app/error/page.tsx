@@ -1,14 +1,13 @@
-// nullshift/app/error/page.tsx
-
 "use client";
 
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { T } from '@/lib/tokens';
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { T } from "@/lib/tokens";
 
-export default function ErrorPage() {
+function ErrorContent() {
   const searchParams = useSearchParams();
-  const message = searchParams.get('message') || 'An unexpected error occurred.';
+  const message = searchParams.get("message") || "An unexpected error occurred.";
 
   return (
     <main
@@ -42,5 +41,17 @@ export default function ErrorPage() {
         </Link>
       </div>
     </main>
+  );
+}
+
+export default function ErrorPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center" style={{ background: T.bg }}>
+        <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", color: T.muted }}>LOADING...</p>
+      </main>
+    }>
+      <ErrorContent />
+    </Suspense>
   );
 }

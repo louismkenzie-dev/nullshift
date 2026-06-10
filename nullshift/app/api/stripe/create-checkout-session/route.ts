@@ -1,57 +1,51 @@
-// nullshift/app/api/stripe/create-checkout-session/route.ts
-
-import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { stripeConfig } from '@/lib/stripeConfig';
-
-const stripe = new Stripe(stripeConfig.secretKey, {
-  apiVersion: '2023-10-16',
-  typescript: true,
-});
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+import { stripeConfig } from "@/lib/stripeConfig";
 
 export async function POST(req: Request) {
+  if (!stripeConfig.secretKey) {
+    return NextResponse.json({ error: "Stripe is not configured." }, { status: 503 });
+  }
+  const stripe = new Stripe(stripeConfig.secretKey, { apiVersion: "2026-05-27.dahlia" });
   try {
-    const { plan, userId } = await req.json();
+    const { plan, userId, email } = await req.json();
 
     if (!plan || !userId) {
-      return NextResponse.json({ error: 'Missing plan or userId.' }, { status: 400 });
+      return NextResponse.json({ error: "Missing plan or userId." }, { status: 400 });
     }
 
     const priceId = stripeConfig.priceIds[plan as keyof typeof stripeConfig.priceIds];
 
     if (!priceId) {
-      return NextResponse.json({ error: 'Invalid plan selected.' }, { status: 400 });
+      return NextResponse.json({ error: "Invalid plan selected." }, { status: 400 });
     }
 
-    // Determine success and cancel URLs based on your application's routes
-    // Ensure these URLs are publicly accessible
-    const successUrl = `${req.headers.get('origin')}/learn/dashboard?session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${req.headers.get('origin')}/onboard?canceled=true`;
+    const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const successUrl = `${origin}/learn?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${origin}/onboard?plan=${plan}&canceled=true`;
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      customer_email: (await stripe.customers.list({ email: (await stripe.customers.list()).data[0]?.email })).data[0]?.email, // Pre-fill customer email if available or fetch from Supabase user
-      client_reference_id: userId, // Link to your internal user ID
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      client_reference_id: userId,
       success_url: successUrl,
       cancel_url: cancelUrl,
-      allow_promotion_codes: true, // Optional: if you want to allow promo codes
+      allow_promotion_codes: true,
       subscription_data: {
-        metadata: {
-          userId: userId,
-          plan: plan,
-        },
+        metadata: { userId, plan },
       },
-    });
+    };
 
-    return NextResponse.json({ sessionId: session.id });
+    // Pre-fill email if provided
+    if (email) {
+      sessionParams.customer_email = email;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+
+    return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    return NextResponse.json({ error: 'Failed to create checkout session.' }, { status: 500 });
+    console.error("Error creating checkout session:", error);
+    return NextResponse.json({ error: "Failed to create checkout session." }, { status: 500 });
   }
 }

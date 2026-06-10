@@ -9,9 +9,9 @@ import { T } from "@/lib/tokens";
 import { LogoMark } from "@/components/Logo";
 import { hasSupabaseBrowserConfig } from "@/lib/supabase/env";
 
-import { PLAN_META_ONBOARD, PricingPlan } from "@/lib/pricingPlans";
+import { PLAN_META_ONBOARD } from "@/lib/pricingPlans";
 
-type Plan = PricingPlan["tier"];
+type Plan = keyof typeof PLAN_META_ONBOARD;
 
 export default function OnboardPage() {
   return (
@@ -478,12 +478,11 @@ function StripeCheckoutRedirect({ plan, email }: StripeCheckoutRedirectProps) {
           throw new Error(sessionData.error || 'Failed to create Stripe Checkout session.');
         }
 
-        const { sessionId } = sessionData;
-        const { error: stripeRedirectError } = await stripe.redirectToCheckout({ sessionId });
-
-        if (stripeRedirectError) {
-          setError(stripeRedirectError.message || 'Failed to redirect to Stripe Checkout.');
-          setLoading(false);
+        const { url } = sessionData;
+        if (url) {
+          window.location.href = url;
+        } else {
+          throw new Error("No checkout URL returned from Stripe.");
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to initiate payment.");

@@ -4,12 +4,11 @@ import Stripe from 'stripe';
 import { stripeConfig } from '@/lib/stripeConfig';
 import { createServiceClient } from '@/lib/supabase/server';
 
-const stripe = new Stripe(stripeConfig.secretKey, {
-  apiVersion: '2023-10-16',
-  typescript: true,
-});
-
 export async function POST(req: Request) {
+  if (!stripeConfig.secretKey) {
+    return new Response("Stripe is not configured.", { status: 503 });
+  }
+  const stripe = new Stripe(stripeConfig.secretKey, { apiVersion: "2026-05-27.dahlia" });
   const body = await req.text();
   const sig = req.headers.get('stripe-signature')!;
 
