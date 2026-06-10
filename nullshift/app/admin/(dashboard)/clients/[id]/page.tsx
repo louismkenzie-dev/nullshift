@@ -8,8 +8,9 @@ import { T } from "@/lib/tokens";
 import { formatCallDate, formatCallTime, money, proposalRef } from "@/lib/format";
 import { BriefViewer } from "@/components/BriefViewer";
 import type { BriefData } from "@/lib/brief";
+import { ProjectUpdatesSection } from "./ProjectUpdatesSection";
 
-type Client = { id: string; name: string; business_name: string | null; email: string | null; phone: string | null; status: string; notes: string | null; requested_date: string | null; requested_time: string | null; brief_completed_at: string | null };
+type Client = { id: string; name: string; business_name: string | null; email: string | null; phone: string | null; status: string; notes: string | null; requested_date: string | null; requested_time: string | null; brief_completed_at: string | null; project_phase: string | null };
 type Call = { id: string; client_id: string; call_date: string; call_time: string; duration_min: number; status: string; meeting_link: string | null; meeting_id: string | null; meeting_password: string | null };
 type LineItem = { label: string; qty: number; unit_price: number };
 type Phase = { phase: string; items: string[] };
@@ -217,6 +218,11 @@ export default function ClientDetail() {
     ? `${formatCallDate(client.requested_date)}${client.requested_time ? ` · ${SLOT_LABEL[client.requested_time] ?? client.requested_time}` : ""}`
     : null;
 
+  async function savePhase(phase: string) {
+    await supabase.from("clients").update({ project_phase: phase || null }).eq("id", id);
+    setClient(c => c ? { ...c, project_phase: phase || null } : c);
+  }
+
   const accepted = !!proposal?.accepted_at;
   const proposalUrl = proposal ? (typeof window !== "undefined" ? `${window.location.origin}/proposal/${proposal.id}` : `/proposal/${proposal.id}`) : "";
 
@@ -271,6 +277,38 @@ export default function ClientDetail() {
             {saving ? "Saving…" : saved ? "Saved ✓" : "Save proposal"}
           </button>
         )}
+      </div>
+
+      {/* Project phase selector */}
+      <div className="mb-6 flex items-center gap-3 flex-wrap">
+        <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.muted }}>Project phase:</span>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {[
+            { value: "",            label: "Not started" },
+            { value: "discovery",   label: "Discovery" },
+            { value: "design",      label: "Design" },
+            { value: "development", label: "Development" },
+            { value: "review",      label: "Review" },
+            { value: "live",        label: "Live" },
+          ].map(({ value, label }) => {
+            const active = (client?.project_phase ?? "") === value;
+            return (
+              <button
+                key={value}
+                onClick={() => savePhase(value)}
+                style={{
+                  fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase",
+                  padding: "4px 10px", borderRadius: T.r.full, cursor: "pointer",
+                  border: `1px solid ${active ? T.primary : T.border}`,
+                  background: active ? `${T.primary}20` : "transparent",
+                  color: active ? T.primary : T.muted,
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Acceptance banner */}
@@ -643,6 +681,11 @@ export default function ClientDetail() {
           </Card>
         </>
       )}
+
+      {/* ── Project Updates ──────────────────────────────── */}
+      <div className="mt-10 mb-4">
+        <ProjectUpdatesSection clientId={id} clientName={client?.name ?? "this client"} />
+      </div>
 
       {/* ── Danger zone ──────────────────────────────────── */}
       <div className="mt-10 mb-4" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.danger }}>// DANGER ZONE</div>
