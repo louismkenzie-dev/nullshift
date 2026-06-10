@@ -295,10 +295,10 @@ export default function HeroText() {
                     style={{
                       fontFamily: T.mono,
                       fontWeight: 600,
-                      fontSize: "1.5rem",
+                      fontSize: "clamp(1rem, 4vw, 1.5rem)",
                       letterSpacing: "-0.02em",
                       color: T.fg,
-                      lineHeight: 1,
+                      lineHeight: 1.1,
                     }}
                   >
                     {s.value}

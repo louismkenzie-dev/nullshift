@@ -10,6 +10,7 @@ export default function BookPage() {
       <main
         style={{
           minHeight: "calc(100dvh - 64px)",
+          paddingTop: 64,
           display: "flex",
           flexDirection: "column",
           backgroundImage: `radial-gradient(ellipse 70% 60% at 10% 50%, ${T.primarySoft} 0%, transparent 60%)`,
@@ -70,7 +71,7 @@ export default function BookPage() {
 
           {/* ── Right: CTA card ───────────────────────────────── */}
           <div
-            className="flex items-center justify-center px-6 py-10 sm:px-12 sm:py-14 lg:px-14 lg:py-20"
+            className="flex items-center justify-center px-3 py-6 sm:px-12 sm:py-14 lg:px-14 lg:py-20"
             style={{ borderLeft: "none" }}
           >
             <div

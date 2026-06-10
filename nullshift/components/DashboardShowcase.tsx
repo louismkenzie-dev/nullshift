@@ -83,7 +83,7 @@ const INVOICES = [
 function InvoicesView() {
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {[
           { label: "Outstanding", value: "£6,400", c: "#f59e0b" },
           { label: "Paid this month", value: "£18,900", c: T.primary },
@@ -111,9 +111,9 @@ function InvoicesView() {
             className="grid items-center"
             style={{ ...rowStyle(i + 1), gridTemplateColumns: "90px 1fr 90px 90px", gap: 12, padding: "11px 16px", borderBottom: i < INVOICES.length - 1 ? `1px solid ${T.border}` : "none" }}
           >
-            <span style={{ fontFamily: T.mono, fontSize: "0.75rem", color: T.muted }}>{inv.id}</span>
-            <span style={{ fontFamily: T.sans, fontSize: "0.8125rem", fontWeight: 500, color: T.fg }}>{inv.client}</span>
-            <span style={{ fontFamily: T.mono, fontSize: "0.8125rem", fontWeight: 600, color: T.fg }}>{inv.amount}</span>
+            <span style={{ fontFamily: T.mono, fontSize: "0.75rem", color: T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{inv.id}</span>
+            <span style={{ fontFamily: T.sans, fontSize: "0.8125rem", fontWeight: 500, color: T.fg, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{inv.client}</span>
+            <span style={{ fontFamily: T.mono, fontSize: "0.8125rem", fontWeight: 600, color: T.fg, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{inv.amount}</span>
             <span><Pill tone={inv.tone}>{inv.icon}{inv.status}</Pill></span>
           </div>
         ))}
@@ -140,7 +140,7 @@ const CRM_LEADS = [
 function CRMView() {
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="grid grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {PIPELINE.map((p, i) => (
           <div
             key={p.stage}
@@ -199,7 +199,7 @@ const BARS = [42, 67, 55, 89, 73, 94, 81, 62, 78, 88, 70, 96];
 function AnalyticsView() {
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="grid grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {ANALYTICS_KPI.map((k, i) => (
           <div
             key={k.label}
@@ -250,7 +250,7 @@ const PAGES = [
 function PagesView() {
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {[
           { label: "Total pages", value: "14" },
           { label: "Monthly views", value: "16.2k" },
@@ -382,13 +382,12 @@ export function DashboardShowcase() {
 
   return (
     <div
-      className="relative w-full overflow-hidden"
+      className="relative w-full overflow-hidden aspect-[4/3] sm:aspect-[16/10]"
       style={{
         background: T.surface,
         border: `1px solid ${T.border}`,
         borderRadius: 16,
         boxShadow: `0 0 0 1px rgba(255,255,255,0.03) inset, 0 50px 120px -16px rgba(0,0,0,0.9)`,
-        aspectRatio: "16 / 10",
       }}
     >
       <div className="flex absolute inset-0" style={{ background: T.bg }}>
