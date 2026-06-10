@@ -8,78 +8,59 @@ export function getSiteUrl(fallbackOrigin?: string | null): string {
   return siteUrl.replace(/\/$/, "");
 }
 
-export function isAllowedRedirect(url: string, siteUrl: string): boolean {
-  try {
-    const target = new URL(url);
-    const allowedOrigins = new Set([
-      new URL(siteUrl).origin,
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-    ]);
-    return allowedOrigins.has(target.origin);
-  } catch {
-    return false;
-  }
+/** Generate a cryptographically random 6-digit numeric code. */
+export function generateVerificationCode(): string {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return String(array[0] % 1_000_000).padStart(6, "0");
 }
 
-export function buildOnboardRedirect(siteUrl: string, plan: string): string {
-  return `${siteUrl}/onboard?plan=${encodeURIComponent(plan.toLowerCase())}&confirmed=true`;
-}
-
-export function buildConfirmUrl(
-  siteUrl: string,
-  tokenHash: string,
-  type: string,
-  redirectTo: string
-): string {
-  const params = new URLSearchParams({
-    token_hash: tokenHash,
-    type,
-    redirect_to: redirectTo,
-  });
-  return `${siteUrl}/api/auth/confirm-email?${params.toString()}`;
-}
-
+/** Send a 6-digit code confirmation email via Resend. */
 export async function sendConfirmationEmail({
   to,
   name,
-  confirmUrl,
+  code,
   idempotencyKey,
 }: {
   to: string;
   name: string;
-  confirmUrl: string;
+  code: string;
   idempotencyKey?: string;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not configured.");
-  }
+  if (!apiKey) throw new Error("RESEND_API_KEY is not configured.");
 
-  const from =
-    process.env.RESEND_FROM_EMAIL || "Nullshift <onboarding@resend.dev>";
+  const from = process.env.RESEND_FROM_EMAIL || "Nullshift <onboarding@resend.dev>";
   const resend = new Resend(apiKey);
+
+  // Split code into individual digits for the big display blocks
+  const digits = code.split("");
 
   const { data, error } = await resend.emails.send({
     from,
     to: [to],
-    subject: "Confirm your Nullshift account",
+    subject: `${code} is your Nullshift verification code`,
     html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#09090b;color:#fafafa;border-radius:12px;">
-        <p style="font-size:13px;letter-spacing:0.12em;text-transform:uppercase;color:#10b981;margin-bottom:24px;">NULLSHIFT / EMAIL CONFIRMATION</p>
-        <h1 style="font-size:28px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;">Confirm your email</h1>
-        <p style="color:#a1a1a6;font-size:15px;line-height:1.65;margin:0 0 32px;">Hi ${name}, click the button below to confirm your email address and activate your account.</p>
-        <a href="${confirmUrl}" style="display:inline-block;background:#10b981;color:#131316;font-weight:700;font-size:13px;letter-spacing:0.06em;padding:12px 24px;border-radius:8px;text-decoration:none;">Confirm email →</a>
-        <p style="color:#3d3d42;font-size:12px;margin-top:32px;">If you didn't create an account, you can safely ignore this email.</p>
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:40px 28px;background:#09090b;color:#fafafa;border-radius:16px;">
+        <p style="font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#10b981;margin:0 0 28px;">NULLSHIFT / VERIFY YOUR EMAIL</p>
+        <h1 style="font-size:26px;font-weight:900;letter-spacing:-0.02em;margin:0 0 12px;line-height:1.1;">Hi ${name},<br/>here&rsquo;s your code.</h1>
+        <p style="color:#a1a1a6;font-size:15px;line-height:1.65;margin:0 0 32px;">Enter the 6-digit code below on the Nullshift sign-up page to verify your email address. It expires in <strong style="color:#fafafa;">15 minutes</strong>.</p>
+
+        <!-- Code display -->
+        <div style="display:flex;gap:8px;margin-bottom:36px;">
+          ${digits.map(d => `<div style="width:48px;height:60px;background:#131316;border:1.5px solid #27272a;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;letter-spacing:0;color:#fafafa;text-align:center;line-height:60px;">${d}</div>`).join("")}
+        </div>
+
+        <p style="color:#3d3d42;font-size:12px;line-height:1.6;margin:0;">
+          If you didn&rsquo;t create a Nullshift account, you can safely ignore this email.<br/>
+          Do not share this code with anyone.
+        </p>
       </div>
     `,
     ...(idempotencyKey ? { idempotencyKey } : {}),
   });
 
-  if (error) {
-    throw new Error(`Resend error: ${error.message}`);
-  }
-
+  if (error) throw new Error(`Resend error: ${error.message}`);
   return data;
 }
 
@@ -96,22 +77,33 @@ export async function findUserByEmail(
       page,
       perPage,
     });
-
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     const user = data.users.find(
       (u: User) => u.email?.toLowerCase() === normalized
     );
-    if (user) {
-      return user;
-    }
-
-    if (data.users.length < perPage) {
-      return null;
-    }
-
+    if (user) return user;
+    if (data.users.length < perPage) return null;
     page += 1;
   }
+}
+
+// ── Kept for backwards compatibility (resend-confirmation route) ──────────────
+
+export function isAllowedRedirect(url: string, siteUrl: string): boolean {
+  try {
+    const target = new URL(url);
+    const allowedOrigins = new Set([
+      new URL(siteUrl).origin,
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+    ]);
+    return allowedOrigins.has(target.origin);
+  } catch {
+    return false;
+  }
+}
+
+export function buildOnboardRedirect(siteUrl: string, plan: string): string {
+  return `${siteUrl}/onboard?plan=${encodeURIComponent(plan.toLowerCase())}`;
 }

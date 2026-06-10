@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -51,22 +51,16 @@ function OnboardFlow() {
   const [resendBusy, setResendBusy] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
 
+  // If the user somehow lands here already signed in with a confirmed email,
+  // skip straight to the payment step.
   useEffect(() => {
-    const isConfirmed = params.get("confirmed") === "true";
-    if (isConfirmed) {
-      setStep(3);
-      return;
-    }
-
     if (!hasSupabaseBrowserConfig()) return;
-
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.email_confirmed_at) {
-        setStep(3);
-      }
+      if (user?.email_confirmed_at) setStep(3);
     });
-  }, [params]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const inputStyle: React.CSSProperties = {
     background: T.bg,
@@ -401,6 +395,7 @@ function OnboardFlow() {
         {step === 4 && (
           <CheckEmailStep
             email={email}
+            password={password}
             plan={plan}
             resendBusy={resendBusy}
             resendMessage={resendMessage}
@@ -421,96 +416,153 @@ function OnboardFlow() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 4: Check email + inline sign-in after verification
+// Step 4: Enter 6-digit verification code
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface CheckEmailStepProps {
   email: string;
+  password: string; // used to sign in automatically after code is verified
   plan: Plan;
   resendBusy: boolean;
   resendMessage: string | null;
   onResend: (e: React.MouseEvent) => void;
-  /** Called once sign-in succeeds. Pass true if user already has a subscription. */
   onAdvance: (hasSubscription: boolean) => void;
 }
 
-function CheckEmailStep({ email, plan, resendBusy, resendMessage, onResend, onAdvance }: CheckEmailStepProps) {
-  const [showLogin, setShowLogin] = useState(false);
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginBusy, setLoginBusy] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
+function CheckEmailStep({ email, password, plan, resendBusy, resendMessage, onResend, onAdvance }: CheckEmailStepProps) {
+  // Six individual digit inputs
+  const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRefs = Array.from({ length: 6 }, () => React.createRef<HTMLInputElement>());
 
-  const inputStyle: React.CSSProperties = {
-    background: T.bg,
-    border: `1px solid ${T.border}`,
-    padding: "12px 16px",
-    color: T.fg,
-    fontFamily: T.sans,
-    fontSize: "0.9375rem",
-    letterSpacing: "-0.005em",
-    outline: "none",
-    borderRadius: T.r.sm,
-    width: "100%",
-  };
+  const code = digits.join("");
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoginBusy(true);
-    setLoginError(null);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password: loginPassword });
-      if (error) throw error;
-      const hasSub = await checkHasActiveSubscription();
-      onAdvance(hasSub);
-    } catch (err) {
-      setLoginError(err instanceof Error ? err.message : "Sign in failed.");
-      setLoginBusy(false);
+  function handleDigitChange(index: number, value: string) {
+    const sanitized = value.replace(/\D/g, "").slice(-1);
+    const next = [...digits];
+    next[index] = sanitized;
+    setDigits(next);
+    if (sanitized && index < 5) {
+      inputRefs[index + 1].current?.focus();
     }
   }
 
+  function handleKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !digits[index] && index > 0) {
+      inputRefs[index - 1].current?.focus();
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const next = ["", "", "", "", "", ""];
+    pasted.split("").forEach((ch, i) => { next[i] = ch; });
+    setDigits(next);
+    const focusIdx = Math.min(pasted.length, 5);
+    inputRefs[focusIdx].current?.focus();
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (code.length < 6) {
+      setError("Please enter all 6 digits.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      // 1. Verify the code server-side
+      const res = await fetch("/api/auth/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Verification failed.");
+
+      // 2. Sign in now that the email is confirmed
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+
+      // 3. Route based on subscription status
+      const hasSub = await checkHasActiveSubscription();
+      onAdvance(hasSub);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Verification failed.");
+      setBusy(false);
+    }
+  }
+
+  const digitBoxStyle: React.CSSProperties = {
+    width: "48px",
+    height: "60px",
+    background: T.surface,
+    border: `1.5px solid ${T.border}`,
+    borderRadius: T.r.md,
+    color: T.fg,
+    fontFamily: T.display,
+    fontWeight: 900,
+    fontSize: "1.6rem",
+    textAlign: "center",
+    outline: "none",
+    caretColor: "transparent",
+  };
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Heading */}
-      <div className="text-center">
+      <div>
         <div className="mb-2" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
-          STEP 02 COMPLETE
+          STEP 02 / VERIFY EMAIL
         </div>
         <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
           CHECK YOUR<br /><span style={{ color: T.primary }}>EMAIL</span>
         </h1>
       </div>
 
-      {/* Info card */}
-      <div className="rounded-xl p-6 flex flex-col gap-3" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
+      <div className="rounded-xl p-6 flex flex-col gap-2" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
         <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.6, color: T.muted }}>
-          We&apos;ve sent a confirmation link to{" "}
+          We&apos;ve sent a <strong style={{ color: T.fg }}>6-digit code</strong> to{" "}
           <span style={{ color: T.fg, fontWeight: 600 }}>{email || "your email"}</span>.
-          Click the link in that email to verify your account, then come back here and sign in.
+          Enter it below — it expires in 15 minutes.
         </p>
-        <div className="h-px" style={{ background: T.border }} />
-        <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted }}>
-          Didn&apos;t receive it? Check your spam folder or{" "}
-          <button
-            type="button"
-            onClick={onResend}
-            disabled={resendBusy}
-            style={{ color: T.primary, background: "none", border: "none", cursor: resendBusy ? "default" : "pointer", fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", opacity: resendBusy ? 0.6 : 1 }}
-          >
-            {resendBusy ? "sending…" : "resend email"}
-          </button>
-          .
-        </p>
-        {resendMessage && (
-          <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>{resendMessage}</p>
-        )}
       </div>
 
-      {/* CTA — reveal sign-in form */}
-      {!showLogin ? (
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        {/* 6 digit boxes */}
+        <div className="flex gap-2 justify-between" onPaste={handlePaste}>
+          {digits.map((d, i) => (
+            <input
+              key={i}
+              ref={inputRefs[i]}
+              type="text"
+              inputMode="numeric"
+              pattern="\d"
+              maxLength={1}
+              value={d}
+              autoFocus={i === 0}
+              onChange={e => handleDigitChange(i, e.target.value)}
+              onKeyDown={e => handleKeyDown(i, e)}
+              style={{
+                ...digitBoxStyle,
+                borderColor: d ? T.primary : T.border,
+                boxShadow: d ? `0 0 12px color-mix(in oklab, ${T.primary} 20%, transparent)` : "none",
+              }}
+            />
+          ))}
+        </div>
+
+        {error && (
+          <p style={{ fontFamily: T.mono, fontSize: "11px", color: "#f87171" }}>{error}</p>
+        )}
+
         <button
-          onClick={() => setShowLogin(true)}
-          className="w-full h-12 flex items-center justify-between px-5 transition-opacity hover:opacity-90"
+          type="submit"
+          disabled={busy || code.length < 6}
+          className="w-full h-12 flex items-center justify-between px-5 transition-opacity hover:opacity-90 disabled:opacity-40"
           style={{
             fontFamily: T.mono,
             fontSize: "0.78rem",
@@ -519,67 +571,28 @@ function CheckEmailStep({ email, plan, resendBusy, resendMessage, onResend, onAd
             background: T.primary,
             color: T.primaryFg,
             borderRadius: T.r.md,
-            boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)`,
+            boxShadow: busy ? "none" : `0 0 24px color-mix(in oklab, ${T.primary} 25%, transparent)`,
           }}
         >
-          <span>I&apos;ve verified my email — sign in</span>
-          <span>→</span>
+          <span>{busy ? "Verifying…" : "Verify & continue"}</span>
+          {!busy && <span>→</span>}
         </button>
-      ) : (
-        <form onSubmit={handleLogin} className="flex flex-col gap-4 rounded-xl p-6" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
-          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: T.primary }}>
-            SIGN IN TO CONTINUE
-          </div>
+      </form>
 
-          {/* Email — read-only, pre-filled */}
-          <div className="flex flex-col gap-1.5">
-            <label style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>Email</label>
-            <input
-              type="email"
-              value={email}
-              readOnly
-              style={{ ...inputStyle, opacity: 0.6, cursor: "not-allowed" }}
-            />
-          </div>
-
-          {/* Password */}
-          <div className="flex flex-col gap-1.5">
-            <label style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>Password</label>
-            <input
-              type="password"
-              required
-              autoFocus
-              value={loginPassword}
-              onChange={e => setLoginPassword(e.target.value)}
-              placeholder="Your password"
-              style={inputStyle}
-              autoComplete="current-password"
-            />
-          </div>
-
-          {loginError && (
-            <p style={{ fontFamily: T.mono, fontSize: "11px", color: "#f87171" }}>{loginError}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loginBusy}
-            className="mt-1 w-full h-11 flex items-center justify-between px-5 transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{
-              fontFamily: T.mono,
-              fontSize: "0.78rem",
-              fontWeight: 600,
-              letterSpacing: "0.06em",
-              background: T.primary,
-              color: T.primaryFg,
-              borderRadius: T.r.md,
-              boxShadow: loginBusy ? "none" : `0 0 20px color-mix(in oklab, ${T.primary} 22%, transparent)`,
-            }}
-          >
-            <span>{loginBusy ? "Signing in…" : "Sign in & continue to payment"}</span>
-            {!loginBusy && <span>→</span>}
-          </button>
-        </form>
+      <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted, textAlign: "center" }}>
+        Didn&apos;t receive it? Check spam or{" "}
+        <button
+          type="button"
+          onClick={onResend}
+          disabled={resendBusy}
+          style={{ color: T.primary, background: "none", border: "none", cursor: resendBusy ? "default" : "pointer", fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", opacity: resendBusy ? 0.6 : 1 }}
+        >
+          {resendBusy ? "sending…" : "resend code"}
+        </button>
+        .
+      </p>
+      {resendMessage && (
+        <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted, textAlign: "center" }}>{resendMessage}</p>
       )}
     </div>
   );

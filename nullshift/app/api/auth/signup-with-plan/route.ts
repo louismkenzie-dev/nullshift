@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import {
-  buildConfirmUrl,
-  buildOnboardRedirect,
-  getSiteUrl,
+  generateVerificationCode,
   sendConfirmationEmail,
 } from "@/lib/auth/confirmation-email";
+
+const CODE_TTL_MINUTES = 15;
 
 export async function POST(req: Request) {
   try {
@@ -16,68 +16,69 @@ export async function POST(req: Request) {
     }
 
     const serviceClient = createServiceClient();
-    const siteUrl = getSiteUrl(req.headers.get("origin"));
-    const redirectTo = buildOnboardRedirect(siteUrl, plan);
 
-    const { data: linkData, error: linkError } =
-      await serviceClient.auth.admin.generateLink({
-        type: "signup",
+    // Create the user — email_confirm: false so they must verify via the code
+    const { data: createData, error: createError } =
+      await serviceClient.auth.admin.createUser({
         email,
         password,
-        options: {
-          data: { full_name: name },
-          redirectTo,
-        },
+        user_metadata: { full_name: name },
+        app_metadata: { subscription_tier: plan.toLowerCase() },
+        email_confirm: false,
       });
 
-    if (linkError) {
-      const message = linkError.message ?? "";
+    if (createError) {
+      const msg = createError.message ?? "";
       if (
-        message.includes("already registered") ||
-        message.includes("already been registered") ||
-        message.includes("User already registered")
+        msg.includes("already registered") ||
+        msg.includes("already been registered") ||
+        msg.includes("User already registered") ||
+        msg.includes("already exists")
       ) {
         return NextResponse.json(
           { error: "A user with this email already exists." },
           { status: 409 }
         );
       }
-      console.error("Supabase generateLink error:", linkError);
-      return NextResponse.json({ error: linkError.message }, { status: 500 });
+      console.error("Supabase createUser error:", createError);
+      return NextResponse.json({ error: createError.message }, { status: 500 });
     }
 
-    const userId = linkData.user?.id;
-    const tokenHash = linkData.properties?.hashed_token;
-
-    if (!userId || !tokenHash) {
-      console.error("Supabase generateLink did not return user ID or token hash.");
+    const userId = createData.user?.id;
+    if (!userId) {
       return NextResponse.json({ error: "User creation failed." }, { status: 500 });
     }
 
-    const { error: updateAppMetadataError } =
-      await serviceClient.auth.admin.updateUserById(userId, {
-        app_metadata: {
-          subscription_tier: plan.toLowerCase(),
-        },
-      });
+    // Invalidate any previous unused codes for this user
+    await serviceClient
+      .from("email_verifications")
+      .update({ used: true })
+      .eq("user_id", userId)
+      .eq("used", false);
 
-    if (updateAppMetadataError) {
-      console.error(
-        "Supabase admin update user app_metadata error:",
-        updateAppMetadataError
-      );
-      return NextResponse.json(
-        { error: "User created but failed to set subscription plan." },
-        { status: 500 }
-      );
+    // Generate and store a fresh 6-digit code
+    const code = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000).toISOString();
+
+    const { error: insertError } = await serviceClient
+      .from("email_verifications")
+      .insert({ user_id: userId, code, expires_at: expiresAt });
+
+    if (insertError) {
+      console.error("Failed to store verification code:", insertError);
+      return NextResponse.json({ error: "Could not create verification code." }, { status: 500 });
     }
 
-    const confirmUrl = buildConfirmUrl(siteUrl, tokenHash, "signup", redirectTo);
-
+    // Send the code via Resend
     try {
-      await sendConfirmationEmail({ to: email, name, confirmUrl, idempotencyKey: `signup-confirm/${userId}` });
+      await sendConfirmationEmail({
+        to: email,
+        name,
+        code,
+        idempotencyKey: `signup-code/${userId}/${code}`,
+      });
     } catch (emailError) {
-      console.error("Resend confirmation email failed:", emailError);
+      console.error("Resend email failed:", emailError);
       return NextResponse.json(
         { error: "Account created but confirmation email could not be sent." },
         { status: 500 }
@@ -85,11 +86,11 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(
-      { message: "User signed up. Please check your email to confirm your account." },
+      { message: "Account created. Please check your email for your 6-digit verification code." },
       { status: 200 }
     );
   } catch (error) {
-    console.error("API route error:", error);
+    console.error("signup-with-plan error:", error);
     return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
 }
