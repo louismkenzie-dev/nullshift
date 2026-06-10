@@ -47,7 +47,7 @@ export function AdminNav({ email }: { email: string }) {
         {/* Logo */}
         <Link href="/admin" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
           <LogoMark size={20} />
-          <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", letterSpacing: "0.02em", color: T.fg }}>NULLSHIFT</span>
+          <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", letterSpacing: "0.02em", color: T.fg }}>Nullshift</span>
           <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", color: T.primary, textTransform: "uppercase" }}>/ admin</span>
         </Link>
 
@@ -86,7 +86,7 @@ export function AdminNav({ email }: { email: string }) {
         <div className="flex items-center justify-between px-6 h-14 shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
           <div className="flex items-center gap-2.5">
             <LogoMark size={18} />
-            <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "0.95rem", color: T.fg }}>NULLSHIFT</span>
+            <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "0.95rem", color: T.fg }}>Nullshift</span>
             <span style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.1em", color: T.primary, textTransform: "uppercase" }}>/ admin</span>
           </div>
           <button onClick={() => setOpen(false)} style={{ color: T.muted, fontFamily: T.mono, fontSize: 20, lineHeight: 1 }}>×</button>
@@ -109,7 +109,7 @@ export function AdminNav({ email }: { email: string }) {
                   animationDelay: `${idx * 40}ms`,
                 }}>
                 <span style={{ fontFamily: T.mono, fontSize: "11px", color: active ? T.primary : T.muted, width: 16, textAlign: "center" }}>{l.icon}</span>
-                <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", letterSpacing: "0.04em", color: active ? T.primary : T.fg }}>
+                <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", letterSpacing: "0.04em", color: active ? T.primary : T.fg }}>
                   {l.label}
                 </span>
                 {active && <span style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: T.primary }} />}

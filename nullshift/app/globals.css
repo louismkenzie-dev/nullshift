@@ -10,98 +10,130 @@
   --font-mono: var(--font-mono);
   --color-border: var(--border);
   --color-ring: var(--ring);
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
-  --radius-xl: 6px;
-}
-
-:root {
-  /* Nullshift color palette — unchanged */
-  --background:         #09090b;
-  --surface:            #18181b;
-  --surface-2:          #262629;
-  --foreground:         #fafafa;
-  --muted-foreground:   #a1a1a6;
-  --primary:            #10b981;
-  --primary-foreground: #131316;
-  --border:             #3d3d42;
-  --border-strong:      #505055;
-  --ring:               #10b981;
-
-  /* Halo radius scale */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-xl: 24px;
-  --radius-full: 999px;
-  --radius: var(--radius-md);
+}
 
-  /* Halo spacing */
-  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
-  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+:root {
+  /* ── Halo surface tiers ────────────────────────────────────── */
+  --background:   #0A0B0F;
+  --surface:      #14151C;
+  --elevated:     #1E2029;
+  --overlay:      rgba(10, 11, 15, 0.72);
+
+  /* ── Foreground ─────────────────────────────────────────────── */
+  --foreground:          #F2F4F8;
+  --muted-foreground:    #9AA0AE;
+  --faint-foreground:    #5C6170;
+
+  /* ── Brand (Nullshift green → replaces Halo indigo) ─────────── */
+  --primary:             #10b981;
+  --primary-hover:       #34d399;
+  --primary-pressed:     #059669;
+  --primary-soft:        rgba(16, 185, 129, 0.12);
+  --primary-foreground:  #0A0B0F;
+
+  /* ── Signal ──────────────────────────────────────────────────── */
+  --success:        #2BE08C;
+  --warning:        #F5D547;
+  --info:           #3DD7E5;
+  --danger:         #FF3A5C;
+  --success-soft:   rgba(43, 224, 140, 0.12);
+  --warning-soft:   rgba(245, 213, 71, 0.14);
+  --info-soft:      rgba(61, 215, 229, 0.14);
+  --danger-soft:    rgba(255, 58, 92, 0.14);
+
+  /* ── Borders ─────────────────────────────────────────────────── */
+  --border:        #2A2D38;
+  --border-strong: #3A3D4A;
+  --border-soft:   rgba(255, 255, 255, 0.04);
+  --ring:          #10b981;
+
+  /* ── Radius ──────────────────────────────────────────────────── */
+  --radius-none: 0px;
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
+  --radius-full: 999px;
+  --radius:      var(--radius-md);
+
+  /* ── Spacing (4px base) ──────────────────────────────────────── */
+  --space-1: 4px;  --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px; --space-6: 24px;  --space-8: 32px;  --space-10: 40px;
   --space-12: 48px; --space-16: 64px; --space-20: 80px;
 
-  /* Halo elevation */
-  --shadow-sm: 0 1px 0 rgba(255,255,255,0.02) inset, 0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md: 0 8px 24px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.03) inset;
-  --shadow-lg: 0 24px 60px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.04) inset;
-  --focus-ring: 0 0 0 3px rgba(16,185,129,0.30);
+  /* ── Elevation ───────────────────────────────────────────────── */
+  --shadow-sm:  0 1px 0 rgba(255,255,255,0.02) inset, 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md:  0 8px 24px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.03) inset;
+  --shadow-lg:  0 24px 60px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.04) inset;
+  --focus-ring: 0 0 0 3px rgba(16, 185, 129, 0.30);
 
-  /* Halo motion */
+  /* ── Motion ──────────────────────────────────────────────────── */
   --motion-fast: 120ms;
   --motion-base: 150ms;
   --motion-slow: 240ms;
   --easing-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
 
-  /* Halo layout */
+  /* ── Layout ──────────────────────────────────────────────────── */
   --container-max: 1200px;
   --container-pad: clamp(20px, 4vw, 48px);
 
-  /* Halo font refs */
-  --font-sans: "Inter";
-  --font-mono: "JetBrains Mono";
+  /* ── Font refs ───────────────────────────────────────────────── */
+  --font-sans:    "Inter";
+  --font-mono:    "JetBrains Mono";
   --font-display: var(--font-sans);
 }
 
 @layer base {
   * { @apply border-border; }
   body {
-    @apply bg-[#09090b] text-[#fafafa];
+    background-color: #0A0B0F;
+    color: #F2F4F8;
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
-  ::selection { background: #10b981; color: #131316; }
+  ::selection {
+    background: rgba(16, 185, 129, 0.25);
+    color: #F2F4F8;
+  }
 }
 
-/* Lenis smooth scroll */
+/* ── Lenis smooth scroll ─────────────────────────────────────── */
 html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
 .lenis.lenis-stopped { overflow: hidden; }
 
-/* ── Brief intake form inputs ───────────────────────────────── */
+/* ── Halo form inputs (brief intake) ────────────────────────── */
 .brief-input {
   width: 100%;
   background: var(--surface);
-  color: #fafafa;
+  color: var(--foreground);
   font-family: var(--font-sans), Inter, ui-sans-serif, system-ui, sans-serif;
   font-size: 0.9375rem;
+  letter-spacing: -0.005em;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 10px 14px;
   outline: none;
-  transition: border-color var(--motion-base) var(--easing-standard), box-shadow var(--motion-base) var(--easing-standard);
+  transition:
+    border-color var(--motion-base) var(--easing-standard),
+    box-shadow var(--motion-base) var(--easing-standard);
 }
-.brief-input::placeholder { color: rgba(161,161,166,0.45); }
+.brief-input::placeholder { color: var(--faint-foreground); }
 .brief-input:hover { border-color: var(--border-strong); }
 .brief-input:focus { border-color: var(--primary); box-shadow: var(--focus-ring); }
-.brief-input-err { border-color: rgba(248,113,113,0.55); }
+.brief-input-err { border-color: var(--danger); }
 
-/* ── Sticky-stacking uniform cards ───────────────────────────── */
+/* ── Sticky-stacking uniform cards (home page) ───────────────── */
 :root { --card-h: 80vh; }
 
-/* Cards are sticky directly inside <main>; each pins centred and stays put
-   while later cards (higher z-index) slide up and cover it. The bottom margin
-   sets the scroll distance between one card pinning and the next covering it. */
 .sticky-stick {
   position: sticky;
   top: calc((100vh - var(--card-h)) / 2);
@@ -109,17 +141,12 @@ html.lenis, html.lenis body { height: auto; }
 }
 .sticky-stick:last-of-type { margin-bottom: 0; }
 
-/* Glass cards: clear the inner section's background and make it fill the
-   whole uniform card so content distributes edge-to-edge (no top gap, and
-   grid borders reach the card edges). */
 .glass-card > section {
   background-color: transparent !important;
   width: 100%;
   height: 100%;
 }
 
-/* On mobile the fixed-height sticky stack can't hold stacked content, so cards
-   flow naturally at their own height and scroll normally. */
 @media (max-width: 767px) {
   :root { --card-h: auto; }
   .sticky-stick {
@@ -128,12 +155,11 @@ html.lenis, html.lenis body { height: auto; }
   }
 }
 
-/* ── Hero glow text ──────────────────────────── */
+/* ── Hero glow animation ─────────────────────────────────────── */
 @keyframes hero-glow-pulse {
   0%, 100% { filter: brightness(1); }
   50%       { filter: brightness(1.22); }
 }
-
 .hero-glow {
   animation: hero-glow-pulse 3.6s ease-in-out infinite;
   text-shadow:
@@ -142,7 +168,7 @@ html.lenis, html.lenis body { height: auto; }
     0 0 74px color-mix(in oklab, #10b981 32%, transparent);
 }
 
-/* ── Noise layer ─────────────────────────────── */
+/* ── Noise layer ─────────────────────────────────────────────── */
 .noise-layer {
   position: fixed;
   inset: 0;
@@ -153,9 +179,39 @@ html.lenis, html.lenis body { height: auto; }
   background-size: 180px;
 }
 
-/* ── Pulse dot ───────────────────────────────── */
+/* ── Pulse dot ───────────────────────────────────────────────── */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.3; }
 }
 .pulse-dot { animation: pulse-dot 2.5s ease-in-out infinite; }
+
+/* ── Halo eyebrow (reusable class) ──────────────────────────── */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+  font-family: var(--font-sans), Inter, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.eyebrow::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+  flex-shrink: 0;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}

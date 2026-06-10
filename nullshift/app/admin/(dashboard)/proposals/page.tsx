@@ -24,7 +24,7 @@ const DEFAULT_PHASES: Phase[] = [
 ];
 
 const statusColor: Record<string, string> = {
-  draft: T.muted, sent: "#06b6d4", accepted: T.primary, declined: "#f87171",
+  draft: T.muted, sent: "#06b6d4", accepted: T.primary, declined: T.danger,
 };
 
 export default function ProposalsPage() {
@@ -86,7 +86,7 @@ export default function ProposalsPage() {
     return c ? (c.business_name || c.name) : null;
   };
 
-  const input: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, padding: "10px 12px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", outline: "none", borderRadius: "3px", width: "100%" };
+  const input: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, padding: "10px 12px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", outline: "none", borderRadius: T.r.sm, width: "100%" };
   const labelS: React.CSSProperties = { fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.muted, marginBottom: "6px", display: "block" };
 
   return (
@@ -94,7 +94,7 @@ export default function ProposalsPage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: "8px" }}>// DOCUMENTS</div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.4rem", color: T.fg }}>PROPOSALS</h1>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.4rem", color: T.fg }}>PROPOSALS</h1>
         </div>
         <div style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
           {rows.length} proposal{rows.length !== 1 ? "s" : ""}
@@ -123,7 +123,7 @@ export default function ProposalsPage() {
                   onClick={() => setOpenId(isOpen ? null : p.id)}
                   className="w-full text-left px-5 py-4 grid grid-cols-[1fr_120px_120px_120px_auto] gap-4 items-center hover:bg-[#1f1f23] transition-colors">
                   <div className="min-w-0">
-                    <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", color: T.fg }}>{p.title}</div>
+                    <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", color: T.fg }}>{p.title}</div>
                     {clientName(p.client_id) && <div style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted }}>{clientName(p.client_id)}</div>}
                   </div>
                   <span style={{ fontFamily: T.mono, fontSize: "0.9rem", color: T.primary }}>{money(p.total, p.currency)}</span>
@@ -157,7 +157,7 @@ export default function ProposalsPage() {
                       </span>
                       {!accepted && (
                         <button onClick={() => saveDoc(p.id)} disabled={saving === p.id} className="px-5 h-9 transition-opacity hover:opacity-90 disabled:opacity-50"
-                          style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px" }}>
+                          style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm }}>
                           {saving === p.id ? "Saving…" : saved === p.id ? "Saved ✓" : "Save document"}
                         </button>
                       )}
@@ -190,7 +190,7 @@ export default function ProposalsPage() {
                             {ph.items.map((it, ii) => (
                               <div key={ii} className="flex items-center gap-2">
                                 <input disabled={accepted} style={{ ...input, padding: "8px 10px" }} value={it} onChange={e => { const s = [...doc.scope]; const items = [...ph.items]; items[ii] = e.target.value; s[pi] = { ...ph, items }; setDoc(p.id, "scope", s); }} placeholder="Scope item" />
-                                {!accepted && <button onClick={() => { const s = [...doc.scope]; s[pi] = { ...ph, items: ph.items.filter((_, j) => j !== ii) }; setDoc(p.id, "scope", s); }} style={{ color: "#f87171", fontFamily: T.mono, fontSize: 16 }}>×</button>}
+                                {!accepted && <button onClick={() => { const s = [...doc.scope]; s[pi] = { ...ph, items: ph.items.filter((_, j) => j !== ii) }; setDoc(p.id, "scope", s); }} style={{ color: T.danger, fontFamily: T.mono, fontSize: 16 }}>×</button>}
                               </div>
                             ))}
                             {!accepted && <button onClick={() => { const s = [...doc.scope]; s[pi] = { ...ph, items: [...ph.items, ""] }; setDoc(p.id, "scope", s); }} className="self-start" style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: T.primary }}>+ Add item</button>}
@@ -205,7 +205,7 @@ export default function ProposalsPage() {
                       {doc.deliverables.map((d, di) => (
                         <div key={di} className="flex items-center gap-2">
                           <input disabled={accepted} style={input} value={d} onChange={e => { const a = [...doc.deliverables]; a[di] = e.target.value; setDoc(p.id, "deliverables", a); }} placeholder="Deliverable" />
-                          {!accepted && <button onClick={() => setDoc(p.id, "deliverables", doc.deliverables.filter((_, j) => j !== di))} style={{ color: "#f87171", fontFamily: T.mono, fontSize: 16 }}>×</button>}
+                          {!accepted && <button onClick={() => setDoc(p.id, "deliverables", doc.deliverables.filter((_, j) => j !== di))} style={{ color: T.danger, fontFamily: T.mono, fontSize: 16 }}>×</button>}
                         </div>
                       ))}
                       {!accepted && <button onClick={() => setDoc(p.id, "deliverables", [...doc.deliverables, ""])} className="self-start mt-1" style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: T.primary }}>+ Add deliverable</button>}
@@ -221,7 +221,7 @@ export default function ProposalsPage() {
                             <input disabled={accepted} style={{ ...input, padding: "8px 10px" }} value={w.title} onChange={e => { const a = [...doc.timeline]; a[wi] = { ...w, title: e.target.value }; setDoc(p.id, "timeline", a); }} placeholder="Milestone / title" />
                             <textarea disabled={accepted} rows={2} style={{ ...input, padding: "8px 10px", resize: "vertical" }} value={w.description} onChange={e => { const a = [...doc.timeline]; a[wi] = { ...w, description: e.target.value }; setDoc(p.id, "timeline", a); }} placeholder="What will happen" />
                           </div>
-                          {!accepted && <button onClick={() => setDoc(p.id, "timeline", doc.timeline.filter((_, j) => j !== wi))} style={{ color: "#f87171", fontFamily: T.mono, fontSize: 16 }}>×</button>}
+                          {!accepted && <button onClick={() => setDoc(p.id, "timeline", doc.timeline.filter((_, j) => j !== wi))} style={{ color: T.danger, fontFamily: T.mono, fontSize: 16 }}>×</button>}
                         </div>
                       ))}
                       {!accepted && <button onClick={() => setDoc(p.id, "timeline", [...doc.timeline, { week: `Week ${doc.timeline.length + 1}`, title: "", description: "" }])} className="self-start" style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: T.primary }}>+ Add week</button>}
@@ -230,7 +230,7 @@ export default function ProposalsPage() {
                     {!accepted && (
                       <div className="flex justify-end pt-3" style={{ borderTop: `1px solid ${T.border}` }}>
                         <button onClick={() => saveDoc(p.id)} disabled={saving === p.id} className="px-6 h-10 transition-opacity hover:opacity-90 disabled:opacity-50"
-                          style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px" }}>
+                          style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm }}>
                           {saving === p.id ? "Saving…" : saved === p.id ? "Saved ✓" : "Save document"}
                         </button>
                       </div>

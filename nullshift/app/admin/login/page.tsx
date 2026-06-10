@@ -44,7 +44,7 @@ function AdminLogin() {
 
   const inputStyle: React.CSSProperties = {
     background: T.bg, border: `1px solid ${T.border}`, padding: "12px 16px",
-    color: T.fg, fontFamily: T.sans, fontSize: "0.95rem", outline: "none", borderRadius: "3px",
+    color: T.fg, fontFamily: T.sans, fontSize: "0.95rem", outline: "none", borderRadius: T.r.sm,
   };
 
   return (
@@ -52,14 +52,14 @@ function AdminLogin() {
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2.5 mb-8 justify-center">
           <LogoMark size={26} />
-          <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.3rem", letterSpacing: "0.02em", color: T.fg }}>NULLSHIFT</span>
+          <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.3rem", letterSpacing: "0.02em", color: T.fg }}>Nullshift</span>
         </div>
         <div className="mb-6 text-center" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
           ADMIN_PORTAL / SECURE_LOGIN
         </div>
         {setupMode ? (
           <div className="flex flex-col gap-4 p-8 rounded-xl" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
-            <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#f87171" }}>
+            <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: T.danger }}>
               SUPABASE_SETUP_REQUIRED
             </div>
             <p style={{ fontFamily: T.sans, fontSize: "0.95rem", lineHeight: 1.7, color: T.muted }}>
@@ -74,7 +74,7 @@ function AdminLogin() {
             <a
               href="/"
               className="mt-2 h-11 inline-flex items-center justify-center font-semibold transition-opacity hover:opacity-90"
-              style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px" }}
+              style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm }}
             >
               Back Home
             </a>
@@ -86,9 +86,9 @@ function AdminLogin() {
             <input type="email" required value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} autoComplete="email" />
             <label className="mt-2" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>Password</label>
             <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} autoComplete="current-password" />
-            {error && <p style={{ fontFamily: T.mono, fontSize: "11px", color: "#f87171", marginTop: "4px" }}>{error}</p>}
+            {error && <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.danger, marginTop: "4px" }}>{error}</p>}
             <button type="submit" disabled={busy} className="mt-4 h-11 font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px" }}>
+              style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm }}>
               {busy ? "Signing in…" : "Sign in →"}
             </button>
           </form>

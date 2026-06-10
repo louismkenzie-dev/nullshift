@@ -10,7 +10,7 @@ type Tab = "privacy" | "terms";
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="py-10" style={{ borderBottom: `1px solid ${T.border}` }}>
-      <h2 className="mb-5" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.4rem", letterSpacing: "0.01em", color: T.fg }}>{title}</h2>
+      <h2 className="mb-5" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.125rem", letterSpacing: "-0.01em", lineHeight: 1.3, color: T.fg }}>{title}</h2>
       <div style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.85, color: T.muted }}>{children}</div>
     </div>
   );
@@ -90,34 +90,37 @@ export default function LegalPage() {
       <main>
         {/* Hero */}
         <section className="pt-28 pb-14 px-8 md:px-16" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <div className="flex items-center gap-3 mb-6" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
-            <span className="size-1.5 rounded-full" style={{ background: T.primary }} />
-            <span>SYS_07 / LEGAL</span>
+          <div className="mb-7">
+            <span className="inline-flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, display: "inline-block" }} />
+              Legal
+            </span>
           </div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(3rem,7vw,7rem)", lineHeight: 0.92, letterSpacing: "-0.01em", color: T.fg }}>
-            LEGAL <span style={{ color: T.muted }}>DOCS.</span>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(3rem, 7vw, 6rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+            Legal <span style={{ color: T.muted }}>documents.</span>
           </h1>
 
           {/* Warning banner */}
-          <div className="mt-8 flex items-start gap-3 px-5 py-4 max-w-2xl" style={{ border: `1px solid #f87171`, background: "rgba(248,113,113,0.05)", borderRadius: "2px" }}>
-            <span style={{ color: "#f87171", flexShrink: 0 }}>⚠</span>
-            <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", lineHeight: 1.7, color: "#f87171" }}>
-              PLACEHOLDER CONTENT — The documents below are skeleton drafts for structural reference only. Replace with legally reviewed Privacy Policy and Terms of Service before this site goes live. Consult a qualified solicitor for compliance with UK consumer law and data protection regulations (UK GDPR, Data Protection Act 2018, etc.).
+          <div className="mt-8 flex items-start gap-3 px-5 py-4 max-w-2xl" style={{ border: `1px solid ${T.danger}`, background: T.dangerSoft, borderRadius: T.r.md }}>
+            <span style={{ color: T.danger, flexShrink: 0 }}>⚠</span>
+            <p style={{ fontFamily: T.sans, fontSize: "0.8125rem", lineHeight: 1.65, letterSpacing: "-0.003em", color: T.danger }}>
+              Placeholder content — these documents are skeleton drafts for structural reference only. Replace with legally reviewed copies before going live. Consult a qualified solicitor for UK GDPR and Data Protection Act 2018 compliance.
             </p>
           </div>
 
-          {/* Tab switcher */}
-          <div className="flex gap-2 mt-10">
+          {/* Tab switcher — Halo pill tabs */}
+          <div className="flex gap-1 mt-10 p-1 w-fit" style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.full }}>
             {(["privacy", "terms"] as Tab[]).map(t => (
               <button key={t} onClick={() => setTab(t)}
-                className="px-6 py-2.5 transition-all"
                 style={{
-                  fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase",
-                  background: tab === t ? T.primary : "transparent",
-                  color: tab === t ? T.primaryFg : T.muted,
-                  border: `1px solid ${tab === t ? T.primary : T.border}`,
-                  borderRadius: "2px",
+                  fontFamily: T.sans, fontSize: "0.8125rem", fontWeight: 500, letterSpacing: "-0.003em",
+                  height: 32, paddingInline: 16,
+                  background: tab === t ? T.elevated : "transparent",
+                  color: tab === t ? T.fg : T.muted,
+                  border: `1px solid ${tab === t ? T.primary : "transparent"}`,
+                  borderRadius: T.r.full,
                   cursor: "pointer",
+                  transition: `background ${T.duration.base} ${T.ease}, color ${T.duration.base} ${T.ease}`,
                 }}>
                 {t === "privacy" ? "Privacy Policy" : "Terms of Service"}
               </button>

@@ -55,13 +55,13 @@ export default function ClientsPage() {
     load();
   }
 
-  const input: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, padding: "10px 12px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", outline: "none", borderRadius: "3px", minWidth: 0, width: "100%" };
+  const input: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, padding: "10px 12px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", outline: "none", borderRadius: T.r.sm, minWidth: 0, width: "100%" };
 
   return (
     <div>
       <div className="mb-8">
         <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: "8px" }}>// ACCOUNTS</div>
-        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.4rem", letterSpacing: "0.01em", color: T.fg }}>CLIENTS</h1>
+        <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.4rem", letterSpacing: "0.01em", color: T.fg }}>CLIENTS</h1>
       </div>
 
       {/* Add client */}
@@ -71,7 +71,7 @@ export default function ClientsPage() {
         <input placeholder="Email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={input} />
         <input placeholder="Phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} style={input} />
         <button type="submit" disabled={saving} className="px-5 transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px" }}>
+          style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm }}>
           {saving ? "…" : "Add"}
         </button>
       </form>
@@ -85,7 +85,7 @@ export default function ClientsPage() {
           {rows.map((c, i) => (
             <Link key={c.id} href={`/admin/clients/${c.id}`} className="grid grid-cols-[1fr_100px_auto] md:grid-cols-[1fr_1fr_120px_120px] gap-3 md:gap-4 items-center px-4 sm:px-5 py-4 hover:bg-[#1f1f23] transition-colors"
               style={{ borderTop: i ? `1px solid ${T.border}` : "none", background: T.surface }}>
-              <span className="min-w-0 truncate" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", color: T.fg }}>
+              <span className="min-w-0 truncate" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", color: T.fg }}>
                 {c.name}
                 {c.business_name && <span className="md:hidden" style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "0.78rem", color: T.muted, marginLeft: "8px" }}>· {c.business_name}</span>}
               </span>

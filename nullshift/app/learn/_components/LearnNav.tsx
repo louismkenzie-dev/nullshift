@@ -44,7 +44,7 @@ export function LearnNav({ tier, email }: LearnNavProps) {
       >
         <Link href="/" className="flex items-center gap-2.5">
           <LogoMark size={22} />
-          <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", letterSpacing: "0.04em", color: T.fg }}>
+          <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", letterSpacing: "0.04em", color: T.fg }}>
             NULLSHIFT
           </span>
         </Link>

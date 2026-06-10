@@ -34,9 +34,9 @@ export default async function LearnDashboard() {
         {/* Heading */}
         <h1 style={{
           fontFamily: T.display,
-          fontWeight: 900,
+          fontWeight: 600,
           fontSize: "clamp(2.6rem, 6vw, 4rem)",
-          lineHeight: 0.92,
+          lineHeight: 1.04,
           letterSpacing: "-0.03em",
           color: T.fg,
         }}>
@@ -56,7 +56,7 @@ export default async function LearnDashboard() {
         </p>
 
         {/* Divider */}
-        <div style={{ width: "40px", height: "2px", background: T.primary, borderRadius: "2px" }} />
+        <div style={{ width: "40px", height: "2px", background: T.primary, borderRadius: T.r.md }} />
 
         {/* Back link */}
         <Link

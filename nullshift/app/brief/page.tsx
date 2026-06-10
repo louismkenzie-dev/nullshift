@@ -104,7 +104,7 @@ function BriefInner() {
               </div>
               <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: T.muted }}>// Brief received</span>
             </div>
-            <h1 className="mb-4" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "3rem", lineHeight: 0.92, letterSpacing: "-0.01em", color: T.fg, textTransform: "uppercase" }}>
+            <h1 className="mb-4" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "3rem", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
               WE&apos;VE GOT<br />WHAT WE NEED.
             </h1>
             <p style={{ fontFamily: T.sans, color: T.muted, marginBottom: "32px" }}>
@@ -172,7 +172,7 @@ function BriefInner() {
               {step === 5 && <StepFive form={form} errors={errors} set={set} />}
             </div>
 
-            {submitError && <p className="mt-4 flex items-center gap-2" style={{ fontFamily: T.mono, fontSize: 11, color: "#f87171" }}><AlertCircle className="w-3 h-3" /> {submitError}</p>}
+            {submitError && <p className="mt-4 flex items-center gap-2" style={{ fontFamily: T.mono, fontSize: 11, color: T.danger }}><AlertCircle className="w-3 h-3" /> {submitError}</p>}
 
             <div className="flex items-center justify-between mt-6">
               <button onClick={back} className="transition-colors hover:text-[#fafafa]" style={{ fontFamily: T.mono, fontSize: "12px", color: T.muted, visibility: step === 1 ? "hidden" : "visible" }}>← BACK</button>
@@ -391,13 +391,13 @@ function StepHeading({ marker, title, sub }: { marker: string; title: string; su
   return (
     <div className="mb-2">
       <p style={{ fontFamily: T.mono, fontSize: "10px", color: T.primary, letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: "8px" }}>{marker}</p>
-      <h2 className="mb-2" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.25rem", lineHeight: 0.92, letterSpacing: "-0.01em", color: T.fg, textTransform: "uppercase", whiteSpace: "pre-line" }}>{title}</h2>
+      <h2 className="mb-2" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.25rem", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg, whiteSpace: "pre-line" }}>{title}</h2>
       <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}>{sub}</p>
     </div>
   );
 }
 function FieldLabel({ children }: { children: React.ReactNode }) { return <label className="block text-sm" style={{ fontFamily: T.sans, fontWeight: 500, color: T.fg }}>{children}</label>; }
-function FieldError({ msg }: { msg?: string }) { if (!msg) return null; return <p className="flex items-center gap-1.5 mt-1.5" style={{ fontFamily: T.mono, fontSize: "11px", color: "#f87171" }}><AlertCircle className="w-3 h-3" /> {msg}</p>; }
+function FieldError({ msg }: { msg?: string }) { if (!msg) return null; return <p className="flex items-center gap-1.5 mt-1.5" style={{ fontFamily: T.mono, fontSize: "11px", color: T.danger }}><AlertCircle className="w-3 h-3" /> {msg}</p>; }
 function Field({ label, note, error, children }: { label: string; note?: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">

@@ -18,7 +18,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column" }}>
-      {/* Portal top bar */}
+      {/* Halo top bar — 56px, hairline border, surface background */}
       <header
         style={{
           height: 56,
@@ -29,16 +29,16 @@ export default async function PortalLayout({ children }: { children: React.React
           justifyContent: "space-between",
           paddingInline: 24,
           flexShrink: 0,
+          boxShadow: T.shadow.sm,
         }}
       >
         <Link
           href="/portal"
           style={{
-            fontFamily: T.mono,
-            fontWeight: 700,
-            fontSize: "0.8rem",
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
+            fontFamily: T.sans,
+            fontWeight: 600,
+            fontSize: "0.875rem",
+            letterSpacing: "-0.005em",
             color: T.fg,
             textDecoration: "none",
             display: "flex",
@@ -46,27 +46,44 @@ export default async function PortalLayout({ children }: { children: React.React
             gap: 10,
           }}
         >
-          <span style={{ color: T.primary }}>■</span> Nullshift Client Portal
+          {/* Brand dot */}
+          <span style={{
+            width: 8, height: 8, borderRadius: "50%",
+            background: T.primary,
+            boxShadow: `0 0 0 4px ${T.primarySoft}`,
+            display: "inline-block",
+            flexShrink: 0,
+          }} />
+          Client Portal
         </Link>
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
+          <span style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 500, color: T.muted }}>
             {user.email}
           </span>
           <form action="/api/auth/signout" method="post">
             <button
               type="submit"
               style={{
-                fontFamily: T.mono,
-                fontSize: "11px",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
+                fontFamily: T.sans,
+                fontSize: "0.8125rem",
+                fontWeight: 500,
+                letterSpacing: "-0.003em",
                 color: T.muted,
-                background: "none",
+                background: "transparent",
                 border: `1px solid ${T.border}`,
-                borderRadius: T.r.sm,
-                padding: "4px 12px",
+                borderRadius: T.r.full,
+                padding: "4px 14px",
                 cursor: "pointer",
+                transition: `color ${T.duration.base} ${T.ease}, border-color ${T.duration.base} ${T.ease}`,
+              }}
+              onMouseOver={e => {
+                (e.currentTarget as HTMLElement).style.color = T.fg;
+                (e.currentTarget as HTMLElement).style.borderColor = T.borderStr;
+              }}
+              onMouseOut={e => {
+                (e.currentTarget as HTMLElement).style.color = T.muted;
+                (e.currentTarget as HTMLElement).style.borderColor = T.border;
               }}
             >
               Sign out

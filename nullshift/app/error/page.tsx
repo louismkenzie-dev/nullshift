@@ -15,7 +15,7 @@ function ErrorContent() {
       style={{ background: T.bg }}
     >
       <div className="flex flex-col gap-6">
-        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+        <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.2rem", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
           ERROR<br /><span style={{ color: T.primary }}>OCCURRED</span>
         </h1>
         <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>

@@ -270,13 +270,13 @@ function SetupScreen() {
             fontSize: "10px",
             letterSpacing: "0.2em",
             textTransform: "uppercase",
-            color: "#f87171",
+            color: T.danger,
             marginBottom: "16px",
           }}
         >
           SETUP_REQUIRED
         </div>
-        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2rem", color: T.fg, marginBottom: "12px" }}>
+        <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2rem", color: T.fg, marginBottom: "12px" }}>
           NOT CONFIGURED
         </h1>
         <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>

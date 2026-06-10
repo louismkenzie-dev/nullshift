@@ -9,35 +9,31 @@ export default function LearnComingSoon() {
     >
       <div className="max-w-lg w-full flex flex-col items-center text-center gap-8">
 
-        {/* Label */}
-        <p style={{
-          fontFamily: T.mono,
-          fontSize: "11px",
-          letterSpacing: "0.2em",
-          textTransform: "uppercase",
-          color: T.primary,
-        }}>
-          LEARN_PORTAL / COMING_SOON
-        </p>
+        {/* Eyebrow */}
+        <span className="inline-flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primarySoft}`, display: "inline-block" }} />
+          Learn portal — coming soon
+        </span>
 
         {/* Heading */}
         <h1 style={{
           fontFamily: T.display,
-          fontWeight: 900,
-          fontSize: "clamp(2.6rem, 6vw, 4rem)",
-          lineHeight: 0.92,
+          fontWeight: 600,
+          fontSize: "clamp(2.75rem, 6vw, 4.5rem)",
+          lineHeight: 1.04,
           letterSpacing: "-0.03em",
           color: T.fg,
         }}>
-          SOMETHING&apos;S<br />
-          <span style={{ color: T.primary }}>COMING.</span>
+          Something&apos;s<br />
+          <span className="hero-glow" style={{ color: T.primary }}>coming.</span>
         </h1>
 
         {/* Body */}
         <p style={{
           fontFamily: T.sans,
           fontSize: "1rem",
-          lineHeight: 1.7,
+          lineHeight: 1.65,
+          letterSpacing: "-0.005em",
           color: T.muted,
           maxWidth: "36ch",
         }}>
@@ -45,25 +41,28 @@ export default function LearnComingSoon() {
         </p>
 
         {/* Divider */}
-        <div style={{ width: "40px", height: "2px", background: T.primary, borderRadius: "2px" }} />
+        <div style={{ width: 40, height: 2, background: T.primary, borderRadius: 2 }} />
 
-        {/* Sign in link for existing subscribers */}
+        {/* Sign in */}
         <Link
           href="/portal/login"
-          className="inline-flex items-center justify-center transition-opacity hover:opacity-90"
+          className="inline-flex items-center justify-center font-medium"
           style={{
-            fontFamily: T.mono,
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
+            fontFamily: T.sans,
+            fontSize: "0.9375rem",
+            fontWeight: 500,
+            letterSpacing: "-0.005em",
             height: 44,
             paddingInline: 24,
             background: T.primary,
             color: T.primaryFg,
-            borderRadius: "10px",
+            borderRadius: T.r.md,
             textDecoration: "none",
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
+            transition: `background ${T.duration.base} ${T.ease}`,
           }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.primaryHover}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = T.primary}
         >
           Subscriber login →
         </Link>
@@ -71,10 +70,9 @@ export default function LearnComingSoon() {
         <Link
           href="/"
           style={{
-            fontFamily: T.mono,
-            fontSize: "0.75rem",
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
+            fontFamily: T.sans,
+            fontSize: "0.8125rem",
+            letterSpacing: "-0.003em",
             color: T.muted,
             textDecoration: "none",
           }}

@@ -92,7 +92,7 @@ export default function CalendarPage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: "8px" }}>// SCHEDULE</div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.4rem", color: T.fg }}>CALL CALENDAR</h1>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.4rem", color: T.fg }}>CALL CALENDAR</h1>
         </div>
         <div style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
           {upcoming.length} upcoming · London time
@@ -108,8 +108,8 @@ export default function CalendarPage() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
               <div className="flex items-baseline gap-2">
-                <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.4rem", color: T.fg }}>{MONTHS[view.m]}</span>
-                <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.4rem", color: T.muted }}>{view.y}</span>
+                <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.4rem", color: T.fg }}>{MONTHS[view.m]}</span>
+                <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.4rem", color: T.muted }}>{view.y}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={goToday} className="transition-opacity hover:opacity-80" style={{ ...navBtn, width: "auto", padding: "0 12px", fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted }}>Today</button>
@@ -170,7 +170,7 @@ export default function CalendarPage() {
                     style={{ borderTop: i ? `1px solid ${T.border}` : "none" }}>
                     <div className="flex items-center gap-2 mb-1">
                       <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.primary, flexShrink: 0 }} />
-                      <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "0.95rem", color: T.fg }}>{cellName(c)}</span>
+                      <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "0.95rem", color: T.fg }}>{cellName(c)}</span>
                     </div>
                     <div style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted, paddingLeft: 14 }}>{formatCallDate(c.call_date)}</div>
                     <div style={{ fontFamily: T.mono, fontSize: "0.74rem", color: T.primary, paddingLeft: 14 }}>{formatCallTime(c.call_time)} · {c.duration_min} min</div>

@@ -24,7 +24,7 @@ type Enquiry = {
 
 const STATUSES = ["new", "in_progress", "quoted", "won", "lost"];
 const statusColor: Record<string, string> = {
-  new: T.primary, in_progress: "#facc15", quoted: "#06b6d4", won: "#10b981", lost: "#f87171",
+  new: T.primary, in_progress: "#facc15", quoted: "#06b6d4", won: "#10b981", lost: T.danger,
 };
 
 export default function EnquiriesPage() {
@@ -93,7 +93,7 @@ export default function EnquiriesPage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: "8px" }}>// INBOX</div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.4rem", letterSpacing: "0.01em", color: T.fg }}>ENQUIRIES</h1>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.4rem", letterSpacing: "0.01em", color: T.fg }}>ENQUIRIES</h1>
         </div>
         <div style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
           {rows.length} total · <span style={{ color: T.primary }}>{newCount} new</span>
@@ -111,7 +111,7 @@ export default function EnquiriesPage() {
               <button onClick={() => setOpen(open === e.id ? null : e.id)} className="w-full text-left px-5 py-4 grid grid-cols-[90px_1fr_140px_120px] gap-4 items-center hover:bg-[#1f1f23] transition-colors">
                 <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>{e.source}</span>
                 <span>
-                  <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", color: T.fg }}>{e.name}</span>
+                  <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", color: T.fg }}>{e.name}</span>
                   {e.business_name && <span style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}> · {e.business_name}</span>}
                 </span>
                 <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted }}>{new Date(e.created_at).toLocaleDateString()}</span>
@@ -132,13 +132,13 @@ export default function EnquiriesPage() {
                     <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted, marginRight: "4px" }}>STATUS:</span>
                     {STATUSES.map(s => (
                       <button key={s} onClick={() => setStatus(e.id, s)} className="px-3 py-1.5 transition-opacity hover:opacity-90"
-                        style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", borderRadius: "2px",
+                        style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", borderRadius: T.r.sm,
                           background: e.status === s ? statusColor[s] : "transparent", color: e.status === s ? T.primaryFg : T.muted, border: `1px solid ${e.status === s ? statusColor[s] : T.border}` }}>
                         {s.replace("_", " ")}
                       </button>
                     ))}
                     <button onClick={() => convertToClient(e)} className="ml-auto px-4 py-1.5 transition-opacity hover:opacity-90"
-                      style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "2px" }}>
+                      style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm }}>
                       Convert to client →
                     </button>
                   </div>

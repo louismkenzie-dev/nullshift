@@ -11,7 +11,7 @@ import Link from "next/link";
 function Eyebrow({ children, tone = T.primary }: { children: React.ReactNode; tone?: string }) {
   return (
     <span className="inline-flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
-      <span style={{ width: 8, height: 8, borderRadius: "50%", background: tone, boxShadow: `0 0 0 4px ${tone}20`, flexShrink: 0, display: "inline-block" }} />
+      <span style={{ width: 8, height: 8, borderRadius: "50%", background: tone, boxShadow: `0 0 0 4px ${tone}22`, flexShrink: 0, display: "inline-block" }} />
       {children}
     </span>
   );
@@ -240,8 +240,11 @@ function CtaStrip() {
       </Reveal>
       <Reveal delay={0.1}>
         <Link href="/book"
-          className="inline-flex items-center gap-2 font-medium transition-opacity hover:opacity-90"
-          style={{ fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", height: 48, paddingInline: 24, background: T.primary, color: T.primaryFg, borderRadius: "10px", boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 28px ${T.primary}35`, whiteSpace: "nowrap" }}>
+          className="inline-flex items-center gap-2 font-medium"
+          style={{ fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", height: 48, paddingInline: 24, background: T.primary, color: T.primaryFg, borderRadius: T.r.md, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`, whiteSpace: "nowrap", textDecoration: "none", transition: `background ${T.duration.base} ${T.ease}` }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.primaryHover}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = T.primary}
+        >
           Book a discovery call →
         </Link>
       </Reveal>

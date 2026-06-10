@@ -156,8 +156,8 @@ function OnboardFlow() {
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5 mb-12">
         <LogoMark size={24} />
-        <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.1rem", letterSpacing: "0.04em", color: T.fg }}>
-          NULLSHIFT
+        <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.1rem", letterSpacing: "-0.01em", color: T.fg }}>
+          Nullshift
         </span>
       </Link>
 
@@ -201,7 +201,7 @@ function OnboardFlow() {
               >
                 STEP 01 / YOUR PLAN
               </div>
-              <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+              <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.25rem", lineHeight: 1.12, letterSpacing: "-0.02em", color: T.fg }}>
                 YOU&apos;VE CHOSEN<br /><span style={{ color: T.primary }}>{meta.label.toUpperCase()}</span>
               </h1>
             </div>
@@ -215,7 +215,7 @@ function OnboardFlow() {
                   <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "0.7rem", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted, marginBottom: "6px" }}>
                     {meta.label}
                   </div>
-                  <div style={{ fontFamily: T.display, fontWeight: 800, fontSize: "2rem", letterSpacing: "-0.03em", color: T.primary }}>
+                  <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.25rem", letterSpacing: "-0.02em", color: T.primary }}>
                     {meta.price}
                   </div>
                 </div>
@@ -278,7 +278,7 @@ function OnboardFlow() {
               >
                 STEP 02 / CREATE ACCOUNT
               </div>
-              <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+              <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.25rem", lineHeight: 1.12, letterSpacing: "-0.02em", color: T.fg }}>
                 SET UP YOUR<br /><span style={{ color: T.primary }}>LOGIN</span>
               </h1>
             </div>
@@ -294,7 +294,7 @@ function OnboardFlow() {
                 <button
                   onClick={() => setStep(3)}
                   className="mt-4 w-full h-11 flex items-center justify-between px-5 transition-opacity hover:opacity-90"
-                  style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.06em", background: T.primary, color: T.primaryFg, borderRadius: T.r.md }}
+                  style={{ fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", background: T.primary, color: T.primaryFg, borderRadius: T.r.md, border: "none", boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)` }}
                 >
                   <span>Continue to payment</span>
                   <span>→</span>
@@ -359,7 +359,7 @@ function OnboardFlow() {
                   />
                 </div>
                 {error && (
-                  <p style={{ fontFamily: T.mono, fontSize: "11px", color: "#f87171" }}>{error}</p>
+                  <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.danger }}>{error}</p>
                 )}
                 <button
                   type="submit"
@@ -515,7 +515,7 @@ function CheckEmailStep({ email, password, plan, resendBusy, resendMessage, onRe
     borderRadius: T.r.md,
     color: T.fg,
     fontFamily: T.display,
-    fontWeight: 900,
+    fontWeight: 600,
     fontSize: "1.6rem",
     textAlign: "center",
     outline: "none",
@@ -528,7 +528,7 @@ function CheckEmailStep({ email, password, plan, resendBusy, resendMessage, onRe
         <div className="mb-2" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
           STEP 02 / VERIFY EMAIL
         </div>
-        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+        <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.25rem", lineHeight: 1.12, letterSpacing: "-0.02em", color: T.fg }}>
           CHECK YOUR<br /><span style={{ color: T.primary }}>EMAIL</span>
         </h1>
       </div>
@@ -566,7 +566,7 @@ function CheckEmailStep({ email, password, plan, resendBusy, resendMessage, onRe
         </div>
 
         {error && (
-          <p style={{ fontFamily: T.mono, fontSize: "11px", color: "#f87171" }}>{error}</p>
+          <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.danger }}>{error}</p>
         )}
 
         <button
@@ -712,7 +712,7 @@ function StripeCheckoutRedirect({ plan, email: emailProp }: StripeCheckoutRedire
         <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
           EMAIL CONFIRMED ✓
         </div>
-        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+        <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.25rem", lineHeight: 1.12, letterSpacing: "-0.02em", color: T.fg }}>
           VERIFYING<br /><span style={{ color: T.primary }}>YOUR SESSION</span>
         </h1>
         <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
@@ -729,7 +729,7 @@ function StripeCheckoutRedirect({ plan, email: emailProp }: StripeCheckoutRedire
         <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
           EMAIL CONFIRMED ✓
         </div>
-        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+        <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.25rem", lineHeight: 1.12, letterSpacing: "-0.02em", color: T.fg }}>
           REDIRECTING<br /><span style={{ color: T.primary }}>TO CHECKOUT</span>
         </h1>
         <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
@@ -746,14 +746,14 @@ function StripeCheckoutRedirect({ plan, email: emailProp }: StripeCheckoutRedire
         <div className="mb-2" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
           EMAIL CONFIRMED ✓
         </div>
-        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg }}>
+        <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.25rem", lineHeight: 1.12, letterSpacing: "-0.02em", color: T.fg }}>
           PROCEED TO<br /><span style={{ color: T.primary }}>PAYMENT</span>
         </h1>
       </div>
 
       <div className="rounded-xl p-5 flex flex-col gap-3" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
         {error ? (
-          <p style={{ fontFamily: T.mono, fontSize: "11px", color: "#f87171" }}>{error}</p>
+          <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.danger }}>{error}</p>
         ) : (
           <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
             Your email is confirmed. Click below to complete your subscription via Stripe.

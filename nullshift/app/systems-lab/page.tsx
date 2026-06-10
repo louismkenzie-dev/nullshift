@@ -627,7 +627,7 @@ function MembershipDemo() {
               </div>
             )}
             <p style={{ fontFamily: T.sans, fontSize: "11px", fontWeight: 700, color: tier.recommended ? T.primary : T.fg, marginBottom: 2 }}>{tier.name}</p>
-            <p style={{ fontFamily: T.display, fontSize: "16px", fontWeight: 900, color: tier.color, letterSpacing: "-0.02em", marginBottom: 6 }}>{tier.price}<span style={{ fontFamily: T.mono, fontSize: "8px", color: T.muted, fontWeight: 400 }}>/mo</span></p>
+            <p style={{ fontFamily: T.display, fontSize: "16px", fontWeight: 600, color: tier.color, letterSpacing: "-0.02em", marginBottom: 6 }}>{tier.price}<span style={{ fontFamily: T.mono, fontSize: "8px", color: T.muted, fontWeight: 400 }}>/mo</span></p>
             <div className="flex flex-col gap-1">
               {tier.features.map(f => (
                 <div key={f} className="flex items-start gap-1">
@@ -726,7 +726,7 @@ function FunnelStage({ stage, index }: { stage: typeof FUNNEL_STAGES[0]; index: 
         padding: "0 10px", transition: "width 0.8s ease",
       }}>
         <span style={{ fontFamily: T.sans, fontSize: "10px", fontWeight: 600, color: stage.color }}>{stage.label}</span>
-        <span style={{ fontFamily: T.display, fontSize: "13px", fontWeight: 900, color: stage.color, letterSpacing: "-0.02em" }}>{val.toLocaleString()}</span>
+        <span style={{ fontFamily: T.display, fontSize: "13px", fontWeight: 600, color: stage.color, letterSpacing: "-0.02em" }}>{val.toLocaleString()}</span>
       </div>
       {index < FUNNEL_STAGES.length - 1 && (
         <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 0" }}>
@@ -749,7 +749,7 @@ function FunnelDemo() {
       ))}
       <div style={{ marginTop: 6, padding: "6px 10px", background: `${T.primary}10`, border: `1px solid ${T.primary}33`, borderRadius: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ fontFamily: T.mono, fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted }}>Conversion rate</span>
-        <span style={{ fontFamily: T.display, fontSize: "14px", fontWeight: 900, color: T.primary }}>2.2%</span>
+        <span style={{ fontFamily: T.display, fontSize: "14px", fontWeight: 600, color: T.primary }}>2.2%</span>
       </div>
     </div>
   );
@@ -812,7 +812,7 @@ function EcommerceDemo() {
           <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
             <div className="flex justify-between items-center mb-3">
               <span style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted }}>Total</span>
-              <span style={{ fontFamily: T.display, fontSize: "16px", fontWeight: 900, color: T.fg }}>£{total}</span>
+              <span style={{ fontFamily: T.display, fontSize: "16px", fontWeight: 600, color: T.fg }}>£{total}</span>
             </div>
             <button style={{ width: "100%", padding: "9px", background: T.primary, color: T.primaryFg, border: "none", borderRadius: 3, fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", fontWeight: 600, boxShadow: `0 0 16px ${T.primary}40` }}>
               Checkout →
@@ -889,7 +889,7 @@ function AnalyticsDemo() {
         {KPI.map(k => (
           <div key={k.label} style={{ background: T.surface2, border: `1px solid ${T.border}`, borderRadius: 4, padding: "8px 6px" }}>
             <p style={{ fontFamily: T.mono, fontSize: "7px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, marginBottom: 4 }}>{k.label}</p>
-            <p style={{ fontFamily: T.display, fontSize: "14px", fontWeight: 900, color: T.fg, letterSpacing: "-0.02em", lineHeight: 1 }}>{k.value}</p>
+            <p style={{ fontFamily: T.display, fontSize: "14px", fontWeight: 600, color: T.fg, letterSpacing: "-0.02em", lineHeight: 1 }}>{k.value}</p>
             <p style={{ fontFamily: T.mono, fontSize: "8px", color: T.primary, marginTop: 2 }}>{k.delta}</p>
           </div>
         ))}
@@ -1029,7 +1029,7 @@ function WizardDemo() {
 
       {/* Step content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-        <h4 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.1rem", letterSpacing: "-0.01em", color: T.fg, margin: 0 }}>
+        <h4 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.1rem", letterSpacing: "-0.01em", color: T.fg, margin: 0 }}>
           {current.title}
         </h4>
 
@@ -1114,7 +1114,7 @@ function ReviewsDemo() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-baseline gap-2">
-            <span style={{ fontFamily: T.display, fontSize: "28px", fontWeight: 900, color: T.fg, letterSpacing: "-0.02em", lineHeight: 1 }}>{avgRating}</span>
+            <span style={{ fontFamily: T.display, fontSize: "28px", fontWeight: 600, color: T.fg, letterSpacing: "-0.02em", lineHeight: 1 }}>{avgRating}</span>
             <span style={{ fontFamily: T.mono, fontSize: "9px", color: T.muted, letterSpacing: "0.08em" }}>/ 5.0</span>
           </div>
           <div className="flex gap-0.5 mt-1">
@@ -1226,11 +1226,11 @@ export default function SystemsLabPage() {
               </div>
             </Reveal>
             <Reveal delay={0.08}>
-              <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(3.2rem,7vw,7.5rem)", lineHeight: 0.92, letterSpacing: "-0.02em", color: T.fg, marginBottom: 0 }}>
+              <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(3.2rem,7vw,7.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg, marginBottom: 0 }}>
                 EXPERIENCE<br />
                 <span style={{ color: T.muted }}>THE SYSTEM.</span>
               </h1>
-              <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(3.2rem,7vw,7.5rem)", lineHeight: 0.92, letterSpacing: "-0.02em", color: T.primary, marginTop: 0 }}>
+              <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(3.2rem,7vw,7.5rem)", lineHeight: 1.04, letterSpacing: "-0.02em", color: T.primary, marginTop: 0 }}>
                 BEFORE YOU BUILD IT.
               </h2>
             </Reveal>
@@ -1252,7 +1252,7 @@ export default function SystemsLabPage() {
                 <Link
                   href="/book"
                   className="inline-flex items-center gap-3 px-5 h-10 font-medium transition-opacity hover:opacity-90"
-                  style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.04em", background: T.primary, color: T.primaryFg, borderRadius: "2px", boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 30%, transparent)`, outline: `1px solid ${T.primary}66` }}
+                  style={{ fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.04em", background: T.primary, color: T.primaryFg, borderRadius: T.r.md, boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 30%, transparent)`, outline: `1px solid ${T.primary}66` }}
                 >
                   Book a call →
                 </Link>
@@ -1286,7 +1286,7 @@ export default function SystemsLabPage() {
 
                   {/* Card title + desc */}
                   <div>
-                    <h3 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.4rem", letterSpacing: "-0.01em", color: T.fg, marginBottom: 4 }}>
+                    <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.4rem", letterSpacing: "-0.01em", color: T.fg, marginBottom: 4 }}>
                       {demo.title}
                     </h3>
                     <p style={{ fontFamily: T.sans, fontSize: "13px", lineHeight: 1.6, color: T.muted }}>
@@ -1336,7 +1336,7 @@ export default function SystemsLabPage() {
               <MonoTag>Ready?</MonoTag>
             </Reveal>
             <Reveal delay={0.1}>
-              <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2.4rem,5vw,5rem)", lineHeight: 0.95, letterSpacing: "-0.02em", color: T.fg, margin: "20px 0 16px" }}>
+              <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.4rem,5vw,5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg, margin: "20px 0 16px" }}>
                 READY TO BUILD<br />
                 <span style={{ color: T.primary }}>YOUR SYSTEM?</span>
               </h2>

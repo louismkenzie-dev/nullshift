@@ -61,7 +61,7 @@ export default async function PortalDashboard() {
         <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: 8 }}>
           CLIENT PORTAL
         </p>
-        <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(1.8rem, 3vw, 2.6rem)", letterSpacing: "-0.03em", color: T.fg, lineHeight: 1, marginBottom: 8 }}>
+        <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.8rem, 3vw, 2.6rem)", letterSpacing: "-0.03em", color: T.fg, lineHeight: 1, marginBottom: 8 }}>
           Welcome back, {displayName}.
         </h1>
         {businessName && (

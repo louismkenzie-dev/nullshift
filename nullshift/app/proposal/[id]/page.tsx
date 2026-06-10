@@ -43,7 +43,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div style={{ width: 12, height: 12, background: T.primary, borderRadius: "50%" }} />
-              <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.5rem", letterSpacing: "-0.01em", textTransform: "uppercase", color: T.fg }}>NULLSHIFT</h1>
+              <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.5rem", letterSpacing: "-0.01em", textTransform: "uppercase", color: T.fg }}>NULLSHIFT</h1>
             </div>
             <div style={{ textAlign: "right" }}>
               <p style={{ ...mono, fontSize: "0.72rem", letterSpacing: "0.15em", textTransform: "uppercase", color: T.muted }}>Proposal</p>
@@ -154,7 +154,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
             </div>
             <div className="flex items-center justify-between" style={{ paddingTop: 24, marginTop: 8, borderTop: `2px solid ${T.primary}` }}>
               <span style={{ fontFamily: T.display, fontWeight: 800, fontSize: "1.25rem", textTransform: "uppercase", color: T.fg }}>Total Investment</span>
-              <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2rem", color: T.primary }}>{money(p.total || 0, p.currency || "GBP")}</span>
+              <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2rem", color: T.primary }}>{money(p.total || 0, p.currency || "GBP")}</span>
             </div>
           </div>
         </section>
@@ -162,7 +162,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
         {/* Acceptance */}
         <section style={{ marginBottom: 48 }}>
           <div style={{ background: `linear-gradient(135deg, ${T.surface}, ${T.surface2})`, border: `2px solid ${T.primary}`, borderRadius: 12, padding: 36 }}>
-            <h3 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.75rem", textTransform: "uppercase", color: T.primary, textAlign: "center", marginBottom: 16 }}>
+            <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.75rem", textTransform: "uppercase", color: T.primary, textAlign: "center", marginBottom: 16 }}>
               {accepted ? "Proposal Accepted" : "Ready to build?"}
             </h3>
             {accepted ? (

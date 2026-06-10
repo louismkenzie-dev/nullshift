@@ -8,32 +8,32 @@ import { T } from "@/lib/tokens";
 import { LogoMark } from "@/components/Logo";
 import { hasSupabaseBrowserConfig } from "@/lib/supabase/env";
 
-function LoginSkeleton() {
-  return (
-    <main className="min-h-screen flex items-center justify-center px-6" style={{ background: T.bg }}>
-      <div className="w-full max-w-sm">
-        <div className="flex items-center gap-2.5 mb-8 justify-center">
-          <LogoMark size={26} />
-          <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.3rem", letterSpacing: "0.02em", color: T.fg }}>NULLSHIFT</span>
-        </div>
-        <div className="mb-6 text-center" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
-          LEARN_PORTAL / SIGN_IN
-        </div>
-        <div className="flex flex-col gap-3 p-8 rounded-2xl" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
-          <div className="h-3 w-12 rounded" style={{ background: T.border }} />
-          <div className="h-11 rounded" style={{ background: T.bg, border: `1px solid ${T.border}` }} />
-          <div className="h-3 w-16 rounded mt-2" style={{ background: T.border }} />
-          <div className="h-11 rounded" style={{ background: T.bg, border: `1px solid ${T.border}` }} />
-          <div className="h-11 rounded mt-4" style={{ background: `${T.primary}40` }} />
-        </div>
-      </div>
-    </main>
-  );
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  height: 40,
+  background: T.bg,
+  border: `1px solid ${T.border}`,
+  borderRadius: T.r.md,
+  padding: "0 14px",
+  color: T.fg,
+  fontFamily: T.sans,
+  fontSize: "0.9375rem",
+  letterSpacing: "-0.005em",
+  outline: "none",
+  transition: `border-color ${T.duration.base} ${T.ease}, box-shadow ${T.duration.base} ${T.ease}`,
+};
+function onFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = T.primary;
+  e.currentTarget.style.boxShadow = T.shadow.focus;
+}
+function onBlur(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = T.border;
+  e.currentTarget.style.boxShadow = "none";
 }
 
 export default function LearnLoginPage() {
   return (
-    <Suspense fallback={<LoginSkeleton />}>
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: T.bg }} />}>
       <LearnLogin />
     </Suspense>
   );
@@ -50,32 +50,13 @@ function LearnLogin() {
 
   useEffect(() => {
     if (!hasSupabaseBrowserConfig()) return;
-
     const supabase = createClient();
     let cancelled = false;
-
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!cancelled && user) {
-        router.replace(next);
-      }
+      if (!cancelled && user) router.replace(next);
     });
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [next, router]);
-
-  const inputStyle: React.CSSProperties = {
-    background: T.bg,
-    border: `1px solid ${T.border}`,
-    padding: "12px 16px",
-    color: T.fg,
-    fontFamily: T.sans,
-    fontSize: "0.9375rem",
-    outline: "none",
-    borderRadius: T.r.sm,
-    letterSpacing: "-0.005em",
-  };
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -86,9 +67,6 @@ function LearnLogin() {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
 
-      // Check whether this user already has an active subscription.
-      // If not, route them to the checkout for the plan stored in their profile
-      // (or a generic plan selection page) before they can access the portal.
       const { data: { user } } = await supabase.auth.getUser();
       const { data: sub } = await supabase
         .from("subscriptions")
@@ -98,13 +76,8 @@ function LearnLogin() {
         .maybeSingle();
 
       if (!sub) {
-        // No active subscription — send them to onboarding checkout.
-        // Use the tier stored in app_metadata if available, otherwise pricing page.
         const tier = (user?.app_metadata?.subscription_tier as string | undefined) ?? "";
-        const dest = tier
-          ? `/onboard?plan=${encodeURIComponent(tier)}&confirmed=true`
-          : "/pricing";
-        router.replace(dest);
+        router.replace(tier ? `/onboard?plan=${encodeURIComponent(tier)}&confirmed=true` : "/pricing");
       } else {
         router.replace(next);
       }
@@ -126,84 +99,55 @@ function LearnLogin() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6" style={{ background: T.bg }}>
       <div className="w-full max-w-sm">
-        {/* Logo */}
+
+        {/* Brand */}
         <div className="flex items-center gap-2.5 mb-8 justify-center">
           <LogoMark size={26} />
-          <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.3rem", letterSpacing: "0.02em", color: T.fg }}>
-            NULLSHIFT
-          </span>
+          <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.1rem", letterSpacing: "-0.01em", color: T.fg }}>Nullshift</span>
         </div>
 
-        <div
-          className="mb-6 text-center"
-          style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}
-        >
-          LEARN_PORTAL / SIGN_IN
+        {/* Eyebrow */}
+        <div className="mb-6 text-center">
+          <span className="inline-flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primarySoft}`, display: "inline-block" }} />
+            Learn portal — sign in
+          </span>
         </div>
 
         <form
           onSubmit={onSubmit}
-          className="flex flex-col gap-3 p-8 rounded-2xl"
-          style={{ background: T.surface, border: `1px solid ${T.border}` }}
+          className="flex flex-col gap-4 p-8 rounded-2xl"
+          style={{ background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.shadow.md }}
         >
-          <label style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>
-            Email
-          </label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            style={inputStyle}
-            autoComplete="email"
-          />
-          <label
-            className="mt-2"
-            style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}
-          >
-            Password
-          </label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            style={inputStyle}
-            autoComplete="current-password"
-          />
-          {error && (
-            <p style={{ fontFamily: T.mono, fontSize: "11px", color: "#f87171", marginTop: "4px" }}>{error}</p>
-          )}
+          <div className="flex flex-col gap-1.5">
+            <label style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Email</label>
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} autoComplete="email" onFocus={onFocus} onBlur={onBlur} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Password</label>
+            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} autoComplete="current-password" onFocus={onFocus} onBlur={onBlur} />
+          </div>
+
+          {error && <p style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.danger }}>{error}</p>}
+
           <button
             type="submit"
             disabled={busy}
-            className="mt-4 h-11 font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{
-              fontFamily: T.mono,
-              fontSize: "0.78rem",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              background: T.primary,
-              color: T.primaryFg,
-              borderRadius: T.r.md,
-              boxShadow: busy ? "none" : `0 0 20px color-mix(in oklab, ${T.primary} 25%, transparent)`,
-            }}
+            className="mt-2 h-10 font-medium cursor-pointer"
+            style={{ width: "100%", fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", background: T.primary, color: T.primaryFg, borderRadius: T.r.md, border: "none", boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`, transition: `background ${T.duration.base} ${T.ease}`, opacity: busy ? 0.6 : 1 }}
+            onMouseEnter={e => { if (!busy) (e.currentTarget as HTMLElement).style.background = T.primaryHover; }}
+            onMouseLeave={e => { if (!busy) (e.currentTarget as HTMLElement).style.background = T.primary; }}
           >
             {busy ? "Signing in…" : "Sign in →"}
           </button>
         </form>
 
         <div className="mt-6 text-center flex flex-col gap-3">
-          <Link
-            href="/pricing"
-            style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.primary }}
-          >
+          <Link href="/pricing" style={{ fontFamily: T.sans, fontSize: "0.8125rem", fontWeight: 500, color: T.primary, textDecoration: "none" }}>
             Don&apos;t have a subscription? View plans →
           </Link>
-          <Link
-            href="/"
-            style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted }}
-          >
+          <Link href="/" style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.muted, textDecoration: "none" }}>
             ← Back to website
           </Link>
         </div>

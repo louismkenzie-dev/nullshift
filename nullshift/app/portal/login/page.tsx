@@ -8,6 +8,31 @@ import { T } from "@/lib/tokens";
 import { LogoMark } from "@/components/Logo";
 import { hasSupabaseBrowserConfig } from "@/lib/supabase/env";
 
+/* ── Shared input style (Halo) ─────────────────────────────── */
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  height: 40,
+  background: T.bg,
+  border: `1px solid ${T.border}`,
+  borderRadius: T.r.md,
+  padding: "0 14px",
+  color: T.fg,
+  fontFamily: T.sans,
+  fontSize: "0.9375rem",
+  letterSpacing: "-0.005em",
+  outline: "none",
+  transition: `border-color ${T.duration.base} ${T.ease}, box-shadow ${T.duration.base} ${T.ease}`,
+};
+
+function onFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = T.primary;
+  e.currentTarget.style.boxShadow = T.shadow.focus;
+}
+function onBlur(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = T.border;
+  e.currentTarget.style.boxShadow = "none";
+}
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -24,19 +49,6 @@ function LoginForm() {
       if (user) router.replace(next);
     });
   }, [next, router]);
-
-  const inputStyle: React.CSSProperties = {
-    background: T.bg,
-    border: `1px solid ${T.border}`,
-    padding: "12px 16px",
-    color: T.fg,
-    fontFamily: T.sans,
-    fontSize: "0.9375rem",
-    outline: "none",
-    borderRadius: T.r.sm,
-    letterSpacing: "-0.005em",
-    width: "100%",
-  };
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,47 +73,64 @@ function LoginForm() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6" style={{ background: T.bg }}>
       <div className="w-full max-w-sm">
+
+        {/* Brand */}
         <div className="flex items-center gap-2.5 mb-8 justify-center">
           <LogoMark size={26} />
-          <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.3rem", letterSpacing: "0.02em", color: T.fg }}>NULLSHIFT</span>
+          <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.1rem", letterSpacing: "-0.01em", color: T.fg }}>Nullshift</span>
         </div>
 
-        <div className="mb-6 text-center" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
-          CLIENT_PORTAL / SIGN_IN
+        {/* Eyebrow */}
+        <div className="mb-6 text-center">
+          <span className="inline-flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primarySoft}`, display: "inline-block" }} />
+            Client portal — sign in
+          </span>
         </div>
 
+        {/* Card */}
         <form
           onSubmit={onSubmit}
-          className="flex flex-col gap-3 p-8 rounded-2xl"
-          style={{ background: T.surface, border: `1px solid ${T.border}` }}
+          className="flex flex-col gap-4 p-8 rounded-2xl"
+          style={{ background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.shadow.md }}
         >
-          <label style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>Email</label>
-          <input type="email" required value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} autoComplete="email" />
+          <div className="flex flex-col gap-1.5">
+            <label style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Email</label>
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} autoComplete="email" onFocus={onFocus} onBlur={onBlur} />
+          </div>
 
-          <label className="mt-2" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>Password</label>
-          <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} autoComplete="current-password" />
+          <div className="flex flex-col gap-1.5">
+            <label style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>Password</label>
+            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={inputStyle} autoComplete="current-password" onFocus={onFocus} onBlur={onBlur} />
+          </div>
 
-          {error && <p style={{ fontFamily: T.mono, fontSize: "11px", color: T.danger, marginTop: 4 }}>{error}</p>}
+          {error && <p style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.danger }}>{error}</p>}
 
           <button
             type="submit"
             disabled={busy}
-            className="mt-4 h-11 font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="mt-2 h-10 font-medium cursor-pointer"
             style={{
-              fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.08em", textTransform: "uppercase",
+              width: "100%",
+              fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em",
               background: T.primary, color: T.primaryFg, borderRadius: T.r.md,
-              boxShadow: busy ? "none" : `0 0 20px color-mix(in oklab, ${T.primary} 25%, transparent)`,
+              border: "none",
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
+              transition: `background ${T.duration.base} ${T.ease}`,
+              opacity: busy ? 0.6 : 1,
             }}
+            onMouseEnter={e => { if (!busy) (e.currentTarget as HTMLElement).style.background = T.primaryHover; }}
+            onMouseLeave={e => { if (!busy) (e.currentTarget as HTMLElement).style.background = T.primary; }}
           >
             {busy ? "Signing in…" : "Sign in →"}
           </button>
         </form>
 
         <div className="mt-6 text-center flex flex-col gap-3">
-          <Link href="/portal/signup" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.primary, textDecoration: "none" }}>
+          <Link href="/portal/signup" style={{ fontFamily: T.sans, fontSize: "0.8125rem", fontWeight: 500, color: T.primary, textDecoration: "none" }}>
             New client? Create an account →
           </Link>
-          <Link href="/" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, textDecoration: "none" }}>
+          <Link href="/" style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.muted, textDecoration: "none" }}>
             ← Back to website
           </Link>
         </div>

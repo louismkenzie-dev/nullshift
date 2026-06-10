@@ -38,7 +38,7 @@ const DEFAULT_PHASES: Phase[] = [
 // (a render-scoped component would remount inputs and drop focus per keystroke).
 const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section className="p-6 rounded-lg mb-4" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
-    <h2 className="mb-4" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.1rem", letterSpacing: "0.04em", textTransform: "uppercase", color: T.primary }}>{title}</h2>
+    <h2 className="mb-4" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.1rem", letterSpacing: "0.04em", textTransform: "uppercase", color: T.primary }}>{title}</h2>
     {children}
   </section>
 );
@@ -210,7 +210,7 @@ export default function ClientDetail() {
 
   if (loading) return <p style={{ fontFamily: T.mono, fontSize: "12px", color: T.muted }}>Loading…</p>;
 
-  const input: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, padding: "10px 12px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", outline: "none", borderRadius: "3px", width: "100%" };
+  const input: React.CSSProperties = { background: T.bg, border: `1px solid ${T.border}`, padding: "10px 12px", color: T.fg, fontFamily: T.sans, fontSize: "0.9rem", outline: "none", borderRadius: T.r.sm, width: "100%" };
   const labelS: React.CSSProperties = { fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.muted, marginBottom: "6px", display: "block" };
 
   const requestedHint = client?.requested_date
@@ -251,14 +251,14 @@ export default function ClientDetail() {
       <Link href="/admin/clients" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted }}>← Clients</Link>
       <div className="mt-3 mb-8 flex items-end justify-between gap-4">
         <div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.2rem", color: T.fg }}>{client?.name}</h1>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.2rem", color: T.fg }}>{client?.name}</h1>
           <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>{client?.business_name} · {client?.email}</p>
           {proposal && (
             <button
               onClick={() => { navigator.clipboard?.writeText(proposalRef(proposal.id)).catch(() => {}); setCopiedRef(true); setTimeout(() => setCopiedRef(false), 1500); }}
               title="Click to copy for invoicing"
               className="mt-2 inline-flex items-center gap-2 px-2.5 h-7 transition-colors hover:bg-[#1f1f23]"
-              style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.06em", color: copiedRef ? T.primary : T.fg, border: `1px solid ${T.border}`, borderRadius: "4px" }}>
+              style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.06em", color: copiedRef ? T.primary : T.fg, border: `1px solid ${T.border}`, borderRadius: T.r.sm }}>
               <span style={{ color: T.muted }}>REF</span>
               <span>{proposalRef(proposal.id)}</span>
               <span style={{ color: T.muted, fontSize: "10px" }}>{copiedRef ? "✓ copied" : "⧉"}</span>
@@ -267,7 +267,7 @@ export default function ClientDetail() {
         </div>
         {proposal && (
           <button onClick={saveProposalDoc} disabled={saving} className="px-5 h-11 transition-opacity hover:opacity-90 disabled:opacity-50 shrink-0"
-            style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px" }}>
+            style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm }}>
             {saving ? "Saving…" : saved ? "Saved ✓" : "Save proposal"}
           </button>
         )}
@@ -304,7 +304,7 @@ export default function ClientDetail() {
           <StepHead i={0} label="Booked" />
           {call ? (
             <div className="flex flex-col gap-1">
-              <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.05rem", color: T.fg }}>Call confirmed</span>
+              <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.05rem", color: T.fg }}>Call confirmed</span>
               <span style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.muted }}>{formatCallDate(call.call_date)}</span>
               <span style={{ fontFamily: T.mono, fontSize: "0.74rem", color: T.primary }}>{formatCallTime(call.call_time)} · {call.duration_min} min</span>
 
@@ -334,7 +334,7 @@ export default function ClientDetail() {
             </div>
           ) : (
             <button onClick={() => setBooking(v => !v)} className="text-left w-full">
-              <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.05rem", color: T.fg }}>Book Call</div>
+              <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.05rem", color: T.fg }}>Book Call</div>
               <div style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted, marginTop: 4 }}>Schedule a discovery call (London time).</div>
               {requestedHint && (
                 <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${T.border}` }}>
@@ -350,7 +350,7 @@ export default function ClientDetail() {
         <div style={stepCardStyle(1)}>
           <StepHead i={1} label={brief ? "Complete" : "Pending"} />
           <button onClick={() => brief ? setBriefViewerOpen(v => !v) : setBriefOpen(v => !v)} className="text-left w-full">
-            <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.05rem", color: T.fg }}>
+            <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.05rem", color: T.fg }}>
               {brief ? "Brief received ✓" : "Send Brief Collection"}
             </div>
             <div style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted, marginTop: 4 }}>
@@ -375,7 +375,7 @@ export default function ClientDetail() {
         <div style={stepCardStyle(2)}>
           <StepHead i={2} label="Drafted" />
           <button onClick={draftProposal} className="text-left w-full">
-            <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.05rem", color: T.fg }}>Draft Proposal</div>
+            <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.05rem", color: T.fg }}>Draft Proposal</div>
             <div style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted, marginTop: 4 }}>
               {proposal ? "Quote created. Fill in the proposal below." : "Pre-fill a proposal with this client's details."}
             </div>
@@ -386,7 +386,7 @@ export default function ClientDetail() {
         <div style={stepCardStyle(3, !proposal)}>
           <StepHead i={3} label="Accepted" />
           <button onClick={() => setDocsOpen(v => !v)} className="text-left w-full" disabled={!proposal} style={{ cursor: proposal ? "pointer" : "not-allowed" }}>
-            <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.05rem", color: T.fg }}>Send Documents</div>
+            <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.05rem", color: T.fg }}>Send Documents</div>
             <div style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted, marginTop: 4 }}>
               {accepted ? "Accepted by the client." : proposal ? "Share the proposal link for signature." : "Draft a proposal first."}
             </div>
@@ -435,7 +435,7 @@ export default function ClientDetail() {
                 <button
                   onClick={() => { navigator.clipboard?.writeText(meetingLink).catch(() => {}); setMeetingCopied(true); setTimeout(() => setMeetingCopied(false), 1500); }}
                   className="px-4 h-10 transition-opacity hover:opacity-90"
-                  style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.fg, border: `1px solid ${T.border}`, borderRadius: "3px" }}>
+                  style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.fg, border: `1px solid ${T.border}`, borderRadius: T.r.sm }}>
                   {meetingCopied ? "Copied ✓" : "Copy"}
                 </button>
               )}
@@ -457,13 +457,13 @@ export default function ClientDetail() {
                 onClick={saveMeeting}
                 disabled={meetingSaving}
                 className="px-5 h-10 transition-opacity hover:opacity-90 disabled:opacity-50"
-                style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.accent, color: T.primaryFg, borderRadius: "3px" }}>
+                style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.accent, color: T.primaryFg, borderRadius: T.r.sm }}>
                 {meetingSaving ? "Saving…" : "Save meeting details"}
               </button>
               <button
                 onClick={() => setMeetingOpen(false)}
                 className="px-5 h-10 transition-opacity hover:opacity-90"
-                style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted, border: `1px solid ${T.border}`, borderRadius: "3px" }}>
+                style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted, border: `1px solid ${T.border}`, borderRadius: T.r.sm }}>
                 Cancel
               </button>
             </div>
@@ -483,11 +483,11 @@ export default function ClientDetail() {
             <div className="flex flex-wrap items-center gap-2">
               <input readOnly value={briefUrl} style={{ ...input, flex: "1 1 320px", fontFamily: T.mono, fontSize: "0.78rem" }} onFocus={e => e.currentTarget.select()} />
               <button onClick={() => { navigator.clipboard?.writeText(briefUrl).catch(() => {}); setBriefLinkCopied(true); setTimeout(() => setBriefLinkCopied(false), 1500); }}
-                className="px-5 h-10 transition-opacity hover:opacity-90" style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px" }}>
+                className="px-5 h-10 transition-opacity hover:opacity-90" style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm }}>
                 {briefLinkCopied ? "Copied ✓" : "Copy link"}
               </button>
               <a href={briefUrl} target="_blank" rel="noreferrer" className="px-5 h-10 inline-flex items-center transition-opacity hover:opacity-90"
-                style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.fg, border: `1px solid ${T.border}`, borderRadius: "3px" }}>
+                style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.fg, border: `1px solid ${T.border}`, borderRadius: T.r.sm }}>
                 Preview ↗
               </a>
             </div>
@@ -512,11 +512,11 @@ export default function ClientDetail() {
           <div className="flex flex-wrap items-center gap-2">
             <input readOnly value={proposalUrl} style={{ ...input, flex: "1 1 320px", fontFamily: T.mono, fontSize: "0.78rem" }} onFocus={e => e.currentTarget.select()} />
             <button onClick={() => { navigator.clipboard?.writeText(proposalUrl).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-              className="px-5 h-10 transition-opacity hover:opacity-90" style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px" }}>
+              className="px-5 h-10 transition-opacity hover:opacity-90" style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm }}>
               {copied ? "Copied ✓" : "Copy link"}
             </button>
             <a href={proposalUrl} target="_blank" rel="noreferrer" className="px-5 h-10 inline-flex items-center transition-opacity hover:opacity-90"
-              style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.fg, border: `1px solid ${T.border}`, borderRadius: "3px" }}>
+              style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.fg, border: `1px solid ${T.border}`, borderRadius: T.r.sm }}>
               Open ↗
             </a>
           </div>
@@ -531,10 +531,10 @@ export default function ClientDetail() {
 
       {!proposal ? (
         <div className="p-8 rounded-lg text-center" style={{ background: T.surface, border: `1px dashed ${T.border}` }}>
-          <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.1rem", color: T.fg, marginBottom: 8 }}>No proposal yet</div>
+          <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.1rem", color: T.fg, marginBottom: 8 }}>No proposal yet</div>
           <p style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.muted, marginBottom: 16 }}>Create the quote first, then fill in the proposal details here.</p>
           <button onClick={draftProposal} className="px-6 h-11 transition-opacity hover:opacity-90"
-            style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: "3px" }}>
+            style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm }}>
             Draft proposal →
           </button>
         </div>
@@ -632,8 +632,8 @@ export default function ClientDetail() {
                       </>
                     )}
                     <div className="flex items-center justify-between pt-3 mt-1">
-                      <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.2rem", color: T.fg }}>TOTAL</span>
-                      <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.4rem", color: T.primary }}>{money(proposal.total || 0, proposal.currency)}</span>
+                      <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.2rem", color: T.fg }}>TOTAL</span>
+                      <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.4rem", color: T.primary }}>{money(proposal.total || 0, proposal.currency)}</span>
                     </div>
                   </>
                 );
@@ -648,11 +648,11 @@ export default function ClientDetail() {
       <div className="mt-10 mb-4" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.danger }}>// DANGER ZONE</div>
       <div className="p-5 rounded-lg flex flex-wrap items-center justify-between gap-4" style={{ background: T.surface, border: `1px solid ${T.danger}40` }}>
         <div>
-          <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", color: T.fg }}>Remove client</div>
+          <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", color: T.fg }}>Remove client</div>
           <div style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.muted, marginTop: 2 }}>Permanently deletes this client and all their data — proposal, booked calls.</div>
         </div>
         <button onClick={deleteClient} disabled={deleting} className="px-5 h-11 shrink-0 transition-opacity hover:opacity-90 disabled:opacity-50"
-          style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.08em", textTransform: "uppercase", background: "transparent", color: T.danger, border: `1px solid ${T.danger}`, borderRadius: "3px" }}>
+          style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.08em", textTransform: "uppercase", background: "transparent", color: T.danger, border: `1px solid ${T.danger}`, borderRadius: T.r.sm }}>
           {deleting ? "Removing…" : "Remove client"}
         </button>
       </div>

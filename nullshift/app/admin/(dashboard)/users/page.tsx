@@ -210,7 +210,7 @@ export default async function UsersPage() {
           <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: "8px" }}>
             ACCESS CONTROL
           </div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.4rem", letterSpacing: "0.01em", color: T.fg }}>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.4rem", letterSpacing: "0.01em", color: T.fg }}>
             USERS
           </h1>
           <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted, marginTop: "8px", maxWidth: "60ch" }}>
@@ -221,7 +221,7 @@ export default async function UsersPage() {
           <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>
             Total users
           </div>
-          <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2rem", color: T.fg, marginTop: "4px" }}>
+          <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2rem", color: T.fg, marginTop: "4px" }}>
             {total || rows.length}
           </div>
         </div>

@@ -38,12 +38,12 @@ export default function PricingPage() {
         <section className="pt-28 pb-20 px-8 md:px-16" style={{
           backgroundImage: `radial-gradient(ellipse 55% 50% at 55% 40%, color-mix(in oklab, ${T.primary} 6%, transparent) 0%, transparent 70%)`,
         }}>
-          <div className="flex items-center gap-3 mb-6" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>
-            <span className="size-1.5 rounded-full pulse-dot" style={{ background: T.primary }} />
-            <span>SYS_04 / PRICING</span>
-          </div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(3.5rem,9vw,9rem)", lineHeight: 0.92, letterSpacing: "-0.01em", color: T.fg }}>
-            TOOLS EXIST.<br /><span className="hero-glow" style={{ color: T.primary }}>TRAINING DOESN'T.</span>
+          <span className="inline-flex items-center gap-2 mb-6" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primarySoft}`, display: "inline-block" }} />
+            Pricing
+          </span>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(3.5rem,9vw,9rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+            Tools exist.<br /><span className="hero-glow" style={{ color: T.primary }}>Training doesn&apos;t.</span>
           </h1>
           <p className="mt-6 max-w-[52ch]" style={{ fontFamily: T.sans, fontSize: "1.05rem", lineHeight: 1.75, color: T.muted }}>
             AI has created the most powerful productivity tools in history. Most people have no idea how to use them. We fix that — with structured learning, real support, and a goal of genuine independence.
@@ -75,8 +75,8 @@ export default function PricingPage() {
               <PricingCard key={tier.tier} {...tier} />
             ))}
           </div>
-          <p className="mt-6 text-center" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: `${T.muted}88` }}>
-            ALL_PRICES_GBP / BILLED_MONTHLY / CANCEL_ANYTIME_EXCEPT_PARTNER_TIER
+          <p className="mt-6 text-center" style={{ fontFamily: T.sans, fontSize: "0.75rem", letterSpacing: "0.02em", color: T.faint }}>
+            All prices GBP · billed monthly · cancel anytime (except Partner tier)
           </p>
         </section>
 
@@ -84,8 +84,8 @@ export default function PricingPage() {
         <section style={{ borderTop: `1px solid ${T.border}` }}>
           <div className="px-10 md:px-16 pt-16 pb-10">
             <Reveal>
-              <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2rem,4vw,3.5rem)", lineHeight: 0.95, color: T.fg }}>
-                COMMON <span style={{ color: T.muted }}>QUESTIONS.</span>
+              <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2rem,4vw,3.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+                Common <span style={{ color: T.muted }}>questions.</span>
               </h2>
             </Reveal>
           </div>
@@ -93,7 +93,7 @@ export default function PricingPage() {
             {faqs.map((f, i) => (
               <Reveal key={i} delay={i * 0.08}>
                 <div className="p-10 md:p-12" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
-                  <h3 className="mb-4" style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.2rem", letterSpacing: "0.01em", color: T.fg }}>{f.q}</h3>
+                  <h3 className="mb-4" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.2rem", letterSpacing: "0.01em", color: T.fg }}>{f.q}</h3>
                   <p style={{ fontFamily: T.sans, fontSize: "0.875rem", lineHeight: 1.75, color: T.muted }}>{f.a}</p>
                 </div>
               </Reveal>
@@ -105,15 +105,18 @@ export default function PricingPage() {
         <section className="px-10 md:px-16 py-24 flex flex-col md:flex-row items-start md:items-center justify-between gap-8" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
           <Reveal>
             <div>
-              <h2 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "clamp(2rem,4vw,3.5rem)", lineHeight: 0.95, letterSpacing: "-0.01em", color: T.fg }}>
-                NOT SURE WHERE<br />TO START?
+              <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2rem,4vw,3.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+                Not sure where<br />to start?
               </h2>
               <p className="mt-3" style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>Book a free call — we&apos;ll work out the right tier for where you are now.</p>
             </div>
           </Reveal>
           <Reveal delay={0.1}>
-            <Link href="/book" className="inline-flex items-center gap-3 px-6 h-12 font-semibold transition-opacity hover:opacity-90"
-              style={{ fontFamily: T.mono, fontSize: "0.8rem", letterSpacing: "0.06em", background: T.primary, color: T.primaryFg, borderRadius: "2px", boxShadow: `0 0 24px color-mix(in oklab, ${T.primary} 30%, transparent)`, whiteSpace: "nowrap" }}>
+            <Link href="/book" className="inline-flex items-center justify-center font-medium"
+              style={{ fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", height: 48, paddingInline: 28, background: T.primary, color: T.primaryFg, borderRadius: T.r.md, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`, textDecoration: "none", whiteSpace: "nowrap", transition: `background ${T.duration.base} ${T.ease}` }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.primaryHover}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = T.primary}
+            >
               Book a free call →
             </Link>
           </Reveal>

@@ -64,7 +64,7 @@ export function AcceptForm({ proposalId }: { proposalId: string }) {
         </div>
       </div>
 
-      {error && <p style={{ fontFamily: T.mono, fontSize: "0.8rem", color: "#f87171", marginBottom: 12, textAlign: "center" }}>{error}</p>}
+      {error && <p style={{ fontFamily: T.mono, fontSize: "0.8rem", color: T.danger, marginBottom: 12, textAlign: "center" }}>{error}</p>}
 
       <button onClick={accept} disabled={busy} className="w-full transition-opacity hover:opacity-90 disabled:opacity-50"
         style={{ background: T.primary, color: T.primaryFg, padding: "16px", borderRadius: 8, fontFamily: T.display, fontWeight: 800, fontSize: "1.1rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>

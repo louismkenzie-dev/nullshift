@@ -17,13 +17,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
               fontSize: "10px",
               letterSpacing: "0.2em",
               textTransform: "uppercase",
-              color: "#f87171",
+              color: T.danger,
               marginBottom: "16px",
             }}
           >
             SUPABASE_SETUP_REQUIRED
           </div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2rem", color: T.fg, marginBottom: "12px" }}>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2rem", color: T.fg, marginBottom: "12px" }}>
             ADMIN LOGIN ISN'T READY YET
           </h1>
           <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
@@ -44,8 +44,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     return (
       <main className="min-h-screen flex items-center justify-center px-6" style={{ background: T.bg }}>
         <div className="text-center max-w-md">
-          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#f87171", marginBottom: "16px" }}>ACCESS_DENIED</div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2rem", color: T.fg, marginBottom: "12px" }}>NOT AUTHORISED</h1>
+          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.danger, marginBottom: "16px" }}>ACCESS_DENIED</div>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2rem", color: T.fg, marginBottom: "12px" }}>NOT AUTHORISED</h1>
           <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
             The account <span style={{ color: T.fg }}>{user.email}</span> is not on the admin allowlist. Add it to <code>ADMIN_EMAILS</code> in your environment.
           </p>

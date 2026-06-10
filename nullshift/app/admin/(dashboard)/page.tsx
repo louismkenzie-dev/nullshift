@@ -109,7 +109,7 @@ export default function DashboardPage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: "8px" }}>// OVERVIEW</div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 900, fontSize: "2.4rem", letterSpacing: "0.01em", color: T.fg }}>DASHBOARD</h1>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.4rem", letterSpacing: "0.01em", color: T.fg }}>DASHBOARD</h1>
         </div>
         <div style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
           {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: LONDON_TZ })}
@@ -154,7 +154,7 @@ export default function DashboardPage() {
                     className="flex items-center justify-between py-3 px-3 hover:bg-[#1f1f23] rounded-lg transition-colors"
                     style={{ borderTop: i ? `1px solid ${T.border}` : "none" }}>
                     <div className="min-w-0">
-                      <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "0.95rem", color: T.fg }}>{e.name}</div>
+                      <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "0.95rem", color: T.fg }}>{e.name}</div>
                       {e.business_name && <div style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted }}>{e.business_name}</div>}
                     </div>
                     <div className="text-right shrink-0 ml-4">
@@ -185,7 +185,7 @@ export default function DashboardPage() {
                     className="flex items-center justify-between py-3 px-3 hover:bg-[#1f1f23] rounded-lg transition-colors"
                     style={{ borderTop: i ? `1px solid ${T.border}` : "none" }}>
                     <div className="min-w-0">
-                      <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "0.95rem", color: T.fg }}>{c.name}</div>
+                      <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "0.95rem", color: T.fg }}>{c.name}</div>
                       {c.business_name && <div style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted }}>{c.business_name}</div>}
                     </div>
                     <div className="shrink-0 ml-4">
@@ -219,7 +219,7 @@ export default function DashboardPage() {
             <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: "12px" }}>// NEXT CALL</div>
             {nextCall ? (
               <Link href={`/admin/clients/${nextCall.client_id}`} className="block hover:opacity-90 transition-opacity">
-                <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.3rem", color: T.fg, marginBottom: "2px" }}>
+                <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.3rem", color: T.fg, marginBottom: "2px" }}>
                   {nextCall.clients?.business_name || nextCall.clients?.name || "Client"}
                 </div>
                 {nextCall.clients?.business_name && (
@@ -253,7 +253,7 @@ export default function DashboardPage() {
           {/* Mini calendar */}
           <div className="rounded-2xl overflow-hidden" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${T.border}` }}>
-              <span style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", color: T.fg }}>
+              <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", color: T.fg }}>
                 {MONTHS[calView.m]} <span style={{ color: T.muted }}>{calView.y}</span>
               </span>
               <Link href="/admin/calendar" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted }}>
@@ -299,7 +299,7 @@ function StatCard({ label, sublabel, value, accent }: { label: string; sublabel:
   return (
     <div className="rounded-2xl p-5" style={{ background: T.surface, border: `1px solid ${T.border}` }}>
       <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.muted, marginBottom: "8px" }}>{label}</div>
-      <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1.9rem", color: accent, lineHeight: 1, marginBottom: "6px" }}>{value}</div>
+      <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.9rem", color: accent, lineHeight: 1, marginBottom: "6px" }}>{value}</div>
       <div style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted }}>{sublabel}</div>
     </div>
   );
@@ -311,7 +311,7 @@ function Section({ title, label, href, children }: { title: string; label: strin
       <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
         <div>
           <div style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: "2px" }}>{label}</div>
-          <div style={{ fontFamily: T.display, fontWeight: 900, fontSize: "1rem", color: T.fg }}>{title}</div>
+          <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", color: T.fg }}>{title}</div>
         </div>
         <Link href={href} style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", color: T.muted }}>View all →</Link>
       </div>
