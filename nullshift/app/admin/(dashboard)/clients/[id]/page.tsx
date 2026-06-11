@@ -10,7 +10,7 @@ import { BriefViewer } from "@/components/BriefViewer";
 import type { BriefData } from "@/lib/brief";
 import { ProjectUpdatesSection } from "./ProjectUpdatesSection";
 
-type Client = { id: string; name: string; business_name: string | null; email: string | null; phone: string | null; status: string; notes: string | null; requested_date: string | null; requested_time: string | null; brief_completed_at: string | null; project_phase: string | null };
+type Client = { id: string; name: string; business_name: string | null; email: string | null; phone: string | null; status: string; notes: string | null; requested_date: string | null; requested_time: string | null; brief_completed_at: string | null; project_phase: string | null; auth_user_id: string | null };
 type Call = { id: string; client_id: string; call_date: string; call_time: string; duration_min: number; status: string; meeting_link: string | null; meeting_id: string | null; meeting_password: string | null };
 type LineItem = { label: string; qty: number; unit_price: number };
 type Phase = { phase: string; items: string[] };
@@ -21,6 +21,7 @@ type Proposal = {
   project_name: string | null; duration: string | null; platform: string | null; team_size: string | null;
   overview: string | null; scope: Phase[]; deliverables: string[]; timeline: Week[];
   accepted_at: string | null; accepted_name: string | null; accepted_signature: string | null;
+  payment_terms: string | null;
 };
 
 // The public booking form offers slots; map them to a concrete start time
@@ -80,6 +81,12 @@ export default function ClientDetail() {
   const [briefOpen, setBriefOpen] = useState(false);
   const [briefViewerOpen, setBriefViewerOpen] = useState(false);
   const [briefLinkCopied, setBriefLinkCopied] = useState(false);
+
+  // Portal account creation state
+  const [portalPassword, setPortalPassword] = useState("");
+  const [portalCreating, setPortalCreating] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
+  const [portalSuccess, setPortalSuccess] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -190,6 +197,7 @@ export default function ClientDetail() {
       project_name: proposal.project_name, duration: proposal.duration, platform: proposal.platform,
       team_size: proposal.team_size, overview: proposal.overview,
       scope: proposal.scope, deliverables: proposal.deliverables, timeline: proposal.timeline,
+      payment_terms: proposal.payment_terms || null,
     }).eq("id", proposal.id);
     setSaving(false);
     setSaved(true);
@@ -207,6 +215,31 @@ export default function ClientDetail() {
     await supabase.from("enquiries").update({ client_id: null }).eq("client_id", id);
     await supabase.from("clients").delete().eq("id", id);
     router.push("/admin/clients");
+  }
+
+  async function createPortalAccount() {
+    if (!client?.email || !portalPassword) return;
+    setPortalCreating(true);
+    setPortalError(null);
+    try {
+      const res = await fetch("/api/admin/create-client-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId: id, email: client.email, password: portalPassword }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setPortalError(json.error ?? "Something went wrong.");
+      } else {
+        setPortalSuccess(true);
+        setPortalPassword("");
+        setClient(c => c ? { ...c, auth_user_id: json.userId } : c);
+      }
+    } catch {
+      setPortalError("Network error — please try again.");
+    } finally {
+      setPortalCreating(false);
+    }
   }
 
   if (loading) return <p style={{ fontFamily: T.mono, fontSize: "12px", color: T.muted }}>Loading…</p>;
@@ -640,6 +673,16 @@ export default function ClientDetail() {
             <button onClick={() => setDoc("timeline", [...proposal.timeline, { week: `Week ${proposal.timeline.length + 1}`, title: "", description: "" }])} className="mt-3" style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: T.primary }}>+ Add week</button>
           </Card>
 
+          <Card title="Payment terms">
+            <textarea
+              rows={4}
+              style={{ ...input, resize: "vertical" }}
+              value={proposal.payment_terms ?? ""}
+              onChange={e => setDoc("payment_terms", e.target.value || null)}
+              placeholder={"e.g. 50% deposit on acceptance, 50% on launch.\nAll payments due within 14 days of invoice."}
+            />
+          </Card>
+
           <Card title="Investment — pulled from the quote">
             <div className="flex flex-col gap-2">
               {(() => {
@@ -685,6 +728,70 @@ export default function ClientDetail() {
       {/* ── Project Updates ──────────────────────────────── */}
       <div className="mt-10 mb-4">
         <ProjectUpdatesSection clientId={id} clientName={client?.name ?? "this client"} />
+      </div>
+
+      {/* ── Portal Account ───────────────────────────────── */}
+      <div className="mt-10 mb-4" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}>// PORTAL ACCESS</div>
+      <div className="p-5 rounded-lg mb-4" style={{ background: T.surface, border: `1px solid ${client?.auth_user_id ? T.primary : T.border}` }}>
+        {client?.auth_user_id ? (
+          <div className="flex items-start gap-3">
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, marginTop: 4, flexShrink: 0 }} />
+            <div>
+              <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", color: T.fg }}>Portal account active</div>
+              <div style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.muted, marginTop: 2 }}>
+                {client.name} can log in to the client portal with <span style={{ color: T.fg }}>{client.email}</span>.
+              </div>
+              <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", color: T.muted, marginTop: 8 }}>
+                USER ID: {client.auth_user_id}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", color: T.fg, marginBottom: 4 }}>Create portal account</div>
+            <div style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.muted, marginBottom: 16, lineHeight: 1.6 }}>
+              Set up a login for <span style={{ color: T.fg }}>{client?.name}</span> so they can access the client portal.
+              Their email (<span style={{ color: T.fg }}>{client?.email ?? "no email on record"}</span>) will be used as
+              the username. All existing proposal and call data will remain associated.
+            </div>
+            {!client?.email && (
+              <div className="mb-4 px-4 py-3 rounded" style={{ background: `${T.danger}18`, border: `1px solid ${T.danger}40`, fontFamily: T.sans, fontSize: "0.82rem", color: T.danger }}>
+                No email address on this client record — add one above before creating an account.
+              </div>
+            )}
+            {portalSuccess ? (
+              <div className="px-4 py-3 rounded flex items-center gap-2" style={{ background: `${T.primary}14`, border: `1px solid ${T.primary}`, fontFamily: T.mono, fontSize: "0.78rem", color: T.primary }}>
+                ✓ Account created — {client?.name} can now log in with their email.
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-end gap-3">
+                <div style={{ flex: "1 1 240px" }}>
+                  <label style={labelS}>Password for {client?.name}</label>
+                  <input
+                    type="password"
+                    placeholder="Min. 8 characters"
+                    value={portalPassword}
+                    onChange={e => { setPortalPassword(e.target.value); setPortalError(null); }}
+                    disabled={!client?.email || portalCreating}
+                    style={{ ...input, fontFamily: T.mono, fontSize: "0.82rem" }}
+                  />
+                </div>
+                <button
+                  onClick={createPortalAccount}
+                  disabled={!client?.email || portalPassword.length < 8 || portalCreating}
+                  className="px-5 h-10 transition-opacity hover:opacity-90 disabled:opacity-40"
+                  style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", background: T.primary, color: T.primaryFg, borderRadius: T.r.sm, flexShrink: 0 }}>
+                  {portalCreating ? "Creating…" : "Create account"}
+                </button>
+              </div>
+            )}
+            {portalError && (
+              <div className="mt-3 px-4 py-2 rounded" style={{ background: `${T.danger}18`, border: `1px solid ${T.danger}40`, fontFamily: T.sans, fontSize: "0.82rem", color: T.danger }}>
+                {portalError}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Danger zone ──────────────────────────────────── */}

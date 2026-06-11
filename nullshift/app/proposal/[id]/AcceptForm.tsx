@@ -23,6 +23,8 @@ export function AcceptForm({ proposalId }: { proposalId: string }) {
         throw new Error(j.error || "Something went wrong.");
       }
       setDone(true);
+      // Reload so the server re-renders with accepted=true, enabling the PDF button.
+      setTimeout(() => window.location.reload(), 1800);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {

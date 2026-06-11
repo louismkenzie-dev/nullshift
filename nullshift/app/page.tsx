@@ -6,6 +6,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import HeroText from "@/components/HeroText";
+import ScrollVideoSection from "@/components/ScrollVideoSection";
 import { T } from "@/lib/tokens";
 
 /* ── Section label (Halo eyebrow) ───────────── */
@@ -290,6 +291,9 @@ export default function Page() {
       <div className="relative z-10">
         <HeroText />
       </div>
+
+      {/* Scroll-driven video section */}
+      <ScrollVideoSection />
 
       {/* Uniform cards stack over one another. The first pins centred; each
           subsequent card slides up, covers it, then pins in its place. */}

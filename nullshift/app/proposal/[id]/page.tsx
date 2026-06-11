@@ -3,6 +3,8 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { T } from "@/lib/tokens";
 import { money, proposalRef } from "@/lib/format";
 import { AcceptForm } from "./AcceptForm";
+import { Logo } from "@/components/Logo";
+import { ProposalActions } from "./ProposalActions";
 
 type LineItem = { label: string; qty: number; unit_price: number };
 type Phase = { phase: string; items: string[] };
@@ -36,15 +38,16 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
   );
 
   return (
-    <div style={wrap}>
+    <div id="proposal-document" style={wrap}>
+      {/* Fixed download button — positioned over the page, excluded from capture */}
+      <ProposalActions accepted={accepted} proposalRef={proposalRef(id)} />
+
       <div style={{ maxWidth: 880, margin: "0 auto" }}>
+
         {/* Header */}
         <header style={{ borderBottom: `1px solid ${T.borderStr}`, paddingBottom: 32, marginBottom: 48 }}>
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div style={{ width: 12, height: 12, background: T.primary, borderRadius: "50%" }} />
-              <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.5rem", letterSpacing: "-0.01em", textTransform: "uppercase", color: T.fg }}>NULLSHIFT</h1>
-            </div>
+            <Logo markSize={34} />
             <div style={{ textAlign: "right" }}>
               <p style={{ ...mono, fontSize: "0.72rem", letterSpacing: "0.15em", textTransform: "uppercase", color: T.muted }}>Proposal</p>
               <p style={{ ...mono, color: T.fg }}>{proposalRef(id)}</p>
@@ -144,23 +147,58 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
         <section style={{ marginBottom: 48 }}>
           <SectionHead n="05" label="Investment" />
           <div style={card}>
-            <div className="flex flex-col">
-              {items.map((li, i) => (
-                <div key={i} className="flex items-center justify-between" style={{ padding: "12px 0", borderBottom: `1px solid ${T.border}` }}>
-                  <span style={{ fontFamily: T.sans, color: T.fg }}>{li.label}</span>
-                  <span style={{ ...mono, color: T.fg }}>{money((li.qty || 0) * (li.unit_price || 0), p.currency || "GBP")}</span>
+            {(() => {
+              const cur = p.currency || "GBP";
+              const regular = items.filter(li => (li.unit_price || 0) >= 0);
+              const discountItem = items.find(li => (li.unit_price || 0) < 0);
+              const subtotal = regular.reduce((s, li) => s + (li.qty || 0) * (li.unit_price || 0), 0);
+              const discountPct = discountItem ? Math.abs(discountItem.unit_price) : 0;
+              const discountAmt = subtotal * (discountPct / 100);
+              return (
+                <div className="flex flex-col">
+                  {regular.map((li, i) => (
+                    <div key={i} className="flex items-center justify-between" style={{ padding: "12px 0", borderBottom: `1px solid ${T.border}` }}>
+                      <span style={{ fontFamily: T.sans, color: T.fg }}>{li.label}</span>
+                      <span style={{ ...mono, color: T.fg }}>{money((li.qty || 0) * (li.unit_price || 0), cur)}</span>
+                    </div>
+                  ))}
+                  {discountItem && (
+                    <>
+                      <div className="flex items-center justify-between" style={{ padding: "12px 0", borderBottom: `1px solid ${T.border}` }}>
+                        <span style={{ fontFamily: T.sans, color: T.muted }}>Subtotal</span>
+                        <span style={{ ...mono, color: T.muted }}>{money(subtotal, cur)}</span>
+                      </div>
+                      <div className="flex items-center justify-between" style={{ padding: "12px 0", borderBottom: `1px solid ${T.border}` }}>
+                        <span style={{ fontFamily: T.sans, color: T.warning }}>
+                          {discountItem.label || "Discount"}{" "}
+                          <span style={{ ...mono, fontSize: "0.82rem" }}>(−{discountPct}%)</span>
+                        </span>
+                        <span style={{ ...mono, color: T.warning }}>−{money(discountAmt, cur)}</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex items-center justify-between" style={{ paddingTop: 24, marginTop: 8, borderTop: `2px solid ${T.primary}` }}>
+                    <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.25rem", textTransform: "uppercase", color: T.fg }}>Total Investment</span>
+                    <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2rem", color: T.primary }}>{money(p.total || 0, cur)}</span>
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div className="flex items-center justify-between" style={{ paddingTop: 24, marginTop: 8, borderTop: `2px solid ${T.primary}` }}>
-              <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.25rem", textTransform: "uppercase", color: T.fg }}>Total Investment</span>
-              <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2rem", color: T.primary }}>{money(p.total || 0, p.currency || "GBP")}</span>
-            </div>
+              );
+            })()}
           </div>
         </section>
 
-        {/* Acceptance */}
-        <section style={{ marginBottom: 48 }}>
+        {/* 06 Payment Terms */}
+        {p.payment_terms && (
+          <section style={{ marginBottom: 48 }}>
+            <SectionHead n="06" label="Payment Terms" />
+            <div style={card}>
+              <p style={{ fontFamily: T.sans, lineHeight: 1.75, color: T.fg, whiteSpace: "pre-wrap" }}>{p.payment_terms}</p>
+            </div>
+          </section>
+        )}
+
+        {/* Acceptance — hidden when printing (already signed; PDF is the record) */}
+        <section className="no-print" style={{ marginBottom: 48 }}>
           <div style={{ background: `linear-gradient(135deg, ${T.surface}, ${T.surface2})`, border: `2px solid ${T.primary}`, borderRadius: 12, padding: 36 }}>
             <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.75rem", textTransform: "uppercase", color: T.primary, textAlign: "center", marginBottom: 16 }}>
               {accepted ? "Proposal Accepted" : "Ready to build?"}

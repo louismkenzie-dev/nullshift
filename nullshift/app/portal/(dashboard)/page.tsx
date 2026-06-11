@@ -254,16 +254,14 @@ function ProposalSection({ proposal }: { proposal: Proposal }) {
         </div>
       )}
 
-      {/* View link */}
-      {status !== "draft" && (
-        <Link
-          href={`/proposal/${proposal.id}`}
-          target="_blank"
-          style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, color: T.primary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
-        >
-          View full proposal ↗
-        </Link>
-      )}
+      {/* View link — always visible so clients can always access the full document */}
+      <Link
+        href={`/proposal/${proposal.id}`}
+        target="_blank"
+        style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, color: T.primary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+      >
+        View full proposal ↗
+      </Link>
     </div>
   );
 }
@@ -341,25 +339,31 @@ export default async function PortalDashboard() {
 
   const service = createServiceClient();
 
-  // Client record
-  const { data: client } = await service
+  // Client record — look up by email (case-insensitive via ilike)
+  const { data: client, error: clientErr } = await service
     .from("clients")
     .select("id, name, business_name, email, status, project_phase, created_at")
-    .eq("email", user.email)
+    .ilike("email", user.email)
     .maybeSingle();
 
+  if (clientErr) {
+    console.error("Portal: client lookup failed:", clientErr.message);
+    throw new Error(`Client lookup failed: ${clientErr.message}`);
+  }
+
   // Project updates
-  const { data: updatesRaw } = client
+  const { data: updatesRaw, error: updatesErr } = client
     ? await service
         .from("project_updates")
         .select("*")
         .eq("client_id", client.id)
         .order("created_at", { ascending: false })
-    : { data: [] };
+    : { data: [], error: null };
+  if (updatesErr) console.error("Portal: project_updates error:", updatesErr.message);
   const updates = (updatesRaw ?? []) as ProjectUpdate[];
 
   // Proposal (latest)
-  const { data: proposal } = client
+  const { data: proposal, error: proposalErr } = client
     ? await service
         .from("proposals")
         .select("id, title, project_name, summary, status, total, currency, line_items, accepted_at, accepted_name")
@@ -367,10 +371,11 @@ export default async function PortalDashboard() {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+  if (proposalErr) console.error("Portal: proposal error:", proposalErr.message);
 
   // Brief
-  const { data: briefRow } = client
+  const { data: briefRow, error: briefErr } = client
     ? await service
         .from("enquiries")
         .select("id, created_at, brief_data")
@@ -379,16 +384,18 @@ export default async function PortalDashboard() {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+  if (briefErr) console.error("Portal: brief error:", briefErr.message);
 
   // Brand guidelines
-  const { data: brand } = client
+  const { data: brand, error: brandErr } = client
     ? await service
         .from("brand_guidelines")
         .select("brand_name, tagline, mission, colours, typography, voice, dos_donts")
         .eq("client_id", client.id)
         .maybeSingle()
-    : { data: null };
+    : { data: null, error: null };
+  if (brandErr) console.error("Portal: brand_guidelines error:", brandErr.message);
 
   const displayName  = client?.name ?? user.email.split("@")[0];
   const currentPhase = client?.project_phase ?? null;
@@ -566,24 +573,8 @@ export default async function PortalDashboard() {
             )}
           </section>
 
-          {/* ── Two-column lower sections ─────────────────────── */}
+          {/* ── Lower sections ────────────────────────────────── */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 24 }}>
-
-            {/* Brief */}
-            <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.lg, padding: "24px 28px" }}>
-              <SectionHead label="Your brief">
-                {briefRow?.created_at && (
-                  <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.faint }}>
-                    Submitted {new Date(briefRow.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                  </span>
-                )}
-              </SectionHead>
-              {briefRow?.brief_data ? (
-                <BriefSection brief={briefRow.brief_data as Record<string, unknown>} />
-              ) : (
-                <EmptyState message="Your project brief hasn't been submitted yet." />
-              )}
-            </section>
 
             {/* Proposal & investment */}
             <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.lg, padding: "24px 28px" }}>

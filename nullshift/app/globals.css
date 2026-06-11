@@ -208,10 +208,44 @@ html.lenis, html.lenis body { height: auto; }
   flex-shrink: 0;
 }
 
+/* ── ScrollVideoSection — text panel glass backdrop (mobile) ─── */
+.scroll-panel-glass {
+  padding: 22px 26px;
+  border-radius: 12px;
+  /* no background on desktop — text sits cleanly over the dark bg */
+}
+@media (max-width: 900px) {
+  .scroll-panel-glass {
+    background: rgba(10, 11, 15, 0.62);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  }
+}
+
 /* ── Reduced motion ──────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     transition-duration: 0.001ms !important;
     animation-duration: 0.001ms !important;
   }
+}
+
+/* ── Proposal print / PDF ────────────────────────────────────── */
+@media print {
+  /* Hide interactive elements that shouldn't appear in the PDF */
+  .no-print { display: none !important; }
+
+  /* Preserve the dark theme exactly — don't let the browser wash it out */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Avoid page breaks inside cards */
+  section { break-inside: avoid; }
 }
