@@ -5,7 +5,6 @@ import { T } from "@/lib/tokens";
 
 const navLinks = [
   { label: "About",   href: "/about" },
-  { label: "Work",    href: "/work" },
   { label: "FAQ",     href: "/faq" },
   { label: "Brand",   href: "/brand" },
   { label: "Legal",   href: "/legal" },

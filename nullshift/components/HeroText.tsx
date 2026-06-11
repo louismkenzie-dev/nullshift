@@ -220,29 +220,6 @@ export default function HeroText() {
                     </div>
                   </motion.div>
 
-                  <motion.div variants={fadeUp}>
-                    <Link
-                      href="/work"
-                      className="inline-flex items-center gap-1.5 font-medium transition-colors"
-                      style={{
-                        fontFamily: T.sans,
-                        fontSize: "0.9375rem",
-                        fontWeight: 500,
-                        letterSpacing: "-0.005em",
-                        height: 44,
-                        paddingInline: 22,
-                        color: T.muted,
-                        borderRadius: "10px",
-                        textDecoration: "none",
-                        whiteSpace: "nowrap",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.color = T.fg}
-                      onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.color = T.muted}
-                    >
-                      <span>See our work</span>
-                      <ChevronRight size={16} />
-                    </Link>
-                  </motion.div>
                 </motion.div>
               </div>
             </div>
