@@ -1,0 +1,51 @@
+/* ============================================================
+   Nullshift — Typography tokens
+   Inter 600 for all headings — sentence case, -0.03em tracking,
+   1.04 line-height. JetBrains Mono for code, labels, system
+   markers. Type carries hierarchy before colour does.
+   ============================================================ */
+
+:root {
+  /* ── Families ──────────────────────────────────────────────
+     Family names; @font-face binaries are loaded by the app.  */
+  --font-sans:    "Inter";
+  --font-mono:    "JetBrains Mono";
+  --font-display: var(--font-sans);   /* Inter is both display and body. */
+
+  /* ── Weights ───────────────────────────────────────────────  */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;   /* Headings cap at 600 — never 900. */
+
+  /* ── Display / heading scale (tracking -0.03em, lh 1.04) ───  */
+  --text-display:   clamp(3rem, 8vw, 8rem);   /* Hero. */
+  --text-h1:        clamp(2.2rem, 4vw, 3rem);
+  --text-h2:        clamp(1.75rem, 3vw, 2.4rem);
+  --text-h3:        1.5rem;
+  --text-h4:        1.2rem;
+
+  /* ── Body / UI scale ───────────────────────────────────────  */
+  --text-lg:        1rem;        /* Lead paragraphs. */
+  --text-base:      0.9375rem;   /* Body default — 15px. */
+  --text-sm:        0.875rem;    /* UI labels, nav, dense body. */
+  --text-xs:        0.8125rem;   /* Captions, secondary meta. */
+
+  /* ── Mono / eyebrow scale ──────────────────────────────────  */
+  --text-mono:      0.75rem;     /* Code, system markers, eyebrows. */
+  --text-mono-sm:   0.6875rem;
+  --text-mono-xs:   0.625rem;
+
+  /* ── Line heights ──────────────────────────────────────────  */
+  --leading-display: 1.04;   /* Headings — tight. */
+  --leading-snug:    1.2;
+  --leading-body:    1.55;   /* Paragraphs. */
+  --leading-relaxed: 1.75;
+
+  /* ── Letter spacing ────────────────────────────────────────  */
+  --tracking-display:  -0.03em;   /* All headings. */
+  --tracking-tight:    -0.015em;
+  --tracking-body:     -0.005em;
+  --tracking-eyebrow:   0.08em;   /* Uppercase eyebrows. */
+  --tracking-mono:      0.06em;   /* Mono system markers. */
+  --tracking-wordmark:  0.02em;
+}

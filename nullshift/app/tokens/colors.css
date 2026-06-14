@@ -1,0 +1,68 @@
+/* ============================================================
+   Nullshift — Colour tokens
+   Dark architectural system. Three surface tiers, one brand
+   colour (emerald), signal colours for status only.
+
+   The app's canonical names (--background, --foreground,
+   --muted-foreground) are kept because Tailwind's @theme and
+   existing components depend on them. Design-system short names
+   (--bg, --fg, --muted, --surface-card…) are added as aliases.
+   ============================================================ */
+
+:root {
+  /* ── Surface tiers ─────────────────────────────────────────
+     background → surface → elevated. Components live at their
+     tier; no arbitrary depth. Only modals get drop shadows.   */
+  --background:   #0A0B0F;            /* Page canvas — cool near-black. */
+  --surface:      #14151C;            /* Cards, panels, inputs, nav bar. */
+  --elevated:     #1E2029;            /* Modals, dropdowns, active tab fill. */
+  --overlay:      rgba(10, 11, 15, 0.72);
+
+  /* ── Foreground ────────────────────────────────────────────  */
+  --foreground:        #F2F4F8;       /* Primary text — off-white, not pure white. */
+  --muted-foreground:  #9AA0AE;       /* Secondary / supporting text. */
+  --faint-foreground:  #5C6170;       /* Placeholders, captions, helper text. */
+
+  /* ── Brand — emerald. Reserved for ACTIONS only. ───────────
+     CTAs, focus rings, active states, the brand dot.          */
+  --primary:             #10b981;
+  --primary-hover:       #34d399;
+  --primary-pressed:     #059669;
+  --primary-soft:        rgba(16, 185, 129, 0.12);
+  --primary-foreground:  #0A0B0F;     /* Text/icons on emerald fills. */
+
+  /* ── Signal — STATUS only, never decoration. ───────────────  */
+  --success:        #2BE08C;
+  --warning:        #F5D547;
+  --info:           #3DD7E5;
+  --danger:         #FF3A5C;
+  --success-soft:   rgba(43, 224, 140, 0.12);
+  --warning-soft:   rgba(245, 213, 71, 0.14);
+  --info-soft:      rgba(61, 215, 229, 0.14);
+  --danger-soft:    rgba(255, 58, 92, 0.14);
+
+  /* ── Borders — hairline geometry. ──────────────────────────  */
+  --border:        #2A2D38;           /* Hairline dividers, default card outlines. */
+  --border-strong: #3A3D4A;           /* Inputs, secondary buttons, strong dividers. */
+  --border-soft:   rgba(255, 255, 255, 0.04);
+  --ring:          #10b981;           /* Focus ring colour. */
+
+  /* ── Pill greys (the logo's light pill) ────────────────────  */
+  --pill-light:    #D6D6D6;
+
+  /* ── Design-system short-name aliases ──────────────────────  */
+  --bg:        var(--background);
+  --fg:        var(--foreground);
+  --muted:     var(--muted-foreground);
+  --faint:     var(--faint-foreground);
+  --primary-fg: var(--primary-foreground);
+
+  /* ── Semantic aliases ──────────────────────────────────────  */
+  --text-heading:   var(--foreground);
+  --text-body:      var(--foreground);
+  --text-muted:     var(--muted-foreground);
+  --text-faint:     var(--faint-foreground);
+  --surface-card:   var(--surface);
+  --surface-input:  var(--surface);
+  --surface-modal:  var(--elevated);
+}

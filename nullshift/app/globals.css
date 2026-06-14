@@ -1,6 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ── Design-system token layer (formalized) ──────────────────
+   Source of truth for colours, type, spacing, effects + the
+   .ns-* helper API. See app/tokens/. */
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import "./tokens/effects.css";
+@import "./tokens/base.css";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -16,76 +25,8 @@
   --radius-xl: 24px;
 }
 
-:root {
-  /* ── Halo surface tiers ────────────────────────────────────── */
-  --background:   #0A0B0F;
-  --surface:      #14151C;
-  --elevated:     #1E2029;
-  --overlay:      rgba(10, 11, 15, 0.72);
-
-  /* ── Foreground ─────────────────────────────────────────────── */
-  --foreground:          #F2F4F8;
-  --muted-foreground:    #9AA0AE;
-  --faint-foreground:    #5C6170;
-
-  /* ── Brand (Nullshift green → replaces Halo indigo) ─────────── */
-  --primary:             #10b981;
-  --primary-hover:       #34d399;
-  --primary-pressed:     #059669;
-  --primary-soft:        rgba(16, 185, 129, 0.12);
-  --primary-foreground:  #0A0B0F;
-
-  /* ── Signal ──────────────────────────────────────────────────── */
-  --success:        #2BE08C;
-  --warning:        #F5D547;
-  --info:           #3DD7E5;
-  --danger:         #FF3A5C;
-  --success-soft:   rgba(43, 224, 140, 0.12);
-  --warning-soft:   rgba(245, 213, 71, 0.14);
-  --info-soft:      rgba(61, 215, 229, 0.14);
-  --danger-soft:    rgba(255, 58, 92, 0.14);
-
-  /* ── Borders ─────────────────────────────────────────────────── */
-  --border:        #2A2D38;
-  --border-strong: #3A3D4A;
-  --border-soft:   rgba(255, 255, 255, 0.04);
-  --ring:          #10b981;
-
-  /* ── Radius ──────────────────────────────────────────────────── */
-  --radius-none: 0px;
-  --radius-sm:   6px;
-  --radius-md:   10px;
-  --radius-lg:   16px;
-  --radius-xl:   24px;
-  --radius-full: 999px;
-  --radius:      var(--radius-md);
-
-  /* ── Spacing (4px base) ──────────────────────────────────────── */
-  --space-1: 4px;  --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
-  --space-5: 20px; --space-6: 24px;  --space-8: 32px;  --space-10: 40px;
-  --space-12: 48px; --space-16: 64px; --space-20: 80px;
-
-  /* ── Elevation ───────────────────────────────────────────────── */
-  --shadow-sm:  0 1px 0 rgba(255,255,255,0.02) inset, 0 1px 2px rgba(0,0,0,0.4);
-  --shadow-md:  0 8px 24px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.03) inset;
-  --shadow-lg:  0 24px 60px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.04) inset;
-  --focus-ring: 0 0 0 3px rgba(16, 185, 129, 0.30);
-
-  /* ── Motion ──────────────────────────────────────────────────── */
-  --motion-fast: 120ms;
-  --motion-base: 150ms;
-  --motion-slow: 240ms;
-  --easing-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
-
-  /* ── Layout ──────────────────────────────────────────────────── */
-  --container-max: 1200px;
-  --container-pad: clamp(20px, 4vw, 48px);
-
-  /* ── Font refs ───────────────────────────────────────────────── */
-  --font-sans:    "Inter";
-  --font-mono:    "JetBrains Mono";
-  --font-display: var(--font-sans);
-}
+/* Design tokens (colours, type, spacing, effects, fonts) now live in
+   app/tokens/*.css, imported at the top of this file. */
 
 @layer base {
   * { @apply border-border; }

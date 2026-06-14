@@ -1,0 +1,37 @@
+/* ============================================================
+   Nullshift — Elevation, motion & effects tokens
+   No arbitrary depth or shadow stacking. Only modals get drop
+   shadows. Hairline borders define geometry, not shadow.
+   ============================================================ */
+
+:root {
+  /* ── Elevation ─────────────────────────────────────────────
+     sm/md are reserved; only modals & popovers earn lg.        */
+  --shadow-sm:  0 1px 0 rgba(255,255,255,0.02) inset, 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md:  0 8px 24px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.03) inset;
+  --shadow-lg:  0 24px 60px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.04) inset;
+
+  /* Top-light inset — applied to primary (emerald) buttons. */
+  --inset-top-light: inset 0 1px 0 rgba(255,255,255,0.18);
+
+  /* ── Focus ring — emerald, always. ─────────────────────────  */
+  --focus-ring: 0 0 0 3px rgba(16, 185, 129, 0.30);
+
+  /* ── Brand glow — the ONLY approved decorative effect, used
+     on the hero headline and primary CTAs sparingly. ─────────  */
+  --glow-primary: 0 0 20px rgba(16, 185, 129, 0.30);
+  --glow-hero:
+    0 0 12px rgba(16, 185, 129, 0.72),
+    0 0 34px rgba(16, 185, 129, 0.52),
+    0 0 74px rgba(16, 185, 129, 0.32);
+
+  /* ── Motion ────────────────────────────────────────────────  */
+  --motion-fast: 120ms;
+  --motion-base: 150ms;
+  --motion-slow: 240ms;
+  --easing-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+
+  /* ── Backdrop blur (nav, overlays) ─────────────────────────  */
+  --blur-nav:     blur(14px);
+  --blur-overlay: blur(20px) saturate(130%);
+}
