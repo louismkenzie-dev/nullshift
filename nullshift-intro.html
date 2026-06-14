@@ -599,6 +599,9 @@
   function showCloser() {
     if (stage.classList.contains('closer-on')) return;
     stage.classList.add('closer-on'); $('closer').setAttribute('aria-hidden','false');
+    // The visitor is now at the decision point — tell the gate to cancel its
+    // auto-dismiss fail-safe so the conversion frame stays until they choose.
+    if (embedded) { try { window.parent.postMessage('ns-intro-closer', '*'); } catch(e){} }
     if (actx) { airSwell(now(), 1.4, 0.07); tone(now() + 0.1, 294, 0.08, 1.6); }
   }
   var finished = false;

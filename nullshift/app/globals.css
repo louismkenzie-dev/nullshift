@@ -156,10 +156,70 @@ html.lenis, html.lenis body { height: auto; }
   /* no background on desktop — text sits cleanly over the dark bg */
 }
 
-/* ── ScrollVideoSection — 3D graphic shell size (responsive) ─── */
+/* ── ScrollVideoSection — graphic shell size (responsive) ─── */
 .relight-shell {
   width: clamp(320px, 60vw, 680px);
   height: clamp(320px, 60vw, 680px);
+}
+
+/* ── Cinematic "systems constellation" — scroll-scrubbed via --p (0→1).
+   No JS per frame; CSS calc()/clamp() off the inherited --p does the work. */
+.cs-stage { position: relative; }
+.cs-embers { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.cs-svg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; overflow: visible; }
+
+/* core glow — blooms as the section resolves */
+.cs-glow {
+  filter: blur(46px);
+  opacity: clamp(0.05, calc(0.06 + var(--p, 0) * 0.42), 0.5);
+  transform-box: fill-box; transform-origin: center;
+  transform: scale(clamp(0.6, calc(0.6 + var(--p, 0) * 0.6), 1.15));
+}
+
+/* orbital rings — draw in, then rotate gently with scroll */
+.cs-rings { transform-box: fill-box; transform-origin: center; transform: rotate(calc(var(--p, 0) * 24deg)); }
+.cs-rings ellipse {
+  fill: none; stroke: #10b981; stroke-width: 1;
+  opacity: clamp(0, calc((var(--p, 0) - 0.04) * 4), 0.4);
+  vector-effect: non-scaling-stroke;
+}
+.cs-rings ellipse:nth-child(2) { stroke: rgba(255,255,255,0.10); opacity: clamp(0, calc((var(--p, 0) - 0.08) * 3.5), 0.5); }
+
+/* wires core → node, drawn with dash offset as each node reveals */
+.cs-line {
+  stroke: color-mix(in oklab, #10b981 60%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke;
+  stroke-dasharray: var(--len); stroke-dashoffset: calc(var(--len) * clamp(0, calc(1 - (var(--p, 0) - var(--t)) * 6), 1));
+  opacity: clamp(0, calc((var(--p, 0) - var(--t)) * 6), 0.55);
+}
+
+/* nodes — fade + grow from their own centre as the constellation populates */
+.cs-node {
+  opacity: clamp(0, calc((var(--p, 0) - var(--t)) * 8), 1);
+  transform-box: fill-box; transform-origin: center;
+  transform: scale(clamp(0.4, calc(0.4 + (var(--p, 0) - var(--t)) * 8 * 0.6), 1));
+}
+.cs-node-ring { fill: rgba(16,185,129,0.10); stroke: color-mix(in oklab, #10b981 45%, transparent); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.cs-dot { fill: #34D399; filter: drop-shadow(0 0 5px rgba(16,185,129,0.8)); animation: cs-dot-pulse 3.2s ease-in-out infinite; }
+@keyframes cs-dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+.cs-label {
+  font-family: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+  font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; fill: #9AA0AE;
+}
+
+/* core pill — resolves "from nothing" first */
+.cs-pill {
+  transform-box: fill-box; transform-origin: center;
+  opacity: clamp(0, calc(var(--p, 0) * 7), 1);
+  transform: scale(clamp(0.66, calc(0.66 + var(--p, 0) * 2.4), 1));
+  filter: drop-shadow(0 0 14px rgba(16,185,129,0.4));
+}
+
+@media (max-width: 899px) {
+  .cs-label { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cs-glow, .cs-rings, .cs-line, .cs-node, .cs-pill { transition: none; }
+  .cs-dot { animation: none; }
 }
 
 /* ── ScrollVideoSection — desktop vs mobile text layout ─────────

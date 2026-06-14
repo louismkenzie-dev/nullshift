@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { T } from "@/lib/tokens";
-import ScrollGraphicScene from "./ScrollGraphicScene";
+import CinematicSystems from "./CinematicSystems";
 
 const PANELS = [
   {
@@ -70,33 +70,21 @@ export default function ScrollVideoSection() {
         lastProgress = progress;
         progressRef.current = progress;
 
-        // ── Graphic materialise (whole assembly) ───────────────────
-        // The single WebGL scene fades up out of a soft blur as the section
-        // enters, then STAYS — it does not dissolve on exit (the neural sphere
-        // should remain present). The gyroscope → neural-sphere hand-off
-        // happens *inside* the canvas (driven by the same progressRef).
+        // ── Graphic materialise + scroll-scrub ─────────────────────
+        // The constellation resolves up out of a soft blur as the section
+        // enters, then STAYS. Everything else (pill, rings, nodes, wires) is
+        // scrubbed by the inherited CSS var --p = progress (see CinematicSystems
+        // + the .cs-* rules in globals.css). No per-frame React work for it.
         const ENTER_END  = 0.14; // fully resolved by 14% through
         const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
         const fadeIn  = easeOutCubic(clamp01(progress / ENTER_END));
 
-        // Hand-off blur — peaks at the gyroscope→neural seam (~0.63) so the
-        // outgoing graphic blurs fully OUT before the incoming one resolves IN
-        // (sequential, never a sharp overlap). Window matches the swap in
-        // ScrollGraphicScene (GYRO_OUT 0.53–0.63, NEURAL_IN 0.63–0.73).
-        const HO_START = 0.53, HO_PEAK = 0.63, HO_END = 0.73, HO_MAX = 24;
-        let handoff = 0;
-        if (progress > HO_START && progress < HO_END) {
-          const raw = progress < HO_PEAK
-            ? (progress - HO_START) / (HO_PEAK - HO_START)
-            : (HO_END - progress) / (HO_END - HO_PEAK);
-          handoff = raw * raw * (3 - 2 * raw); // smoothstep ramp up then down
-        }
-
         const wrap = graphicWrapRef.current;
         if (wrap) {
+          wrap.style.setProperty("--p", String(progress));
           wrap.style.opacity   = String(fadeIn);
-          wrap.style.transform = `scale(${0.82 + 0.18 * fadeIn})`;
-          wrap.style.filter    = `blur(${26 * (1 - fadeIn) + HO_MAX * handoff}px)`;
+          wrap.style.transform = `scale(${0.9 + 0.1 * fadeIn})`;
+          wrap.style.filter    = `blur(${10 * (1 - fadeIn)}px)`;
         }
 
         // Animate panel text. Desktop slides horizontally over the graphic;
@@ -208,11 +196,10 @@ export default function ScrollVideoSection() {
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
 
-        {/* Single Three.js scene holding both the gyroscope and the neural
-            sphere in one WebGL context. progressRef drives the scroll-jog and
-            the in-canvas gyroscope→neural crossfade; this wrapper receives
-            scroll-driven opacity/scale/blur so the whole assembly materialises
-            out of, and dissolves back into, depth as the section enters/exits. */}
+        {/* Cinematic systems constellation — the brand pill at the core, system
+            nodes assembling and wiring back to it as you scroll. Scrubbed by the
+            inherited CSS var --p set on this wrapper each frame. This wrapper
+            also materialises the whole assembly out of a soft blur on enter. */}
         <div
           ref={graphicWrapRef}
           style={{
@@ -220,12 +207,12 @@ export default function ScrollVideoSection() {
             display: "flex", alignItems: "center", justifyContent: "center",
             zIndex: 1,
             opacity: 0,
-            transform: "scale(0.82)",
-            filter: "blur(26px)",
+            transform: "scale(0.9)",
+            filter: "blur(10px)",
             willChange: "opacity, transform, filter",
           }}
         >
-          <ScrollGraphicScene progressRef={progressRef} />
+          <CinematicSystems />
         </div>
 
         {/* Ambient emerald glow — soft multi-stop falloff, no hard stop */}

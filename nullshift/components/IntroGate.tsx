@@ -59,15 +59,18 @@ export function IntroGate() {
       window.location.href = "/book";
     };
 
+    // safety net: never trap the visitor if the intro never signals
+    const failSafe = window.setTimeout(dismiss, 45000);
+
     const onMsg = (e: MessageEvent) => {
       // same-origin iframe; accept the intro's signals
       if (e.data === "ns-intro-done") dismiss();
       else if (e.data === "ns-intro-book") goBook();
+      // The conversion frame is up and the visitor is in control — cancel the
+      // auto-dismiss so it stays until they pick a CTA (no quick fade-away).
+      else if (e.data === "ns-intro-closer") window.clearTimeout(failSafe);
     };
     window.addEventListener("message", onMsg);
-
-    // safety net: never trap the visitor if the intro never signals
-    const failSafe = window.setTimeout(dismiss, 45000);
 
     return () => {
       window.removeEventListener("message", onMsg);
