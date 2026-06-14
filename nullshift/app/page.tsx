@@ -8,6 +8,7 @@ import { Reveal } from "@/components/Reveal";
 import { ScrollProgress } from "@/components/ScrollProgress";
 import HeroText from "@/components/HeroText";
 import ScrollVideoSection from "@/components/ScrollVideoSection";
+import { IntroGate } from "@/components/IntroGate";
 import { T } from "@/lib/tokens";
 
 /* ── Section label (Halo eyebrow) ───────────── */
@@ -325,6 +326,8 @@ export default function Page() {
 
   return (
     <>
+      {/* First-visit immersive intro (once per session), fades into the site */}
+      <IntroGate />
       <ScrollProgress />
       {/* Film-grain atmosphere over the whole experience */}
       <div className="noise-layer" aria-hidden />
