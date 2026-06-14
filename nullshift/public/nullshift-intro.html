@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nullshift — Web · Automation · Brand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     Nullshift — Design-system token layer (exact brand values)
+     ============================================================ */
+  :root {
+    --bg: #0A0B0F;
+    --surface: #14151C;
+    --elevated: #1E2029;
+    --fg: #F2F4F8;
+    --muted: #9AA0AE;
+    --faint: #5C6170;
+    --primary: #10B981;
+    --primary-hover: #34D399;
+    --primary-pressed: #059669;
+    --primary-soft: rgba(16,185,129,0.12);
+    --primary-fg: #0A0B0F;
+    --pill-light: #D6D6D6;
+    --info: #3DD7E5;
+    --border: #2A2D38;
+    --border-strong: #3A3D4A;
+
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-full: 999px;
+
+    --tracking-display: -0.03em;
+    --tracking-eyebrow: 0.08em;
+    --tracking-wordmark: 0.02em;
+    --leading-display: 1.04;
+
+    --inset-top-light: inset 0 1px 0 rgba(255,255,255,0.18);
+    --focus-ring: 0 0 0 3px rgba(16,185,129,0.30);
+    --glow-hero:
+      0 0 12px rgba(16,185,129,0.72),
+      0 0 34px rgba(16,185,129,0.52),
+      0 0 74px rgba(16,185,129,0.32);
+
+    --easing-standard: cubic-bezier(0.2, 0.6, 0.2, 1);
+    --easing-shift: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow: hidden;
+  }
+
+  /* ── Stage ─────────────────────────────────────────────────── */
+  .stage { position: fixed; inset: 0; display: grid; place-items: center; overflow: hidden; }
+
+  /* Aurora drift — emerald + faint info-cyan, slow parallax */
+  .aurora {
+    position: absolute; inset: -20%;
+    background:
+      radial-gradient(38% 44% at 32% 30%, rgba(16,185,129,0.12), transparent 70%),
+      radial-gradient(34% 40% at 72% 62%, rgba(61,215,229,0.07), transparent 72%),
+      radial-gradient(40% 46% at 60% 24%, rgba(16,185,129,0.08), transparent 70%);
+    filter: blur(28px);
+    opacity: 0;
+    transition: transform 0.6s var(--easing-standard);
+    animation: aurora-in 2s var(--easing-standard) 0.1s forwards, aurora-drift 22s ease-in-out 1s infinite alternate;
+    pointer-events: none;
+  }
+  @keyframes aurora-in { to { opacity: 1; } }
+  @keyframes aurora-drift {
+    0%   { background-position: 0% 0%, 0% 0%, 0% 0%; }
+    100% { background-position: 6% -4%, -5% 5%, 3% 3%; }
+  }
+
+  /* Pooled centre glow (parallax target) */
+  .ambient {
+    position: absolute; width: 120vmin; height: 120vmin; left: 50%; top: 46%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle at 50% 50%, rgba(16,185,129,0.10) 0%, rgba(16,185,129,0.05) 28%, transparent 62%);
+    filter: blur(6px); opacity: 0; pointer-events: none;
+    animation: ambient-in 1.6s var(--easing-standard) 0.1s forwards;
+    will-change: transform;
+  }
+  @keyframes ambient-in { to { opacity: 1; } }
+
+  /* Hairline grid */
+  .grid {
+    position: absolute; inset: -2px;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.022) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.022) 1px, transparent 1px);
+    background-size: 64px 64px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 46%, #000 30%, transparent 78%);
+            mask-image: radial-gradient(ellipse 70% 70% at 50% 46%, #000 30%, transparent 78%);
+    opacity: 0; animation: grid-in 2.4s var(--easing-standard) 0.3s forwards;
+  }
+  @keyframes grid-in { to { opacity: 1; } }
+
+  /* Particle ember canvas */
+  #embers { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+
+  /* CRT scanlines + vignette */
+  .scanlines {
+    position: absolute; inset: 0; z-index: 55; pointer-events: none; opacity: 0.5;
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.015) 0 1px, transparent 1px 3px);
+    mix-blend-mode: overlay;
+  }
+  .vignette {
+    position: absolute; inset: 0; z-index: 56; pointer-events: none;
+    background: radial-gradient(ellipse 80% 80% at 50% 46%, transparent 55%, rgba(0,0,0,0.55) 100%);
+  }
+  .vignette.flash { animation: vflash 0.8s var(--easing-standard); }
+  @keyframes vflash {
+    0% { background: radial-gradient(ellipse 80% 80% at 50% 46%, rgba(16,185,129,0.10) 0%, transparent 50%, rgba(0,0,0,0.55) 100%); }
+    100% { background: radial-gradient(ellipse 80% 80% at 50% 46%, transparent 55%, rgba(0,0,0,0.55) 100%); }
+  }
+
+  .noise {
+    position: absolute; inset: 0; pointer-events: none; z-index: 57; opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 180px;
+  }
+
+  /* ── Centre column (hidden until .go) ──────────────────────── */
+  .core { position: relative; z-index: 20; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 24px; }
+
+  .mark-frame { position: relative; width: 188px; height: 188px; display: grid; place-items: center; margin-bottom: 40px; }
+
+  .rings { position: absolute; inset: -28px; pointer-events: none; transform: rotateX(62deg); transform-style: preserve-3d; opacity: 0; will-change: transform; }
+  .stage.go .rings { animation: rings-in 1.2s var(--easing-standard) 0.35s forwards; }
+  @keyframes rings-in { to { opacity: 1; } }
+  .rings .ring { position: absolute; inset: 0; border: 1px solid color-mix(in oklab, var(--primary) 26%, transparent); border-radius: 50%; }
+  .rings .ring.r1 { animation: spin 14s linear infinite; border-color: color-mix(in oklab, var(--primary) 30%, transparent); }
+  .rings .ring.r2 { inset: 14%; animation: spin 9s linear infinite reverse; border-style: dashed; border-color: color-mix(in oklab, var(--primary) 20%, transparent); }
+  .rings .ring.r3 { inset: 30%; animation: spin 20s linear infinite; border-color: rgba(255,255,255,0.06); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .mark { position: relative; z-index: 5; width: 132px; height: auto; overflow: visible; }
+  .pill { transform-box: fill-box; transform-origin: 50% 50%; opacity: 0; }
+  .stage.go .pill-l { animation: pill-l-in 0.9s var(--easing-shift) 0.55s forwards; }
+  .stage.go .pill-r { animation: pill-r-in 0.9s var(--easing-shift) 0.8s forwards, pill-glow 3.6s ease-in-out 2.0s infinite; }
+  @keyframes pill-l-in { 0% { opacity: 0; transform: translateY(-46px) scaleY(1.18); } 70% { opacity: 1; } 100% { opacity: 1; transform: translateY(0) scaleY(1); } }
+  @keyframes pill-r-in { 0% { opacity: 0; transform: translateY(48px) scaleY(1.2); } 70% { opacity: 1; } 100% { opacity: 1; transform: translateY(0) scaleY(1); } }
+  @keyframes pill-glow { 0%,100% { filter: drop-shadow(0 0 6px rgba(16,185,129,0.35)); } 50% { filter: drop-shadow(0 0 16px rgba(16,185,129,0.7)); } }
+
+  /* Shockwave rings spawned on pill lock */
+  .shock { position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; border-radius: 50%; border: 1.5px solid var(--primary-hover); transform: translate(-50%,-50%) scale(0.2); opacity: 0.9; pointer-events: none; z-index: 4; }
+  .shock.go { animation: shock 0.9s var(--easing-standard) forwards; }
+  @keyframes shock { to { transform: translate(-50%,-50%) scale(3.6); opacity: 0; } }
+
+  /* Scan line */
+  .scan { position: absolute; left: 8%; right: 8%; height: 2px; top: 0; z-index: 6; background: linear-gradient(90deg, transparent, var(--primary-hover), transparent); box-shadow: 0 0 14px rgba(16,185,129,0.8); opacity: 0; }
+  .stage.go .scan { animation: scan-sweep 1.0s var(--easing-standard) 1.5s 1 forwards; }
+  @keyframes scan-sweep { 0% { opacity: 0; top: 6%; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; top: 94%; } }
+
+  /* ── Wordmark ──────────────────────────────────────────────── */
+  .wordmark { display: flex; gap: 0.018em; font-weight: 800; font-size: clamp(2.4rem, 9vw, 5rem); letter-spacing: var(--tracking-wordmark); line-height: 1; color: var(--fg); position: relative; }
+  .wordmark .ch { display: inline-block; opacity: 0; transform: translateY(0.42em); filter: blur(10px); }
+  .stage.go .wordmark .ch { animation: ch-in 0.62s var(--easing-shift) forwards; }
+  @keyframes ch-in { to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+  /* RGB-split glitch overlay on reveal */
+  .wordmark.glitch::before, .wordmark.glitch::after {
+    content: attr(data-word); position: absolute; left: 0; top: 0; width: 100%;
+    font-weight: 800; letter-spacing: var(--tracking-wordmark); line-height: 1; pointer-events: none;
+  }
+  .wordmark.glitch::before { color: var(--info); animation: glitch-a 0.5s steps(2) 1; mix-blend-mode: screen; }
+  .wordmark.glitch::after  { color: var(--primary); animation: glitch-b 0.5s steps(2) 1; mix-blend-mode: screen; }
+  @keyframes glitch-a { 0% { opacity: 0.7; transform: translate(-3px,1px); } 100% { opacity: 0; transform: translate(0,0); } }
+  @keyframes glitch-b { 0% { opacity: 0.7; transform: translate(3px,-1px); } 100% { opacity: 0; transform: translate(0,0); } }
+
+  /* Discipline line — Web · Automation · Brand · UK based */
+  .disciplines {
+    margin-top: 18px; font-family: var(--font-mono); font-size: clamp(0.62rem, 1.5vw, 0.78rem);
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+    opacity: 0;
+  }
+  .stage.go .disciplines { animation: rise 0.7s var(--easing-standard) 2.15s forwards; }
+  .disciplines .sep { color: var(--primary); }
+  .disciplines .uk { color: var(--faint); }
+
+  /* ── Tagline ───────────────────────────────────────────────── */
+  .tagline { margin-top: 18px; font-weight: 600; font-size: clamp(1.05rem, 2.6vw, 1.6rem); letter-spacing: var(--tracking-display); line-height: var(--leading-display); color: var(--fg); opacity: 0; transform: translateY(12px); }
+  .stage.go .tagline { animation: rise 0.7s var(--easing-standard) 2.35s forwards; }
+  .tagline .glow { color: var(--primary); text-shadow: var(--glow-hero); animation: hero-glow 3.6s ease-in-out 3.0s infinite; }
+  @keyframes hero-glow { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.22); } }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+  .triad { margin-top: 14px; font-size: clamp(0.82rem, 1.8vw, 0.95rem); font-weight: 500; color: var(--muted); opacity: 0; }
+  .stage.go .triad { animation: rise 0.7s var(--easing-standard) 2.6s forwards; }
+  .triad b { color: var(--fg); font-weight: 600; }
+
+  /* ── Eyebrow / readout / rail / actions ────────────────────── */
+  .eyebrow { position: fixed; top: 28px; left: 30px; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.72rem; font-weight: 500; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; opacity: 0; z-index: 40; }
+  .stage.go .eyebrow { animation: rise 0.7s var(--easing-standard) 2.5s forwards; }
+  .eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); animation: pulse-dot 2.5s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .readout { position: fixed; top: 28px; right: 64px; font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.06em; color: var(--faint); text-align: right; z-index: 40; min-height: 1.2em; }
+  .readout .ok { color: var(--primary); }
+  .readout .cursor { display: inline-block; width: 7px; height: 1em; vertical-align: -0.12em; background: var(--primary); margin-left: 3px; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Sound toggle */
+  .sound { position: fixed; top: 24px; right: 26px; z-index: 45; width: 28px; height: 28px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: color-mix(in oklab, var(--surface) 70%, transparent); color: var(--muted); cursor: pointer; opacity: 0; transition: color .15s, border-color .15s; }
+  .stage.go .sound { animation: rise .6s var(--easing-standard) 2.5s forwards; }
+  .sound:hover { color: var(--fg); border-color: var(--border-strong); }
+  .sound svg { width: 15px; height: 15px; }
+
+  .rail { position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); width: min(340px, 60vw); z-index: 40; opacity: 0; }
+  .stage.go .rail { animation: rise .5s var(--easing-standard) .35s forwards; }
+  .rail .track { height: 1px; width: 100%; background: var(--border); position: relative; overflow: hidden; }
+  .rail .fill { position: absolute; inset: 0; width: 0%; background: linear-gradient(90deg, var(--primary), var(--primary-hover)); box-shadow: 0 0 10px rgba(16,185,129,0.6); }
+  .stage.go .rail .fill { animation: fill 2.6s var(--easing-standard) 0.35s forwards; }
+  @keyframes fill { to { width: 100%; } }
+  .rail .label { display: flex; justify-content: space-between; margin-top: 10px; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+
+  .actions { margin-top: 42px; display: flex; align-items: center; gap: 18px; opacity: 0; transform: translateY(12px); }
+  .stage.go .actions { animation: rise 0.7s var(--easing-standard) 3.0s forwards; }
+  .btn { font-family: var(--font-sans); font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; color: var(--primary-fg); background: var(--primary); border: none; height: 46px; padding: 0 22px; border-radius: var(--radius-md); box-shadow: var(--inset-top-light); cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: background .15s var(--easing-standard), transform .15s var(--easing-standard); }
+  .btn:hover { background: var(--primary-hover); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: none; box-shadow: var(--inset-top-light), var(--focus-ring); }
+  .btn .arrow { transition: transform .15s var(--easing-standard); }
+  .btn:hover .arrow { transform: translateX(3px); }
+  .replay { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: none; border: none; cursor: pointer; padding: 6px 4px; transition: color .15s var(--easing-standard); }
+  .replay:hover { color: var(--fg); }
+
+  .hint { position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%); font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--faint); opacity: 0; z-index: 40; }
+  .stage.go .hint { animation: rise 0.7s var(--easing-standard) 3.3s forwards; }
+
+  /* ── Enter → warp-out + payoff ─────────────────────────────── */
+  .stage.warp .core { animation: warp 0.9s var(--easing-shift) forwards; }
+  .stage.warp .grid, .stage.warp .ambient, .stage.warp .aurora { animation: dim 0.9s var(--easing-standard) forwards; }
+  @keyframes warp { 0% { transform: scale(1); opacity: 1; filter: blur(0); } 100% { transform: scale(1.45); opacity: 0; filter: blur(14px); } }
+  @keyframes dim { to { opacity: 0; } }
+
+  .entered { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 24px; opacity: 0; pointer-events: none; }
+  .stage.warp .entered { animation: rise 0.9s var(--easing-standard) 0.55s forwards; pointer-events: auto; }
+  .entered h2 { font-weight: 600; font-size: clamp(1.6rem, 5vw, 3rem); letter-spacing: var(--tracking-display); line-height: var(--leading-display); max-width: 18ch; }
+  .entered p { margin-top: 20px; color: var(--muted); font-size: 1rem; max-width: 50ch; line-height: 1.55; margin-inline: auto; }
+
+  /* ── Start veil ────────────────────────────────────────────── */
+  .veil { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; cursor: pointer; background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(16,185,129,0.05), transparent 70%), var(--bg); transition: opacity 0.6s var(--easing-standard); }
+  .veil.hide { opacity: 0; pointer-events: none; }
+  .veil .vmark { width: 46px; animation: vfloat 3.6s ease-in-out infinite; }
+  @keyframes vfloat { 0%,100% { transform: translateY(0); filter: drop-shadow(0 0 6px rgba(16,185,129,0.3)); } 50% { transform: translateY(-6px); filter: drop-shadow(0 0 16px rgba(16,185,129,0.6)); } }
+  .veil .prompt { font-family: var(--font-sans); font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; color: var(--fg); }
+  .veil .sub { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); display: inline-flex; align-items: center; gap: 8px; }
+  .veil .sub .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); animation: pulse-dot 2s ease-in-out infinite; }
+  .veil .silent { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); text-decoration: underline; text-underline-offset: 3px; background: none; border: none; cursor: pointer; margin-top: 2px; }
+  .veil .silent:hover { color: var(--muted); }
+
+  @media (max-width: 560px) {
+    .eyebrow, .readout { font-size: 0.6rem; }
+    .readout { right: 60px; max-width: 40vw; }
+    .mark-frame { width: 150px; height: 150px; margin-bottom: 32px; }
+    .mark { width: 104px; }
+    .disciplines { gap: 8px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+    .stage.go .pill, .stage.go .wordmark .ch, .stage.go .tagline, .stage.go .triad, .stage.go .eyebrow, .stage.go .actions, .stage.go .hint, .stage.go .disciplines, .stage.go .rings { opacity: 1 !important; transform: none !important; filter: none !important; }
+    .stage.go .rail .fill { width: 100% !important; }
+  }
+</style>
+</head>
+<body>
+  <main class="stage" id="stage" aria-label="Nullshift intro">
+    <div class="aurora"></div>
+    <div class="ambient" id="ambient"></div>
+    <div class="grid"></div>
+    <canvas id="embers"></canvas>
+
+    <div class="core" id="core">
+      <div class="mark-frame" id="markFrame">
+        <div class="rings" id="rings" aria-hidden="true">
+          <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
+        </div>
+        <div class="scan" aria-hidden="true"></div>
+        <svg class="mark" viewBox="40 30 78 98" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nullshift">
+          <rect class="pill pill-l" x="44.69" y="33.95" width="31.42" height="81.96" rx="10" fill="var(--pill-light)" />
+          <rect class="pill pill-r" x="83.88" y="45.30" width="29.50" height="78.70" rx="10" fill="var(--primary)" />
+        </svg>
+      </div>
+
+      <div class="wordmark" id="wordmark" data-word="NULLSHIFT" aria-hidden="true"></div>
+
+      <div class="disciplines">
+        <span>Web</span><span class="sep">·</span><span>Automation</span><span class="sep">·</span><span>Brand developer</span><span class="sep">—</span><span class="uk">UK based</span>
+      </div>
+
+      <p class="tagline">Built with <span class="glow">intention.</span></p>
+      <p class="triad"><b>No templates.</b> <b>No bloat.</b> <b>No nonsense.</b></p>
+
+      <div class="actions">
+        <button class="btn" id="enterBtn">Enter <span class="arrow">→</span></button>
+        <button class="replay" id="replayBtn">↺ Replay</button>
+      </div>
+    </div>
+
+    <div class="eyebrow">Web · Automation · Brand developer</div>
+    <div class="readout" id="readout"></div>
+
+    <button class="sound" id="soundBtn" aria-label="Toggle sound" title="Toggle sound">
+      <svg id="soundIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+    </button>
+
+    <div class="rail" aria-hidden="true">
+      <div class="track"><div class="fill"></div></div>
+      <div class="label"><span>// INITIALISING</span><span>NULLSHIFT_OS</span></div>
+    </div>
+
+    <div class="hint">Scroll · or press enter</div>
+
+    <section class="entered" id="entered" aria-hidden="true">
+      <h2>We build more than websites.</h2>
+      <p>Web, automation and brand development — bespoke sites, custom systems and identities engineered for businesses doing the work. UK based.</p>
+    </section>
+
+    <!-- Start veil — click unlocks audio + begins the sequence -->
+    <div class="veil" id="veil" role="button" tabindex="0" aria-label="Begin Nullshift intro">
+      <svg class="vmark" viewBox="40 30 78 98" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="44.69" y="33.95" width="31.42" height="81.96" rx="10" fill="var(--pill-light)" />
+        <rect x="83.88" y="45.30" width="29.50" height="78.70" rx="10" fill="var(--primary)" />
+      </svg>
+      <div class="prompt">Tap to begin</div>
+      <div class="sub"><span class="dot"></span> Best experienced with sound</div>
+      <button class="silent" id="silentBtn">Enter silently</button>
+    </div>
+  </main>
+
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  var wordmarkEl = document.getElementById('wordmark');
+  var readout = document.getElementById('readout');
+  var enterBtn = document.getElementById('enterBtn');
+  var replayBtn = document.getElementById('replayBtn');
+  var entered = document.getElementById('entered');
+  var veil = document.getElementById('veil');
+  var silentBtn = document.getElementById('silentBtn');
+  var soundBtn = document.getElementById('soundBtn');
+  var markFrame = document.getElementById('markFrame');
+  var ambient = document.getElementById('ambient');
+  var rings = document.getElementById('rings');
+  var vignette = document.querySelector('.vignette') || (function(){ var v=document.createElement('div'); v.className='vignette'; stage.appendChild(v); return v; })();
+  // ensure scanlines + vignette + noise exist
+  ['scanlines','vignette','noise'].forEach(function(c){ if(!stage.querySelector('.'+c)){ var d=document.createElement('div'); d.className=c; stage.appendChild(d);} });
+  vignette = stage.querySelector('.vignette');
+
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var WORD = 'NULLSHIFT';
+  var BOOT = ['BOOT // null state', 'LOADING brand core', 'PILLS aligned', 'WEB · AUTO · BRAND', 'SYSTEM ONLINE'];
+
+  /* ── Web Audio ──────────────────────────────────────────── */
+  var AC = window.AudioContext || window.webkitAudioContext;
+  var actx = null, master = null, muted = false, noiseBuf = null, drone = null;
+
+  function ensureAudio() {
+    if (actx) return;
+    try {
+      actx = new AC();
+      master = actx.createGain();
+      master.gain.value = muted ? 0 : 0.5;
+      master.connect(actx.destination);
+      // shared noise buffer
+      var len = actx.sampleRate * 1.2;
+      noiseBuf = actx.createBuffer(1, len, actx.sampleRate);
+      var d = noiseBuf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    } catch (e) { actx = null; }
+  }
+  function now() { return actx ? actx.currentTime : 0; }
+
+  function thud(at, freq, gain, dur) {
+    if (!actx) return; freq = freq || 80; gain = gain || 0.5; dur = dur || 0.5;
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(freq * 1.8, at); o.frequency.exponentialRampToValueAtTime(freq, at + dur);
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(g); g.connect(master); o.start(at); o.stop(at + dur + 0.05);
+  }
+  function riser(at, dur, gain) {
+    if (!actx) return; dur = dur || 1.4; gain = gain || 0.12;
+    var src = actx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+    var f = actx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
+    f.frequency.setValueAtTime(220, at); f.frequency.exponentialRampToValueAtTime(2600, at + dur);
+    var g = actx.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.linearRampToValueAtTime(gain, at + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    src.connect(f); f.connect(g); g.connect(master); src.start(at); src.stop(at + dur + 0.05);
+  }
+  function sweep(at) {
+    if (!actx) return;
+    var src = actx.createBufferSource(); src.buffer = noiseBuf;
+    var f = actx.createBiquadFilter(); f.type = 'highpass'; f.frequency.setValueAtTime(400, at); f.frequency.exponentialRampToValueAtTime(5000, at + 0.5);
+    var g = actx.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.10, at + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.5);
+    src.connect(f); f.connect(g); g.connect(master); src.start(at); src.stop(at + 0.55);
+  }
+  function blip(at, freq, gain) {
+    if (!actx) return; gain = gain || 0.05;
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'triangle'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
+    o.connect(g); g.connect(master); o.start(at); o.stop(at + 0.1);
+  }
+  function chime(at) {
+    if (!actx) return;
+    [0, 7, 12].forEach(function (semi, i) {
+      var o = actx.createOscillator(), g = actx.createGain();
+      var freq = 440 * Math.pow(2, semi / 12);
+      o.type = 'sine'; o.frequency.value = freq;
+      var t = at + i * 0.06;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+      o.connect(g); g.connect(master); o.start(t); o.stop(t + 1.0);
+    });
+  }
+  function whoosh(at) {
+    if (!actx) return;
+    var src = actx.createBufferSource(); src.buffer = noiseBuf;
+    var f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(300, at); f.frequency.exponentialRampToValueAtTime(4000, at + 0.4); f.frequency.exponentialRampToValueAtTime(200, at + 0.8);
+    var g = actx.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.22, at + 0.12); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.8);
+    src.connect(f); f.connect(g); g.connect(master); src.start(at); src.stop(at + 0.85);
+    thud(at + 0.1, 50, 0.4, 0.7); // sub drop
+  }
+  function startDrone() {
+    if (!actx || drone) return;
+    var o = actx.createOscillator(), o2 = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.value = 55; o2.type = 'sine'; o2.frequency.value = 55.4; // slight detune beat
+    g.gain.setValueAtTime(0.0001, now()); g.gain.linearRampToValueAtTime(0.05, now() + 1.6);
+    o.connect(g); o2.connect(g); g.connect(master); o.start(); o2.start();
+    drone = { o: o, o2: o2, g: g };
+  }
+  function tick(gain) { if (!actx) return; blip(now(), 660, gain || 0.04); }
+
+  function setMuted(m) {
+    muted = m;
+    if (master) master.gain.setTargetAtTime(muted ? 0 : 0.5, now(), 0.05);
+    soundBtn.style.color = muted ? 'var(--faint)' : 'var(--muted)';
+    document.getElementById('soundIcon').innerHTML = muted
+      ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>'
+      : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>';
+  }
+
+  /* ── Visual helpers ─────────────────────────────────────── */
+  function spawnShock() {
+    var s = document.createElement('div'); s.className = 'shock'; markFrame.appendChild(s);
+    requestAnimationFrame(function () { s.classList.add('go'); });
+    setTimeout(function () { s.remove(); }, 1000);
+  }
+  function flashVignette() { vignette.classList.remove('flash'); void vignette.offsetWidth; vignette.classList.add('flash'); }
+
+  function buildWordmark() {
+    wordmarkEl.innerHTML = '';
+    WORD.split('').forEach(function (c, i) {
+      var s = document.createElement('span'); s.className = 'ch'; s.textContent = c;
+      s.style.animationDelay = (1.6 + i * 0.055) + 's';
+      wordmarkEl.appendChild(s);
+    });
+  }
+  var bootTimers = [];
+  function runReadout() {
+    bootTimers.forEach(clearTimeout); bootTimers = [];
+    readout.innerHTML = '';
+    BOOT.forEach(function (line, i) {
+      bootTimers.push(setTimeout(function () {
+        var last = i === BOOT.length - 1;
+        readout.innerHTML = '<span class="' + (last ? 'ok' : '') + '">' + line + '</span>' + (last ? '' : '<span class="cursor"></span>');
+      }, 600 + i * 480));
+    });
+  }
+
+  /* ── The orchestrated timeline (ms from begin) ──────────── */
+  var seqTimers = [];
+  function schedule(fn, ms) { seqTimers.push(setTimeout(fn, ms)); }
+  function clearSeq() { seqTimers.forEach(clearTimeout); seqTimers = []; bootTimers.forEach(clearTimeout); }
+
+  function runSequence() {
+    buildWordmark();
+    runReadout();
+    if (actx) {
+      var t = now();
+      startDrone();
+      riser(t + 0.35, 1.3, 0.10);          // tension build
+      thud(t + 0.55, 120, 0.42, 0.45);     // light pill lock
+      thud(t + 0.80, 78, 0.55, 0.6);       // emerald pill lock (deeper)
+      sweep(t + 1.5);                       // scan
+      for (var i = 0; i < WORD.length; i++) blip(t + 1.62 + i * 0.055, 520 + i * 26, 0.035); // letters
+      chime(t + 2.5);                       // system online
+    }
+    // synced visual punctuation
+    schedule(function () { spawnShock(); }, 550 + 320);   // ~ when light pill settles
+    schedule(function () { spawnShock(); flashVignette(); }, 800 + 320); // emerald settles
+    schedule(function () {
+      wordmarkEl.classList.add('glitch');
+      setTimeout(function () { wordmarkEl.classList.remove('glitch'); }, 520);
+    }, 1620);
+    schedule(function () { flashVignette(); }, 2500);     // online flash
+  }
+
+  function begin(withSound) {
+    if (withSound) { ensureAudio(); if (actx && actx.state === 'suspended') actx.resume(); setMuted(false); }
+    else { setMuted(true); }
+    veil.classList.add('hide');
+    stage.classList.add('go');
+    // small reflow so animations key off .go cleanly
+    void stage.offsetWidth;
+    runSequence();
+  }
+
+  function enter() {
+    if (stage.classList.contains('warp')) return;
+    stage.classList.add('warp');
+    entered.setAttribute('aria-hidden', 'false');
+    if (actx) whoosh(now());
+  }
+
+  /* ── Events ─────────────────────────────────────────────── */
+  veil.addEventListener('click', function () { begin(true); });
+  veil.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); begin(true); } });
+  silentBtn.addEventListener('click', function (e) { e.stopPropagation(); begin(false); });
+
+  enterBtn.addEventListener('click', function () { if (actx) tick(0.05); enter(); });
+  enterBtn.addEventListener('mouseenter', function () { tick(0.03); });
+  replayBtn.addEventListener('click', function () { location.reload(); });
+  soundBtn.addEventListener('click', function () { ensureAudio(); if (actx && actx.state === 'suspended') actx.resume(); setMuted(!muted); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Enter' && stage.classList.contains('go')) enter(); });
+
+  /* Mouse parallax on ambient glow + gyroscope rings */
+  if (!reduced) {
+    window.addEventListener('mousemove', function (e) {
+      var dx = (e.clientX / window.innerWidth - 0.5);
+      var dy = (e.clientY / window.innerHeight - 0.5);
+      ambient.style.transform = 'translate(calc(-50% + ' + (dx * 26) + 'px), calc(-50% + ' + (dy * 26) + 'px))';
+      rings.style.transform = 'rotateX(62deg) translate(' + (dx * 14) + 'px, ' + (dy * 14) + 'px)';
+      document.querySelector('.aurora').style.transform = 'translate(' + (dx * -18) + 'px, ' + (dy * -18) + 'px)';
+    }, { passive: true });
+  }
+
+  /* ── Ember particle field ───────────────────────────────── */
+  (function embers() {
+    if (reduced) return;
+    var canvas = document.getElementById('embers');
+    var ctx = canvas.getContext('2d');
+    var DPR = Math.min(window.devicePixelRatio || 1, 2);
+    var W, H, parts = [];
+    function resize() { W = canvas.width = innerWidth * DPR; H = canvas.height = innerHeight * DPR; canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px'; }
+    resize(); addEventListener('resize', resize);
+    function mk() {
+      var cyan = Math.random() < 0.18;
+      return { x: Math.random() * W, y: H + Math.random() * H, r: (Math.random() * 1.6 + 0.4) * DPR,
+        vy: -(Math.random() * 0.25 + 0.08) * DPR, vx: (Math.random() - 0.5) * 0.12 * DPR,
+        a: Math.random() * 0.5 + 0.1, ph: Math.random() * Math.PI * 2, cyan: cyan };
+    }
+    for (var i = 0; i < 64; i++) { var p = mk(); p.y = Math.random() * H; parts.push(p); }
+    function loop(ts) {
+      ctx.clearRect(0, 0, W, H);
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i]; p.y += p.vy; p.x += p.vx; p.ph += 0.03;
+        var fl = 0.55 + 0.45 * Math.sin(p.ph);
+        if (p.y < -10) { parts[i] = mk(); continue; }
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = (p.cyan ? 'rgba(61,215,229,' : 'rgba(16,185,129,') + (p.a * fl).toFixed(3) + ')';
+        ctx.shadowBlur = 8 * DPR; ctx.shadowColor = p.cyan ? 'rgba(61,215,229,0.6)' : 'rgba(16,185,129,0.6)';
+        ctx.fill();
+      }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
+
+  // initialise sound icon state (visually "on" by default)
+  soundBtn.style.color = 'var(--muted)';
+})();
+</script>
+</body>
+</html>
