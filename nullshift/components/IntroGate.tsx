@@ -36,22 +36,33 @@ export function IntroGate() {
 
   useEffect(() => {
     if (!show) return;
-    const dismiss = () => {
-      if (dismissed.current) return;
-      dismissed.current = true;
+    const markSeen = () => {
       try {
         sessionStorage.setItem(SEEN_KEY, "1");
       } catch {
         /* ignore */
       }
-      setFading(true);
       document.documentElement.style.overflow = "";
+    };
+    const dismiss = () => {
+      if (dismissed.current) return;
+      dismissed.current = true;
+      markSeen();
+      setFading(true);
       window.setTimeout(() => setShow(false), 900);
+    };
+    // Primary conversion CTA: take the visitor straight to the booking brief.
+    const goBook = () => {
+      if (dismissed.current) return;
+      dismissed.current = true;
+      markSeen();
+      window.location.href = "/book";
     };
 
     const onMsg = (e: MessageEvent) => {
-      // same-origin iframe; accept the done signal
+      // same-origin iframe; accept the intro's signals
       if (e.data === "ns-intro-done") dismiss();
+      else if (e.data === "ns-intro-book") goBook();
     };
     window.addEventListener("message", onMsg);
 
