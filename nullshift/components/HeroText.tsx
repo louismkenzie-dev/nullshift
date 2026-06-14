@@ -92,10 +92,10 @@ function AnimatedHeadline() {
 }
 
 const stats = [
-  { label: "Avg. delivery", value: "4 weeks" },
-  { label: "Code base", value: "100% Custom" },
-  { label: "Post-launch", value: "Full support" },
-  { label: "Page builders", value: "Zero." },
+  { label: "Avg. delivery", value: "2–4 weeks" },
+  { label: "Ownership", value: "100% yours" },
+  { label: "Lock-in", value: "None" },
+  { label: "We report", value: "£ recovered" },
 ];
 
 export default function HeroText() {
@@ -176,9 +176,10 @@ export default function HeroText() {
                       color: T.muted,
                     }}
                   >
-                    Nullshift designs and builds websites, branding, and digital
-                    systems tailored to your business — no templates, no page
-                    builders, just results.
+                    We build your bespoke site, then run the system that brings the
+                    customers in — booking, missed-call recovery, automations and AI.
+                    You own all of it, live in weeks, and we report the revenue we
+                    recover every month.
                   </motion.p>
                 </motion.div>
 
@@ -221,6 +222,32 @@ export default function HeroText() {
                     </div>
                   </motion.div>
 
+                  <motion.div variants={fadeUp}>
+                    <a
+                      href="/systems-lab"
+                      className="inline-flex items-center justify-center font-medium"
+                      style={{
+                        fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500,
+                        letterSpacing: "-0.005em", height: 46, paddingInline: 22,
+                        background: "transparent", color: T.muted, borderRadius: "10px",
+                        border: `1px solid ${T.borderStr}`, textDecoration: "none", whiteSpace: "nowrap",
+                      }}
+                    >
+                      Try the live demos
+                    </a>
+                  </motion.div>
+                </motion.div>
+
+                {/* Vertical chooser — surface the two wedge offers */}
+                <motion.div
+                  variants={fadeUp} initial="hidden" animate="visible"
+                  className="mt-6 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1"
+                  style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.04em", textTransform: "uppercase", color: T.faint }}
+                >
+                  <span>Built for</span>
+                  <a href="/trades" style={{ color: T.primary, textDecoration: "none" }}>Trades →</a>
+                  <span style={{ color: T.border }}>·</span>
+                  <a href="/wellness" style={{ color: T.primary, textDecoration: "none" }}>Salons &amp; clinics →</a>
                 </motion.div>
               </ScrollDissolve>
             </div>

@@ -8,9 +8,10 @@ import { Logo, LogoMark } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { label: "About",       href: "/about" },
+  { label: "For Trades",  href: "/trades" },
+  { label: "For Salons",  href: "/wellness" },
   { label: "Systems Lab", href: "/systems-lab" },
-  { label: "FAQ",         href: "/faq" },
+  { label: "Pricing",     href: "/pricing" },
 ];
 
 export function Nav() {
