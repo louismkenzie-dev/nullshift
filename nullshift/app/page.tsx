@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
+import { ScrollProgress } from "@/components/ScrollProgress";
 import HeroText from "@/components/HeroText";
 import ScrollVideoSection from "@/components/ScrollVideoSection";
 import { T } from "@/lib/tokens";
@@ -266,6 +267,7 @@ function StackCard({ children, z }: { children: React.ReactNode; z: number }) {
        the next card slides up and covers it. Higher z stacks over lower. */
     <div className="sticky-stick px-3 sm:px-5 md:px-8" style={{ zIndex: z }}>
       <div
+        data-stack-card
         className="glass-card max-w-6xl mx-auto w-full overflow-hidden rounded-2xl"
         style={{
           height: "var(--card-h)",
@@ -275,6 +277,8 @@ function StackCard({ children, z }: { children: React.ReactNode; z: number }) {
           WebkitBackdropFilter: "blur(20px) saturate(130%)",
           border: `1px solid #3d3d42`,
           boxShadow: "0 0 0 1px rgba(255,255,255,0.03) inset, 0 50px 120px -16px rgba(0,0,0,0.9)",
+          transformOrigin: "center center",
+          willChange: "transform, filter",
         }}
       >
         {children}
@@ -284,15 +288,54 @@ function StackCard({ children, z }: { children: React.ReactNode; z: number }) {
 }
 
 export default function Page() {
+  // ── Stacked-card depth ──────────────────────────────────────────
+  // As each pinned card is covered by the next, scale it back and dim it
+  // so the stack reads with real z-depth (Apple "cards receding" feel).
+  // Disabled on mobile where the cards flow statically.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-stack-card]"));
+    if (cards.length < 2) return;
+
+    let raf = 0;
+    const apply = () => {
+      raf = requestAnimationFrame(apply);
+      if (mq.matches) {
+        for (const c of cards) { c.style.transform = ""; c.style.filter = ""; }
+        return;
+      }
+      for (let i = 0; i < cards.length; i++) {
+        const cur = cards[i];
+        const next = cards[i + 1];
+        if (!next) { cur.style.transform = ""; cur.style.filter = ""; continue; }
+        const cr = cur.getBoundingClientRect();
+        const nr = next.getBoundingClientRect();
+        const curBottom = cr.top + cr.height;
+        const coverage = Math.max(0, Math.min(1, (curBottom - nr.top) / cr.height));
+        const scale = 1 - coverage * 0.06;
+        const bright = 1 - coverage * 0.26;
+        cur.style.transform = `scale(${scale})`;
+        cur.style.filter = `brightness(${bright})`;
+      }
+    };
+    raf = requestAnimationFrame(apply);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   return (
     <>
+      <ScrollProgress />
+      {/* Film-grain atmosphere over the whole experience */}
+      <div className="noise-layer" aria-hidden />
+
       <Nav />
-      {/* Hero stays full-bleed as the opening */}
+      {/* Hero — headline recedes into depth as you scroll (handled inside) */}
       <div className="relative z-10">
         <HeroText />
       </div>
 
-      {/* Scroll-driven video section */}
+      {/* Scroll-driven gyroscope section */}
       <ScrollVideoSection />
 
       {/* Uniform cards stack over one another. The first pins centred; each
@@ -307,6 +350,7 @@ export default function Page() {
 
       {/* Systems Lab promo */}
       <div className="relative" style={{ zIndex: 6, marginTop: "12vh", borderTop: `1px solid ${T.border}`, background: T.surface, padding: "72px 24px" }}>
+        <Reveal>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }} className="md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-2 mb-5">
@@ -330,6 +374,7 @@ export default function Page() {
             Enter Systems Lab →
           </Link>
         </div>
+        </Reveal>
       </div>
 
       <div className="relative" style={{ zIndex: 6 }}>

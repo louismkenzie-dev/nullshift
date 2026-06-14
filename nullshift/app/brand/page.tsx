@@ -4,8 +4,52 @@ import { useRef, useState } from "react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
+import { Logo, LogoMark } from "@/components/Logo";
 import { T } from "@/lib/tokens";
 import { COLORS, TYPE, PRINCIPLES, generateBrandPdf } from "@/lib/brandPdf";
+
+/* ── App icon (favicon) — rounded square + parallel pills ── */
+function AppIcon({ size = 56 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <rect width="160" height="160" rx="34" fill="#0a0b0d" stroke={T.border} strokeWidth="2" />
+      <rect x="44.69" y="33.95" width="31.42" height="81.96" rx="10" fill="#d6d6d6" />
+      <rect x="83.88" y="45.3" width="29.5" height="78.7" rx="10" fill={T.primary} />
+    </svg>
+  );
+}
+
+/* ── Signature graphic marks (static SVG of the live 3D pieces) ── */
+function GyroscopeMark({ size = 132 }: { size?: number }) {
+  const g = T.primary, b = T.primaryHover;
+  return (
+    <svg width={size} height={size} viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <ellipse cx="120" cy="120" rx="92" ry="38" stroke={g} strokeWidth="3" opacity="0.9" />
+      <ellipse cx="120" cy="120" rx="44" ry="86" stroke={g} strokeWidth="3" opacity="0.9" />
+      <ellipse cx="120" cy="120" rx="70" ry="62" stroke={b} strokeWidth="2.4" opacity="0.6" />
+      <circle cx="120" cy="120" r="11" fill="#020A04" stroke={b} strokeWidth="2.5" />
+      <circle cx="120" cy="120" r="4.5" fill={b} />
+    </svg>
+  );
+}
+function NeuralMark({ size = 132 }: { size?: number }) {
+  const g = T.primary, b = T.primaryHover;
+  return (
+    <svg width={size} height={size} viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <circle cx="120" cy="120" r="84" stroke={g} strokeWidth="2" opacity="0.35" />
+      <g stroke={g} strokeWidth="1.6" opacity="0.55">
+        <line x1="120" y1="120" x2="64" y2="76" /><line x1="120" y1="120" x2="180" y2="86" />
+        <line x1="120" y1="120" x2="86" y2="182" /><line x1="64" y1="76" x2="180" y2="86" />
+        <line x1="180" y1="86" x2="86" y2="182" /><line x1="64" y1="76" x2="86" y2="182" />
+      </g>
+      <g fill={b}>
+        <circle cx="120" cy="120" r="9" /><circle cx="64" cy="76" r="5.5" />
+        <circle cx="180" cy="86" r="5.5" /><circle cx="86" cy="182" r="5.5" />
+        <circle cx="170" cy="170" r="4.5" /><circle cx="52" cy="140" r="4.5" />
+      </g>
+    </svg>
+  );
+}
 
 /* ── Colour swatch with copy-to-clipboard ── */
 function Swatch({ name, token, hex, role }: { name: string; token: string; hex: string; role: string }) {
@@ -13,10 +57,10 @@ function Swatch({ name, token, hex, role }: { name: string; token: string; hex: 
   return (
     <button
       onClick={() => { navigator.clipboard?.writeText(hex); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-      className="group text-left"
+      className="group text-left w-full block"
       style={{ cursor: "pointer" }}
     >
-      <div className="h-24 rounded-lg border transition-transform duration-200 group-hover:scale-[1.03]"
+      <div className="h-24 w-full rounded-lg border transition-transform duration-200 group-hover:scale-[1.03]"
         style={{ background: hex, borderColor: T.borderStr }} />
       <div className="mt-3 flex items-center justify-between">
         <span style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.fg, fontWeight: 600 }}>{name}</span>
@@ -114,35 +158,62 @@ function BrandPrintable({ printRef }: { printRef: React.RefObject<HTMLDivElement
       </div>
 
       {/* 03 Logo */}
-      <div style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.06em", color: T.primary, marginBottom: "12px" }}>// 03 — LOGO USAGE</div>
-      <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "30px", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg, marginBottom: "18px" }}>LOGO GUIDELINES</div>
+      <div style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.06em", color: T.primary, marginBottom: "12px" }}>// 03 — LOGO &amp; MARK</div>
+      <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "30px", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg, marginBottom: "18px" }}>THE MARK</div>
+      {/* Logo variants — equal tiles */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+        {[
+          { label: "PRIMARY LOCKUP", node: <Logo markSize={20} /> },
+          { label: "MARK", node: <LogoMark size={34} /> },
+          { label: "APP ICON", node: <AppIcon size={44} /> },
+        ].map((v) => (
+          <div key={v.label} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "16px" }}>
+            <div style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, fontWeight: 600, marginBottom: "12px" }}>{v.label}</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 84, border: `1px solid ${T.border}`, borderRadius: 8, background: T.bg }}>
+              {v.node}
+            </div>
+          </div>
+        ))}
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "44px" }}>
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "20px" }}>
-          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, fontWeight: 600, marginBottom: "14px" }}>PRIMARY LOGO</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 110, border: `1px solid ${T.border}`, borderRadius: 8, marginBottom: "14px" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ width: 11, height: 11, borderRadius: "50%", background: T.primary, display: "inline-block" }} />
-              <span style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "18px", letterSpacing: "0.04em", color: T.fg }}>NULLSHIFT</span>
-            </span>
-          </div>
-          {["Always maintain clear space around the logo", "Minimum width: 120px", "Use on dark backgrounds (near-black) only"].map((r) => (
-            <div key={r} style={{ display: "flex", gap: "8px", fontFamily: T.sans, fontSize: "12px", color: T.muted, marginBottom: "6px" }}>
+          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.primary, fontWeight: 600, marginBottom: "14px" }}>DO</div>
+          {["Maintain clear space of at least the mark's width", "Minimum lockup width: 120px · mark: 18px", "Use on the near-black background", "Keep the light / emerald pill relationship intact"].map((r) => (
+            <div key={r} style={{ display: "flex", gap: "8px", fontFamily: T.sans, fontSize: "12px", color: T.muted, marginBottom: "8px" }}>
               <span style={{ color: T.primary }}>•</span>{r}
             </div>
           ))}
         </div>
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "20px" }}>
           <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.danger, fontWeight: 600, marginBottom: "14px" }}>DON&apos;T</div>
-          {["Don't rotate, stretch or distort the logo", "Don't change the colour scheme", "Don't add effects except the approved hero-glow", "Don't place on busy or light backgrounds", "Don't recreate or re-letter the wordmark"].map((r) => (
-            <div key={r} style={{ display: "flex", gap: "8px", fontFamily: T.sans, fontSize: "12px", color: T.muted, marginBottom: "10px" }}>
+          {["Don't rotate, stretch or distort the mark", "Don't change the colour scheme or recolour the pills", "Don't add effects except the approved hero-glow", "Don't place on busy or light backgrounds", "Don't recreate or re-letter the wordmark"].map((r) => (
+            <div key={r} style={{ display: "flex", gap: "8px", fontFamily: T.sans, fontSize: "12px", color: T.muted, marginBottom: "8px" }}>
               <span style={{ color: T.danger }}>✕</span>{r}
             </div>
           ))}
         </div>
       </div>
 
-      {/* 04 Principles */}
-      <div style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.06em", color: T.primary, marginBottom: "12px" }}>// 04 — DESIGN PRINCIPLES</div>
+      {/* 04 Signature Graphics */}
+      <div style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.06em", color: T.primary, marginBottom: "12px" }}>// 04 — SIGNATURE GRAPHICS</div>
+      <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "30px", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg, marginBottom: "18px" }}>VISUAL LANGUAGE</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "44px" }}>
+        {[
+          { label: "GYROSCOPE", mark: <GyroscopeMark size={104} />, desc: "Gimbal rings, glass band, mirror core — craft, precision, motion." },
+          { label: "NEURAL SPHERE", mark: <NeuralMark size={104} />, desc: "Icosphere node network in a glass cage — systems, intelligence, connection." },
+        ].map((v) => (
+          <div key={v.label} style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, padding: "18px" }}>
+            <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, fontWeight: 600, marginBottom: "12px" }}>{v.label}</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 150, border: `1px solid ${T.border}`, borderRadius: 8, background: T.bg, marginBottom: "12px" }}>
+              {v.mark}
+            </div>
+            <div style={{ fontFamily: T.sans, fontSize: "11.5px", lineHeight: 1.6, color: T.muted }}>{v.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* 05 Principles */}
+      <div style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.06em", color: T.primary, marginBottom: "12px" }}>// 05 — DESIGN PRINCIPLES</div>
       <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "30px", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg, marginBottom: "18px" }}>CORE PRINCIPLES</div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "36px" }}>
         {PRINCIPLES.map((p, i) => (
@@ -243,24 +314,43 @@ export default function BrandPage() {
             </p>
           </section>
 
-          {/* 03 — Logo */}
+          {/* 03 — Logo & Mark */}
           <section className="py-20" style={{ borderTop: `1px solid ${T.border}` }}>
-            <Reveal><SectionTag>// 03 — Logo Usage</SectionTag></Reveal>
-            <Reveal delay={0.05}><H2>Logo Guidelines</H2></Reveal>
+            <Reveal><SectionTag>// 03 — Logo &amp; Mark</SectionTag></Reveal>
+            <Reveal delay={0.05}><H2>The Mark</H2></Reveal>
+            <Reveal delay={0.08}>
+              <p className="mb-12 max-w-[56ch]" style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.65, color: T.muted }}>
+                Two staggered, rounded pills — one light, one emerald, offset to suggest a shift — paired with the NULLSHIFT wordmark. One consistent signature across every surface.
+              </p>
+            </Reveal>
+
+            {/* Logo variants — all tiles identical dimensions */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+              {[
+                { label: "Primary lockup", node: <Logo markSize={28} /> },
+                { label: "Mark", node: <LogoMark size={48} /> },
+                { label: "App icon", node: <AppIcon size={60} /> },
+              ].map((v, i) => (
+                <Reveal key={v.label} delay={i * 0.06}>
+                  <div className="p-6 rounded-lg border h-full" style={{ background: T.surface, borderColor: T.border }}>
+                    <div className="mb-5" style={{ fontFamily: T.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, fontWeight: 600 }}>{v.label}</div>
+                    <div className="flex items-center justify-center rounded-lg border" style={{ height: 132, borderColor: T.border, background: T.bg }}>
+                      {v.node}
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+            {/* Usage + Don't — equal-height cards */}
             <div className="grid lg:grid-cols-2 gap-3">
               <Reveal>
                 <div className="p-8 rounded-lg border h-full" style={{ background: T.surface, borderColor: T.border }}>
-                  <div style={{ fontFamily: T.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, fontWeight: 600 }}>Primary Logo</div>
-                  <div className="flex items-center justify-center h-40 border rounded-lg my-6" style={{ borderColor: T.border }}>
-                    <div className="flex items-center gap-2.5">
-                      <span className="size-3 rounded-full" style={{ background: T.primary }} />
-                      <span style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1.4rem", letterSpacing: "0.04em", color: T.fg }}>NULLSHIFT</span>
-                    </div>
-                  </div>
-                  <ul className="space-y-2">
-                    {["Always maintain clear space around the logo", "Minimum width: 120px", "Use on dark backgrounds (near-black) only"].map((r) => (
-                      <li key={r} className="flex gap-3" style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}>
-                        <span style={{ color: T.primary }}>•</span>{r}
+                  <div className="mb-6" style={{ fontFamily: T.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.primary, fontWeight: 600 }}>Do</div>
+                  <ul className="space-y-3">
+                    {["Maintain clear space of at least the mark's width on all sides", "Minimum lockup width: 120px · minimum mark: 18px", "Use on the near-black background (or the dark app-icon tile)", "Keep the light pill / emerald pill colour relationship intact"].map((r) => (
+                      <li key={r} className="flex gap-3" style={{ fontFamily: T.sans, fontSize: "0.85rem", lineHeight: 1.5, color: T.muted }}>
+                        <span style={{ color: T.primary, flexShrink: 0 }}>•</span>{r}
                       </li>
                     ))}
                   </ul>
@@ -268,11 +358,11 @@ export default function BrandPage() {
               </Reveal>
               <Reveal delay={0.08}>
                 <div className="p-8 rounded-lg border h-full" style={{ background: T.surface, borderColor: T.border }}>
-                  <div style={{ fontFamily: T.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.danger, fontWeight: 600 }}>Don&apos;t</div>
-                  <ul className="space-y-4 mt-6">
-                    {["Don't rotate, stretch or distort the logo", "Don't change the colour scheme", "Don't add effects except the approved hero-glow", "Don't place on busy or light backgrounds", "Don't recreate or re-letter the wordmark"].map((r) => (
-                      <li key={r} className="flex gap-3" style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}>
-                        <span style={{ color: T.danger }}>✕</span>{r}
+                  <div className="mb-6" style={{ fontFamily: T.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.danger, fontWeight: 600 }}>Don&apos;t</div>
+                  <ul className="space-y-3">
+                    {["Don't rotate, stretch or distort the mark or pills", "Don't change the colour scheme or recolour the pills", "Don't add effects except the approved hero-glow", "Don't place on busy or light backgrounds", "Don't recreate or re-letter the wordmark"].map((r) => (
+                      <li key={r} className="flex gap-3" style={{ fontFamily: T.sans, fontSize: "0.85rem", lineHeight: 1.5, color: T.muted }}>
+                        <span style={{ color: T.danger, flexShrink: 0 }}>✕</span>{r}
                       </li>
                     ))}
                   </ul>
@@ -281,9 +371,36 @@ export default function BrandPage() {
             </div>
           </section>
 
+          {/* 04 — Signature Graphics */}
+          <section className="py-20" style={{ borderTop: `1px solid ${T.border}` }}>
+            <Reveal><SectionTag>// 04 — Signature Graphics</SectionTag></Reveal>
+            <Reveal delay={0.05}><H2>Visual Language</H2></Reveal>
+            <Reveal delay={0.08}>
+              <p className="mb-12 max-w-[60ch]" style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.65, color: T.muted }}>
+                Our signature graphics share one system — <span style={{ color: T.fg }}>&ldquo;Glass &amp; Metal Relight&rdquo;</span>: emerald glass and gunmetal rendered on near-black with filmic tone-mapping. They animate and crossfade on scroll across the homepage.
+              </p>
+            </Reveal>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { label: "Gyroscope", mark: <GyroscopeMark />, desc: "Three gimbal rings, a glass band and a mirror core — craft, precision, motion. Anchors the “websites built from scratch” and “custom systems” chapters." },
+                { label: "Neural Sphere", mark: <NeuralMark />, desc: "An icosphere network of pulsing nodes inside a glass cage — systems, intelligence, connection. Resolves in for the “one team, end to end” chapter." },
+              ].map((v, i) => (
+                <Reveal key={v.label} delay={i * 0.06}>
+                  <div className="p-6 rounded-lg border h-full flex flex-col" style={{ background: T.surface, borderColor: T.border }}>
+                    <div className="mb-4" style={{ fontFamily: T.mono, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, fontWeight: 600 }}>{v.label}</div>
+                    <div className="flex items-center justify-center rounded-lg border mb-5" style={{ height: 200, borderColor: T.border, background: `radial-gradient(ellipse 70% 70% at 50% 45%, ${T.primary}0e, transparent 75%), ${T.bg}` }}>
+                      {v.mark}
+                    </div>
+                    <p style={{ fontFamily: T.sans, fontSize: "0.85rem", lineHeight: 1.65, color: T.muted }}>{v.desc}</p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </section>
+
           {/* 04 — Principles */}
           <section className="py-20" style={{ borderTop: `1px solid ${T.border}` }}>
-            <Reveal><SectionTag>// 04 — Design Principles</SectionTag></Reveal>
+            <Reveal><SectionTag>// 05 — Design Principles</SectionTag></Reveal>
             <Reveal delay={0.05}><H2>Core Principles</H2></Reveal>
             <div className="grid md:grid-cols-3 gap-3">
               {PRINCIPLES.map((p, i) => (
@@ -300,7 +417,7 @@ export default function BrandPage() {
 
           {/* 05 — UI System */}
           <section className="py-20" style={{ borderTop: `1px solid ${T.border}` }}>
-            <Reveal><SectionTag>// 05 — UI System</SectionTag></Reveal>
+            <Reveal><SectionTag>// 06 — UI System</SectionTag></Reveal>
             <Reveal delay={0.05}><H2>Halo UI System</H2></Reveal>
             <p className="mb-12 max-w-[52ch]" style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.65, color: T.muted }}>
               Every interface is built on three surface tiers, a single brand signal, and typography that carries hierarchy without colour.

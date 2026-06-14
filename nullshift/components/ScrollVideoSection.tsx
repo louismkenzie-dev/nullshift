@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { T } from "@/lib/tokens";
+import ScrollGraphicScene from "./ScrollGraphicScene";
 
 const PANELS = [
   {
@@ -35,156 +36,72 @@ function eio(t: number) {
   return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 }
 
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
 export default function ScrollVideoSection() {
   const sectionRef     = useRef<HTMLElement>(null);
-  const videoRef       = useRef<HTMLVideoElement>(null);
-  const canvasRef      = useRef<HTMLCanvasElement>(null);
+  const graphicWrapRef = useRef<HTMLDivElement>(null);
   const panelInnerRefs = useRef<(HTMLDivElement | null)[]>([null, null, null]);
+  // Mobile stacks text above (head: eyebrow+heading) and below (body) the graphic
+  const mobileHeadRefs = useRef<(HTMLDivElement | null)[]>([null, null, null]);
+  const mobileBodyRefs = useRef<(HTMLDivElement | null)[]>([null, null, null]);
   const dotRefs        = useRef<(HTMLDivElement | null)[]>([null, null, null]);
   const rafRef         = useRef<number>(0);
+  // Shared ref the scene reads every frame for the scroll-jog + crossfade
+  const progressRef    = useRef<number>(0);
 
   useEffect(() => {
-    const section = sectionRef.current;
-    const video   = videoRef.current;
-    const canvas  = canvasRef.current;
-    if (!section || !video || !canvas) return;
+    if (!sectionRef.current) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    video.pause();
-
-    let isReady      = false;
-    let pendingTime: number | null = null;
     let lastProgress = -1;
-    let vw = 0, vh = 0; // cached video dimensions
 
-    // ── Canvas sizing + draw ─────────────────────────────────────
-    // IMPORTANT: canvas must have absolute CSS dimensions (clamp/vh, not %)
-    // so that offsetWidth/Height are always correct when this runs from a
-    // video event — relative dimensions (100%) may not be computed yet.
-    const sizeCanvas = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const w   = canvas.offsetWidth  || window.innerWidth;
-      const h   = canvas.offsetHeight || window.innerHeight;
-      if (w === 0 || h === 0) return;
-      canvas.width  = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
-    };
-
-    const draw = () => {
-      if (!isReady || vw === 0 || vh === 0) return;
-      const cw = canvas.width, ch = canvas.height;
-      if (cw === 0 || ch === 0) return;
-      const videoAspect  = vw / vh;
-      const canvasAspect = cw / ch;
-      // Cover: fill canvas, crop excess video edges
-      let sx = 0, sy = 0, sw = vw, sh = vh;
-      if (videoAspect > canvasAspect) {
-        sw = vh * canvasAspect;
-        sx = (vw - sw) / 2;
-      } else {
-        sh = vw / canvasAspect;
-        sy = (vh - sh) / 2;
-      }
-      ctx.clearRect(0, 0, cw, ch);
-      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, cw, ch);
-
-      // ── Edge vignette via source-over painting ────────────────────
-      // destination-in silently fails on GPU-composited canvas layers —
-      // transparent pixels are shown as black, not the page background.
-      // Instead we paint the page background colour (#0A0B0F) directly
-      // onto the canvas at each edge, fading from fully opaque at the
-      // boundary to transparent inward. source-over is the default mode
-      // and works in every browser regardless of compositing layer setup.
-      // Corners are naturally covered twice — they become fully page-bg.
-      const C = "10,11,15";       // T.bg = #0A0B0F as rgb components
-      const fw = Math.round(cw * 0.46); // 46% from each side — very wide feather
-      const fh = Math.round(ch * 0.42); // 42% from top/bottom
-
-      ctx.globalCompositeOperation = "source-over";
-
-      // 5-stop gradients produce a smooth S-curve falloff with no visible
-      // inflection point — page-bg bleeds deeply before becoming transparent.
-      const stops: [number, number][] = [
-        [0,    1.00],
-        [0.20, 0.88],
-        [0.45, 0.58],
-        [0.70, 0.22],
-        [0.88, 0.05],
-        [1,    0.00],
-      ];
-      const rev = [...stops].map(([t, a]) => [1 - t, a] as [number, number]).reverse();
-
-      const lG = ctx.createLinearGradient(0, 0, fw, 0);
-      stops.forEach(([t, a]) => lG.addColorStop(t, `rgba(${C},${a})`));
-      ctx.fillStyle = lG; ctx.fillRect(0, 0, fw, ch);
-
-      const rG = ctx.createLinearGradient(cw - fw, 0, cw, 0);
-      rev.forEach(([t, a]) => rG.addColorStop(t, `rgba(${C},${a})`));
-      ctx.fillStyle = rG; ctx.fillRect(cw - fw, 0, fw, ch);
-
-      const tG = ctx.createLinearGradient(0, 0, 0, fh);
-      stops.forEach(([t, a]) => tG.addColorStop(t, `rgba(${C},${a})`));
-      ctx.fillStyle = tG; ctx.fillRect(0, 0, cw, fh);
-
-      const bG = ctx.createLinearGradient(0, ch - fh, 0, ch);
-      rev.forEach(([t, a]) => bG.addColorStop(t, `rgba(${C},${a})`));
-      ctx.fillStyle = bG; ctx.fillRect(0, ch - fh, cw, fh);
-    };
-
-    // ── Seek management (one seek at a time) ─────────────────────
-    const seek = (t: number) => {
-      if (!isFinite(t) || !isFinite(video.duration)) return;
-      const clamped = Math.max(0, Math.min(video.duration, t));
-      if (video.seeking) { pendingTime = clamped; return; }
-      video.currentTime = clamped;
-    };
-
-    const onSeeked = () => {
-      draw();
-      if (pendingTime !== null) {
-        const t = pendingTime; pendingTime = null;
-        video.currentTime = t;
-      }
-    };
-
-    const init = () => {
-      if (isReady) return;
-      isReady = true;
-      vw = video.videoWidth;
-      vh = video.videoHeight;
-      sizeCanvas();
-      // Seek to 0.001 instead of 0 — guarantees the 'seeked' event fires
-      // even if currentTime is already 0, which then calls draw()
-      video.currentTime = 0.001;
-    };
-
-    const onResize = () => { sizeCanvas(); draw(); };
-
-    video.addEventListener("loadedmetadata", init);
-    video.addEventListener("canplay",        init);
-    video.addEventListener("seeked",         onSeeked);
-    window.addEventListener("resize",        onResize);
-
-    // Video may already be loaded (cached/fast network) — init immediately
-    if (video.readyState >= 2) init();
-
-    // ── RAF loop ─────────────────────────────────────────────────
     const tick = () => {
+      // Read the ref fresh each frame — capturing the node once can leave a
+      // stale (detached) reference after Fast Refresh, freezing progress.
+      const section = sectionRef.current;
+      if (!section) { rafRef.current = requestAnimationFrame(tick); return; }
       const rect       = section.getBoundingClientRect();
       const scrollable = section.offsetHeight - window.innerHeight;
       const progress   = Math.max(0, Math.min(1, -rect.top / scrollable));
 
       if (Math.abs(progress - lastProgress) > 0.00007) {
         lastProgress = progress;
+        progressRef.current = progress;
 
-        if (isReady) seek(progress * video.duration);
+        // ── Graphic materialise (whole assembly) ───────────────────
+        // The single WebGL scene fades up out of a soft blur as the section
+        // enters, then STAYS — it does not dissolve on exit (the neural sphere
+        // should remain present). The gyroscope → neural-sphere hand-off
+        // happens *inside* the canvas (driven by the same progressRef).
+        const ENTER_END  = 0.14; // fully resolved by 14% through
+        const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+        const fadeIn  = easeOutCubic(clamp01(progress / ENTER_END));
 
-        // Animate panel inner divs (translateX + opacity)
+        // Hand-off blur — peaks at the gyroscope→neural seam (~0.63) so the
+        // outgoing graphic blurs fully OUT before the incoming one resolves IN
+        // (sequential, never a sharp overlap). Window matches the swap in
+        // ScrollGraphicScene (GYRO_OUT 0.53–0.63, NEURAL_IN 0.63–0.73).
+        const HO_START = 0.53, HO_PEAK = 0.63, HO_END = 0.73, HO_MAX = 24;
+        let handoff = 0;
+        if (progress > HO_START && progress < HO_END) {
+          const raw = progress < HO_PEAK
+            ? (progress - HO_START) / (HO_PEAK - HO_START)
+            : (HO_END - progress) / (HO_END - HO_PEAK);
+          handoff = raw * raw * (3 - 2 * raw); // smoothstep ramp up then down
+        }
+
+        const wrap = graphicWrapRef.current;
+        if (wrap) {
+          wrap.style.opacity   = String(fadeIn);
+          wrap.style.transform = `scale(${0.82 + 0.18 * fadeIn})`;
+          wrap.style.filter    = `blur(${26 * (1 - fadeIn) + HO_MAX * handoff}px)`;
+        }
+
+        // Animate panel text. Desktop slides horizontally over the graphic;
+        // mobile crossfades head (above) and body (below) the graphic.
         PANELS.forEach((p, i) => {
-          const el = panelInnerRefs.current[i];
-          if (!el) return;
           const [inS, inE, outS, outE] = BREAKS[i];
           const dir = p.side === "left" ? -1 : 1;
           let opacity: number, x: number;
@@ -203,8 +120,17 @@ export default function ScrollVideoSection() {
           }
           else                                                   { opacity = 0; x = -dir * 44; }
 
-          el.style.opacity   = String(Math.max(0, Math.min(1, opacity)));
-          el.style.transform = `translateX(${x}px)`;
+          const op = Math.max(0, Math.min(1, opacity));
+
+          const dEl = panelInnerRefs.current[i];
+          if (dEl) { dEl.style.opacity = String(op); dEl.style.transform = `translateX(${x}px)`; }
+
+          // Mobile: head drifts down from above, body rises from below.
+          const y = (1 - op) * 14;
+          const hEl = mobileHeadRefs.current[i];
+          if (hEl) { hEl.style.opacity = String(op); hEl.style.transform = `translateY(${-y}px)`; }
+          const bEl = mobileBodyRefs.current[i];
+          if (bEl) { bEl.style.opacity = String(op); bEl.style.transform = `translateY(${y}px)`; }
         });
 
         // Progress dots
@@ -220,17 +146,9 @@ export default function ScrollVideoSection() {
     };
 
     rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-      video.removeEventListener("loadedmetadata", init);
-      video.removeEventListener("canplay",        init);
-      video.removeEventListener("seeked",         onSeeked);
-      window.removeEventListener("resize",        onResize);
-    };
+    return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
-  // Panel inner content
   const PanelBody = ({ panel }: { panel: typeof PANELS[number] }) => (
     <>
       <div style={{
@@ -259,7 +177,6 @@ export default function ScrollVideoSection() {
     </>
   );
 
-  // Render a panel: outer div centres vertically, inner div is the animation target
   const renderPanel = (
     index: number,
     posStyle: React.CSSProperties,
@@ -283,79 +200,107 @@ export default function ScrollVideoSection() {
     </div>
   );
 
-  // Gradient bg colour as hex-alpha for overlay divs
-  const bg = T.bg; // "#0A0B0F"
-
   return (
     <section ref={sectionRef} style={{ height: "420vh", position: "relative" }}>
       <div style={{
         position: "sticky", top: 0, height: "100vh",
         overflow: "hidden",
+        display: "flex", alignItems: "center", justifyContent: "center",
       }}>
 
-        {/* Hidden video — decoded frames are painted to the canvas */}
-        <video
-          ref={videoRef}
-          src="/green-tech-graphic.mp4"
-          muted playsInline preload="auto"
-          style={{ display: "none" }}
-        />
-
-        {/* Canvas with its OWN absolute CSS dimensions so offsetWidth/Height
-            are reliably readable from video events before layout settles.
-            Never use relative (%) dimensions here — that breaks sizeCanvas(). */}
-        <canvas
-          ref={canvasRef}
+        {/* Single Three.js scene holding both the gyroscope and the neural
+            sphere in one WebGL context. progressRef drives the scroll-jog and
+            the in-canvas gyroscope→neural crossfade; this wrapper receives
+            scroll-driven opacity/scale/blur so the whole assembly materialises
+            out of, and dissolves back into, depth as the section enters/exits. */}
+        <div
+          ref={graphicWrapRef}
           style={{
-            position: "absolute",
-            top: "50%", left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "clamp(480px, 68vw, 1060px)",
-            height: "78vh",
-            display: "block",
+            position: "absolute", inset: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
             zIndex: 1,
+            opacity: 0,
+            transform: "scale(0.82)",
+            filter: "blur(26px)",
+            willChange: "opacity, transform, filter",
           }}
-        />
+        >
+          <ScrollGraphicScene progressRef={progressRef} />
+        </div>
 
-        {/* Ambient glow */}
+        {/* Ambient emerald glow — soft multi-stop falloff, no hard stop */}
         <div style={{
           position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2,
-          background: `radial-gradient(ellipse 50% 50% at 50% 50%, ${T.primary}0d 0%, transparent 70%)`,
+          background: `radial-gradient(ellipse 62% 58% at 50% 50%, ${T.primary}12 0%, ${T.primary}08 30%, ${T.primary}03 52%, transparent 78%)`,
         }} />
 
-        {/* Viewport-edge strips — cover the space between the canvas boundary
-            and the viewport edge. Canvas vignette handles the canvas-internal
-            fade; these cover the outer margin so nothing leaks to the viewport. */}
+        {/* Seamless vignette — a single radial that melts the graphic into the
+            page background. Replaces the old four rectangular edge-fades, whose
+            straight regions + overlapping corners produced visible seams and
+            linear-gradient banding. Multi-stop for a buttery falloff; the global
+            grain layer dithers any residual banding. */}
         <div style={{
-          position: "absolute", top: 0, bottom: 0, left: 0, width: "18%",
-          background: `linear-gradient(to right, ${bg}, transparent)`,
-          pointerEvents: "none", zIndex: 4,
-        }} />
-        <div style={{
-          position: "absolute", top: 0, bottom: 0, right: 0, width: "18%",
-          background: `linear-gradient(to left, ${bg}, transparent)`,
-          pointerEvents: "none", zIndex: 4,
-        }} />
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: "13%",
-          background: `linear-gradient(to bottom, ${bg}, transparent)`,
-          pointerEvents: "none", zIndex: 4,
-        }} />
-        <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0, height: "13%",
-          background: `linear-gradient(to top, ${bg}, transparent)`,
-          pointerEvents: "none", zIndex: 4,
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 4,
+          background: `radial-gradient(ellipse 80% 80% at 50% 50%, transparent 0%, transparent 38%, ${T.bg}66 64%, ${T.bg}cc 82%, ${T.bg} 100%)`,
         }} />
 
-        {/* ── Text panels floating over video ── */}
-        {/* Panel 0 — left, visible initially */}
-        {renderPanel(0, { left: "clamp(52px, 6vw, 100px)" }, 1, 0)}
-        {/* Panel 2 — left, hidden initially */}
-        {renderPanel(2, { left: "clamp(52px, 6vw, 100px)" }, 0, -44)}
-        {/* Panel 1 — right, hidden initially */}
-        {renderPanel(1, { right: "clamp(52px, 6vw, 100px)", textAlign: "right" }, 0, 44)}
+        {/* ── Desktop text panels (float over the graphic, left/right) ── */}
+        <div className="svs-desktop-panels">
+          {renderPanel(0, { left: "clamp(52px, 6vw, 100px)" }, 1, 0)}
+          {renderPanel(2, { left: "clamp(52px, 6vw, 100px)" }, 0, -44)}
+          {renderPanel(1, { right: "clamp(52px, 6vw, 100px)", textAlign: "right" }, 0, 44)}
+        </div>
 
-        {/* ── Progress rail ── */}
+        {/* ── Mobile text (stacked above & below the graphic) ── */}
+        <div className="svs-mobile">
+          <div className="svs-mobile-top">
+            {PANELS.map((p, i) => (
+              <div
+                key={i}
+                ref={el => { mobileHeadRefs.current[i] = el; }}
+                className="svs-mobile-head"
+                style={{ opacity: i === 0 ? 1 : 0, willChange: "opacity, transform" }}
+              >
+                <div style={{
+                  fontFamily: T.mono, fontSize: "0.62rem", fontWeight: 500,
+                  letterSpacing: "0.14em", textTransform: "uppercase",
+                  color: T.primary, marginBottom: 10,
+                }}>
+                  {p.label}
+                </div>
+                <h2 style={{
+                  fontFamily: T.display, fontWeight: 600,
+                  fontSize: "clamp(1.6rem, 7.5vw, 2.3rem)",
+                  lineHeight: 1.08, letterSpacing: "-0.028em",
+                  color: T.fg, margin: 0,
+                }}>
+                  {p.heading[0]}<br />
+                  <span style={{ color: T.muted }}>{p.heading[1]}</span>
+                </h2>
+              </div>
+            ))}
+          </div>
+          <div className="svs-mobile-bottom">
+            {PANELS.map((p, i) => (
+              <div
+                key={i}
+                ref={el => { mobileBodyRefs.current[i] = el; }}
+                className="svs-mobile-body"
+                style={{ opacity: i === 0 ? 1 : 0, willChange: "opacity, transform" }}
+              >
+                <p style={{
+                  fontFamily: T.sans, fontSize: "0.9rem",
+                  lineHeight: 1.6, letterSpacing: "-0.005em",
+                  color: T.muted, margin: 0,
+                }}>
+                  {p.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Progress rail */}
         <div style={{
           position: "absolute", left: "clamp(16px, 2vw, 24px)",
           top: "50%", transform: "translateY(-50%)",
@@ -376,8 +321,8 @@ export default function ScrollVideoSection() {
           ))}
         </div>
 
-        {/* ── Scroll hint ── */}
-        <div style={{
+        {/* Scroll hint */}
+        <div className="svs-scroll-hint" style={{
           position: "absolute", bottom: 28, left: "50%",
           transform: "translateX(-50%)",
           display: "flex", flexDirection: "column",

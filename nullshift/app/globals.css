@@ -208,19 +208,53 @@ html.lenis, html.lenis body { height: auto; }
   flex-shrink: 0;
 }
 
-/* ── ScrollVideoSection — text panel glass backdrop (mobile) ─── */
+/* ── ScrollVideoSection — text panel glass backdrop ─── */
 .scroll-panel-glass {
   padding: 22px 26px;
   border-radius: 12px;
   /* no background on desktop — text sits cleanly over the dark bg */
 }
-@media (max-width: 900px) {
-  .scroll-panel-glass {
-    background: rgba(10, 11, 15, 0.62);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+
+/* ── ScrollVideoSection — 3D graphic shell size (responsive) ─── */
+.relight-shell {
+  width: clamp(320px, 60vw, 680px);
+  height: clamp(320px, 60vw, 680px);
+}
+
+/* ── ScrollVideoSection — desktop vs mobile text layout ─────────
+   Desktop: text floats over the graphic (left / right).
+   Mobile: graphic shrinks and centres; text stacks ABOVE (head)
+   and BELOW (body) it so nothing overlaps the 3D piece. */
+.svs-mobile { display: none; }
+
+.svs-mobile-top,
+.svs-mobile-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: grid;            /* single cell — panels stack & crossfade */
+  place-items: center;
+  padding: 0 24px;
+  z-index: 10;
+  pointer-events: none;
+}
+.svs-mobile-top    { top: clamp(72px, 12vh, 130px); }
+.svs-mobile-bottom { bottom: clamp(60px, 10vh, 120px); }
+.svs-mobile-head,
+.svs-mobile-body {
+  grid-area: 1 / 1;
+  text-align: center;
+  width: 100%;
+}
+.svs-mobile-body { max-width: 40ch; margin: 0 auto; }
+
+@media (max-width: 899px) {
+  .svs-desktop-panels { display: none; }
+  .svs-mobile { display: block; }
+  .svs-scroll-hint { display: none !important; } /* override inline display:flex */
+  .relight-shell {
+    width: min(80vw, 320px);
+    height: min(80vw, 320px);
   }
 }
 

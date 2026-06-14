@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { T } from "@/lib/tokens";
 import { DashboardShowcase } from "@/components/DashboardShowcase";
+import { ScrollDissolve } from "@/components/ScrollDissolve";
 
 /* ── Animation variants ───────────────────────────────── */
 const fadeUp = {
@@ -123,7 +124,7 @@ export default function HeroText() {
             />
 
             <div className="mx-auto max-w-7xl px-6">
-              <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
+              <ScrollDissolve className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
 
                 {/* Announcement badge */}
                 <motion.div variants={stagger} initial="hidden" animate="visible">
@@ -221,7 +222,7 @@ export default function HeroText() {
                   </motion.div>
 
                 </motion.div>
-              </div>
+              </ScrollDissolve>
             </div>
 
             {/* Product showcase — auto-playing dashboard */}
