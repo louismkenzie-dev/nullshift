@@ -4,28 +4,30 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import { PricingCard } from "@/components/PricingCard";
+import { PlanLadder } from "@/components/marketing/PlanLadder";
 import { T } from "@/lib/tokens";
 import { pricingPlans } from "@/lib/pricingPlans";
+import { PROOF_PILLARS, BRAND_LINE } from "@/lib/marketing";
 import Link from "next/link";
 
-const tiers = pricingPlans;
+const learningTiers = pricingPlans; // Core / Grow / Pro / Partner
 
 const faqs = [
   {
-    q: "Why subscriptions instead of one-off projects?",
-    a: "AI tools are evolving fast. A one-time build goes stale. A subscription means you're continuously learning, adapting, and getting support as the landscape changes — not just a deliverable and a goodbye.",
+    q: "Why monthly — I thought you let me own it?",
+    a: "You do. You own the code and every account (hosting, domain, booking, AI), and can cancel anytime and keep everything. The monthly isn't rent on your website — it's us running the system that brings you customers, and reporting the revenue we recover. No hostage situation, no rebilled-tool markups.",
   },
   {
-    q: "What makes Nullshift different?",
-    a: "The tools exist. The training doesn't. We sit between cutting-edge AI capability and the individuals and businesses who need to use it — translating tools into real workflows and building genuine digital independence.",
+    q: "What's the setup fee for?",
+    a: "It covers the bespoke build — your fast, custom site and the automations wired to your business. It makes acquisition pay back almost immediately, so the monthly is pure value from day one.",
   },
   {
-    q: "What is the Partner tier about?",
-    a: "We build your site or system, then spend 12 months teaching you to manage and maintain it yourself. The goal isn't dependency — it's full capability. By month 12, you own it completely.",
+    q: "Too expensive — I'll just use Wix.",
+    a: "Wix is ~£30/mo forever and you never own it. One missed job (or a week of no-shows) costs more than a month with us — and we recover that for you while you own the asset. We compete on outcome and ownership, never on cheapest monthly.",
   },
   {
-    q: "Who is Nullshift for?",
-    a: "Individuals and businesses who know AI tools matter but haven't had the support to use them properly. Whether you're starting out or scaling up, we meet you where you are and give you the skills to move forward.",
+    q: "What's the Partner tier?",
+    a: "\"Done-with-you\": we build your site or system and spend 12 months teaching you to own and run it yourself. By month 12 you're fully independent. Perfect for ambitious owners who want capability, not dependency.",
   },
 ];
 
@@ -35,32 +37,28 @@ export default function PricingPage() {
       <Nav />
       <main>
         {/* Hero */}
-        <section className="pt-28 pb-20 px-8 md:px-16" style={{
-          backgroundImage: `radial-gradient(ellipse 55% 50% at 55% 40%, color-mix(in oklab, ${T.primary} 6%, transparent) 0%, transparent 70%)`,
+        <section className="pt-28 pb-16 px-8 md:px-16" style={{
+          backgroundImage: `radial-gradient(ellipse 55% 50% at 55% 30%, color-mix(in oklab, ${T.primary} 7%, transparent) 0%, transparent 70%)`,
         }}>
           <span className="inline-flex items-center gap-2 mb-6" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primarySoft}`, display: "inline-block" }} />
             Pricing
           </span>
-          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(3.5rem,9vw,9rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
-            Tools exist.<br /><span className="hero-glow" style={{ color: T.primary }}>Training doesn&apos;t.</span>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(3rem,8vw,7rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+            Own your system.<br /><span className="hero-glow" style={{ color: T.primary }}>Subscribe to results.</span>
           </h1>
-          <p className="mt-6 max-w-[52ch]" style={{ fontFamily: T.sans, fontSize: "1.05rem", lineHeight: 1.75, color: T.muted }}>
-            AI has created the most powerful productivity tools in history. Most people have no idea how to use them. We fix that — with structured learning, real support, and a goal of genuine independence.
+          <p className="mt-6 max-w-[56ch]" style={{ fontFamily: T.sans, fontSize: "1.05rem", lineHeight: 1.7, color: T.muted }}>
+            A small setup fee builds your bespoke site. Then a simple monthly plan runs the system that brings the work in — and we show you the revenue recovered, every month. You own everything, and you can cancel anytime.
           </p>
         </section>
 
-        {/* USP strip */}
+        {/* Proof pillars */}
         <section style={{ borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, background: T.surface }}>
           <div className="grid md:grid-cols-3" style={{ borderLeft: `1px solid ${T.border}` }}>
-            {[
-              { label: "PRODUCTIVITY", body: "Give individuals and businesses the tools and knowledge to work faster, smarter, and more independently." },
-              { label: "UPSKILLING", body: "Occupational mobility matters more than ever. We build capability that stays with you through rapidly changing workflows." },
-              { label: "INDEPENDENCE", body: "We're not building dependency. We're building the skills, systems, and confidence for you to operate fully on your own." },
-            ].map((item, i) => (
-              <Reveal key={item.label} delay={i * 0.08}>
+            {PROOF_PILLARS.map((item, i) => (
+              <Reveal key={item.n} delay={i * 0.08}>
                 <div className="px-10 py-8 md:px-12" style={{ borderRight: `1px solid ${T.border}` }}>
-                  <div className="mb-3" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", color: T.primary }}>{item.label}</div>
+                  <div className="mb-3" style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", color: T.primary }}>{item.n} — {item.title.toUpperCase()}</div>
                   <p style={{ fontFamily: T.sans, fontSize: "0.875rem", lineHeight: 1.7, color: T.muted }}>{item.body}</p>
                 </div>
               </Reveal>
@@ -68,14 +66,37 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Pricing cards */}
+        {/* The Growth System — recurring care-plan ladder */}
         <section className="px-8 md:px-16 py-20" style={{ borderTop: `1px solid ${T.border}` }}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {tiers.map((tier) => (
+          <Reveal>
+            <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2rem,4vw,3.2rem)", lineHeight: 1.05, letterSpacing: "-0.03em", color: T.fg }}>
+              The Growth System.
+            </h2>
+            <p className="mt-3 max-w-[60ch]" style={{ fontFamily: T.sans, fontSize: "1rem", lineHeight: 1.65, color: T.muted }}>
+              Productised plans for the businesses we serve. Pick your world — the build is the on-ramp, the monthly plan is the machine.
+            </p>
+          </Reveal>
+          <div className="mt-8">
+            <PlanLadder />
+          </div>
+        </section>
+
+        {/* Learning subscriptions — self-serve / done-with-you */}
+        <section className="px-8 md:px-16 py-20" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
+          <Reveal>
+            <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.8rem,3.6vw,2.8rem)", lineHeight: 1.05, letterSpacing: "-0.03em", color: T.fg }}>
+              Prefer to <span style={{ color: T.primary }}>learn it yourself?</span>
+            </h2>
+            <p className="mt-3 max-w-[60ch]" style={{ fontFamily: T.sans, fontSize: "1rem", lineHeight: 1.65, color: T.muted }}>
+              Start here. Self-serve learning for DIY-ers, plus our premium &ldquo;done-with-you&rdquo; Partner tier — we build it and teach you to own it in 12 months.
+            </p>
+          </Reveal>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-10">
+            {learningTiers.map((tier) => (
               <PricingCard key={tier.tier} {...tier} />
             ))}
           </div>
-          <p className="mt-6 text-center" style={{ fontFamily: T.sans, fontSize: "0.75rem", letterSpacing: "0.02em", color: T.faint }}>
+          <p className="mt-6" style={{ fontFamily: T.sans, fontSize: "0.75rem", letterSpacing: "0.02em", color: T.faint }}>
             All prices GBP · billed monthly · cancel anytime (except Partner tier)
           </p>
         </section>
@@ -85,7 +106,7 @@ export default function PricingPage() {
           <div className="px-10 md:px-16 pt-16 pb-10">
             <Reveal>
               <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2rem,4vw,3.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
-                Common <span style={{ color: T.muted }}>questions.</span>
+                Straight <span style={{ color: T.muted }}>answers.</span>
               </h2>
             </Reveal>
           </div>
@@ -108,7 +129,7 @@ export default function PricingPage() {
               <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2rem,4vw,3.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
                 Not sure where<br />to start?
               </h2>
-              <p className="mt-3" style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>Book a free call — we&apos;ll work out the right tier for where you are now.</p>
+              <p className="mt-3" style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>Book a free 15-minute call — we&apos;ll work out the right plan and show you the system live. {BRAND_LINE}</p>
             </div>
           </Reveal>
           <Reveal delay={0.1}>
