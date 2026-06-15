@@ -49,8 +49,8 @@ function PrimaryBtn({ href, children }: { href: string; children: React.ReactNod
 /* ── SERVICES ───────────────────────────────── */
 function Services() {
   const cards = [
-    { num: "01", title: "Web Design & Development", desc: "From strategy to launch, we design and build fast, beautiful websites that convert visitors into customers. Every pixel considered. Every line of code clean.", tag: "CUSTOM_BUILD / NO_TEMPLATES" },
-    { num: "02", title: "Branding & Identity", desc: "Logos, colour systems, and visual identity built for businesses ready to show up professionally online. We make sure your brand is unforgettable from the first glance.", tag: "IDENTITY_SYSTEMS / SCALABLE" },
+    { num: "01", title: "Websites that win you work", desc: "Fast, bespoke sites built to convert — then we run the missed-call recovery, booking and instant follow-up that turn visitors into booked jobs. Live in 2–4 weeks, and you own it.", tag: "BESPOKE_BUILD / NO_TEMPLATES" },
+    { num: "02", title: "Systems that run your business", desc: "Booking, CRM, client portals, automated email and custom AI — the bespoke systems that bring customers in and save you hours, on one monthly plan you can cancel and keep. We report the £ recovered.", tag: "AUTOMATION / OWNED" },
   ];
   return (
     <section id="services" style={{ borderTop: `1px solid ${T.border}` }}>
@@ -92,7 +92,7 @@ function Services() {
 
 /* ── WHO WE HELP ────────────────────────────── */
 function WhoWeHelp() {
-  const tags = ["Retail", "Hospitality", "Trades", "Professional Services", "Health & Wellness"];
+  const tags = ["Trades", "Health & Wellness", "Hospitality", "Professional Services", "Retail"];
   return (
     <section id="clients" className="px-8 md:px-12 py-10 grid md:grid-cols-2 gap-12 md:gap-20 items-center h-full" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
       <div>
@@ -163,9 +163,9 @@ function Process() {
 /* ── WHY NULLSHIFT ──────────────────────────── */
 function WhyNullshift() {
   const props = [
-    { n: "01", title: "Fast turnaround", desc: "Most projects delivered in 2–4 weeks. We move quickly because your time matters as much as ours." },
-    { n: "02", title: "Fixed pricing", desc: "You'll know exactly what you're paying before we start. No hidden fees. No surprise invoices." },
-    { n: "03", title: "Ongoing support", desc: "We don't disappear after launch. Updates, changes, questions — we're always available." },
+    { n: "01", title: "Live in 2–4 weeks", desc: "Bespoke and built fast — not 2–4 months. No templates, no page builders, and fixed pricing you'll know before we start." },
+    { n: "02", title: "You own everything", desc: "The code and every account — hosting, domain, booking, AI — are in your name. Cancel anytime and keep it all. No monthly ransom." },
+    { n: "03", title: "We show you the results", desc: "We don't hand over a website and vanish — we run the system that recovers revenue, and report the £ recovered every month." },
   ];
   return (
     <section id="why" className="relative overflow-hidden w-full h-full" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>

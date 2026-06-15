@@ -5,7 +5,6 @@ import { T } from "@/lib/tokens";
 import { TRADES, WELLNESS } from "@/lib/marketing";
 import { PlanLadder } from "@/components/marketing/PlanLadder";
 import { RevenueCalculator } from "@/components/marketing/RevenueCalculator";
-import { MarketingAdvisorChat } from "@/components/admin/MarketingAdvisorChat";
 
 const TABS = ["Advisor", "Strategy", "Offer & Pricing", "Channels", "90-Day Roadmap", "Numbers"] as const;
 type Tab = typeof TABS[number];
@@ -108,7 +107,7 @@ export default function MarketingCommandCentre() {
       </div>
 
       {/* Panels */}
-      {tab === "Advisor" && <MarketingAdvisorChat />}
+      {tab === "Advisor" && <AdvisorPlaybook />}
 
       {tab === "Strategy" && (
         <div>
@@ -242,6 +241,62 @@ function Roadmap() {
           })}
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ── Advisor playbook (use the /marketing-advisor agent in Claude Code) ── */
+const ADVISOR_MODES: [string, string][] = [
+  ["Campaign", "Concept, hook, audience, channel, offer, creative angles, CTA + the metric it moves — anchored on a real stat (£24k / £1.6bn)."],
+  ["Ad copy", "3–5 ready-to-paste variants per platform. Pain in pounds, ownership + speed, clear CTA."],
+  ["Landing page", "Section-by-section web copy: hero, proof, offer ladder, objection-busters, demo CTA, FAQ."],
+  ["Outreach", "60-sec Loom teardown scripts, cold email/DM sequences, follow-ups — referencing the prospect's actual listing."],
+  ["SEO / content", "Niche trade×town pages, calculators, short-form video scripts — mapped to a keyword + funnel stage."],
+  ["Weekly plan", "A prioritised do-list tied to the 90-day roadmap and KPI targets, with effort estimates."],
+  ["Funnel / pricing audit", "Reads the site, finds the leaks, ranks fixes by MRR impact."],
+  ["KPI review", "Interprets your numbers against the targets and names the single highest-leverage next action."],
+];
+const ADVISOR_PROMPTS = [
+  "Plan my marketing week",
+  "Write the Never-Miss-a-Job hero + offer section",
+  "10 trade outreach Looms for Leeds",
+  "Google Ads for electricians in [town]",
+  "Audit my pricing page for MRR",
+  "5 short-form video scripts from the Systems Lab",
+  "Zero-No-Show campaign for salons",
+  "Monthly client report template that prevents churn",
+];
+
+function AdvisorPlaybook() {
+  return (
+    <div>
+      <div style={{ borderLeft: `3px solid ${T.primary}`, background: `${T.primary}0d`, borderRadius: "0 12px 12px 0", padding: "18px 22px", marginBottom: 24 }}>
+        <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.2rem", color: T.fg }}>Your in-house growth marketer lives in Claude Code.</div>
+        <p style={{ color: T.muted, marginTop: 8, fontFamily: T.sans, fontSize: "0.92rem", lineHeight: 1.6, maxWidth: "70ch" }}>
+          Run <code style={{ fontFamily: T.mono, fontSize: "0.85em", background: T.elevated, padding: "2px 7px", borderRadius: 5, color: T.primary }}>/marketing-advisor</code> in Claude Code. The agent (<span style={{ fontFamily: T.mono, fontSize: "0.82em", color: T.faint }}>.claude/agents/marketing-advisor.md</span>) reads your full strategy and writes campaigns, copy, outreach and plans straight into the repo — tied to MRR and pounds. <strong style={{ color: T.fg }}>No API key, included with your Claude Code plan.</strong>
+        </p>
+      </div>
+
+      <H2>What to ask it</H2>
+      <div className="grid sm:grid-cols-2 gap-4">
+        {ADVISOR_MODES.map(([t, d]) => (
+          <Card key={t}>
+            <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "0.98rem", color: T.fg, marginBottom: 6 }}>{t}</h3>
+            <p style={{ color: T.muted, fontSize: "0.86rem", lineHeight: 1.55 }}>{d}</p>
+          </Card>
+        ))}
+      </div>
+
+      <H2>Quick-start prompts</H2>
+      <p style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.muted, marginBottom: 14 }}>Copy any of these into Claude Code:</p>
+      <div className="flex flex-col gap-2">
+        {ADVISOR_PROMPTS.map((p) => (
+          <div key={p} className="flex items-center gap-3" style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "11px 14px" }}>
+            <span style={{ fontFamily: T.mono, fontSize: "0.72rem", color: T.primary }}>/marketing-advisor</span>
+            <span style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.fg }}>{p}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

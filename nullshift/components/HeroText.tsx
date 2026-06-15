@@ -29,13 +29,16 @@ const staggerSlow = {
   visible: { transition: { staggerChildren: 0.05, delayChildren: 0.75 } },
 };
 
-// Sequenced headline phases — loops after final hold
+// Sequenced headline phases — loops after final hold.
+// Repositioned to the recurring / outcome message: more than a website →
+// we run the system → (trades) catches every job → (wellness) fills every
+// chair → the brand line.
 const PHASES = [
-  { text: "What would you build\nwithout limits?", size: "clamp(3rem, 7vw, 5.5rem)",    color: T.fg,      glow: false, hold: 4000, fast: false },
-  { text: "Fully bespoke",                         size: "clamp(5rem, 11vw, 9.5rem)",    color: T.primary, glow: true,  hold: 3200, fast: false },
-  { text: "websites",                              size: "clamp(5.5rem, 14vw, 12rem)",   color: T.primary, glow: true,  hold: 1400, fast: true  },
-  { text: "systems",                               size: "clamp(5.5rem, 14vw, 12rem)",   color: T.primary, glow: true,  hold: 1400, fast: true  },
-  { text: "Owned by\nyour business",               size: "clamp(3.5rem, 8vw, 7rem)",     color: T.primary, glow: true,  hold: 20000, fast: false },
+  { text: "We build more\nthan websites.",          size: "clamp(2.8rem, 6.5vw, 5.5rem)", color: T.fg,      glow: false, hold: 3800, fast: false },
+  { text: "We run the system",                      size: "clamp(2.8rem, 6.5vw, 5.5rem)", color: T.primary, glow: true,  hold: 2400, fast: false },
+  { text: "that catches\nevery job",                size: "clamp(3rem, 8vw, 6.5rem)",     color: T.primary, glow: true,  hold: 1600, fast: true  },
+  { text: "fills\nevery chair",                     size: "clamp(3rem, 8vw, 6.5rem)",     color: T.primary, glow: true,  hold: 1600, fast: true  },
+  { text: "Own your system.\nSubscribe to results.", size: "clamp(2.4rem, 5.5vw, 4.6rem)", color: T.primary, glow: true,  hold: 20000, fast: false },
 ] as const;
 
 const phaseEnter = { opacity: 0, filter: "blur(20px)", y: 24 };
