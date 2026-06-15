@@ -1,0 +1,29 @@
+<!-- @dsCard group="Type" viewport="700x160" name="Body / UI" subtitle="Inter 400/500/600 · 15px base · 1.55 lh" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html, body { margin: 0; background: var(--bg); }
+  .wrap { padding: 22px 28px; display: flex; flex-direction: column; gap: 10px; }
+  p { margin: 0; max-width: 60ch; }
+  .lead { font-size: var(--text-base); color: var(--fg); }
+  .body { font-size: var(--text-base); color: var(--muted); }
+  .weights { display: flex; gap: 22px; font-size: var(--text-sm); }
+  .weights span { color: var(--fg); }
+  .meta { font-family: var(--font-mono); font-size: var(--text-mono-sm); color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="lead">Fast, beautiful websites that convert visitors into customers — every pixel considered.</p>
+    <div class="weights">
+      <span style="font-weight:400;">Regular 400</span>
+      <span style="font-weight:500;">Medium 500</span>
+      <span style="font-weight:600;">Semibold 600</span>
+    </div>
+    <p class="meta">var(--font-sans) · paragraphs, labels, nav · 0.9375rem · -0.005em · 1.55</p>
+  </div>
+</body>
+</html>

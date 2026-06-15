@@ -1,0 +1,35 @@
+/* ============================================================
+   Nullshift — Spacing, radius & layout tokens
+   4px base grid. Radius scale from badge (6px) to hero (24px).
+   ============================================================ */
+
+:root {
+  /* ── Spacing — 4px base grid ───────────────────────────────  */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ── Radius scale ──────────────────────────────────────────  */
+  --radius-none: 0px;
+  --radius-sm:   6px;     /* Badges, inline tags. */
+  --radius-md:   10px;    /* Inputs, buttons, chips. */
+  --radius-lg:   16px;    /* Cards, modals, panels. */
+  --radius-xl:   24px;    /* Hero cards, large containers. */
+  --radius-full: 999px;   /* Pills, dots, avatars. */
+  --radius:      var(--radius-md);
+
+  /* ── Layout ────────────────────────────────────────────────  */
+  --container-max: 1200px;
+  --container-pad: clamp(20px, 4vw, 48px);
+  --nav-height:    64px;
+  --admin-nav-height: 56px;
+}

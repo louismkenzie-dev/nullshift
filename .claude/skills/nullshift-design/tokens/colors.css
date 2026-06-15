@@ -1,0 +1,57 @@
+/* ============================================================
+   Nullshift — Colour tokens
+   Dark architectural system. Three surface tiers, one brand
+   colour (emerald), signal colours for status only.
+   ============================================================ */
+
+:root {
+  /* ── Surface tiers ─────────────────────────────────────────
+     background → surface → elevated. Components live at their
+     tier; no arbitrary depth. Only modals get drop shadows.   */
+  --bg:        #0A0B0F;            /* Page canvas — cool near-black. Nothing below this. */
+  --surface:   #14151C;            /* Cards, panels, inputs, nav bar. */
+  --elevated:  #1E2029;            /* Modals, dropdowns, active tab fill. */
+  --overlay:   rgba(10, 11, 15, 0.72);
+
+  /* ── Foreground ────────────────────────────────────────────  */
+  --fg:        #F2F4F8;            /* Primary text — off-white, not pure white. */
+  --muted:     #9AA0AE;            /* Secondary / supporting text. */
+  --faint:     #5C6170;            /* Placeholders, captions, helper text. */
+
+  /* ── Brand — emerald. Reserved for ACTIONS only. ───────────
+     CTAs, focus rings, active states, the brand dot. Never
+     used as decoration.                                        */
+  --primary:          #10B981;
+  --primary-hover:    #34D399;
+  --primary-pressed:  #059669;
+  --primary-soft:     rgba(16, 185, 129, 0.12);
+  --primary-fg:       #0A0B0F;     /* Text/icons on emerald fills. */
+
+  /* ── Signal — STATUS only, never decoration. ───────────────  */
+  --success:      #2BE08C;
+  --warning:      #F5D547;
+  --info:         #3DD7E5;
+  --danger:       #FF3A5C;
+  --success-soft: rgba(43, 224, 140, 0.12);
+  --warning-soft: rgba(245, 213, 71, 0.14);
+  --info-soft:    rgba(61, 215, 229, 0.14);
+  --danger-soft:  rgba(255, 58, 92, 0.14);
+
+  /* ── Borders — hairline geometry. ──────────────────────────  */
+  --border:        #2A2D38;        /* Hairline dividers, default card outlines. */
+  --border-strong: #3A3D4A;        /* Inputs, secondary buttons, strong dividers. */
+  --border-soft:   rgba(255, 255, 255, 0.04);
+  --ring:          #10B981;        /* Focus ring colour. */
+
+  /* ── Pill greys (the logo's light pill) ────────────────────  */
+  --pill-light:    #D6D6D6;
+
+  /* ── Semantic aliases ──────────────────────────────────────  */
+  --text-heading:   var(--fg);
+  --text-body:      var(--fg);
+  --text-muted:     var(--muted);
+  --text-faint:     var(--faint);
+  --surface-card:   var(--surface);
+  --surface-input:  var(--surface);
+  --surface-modal:  var(--elevated);
+}

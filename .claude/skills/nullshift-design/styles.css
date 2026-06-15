@@ -1,0 +1,12 @@
+/* ============================================================
+   Nullshift Design System — global entry point
+   Consumers link THIS one file. It is a manifest of @imports
+   only; every token + font-face lives in tokens/.
+   ============================================================ */
+
+@import "./tokens/fonts.css";
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import "./tokens/effects.css";
+@import "./tokens/base.css";

@@ -1,0 +1,22 @@
+<!-- @dsCard group="Spacing" viewport="700x150" name="Elevation" subtitle="Only modals get drop shadows" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html, body { margin: 0; background: var(--bg); }
+  .row { padding: 28px; display: flex; gap: 28px; align-items: center; }
+  .sw { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .box { width: 110px; height: 60px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .lab { font-family: var(--font-mono); font-size: var(--text-mono-sm); color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="box" style="box-shadow: var(--shadow-sm);"></div><div class="lab">sm — reserved</div></div>
+    <div class="sw"><div class="box" style="box-shadow: var(--shadow-md);"></div><div class="lab">md — popovers</div></div>
+    <div class="sw"><div class="box" style="box-shadow: var(--shadow-lg);"></div><div class="lab">lg — modals</div></div>
+  </div>
+</body>
+</html>

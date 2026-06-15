@@ -1,0 +1,23 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Surface tiers" subtitle="background → surface → elevated" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html, body { margin: 0; background: var(--bg); }
+  .grid { padding: 22px 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .sw { display: flex; flex-direction: column; gap: 8px; }
+  .chip { height: 56px; border-radius: var(--radius-md); border: 1px solid var(--border-strong); }
+  .name { font-family: var(--font-sans); font-size: var(--text-sm); font-weight: 600; color: var(--fg); }
+  .hex { font-family: var(--font-mono); font-size: var(--text-mono-sm); color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div class="sw"><div class="chip" style="background: var(--bg);"></div><div class="name">Background</div><div class="hex">#0A0B0F · --bg</div></div>
+    <div class="sw"><div class="chip" style="background: var(--surface);"></div><div class="name">Surface</div><div class="hex">#14151C · --surface</div></div>
+    <div class="sw"><div class="chip" style="background: var(--elevated);"></div><div class="name">Elevated</div><div class="hex">#1E2029 · --elevated</div></div>
+  </div>
+</body>
+</html>

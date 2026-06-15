@@ -1,0 +1,37 @@
+<!-- @dsCard group="Brand" viewport="700x150" name="Mark & app icon" subtitle="The parallel-pill mark" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html, body { margin: 0; background: var(--bg); }
+  .wrap { padding: 24px 28px; display: flex; align-items: center; gap: 28px; }
+  .tile { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .frame { width: 88px; height: 88px; border-radius: var(--radius-lg); display: grid; place-items: center; }
+  .lab { font-family: var(--font-mono); font-size: var(--text-mono-xs); color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="tile">
+      <div class="frame" style="background: var(--surface); border: 1px solid var(--border);">
+        <img src="../assets/logos/nullshift-mark.svg" alt="mark" style="height: 48px;" />
+      </div>
+      <div class="lab">Mark · transparent</div>
+    </div>
+    <div class="tile">
+      <div class="frame" style="padding: 0; overflow: hidden;">
+        <img src="../assets/logos/nullshift-mark-app.svg" alt="app icon" style="width: 88px; height: 88px;" />
+      </div>
+      <div class="lab">App icon · 36px radius</div>
+    </div>
+    <div class="tile">
+      <div class="frame" style="background: var(--fg); border: 1px solid var(--border-strong);">
+        <img src="../assets/logos/nullshift-mark.svg" alt="mark on light" style="height: 48px;" />
+      </div>
+      <div class="lab">On light — avoid</div>
+    </div>
+  </div>
+</body>
+</html>

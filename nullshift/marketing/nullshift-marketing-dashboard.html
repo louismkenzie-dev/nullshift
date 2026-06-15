@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nullshift — Marketing Command Center</title>
+<style>
+  :root{
+    --bg:#0A0B0F; --surface:#14151C; --surface2:#1E2029; --fg:#F2F4F8;
+    --muted:#9AA0AE; --faint:#5C6170; --primary:#10b981; --primary2:#34d399;
+    --border:#2A2D38; --borderStr:#3A3D4A; --warning:#F5D547; --danger:#FF3A5C; --info:#3DD7E5;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.55;
+    background-image:radial-gradient(ellipse 70% 55% at 75% -5%, rgba(16,185,129,0.10) 0%, transparent 60%);
+    background-attachment:fixed;padding-bottom:80px}
+  a{color:var(--primary);text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 clamp(16px,4vw,40px)}
+
+  /* Topbar */
+  .topbar{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px) saturate(140%);
+    background:rgba(10,11,15,0.82);border-bottom:1px solid var(--border)}
+  .topbar .wrap{display:flex;align-items:center;gap:16px;height:64px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:-.02em}
+  .logomark{display:inline-flex;gap:3px}
+  .pill{width:9px;height:20px;border-radius:999px}
+  .pill.a{background:#7d8290}.pill.b{background:var(--primary)}
+  .northstar{margin-left:auto;font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--primary);border:1px solid rgba(16,185,129,.3);
+    background:rgba(16,185,129,.10);padding:6px 12px;border-radius:999px}
+
+  /* Tabs */
+  .tabs{position:sticky;top:64px;z-index:40;background:rgba(10,11,15,0.82);
+    backdrop-filter:blur(14px);border-bottom:1px solid var(--border);overflow-x:auto}
+  .tabs .wrap{display:flex;gap:4px;height:52px;align-items:center}
+  .tab{font-size:.86rem;font-weight:500;color:var(--muted);padding:8px 14px;border-radius:9px;
+    cursor:pointer;white-space:nowrap;border:1px solid transparent;transition:.15s}
+  .tab:hover{color:var(--fg);background:var(--surface)}
+  .tab.active{color:var(--primary);background:rgba(16,185,129,.10);border-color:rgba(16,185,129,.30)}
+
+  /* Hero */
+  .hero{padding:clamp(36px,6vw,72px) 0 24px}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);display:flex;align-items:center;gap:8px;margin-bottom:18px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 4px rgba(16,185,129,.18)}
+  h1{font-size:clamp(2rem,5vw,3.6rem);line-height:1.04;letter-spacing:-.03em;font-weight:650}
+  h1 .g{color:var(--primary)}
+  .sub{color:var(--muted);font-size:clamp(1rem,1.6vw,1.18rem);max-width:62ch;margin-top:18px}
+
+  .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:32px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px}
+  .stat .n{font-size:1.7rem;font-weight:680;letter-spacing:-.02em;color:var(--primary)}
+  .stat .l{font-size:.82rem;color:var(--muted);margin-top:4px}
+
+  section.panel{display:none;padding:14px 0 40px;animation:fade .25s ease}
+  section.panel.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  h2{font-size:clamp(1.4rem,2.6vw,2rem);letter-spacing:-.02em;font-weight:640;margin:38px 0 6px}
+  h2:first-child{margin-top:14px}
+  .lead{color:var(--muted);max-width:74ch;margin-bottom:18px}
+  h3{font-size:1.06rem;font-weight:600;letter-spacing:-.01em;margin:0 0 6px}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .muted{color:var(--muted)}.faint{color:var(--faint)}
+  .tag{display:inline-block;font-family:var(--mono);font-size:.7rem;letter-spacing:.04em;
+    padding:3px 9px;border-radius:999px;background:rgba(16,185,129,.12);color:var(--primary);
+    border:1px solid rgba(16,185,129,.28);margin:2px 4px 2px 0}
+  .tag.warn{background:rgba(245,213,71,.12);color:var(--warning);border-color:rgba(245,213,71,.3)}
+  .tag.info{background:rgba(61,215,229,.12);color:var(--info);border-color:rgba(61,215,229,.3)}
+  ul.clean{list-style:none;display:flex;flex-direction:column;gap:9px;margin-top:8px}
+  ul.clean li{display:flex;gap:10px;color:var(--muted);font-size:.92rem}
+  ul.clean li::before{content:"";flex:0 0 7px;height:7px;margin-top:8px;border-radius:50%;background:var(--primary)}
+
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.9rem}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+  td .pl{font-weight:600;color:var(--fg)}
+  tr.hl td{background:rgba(16,185,129,.06)}
+  .price{font-family:var(--mono);color:var(--primary);font-weight:600;white-space:nowrap}
+
+  .posmap{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:18px;margin-top:8px}
+  .posrow{display:grid;grid-template-columns:180px 1fr;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+  .posrow:last-child{border-bottom:none}
+  .bar{height:26px;border-radius:7px;background:linear-gradient(90deg,rgba(255,58,92,.25),rgba(245,213,71,.25));position:relative}
+  .bar.win{background:linear-gradient(90deg,rgba(16,185,129,.25),rgba(52,211,153,.5));border:1px solid rgba(16,185,129,.5)}
+  .barlabel{font-size:.78rem;color:var(--muted);padding:0 10px;line-height:26px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* Checklist */
+  .phase{margin-top:18px}
+  .phasehd{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .phasehd .n{font-family:var(--mono);font-size:.78rem;color:var(--primary);border:1px solid rgba(16,185,129,.3);
+    padding:3px 8px;border-radius:6px}
+  .check{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:13px 15px;margin-bottom:9px;cursor:pointer;transition:.15s}
+  .check:hover{border-color:var(--borderStr)}
+  .check.done{opacity:.55}
+  .check.done .ct{text-decoration:line-through}
+  .box{flex:0 0 20px;height:20px;border-radius:6px;border:1.5px solid var(--borderStr);margin-top:1px;
+    display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--bg)}
+  .check.done .box{background:var(--primary);border-color:var(--primary)}
+  .ct{font-size:.92rem}.cs{font-size:.8rem;color:var(--faint);margin-top:2px}
+  .progwrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-top:10px;
+    display:flex;align-items:center;gap:16px;position:sticky;top:128px;z-index:10}
+  .progbar{flex:1;height:10px;background:var(--surface2);border-radius:999px;overflow:hidden}
+  .progfill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--primary2));transition:width .3s}
+  .progpct{font-family:var(--mono);font-weight:600;color:var(--primary);min-width:48px;text-align:right}
+
+  /* Calculator */
+  .calc{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:10px}
+  .controls .row{margin-bottom:16px}
+  .controls label{display:flex;justify-content:space-between;font-size:.86rem;margin-bottom:6px}
+  .controls label .v{font-family:var(--mono);color:var(--primary);font-weight:600}
+  input[type=range]{width:100%;-webkit-appearance:none;height:6px;border-radius:999px;background:var(--surface2);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:var(--primary);cursor:pointer;box-shadow:0 0 0 4px rgba(16,185,129,.18)}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-radius:50%;background:var(--primary);cursor:pointer}
+  .out{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .outcard{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px}
+  .outcard .big{font-size:1.55rem;font-weight:700;letter-spacing:-.02em;color:var(--primary)}
+  .outcard .big.amber{color:var(--warning)}.outcard .big.cyan{color:var(--info)}
+  .outcard .lbl{font-size:.78rem;color:var(--muted);margin-top:2px}
+  .ramp{display:flex;align-items:flex-end;gap:10px;height:120px;margin-top:14px}
+  .rampbar{flex:1;background:linear-gradient(180deg,var(--primary2),rgba(16,185,129,.25));border-radius:7px 7px 0 0;
+    position:relative;min-height:6px;transition:height .3s}
+  .rampbar span{position:absolute;top:-20px;left:0;right:0;text-align:center;font-size:.72rem;font-family:var(--mono);color:var(--primary)}
+  .rampbar small{position:absolute;bottom:-22px;left:0;right:0;text-align:center;font-size:.7rem;color:var(--faint)}
+  .note{font-size:.82rem;color:var(--faint);margin-top:10px}
+
+  .callout{border-left:3px solid var(--primary);background:rgba(16,185,129,.07);border-radius:0 12px 12px 0;
+    padding:14px 18px;margin:14px 0}
+  .quote{font-size:1.25rem;font-weight:600;letter-spacing:-.01em;line-height:1.35}
+  footer{border-top:1px solid var(--border);margin-top:50px;padding-top:24px;color:var(--faint);font-size:.82rem}
+
+  @media(max-width:820px){
+    .statgrid{grid-template-columns:repeat(2,1fr)}
+    .grid2,.grid3,.calc{grid-template-columns:1fr}
+    .posrow{grid-template-columns:120px 1fr}
+    .progwrap{position:static}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar"><div class="wrap">
+  <div class="logo"><span class="logomark"><span class="pill a"></span><span class="pill b"></span></span> Nullshift · Marketing Command Center</div>
+  <div class="northstar">North star — Recurring revenue</div>
+</div></div>
+
+<nav class="tabs"><div class="wrap" id="tabbar">
+  <div class="tab active" data-t="strategy">Strategy</div>
+  <div class="tab" data-t="offer">Offer &amp; Pricing</div>
+  <div class="tab" data-t="channels">Channels &amp; Campaigns</div>
+  <div class="tab" data-t="roadmap">90-Day Roadmap</div>
+  <div class="tab" data-t="numbers">Numbers &amp; Calculators</div>
+</div></nav>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="eyebrow"><span class="dot"></span> Master plan · June 2026 · Built for Louis</div>
+    <h1>Stop selling websites.<br>Start selling <span class="g">recovered revenue.</span></h1>
+    <p class="sub">Reposition Nullshift from a one-off build shop into a <strong>monthly subscription that brings customers in</strong> — won by dominating one trade at a time. Same assets you already own (live demos, "you own it", 2-week delivery), repackaged into predictable MRR at ~85% margin.</p>
+    <div class="statgrid">
+      <div class="stat"><div class="n">£24k/yr</div><div class="l">lost by the average UK trade to missed calls — our hook</div></div>
+      <div class="stat"><div class="n">£1.6bn</div><div class="l">lost to salon no-shows a year — the clone market</div></div>
+      <div class="stat"><div class="n">~85%</div><div class="l">gross margin on the recurring automation layer</div></div>
+      <div class="stat"><div class="n">£3.5–6k</div><div class="l">target MRR by day 90 (15–25 retainer clients)</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ===================== STRATEGY ===================== -->
+<section class="panel show" id="strategy">
+  <div class="callout"><div class="quote">"Agency-quality build, freelancer-beating price, builder-beating ownership — live in weeks, and we run the system that brings you customers."</div>
+  <div class="muted" style="margin-top:8px">Brand line for the recurring model: <strong style="color:var(--fg)">"Own your system. Subscribe to results."</strong></div></div>
+
+  <h2>The strategic bet — who we sell to first</h2>
+  <p class="lead">Recurring revenue needs five things at once: huge volume, recurring &amp; quantifiable pain, ability to pay monthly, low competition, and repeatable templates. Two verticals score high on all five. We dominate one, then clone the playbook.</p>
+  <div class="grid3">
+    <div class="card"><span class="tag">#1 · Dominate first</span><h3 style="margin-top:8px">Trades / Home Services</h3>
+      <p class="muted" style="font-size:.9rem">Plumbers, electricians, builders, heating engineers. The UK's #1 business sector (15.8%). They lose ~£24k/yr to missed calls and 85% of callers never leave a voicemail.</p>
+      <ul class="clean"><li>Offer: <strong style="color:var(--fg)">"Never Miss a Job"</strong> £149–£399/mo</li><li>One recovered job (£330) covers the plan</li><li>Incumbents sell static sites — retainer lane is open</li></ul></div>
+    <div class="card"><span class="tag">#2 · Clone the playbook</span><h3 style="margin-top:8px">Health &amp; Wellness</h3>
+      <p class="muted" style="font-size:.9rem">Salons, barbers, clinics, physios, gyms. ~51,800 hair &amp; beauty firms, 60% self-employed. No-shows eat up to 20% of revenue; deposits cut them 70–85%.</p>
+      <ul class="clean"><li>Offer: <strong style="color:var(--fg)">"Zero No-Show"</strong> £129–£349/mo</li><li>70% prefer to book online; 40% after hours</li><li>Visual niche — perfect for demo-led ads</li></ul></div>
+    <div class="card"><span class="tag info">#3 · Tailwind, later</span><h3 style="margin-top:8px">Accountants (MTD)</h3>
+      <p class="muted" style="font-size:.9rem">Making Tax Digital is mandatory from April 2026 (&gt;£50k), then £30k, then £20k. A forced wave of "client portal + document automation" demand.</p>
+      <ul class="clean"><li>Offer: client portal + onboarding automation</li><li>Trust-heavy, slower sale → Q3/Q4 campaign</li><li>Run after the trades engine is humming</li></ul></div>
+  </div>
+  <p class="note">Deprioritised for now: restaurants (thin margins, declining count), retail/e-commerce (most competitive), broad professional services (slow, saturated). Focus beats spread.</p>
+
+  <h2>Where Nullshift stands — the hole in the market</h2>
+  <p class="lead">Four competitor types, each with a fatal flaw. Nullshift sits in the empty middle: bespoke + fast + genuinely owned + an <em>ethical</em> recurring layer.</p>
+  <div class="posmap">
+    <div class="posrow"><div><strong>Traditional agencies</strong><div class="faint" style="font-size:.78rem">£2k–£15k · 8–16 wks</div></div><div class="bar"><span class="barlabel">Slow, opaque pricing, lock-in (billed £337 to change one photo)</span></div></div>
+    <div class="posrow"><div><strong>Freelance markets</strong><div class="faint" style="font-size:.78rem">£500–£2,500</div></div><div class="bar"><span class="barlabel">Quality lottery, plagiarism, disappearing freelancers, no accountability</span></div></div>
+    <div class="posrow"><div><strong>DIY builders</strong><div class="faint" style="font-size:.78rem">£29–£159/mo forever</div></div><div class="bar"><span class="barlabel">You never own it · can't export · "monthly ransom"</span></div></div>
+    <div class="posrow"><div><strong>Automation / WaaS</strong><div class="faint" style="font-size:.78rem">£500–£5,000/mo</div></div><div class="bar"><span class="barlabel">Rent-forever dependency · rebilled tool markups (£30 → £100)</span></div></div>
+    <div class="posrow"><div><strong style="color:var(--primary)">▲ Nullshift</strong><div class="faint" style="font-size:.78rem">setup + £129–£399/mo</div></div><div class="bar win"><span class="barlabel" style="color:var(--fg)">Bespoke + fast + you own it + ethical recurring + live demos to test-drive</span></div></div>
+  </div>
+  <p class="note">⚠ Never compete on cheapest monthly vs £29 WaaS — you'll lose and bleed margin. Win on outcome + ownership.</p>
+
+  <h2>Unfair advantages you already own (and under-use)</h2>
+  <div class="grid2">
+    <div class="card"><h3>🧪 The Systems Lab</h3><p class="muted" style="font-size:.92rem">12 live, clickable demos — booking, AI receptionist, CRM, portal, funnels. Almost no agency lets buyers test-drive. Today it's a footer link; make it the hero CTA and your #1 ad-creative source.</p></div>
+    <div class="card"><h3>🔓 "No monthly ransom"</h3><p class="muted" style="font-size:.92rem">You own the code and every account, cancel anytime. The one thing WaaS &amp; automation agencies <em>cannot</em> say — it squares the recurring model with your ethics instead of contradicting it.</p></div>
+    <div class="card"><h3>⚡ 2–4 week delivery + fixed price</h3><p class="muted" style="font-size:.92rem">Quantifiable and provable — the exact opposite of the 8–16 week, opaque-hourly agency norm. Lead with it.</p></div>
+    <div class="card"><h3>🎓 "We teach you to own it"</h3><p class="muted" style="font-size:.92rem">The Partner tier markets <em>independence</em> — nobody else does. Reframe as premium "done-with-you" recurring (£749/mo): sticky and high-value.</p></div>
+  </div>
+</section>
+
+<!-- ===================== OFFER ===================== -->
+<section class="panel" id="offer">
+  <h2>The recurring-revenue engine</h2>
+  <p class="lead">Stop selling deliverables; sell outcomes as subscriptions. The build is the on-ramp — the monthly plan is the business. Setup fee makes acquisition pay back almost immediately; the monthly compounds into MRR.</p>
+  <div class="callout"><strong>Resolving "own it vs subscription":</strong> <span class="muted">You own the code; accounts are in your name; cancel and keep everything. The monthly fee isn't rent on a website — it's us running the machine that brings customers (managing automations, optimising leads/bookings, reporting the £ recovered). No hostage, no rebilled-tool games.</span></div>
+
+  <h2 style="font-size:1.3rem">🔧 Trades — "Never Miss a Job"</h2>
+  <table>
+    <tr><th>Plan</th><th>Setup</th><th>Monthly</th><th>What's inside</th></tr>
+    <tr><td><span class="pl">Foundation</span></td><td class="price">£499</td><td class="price">£149</td><td class="muted">Bespoke fast site · missed-call-text-back · automated review engine · Google Business Profile · monthly "jobs recovered" report</td></tr>
+    <tr class="hl"><td><span class="pl">Growth ⭐</span></td><td class="price">£799</td><td class="price">£249</td><td class="muted">+ 24/7 AI receptionist/chat · instant quote-form follow-up · lead pipeline / CRM lite</td></tr>
+    <tr><td><span class="pl">Pro</span></td><td class="price">£1,199</td><td class="price">£399</td><td class="muted">+ full CRM · quote→invoice automation · multi-channel automations · priority support + quarterly strategy call</td></tr>
+  </table>
+
+  <h2 style="font-size:1.3rem">💇 Wellness — "Zero No-Show"</h2>
+  <table>
+    <tr><th>Plan</th><th>Setup</th><th>Monthly</th><th>What's inside</th></tr>
+    <tr><td><span class="pl">Foundation</span></td><td class="price">£399</td><td class="price">£129</td><td class="muted">Bespoke booking site · deposits/prepayment · automated SMS+email reminders · review requests</td></tr>
+    <tr class="hl"><td><span class="pl">Growth ⭐</span></td><td class="price">£699</td><td class="price">£229</td><td class="muted">+ waitlist auto-fill · rebooking nudges · memberships/packages · no-show analytics</td></tr>
+    <tr><td><span class="pl">Pro</span></td><td class="price">£999</td><td class="price">£349</td><td class="muted">+ full client CRM · marketing automation · loyalty / retention flows</td></tr>
+  </table>
+
+  <h2 style="font-size:1.3rem">Reframe the tiers you already have</h2>
+  <div class="grid3">
+    <div class="card"><h3>Partner → "Done-with-you"</h3><p class="muted" style="font-size:.9rem"><span class="price">£749/mo</span> · we build it and teach you to own it in 12 months. Premium, sticky, for ambitious owners who want independence + hand-holding.</p></div>
+    <div class="card"><h3>Maintenance → folded in</h3><p class="muted" style="font-size:.9rem"><span class="price">£249/mo</span> · don't sell it naked — bake it into the care plans above so every client is on an outcome plan, not "maintenance".</p></div>
+    <div class="card"><h3>Learning subs → entry + nurture</h3><p class="muted" style="font-size:.9rem"><span class="price">£19.99–£249/mo</span> · the "start here" for DIY-ers, the tripwire after a calculator, and the holding pen for leads who'll ascend to a Growth System plan.</p></div>
+  </div>
+
+  <h2>Messaging that closes</h2>
+  <div class="grid2">
+    <div class="card"><h3>Proof pillars (use everywhere)</h3><ul class="clean"><li><strong style="color:var(--fg)">Speed</strong> — live in 2–4 weeks, not months</li><li><strong style="color:var(--fg)">Ownership</strong> — you own it, cancel anytime, no ransom</li><li><strong style="color:var(--fg)">Results</strong> — we run the machine &amp; report the £ recovered monthly</li></ul></div>
+    <div class="card"><h3>Objection-busters</h3><ul class="clean"><li>"Already have a site" → "Does it answer the phone when you're up a ladder?"</li><li>"Too pricey / I'll use Wix" → "One missed job costs more than a month with us — and you own it"</li><li>"Why monthly?" → "The site's the easy part; the monthly is the machine that brings customers"</li></ul></div>
+  </div>
+</section>
+
+<!-- ===================== CHANNELS ===================== -->
+<section class="panel" id="channels">
+  <h2>Channel strategy — organic core + £300–£1,000/mo paid</h2>
+  <p class="lead">Ranked by ROI for a local-SMB recurring motion. Put the paid budget where intent is hottest (Google Search), let founder-led outbound win the first clients, and build compounding organic in parallel.</p>
+
+  <h3 style="margin-top:18px">Tier 1 — do first, they convert</h3>
+  <div class="grid3">
+    <div class="card"><span class="tag">Most of paid budget</span><h3 style="margin-top:8px">Google Search Ads</h3><p class="muted" style="font-size:.9rem">High-intent, local: "[trade] website [town]", "salon booking system". £300–£700/mo — small budget works because intent is red-hot and geography is tight.</p></div>
+    <div class="card"><span class="tag">Near-zero cost · best close rate</span><h3 style="margin-top:8px">Founder-led outbound</h3><p class="muted" style="font-size:.9rem">15–25 personalised 60-sec Loom teardowns/week showing their listing problem + the fix + a Systems Lab link. Best channel for your first 10–20 clients.</p></div>
+    <div class="card"><span class="tag">Compounds 60–90 days</span><h3 style="margin-top:8px">Local SEO + GBP</h3><p class="muted" style="font-size:.9rem">Niche pages at scale (trade × town). Own the "money keyword" local searches organically.</p></div>
+  </div>
+  <h3 style="margin-top:18px">Tier 2 — build in parallel</h3>
+  <div class="grid3">
+    <div class="card"><h3>Short-form video</h3><p class="muted" style="font-size:.9rem">Site teardowns, "the £24k phone call", Systems Lab clips. Cheap, demonstrative, algorithm-friendly.</p></div>
+    <div class="card"><h3>Meta retargeting</h3><p class="muted" style="font-size:.9rem">£150–£300/mo retargeting demo/calculator visitors. Especially strong for wellness (visual).</p></div>
+    <div class="card"><h3>Lead-magnet calculators</h3><p class="muted" style="font-size:.9rem">"Missed-Call Revenue" &amp; "No-Show Cost" tools quantify pain in £, then route to a call (see Numbers tab).</p></div>
+  </div>
+  <h3 style="margin-top:18px">Tier 3 — multipliers</h3>
+  <div class="grid3">
+    <div class="card"><h3>Partnerships &amp; referrals</h3><p class="muted" style="font-size:.9rem">Trade merchants, salon wholesalers, associations, chambers. Referral reward: a free month or £100 per signed client.</p></div>
+    <div class="card"><h3>Case-study engine</h3><p class="muted" style="font-size:.9rem">Every client = "we recovered £X / filled Y appts". Make a video testimonial part of onboarding.</p></div>
+    <div class="card"><h3>Email nurture</h3><p class="muted" style="font-size:.9rem">Calculators + subs feed a list; monthly "money you're leaving on the table" emails convert over time.</p></div>
+  </div>
+
+  <h2>Signature campaigns</h2>
+  <div class="grid2">
+    <div class="card"><span class="tag">Flagship</span><h3 style="margin-top:8px">"The £24,000 Phone Call"</h3><p class="muted" style="font-size:.92rem">Calculator → landing page → ad → outreach, all on the missed-call stat. "How many calls did you miss this week?" Drives Never-Miss-a-Job.</p></div>
+    <div class="card"><span class="tag">Wellness</span><h3 style="margin-top:8px">"Your Empty Chair"</h3><p class="muted" style="font-size:.92rem">No-show cost calculator. "Every empty chair this week cost you £X — here's how to fill it automatically."</p></div>
+    <div class="card"><span class="tag warn">Brand / values</span><h3 style="margin-top:8px">"Own It"</h3><p class="muted" style="font-size:.92rem">Anti-ransom vs Wix &amp; lock-in agencies. "Stop renting your website. Own your system." Great organic + PR.</p></div>
+    <div class="card"><span class="tag info">Demo-led</span><h3 style="margin-top:8px">"Try Before You Build"</h3><p class="muted" style="font-size:.92rem">Push the live Systems Lab. "Test-drive your future booking system right now." Repurpose into ad creative.</p></div>
+  </div>
+  <div class="callout"><strong>Paid budget starter (£600/mo):</strong> <span class="muted">Google Search £400 · Meta retargeting £150 · creative/tools £50. Scale Google first once CAC proves out.</span></div>
+</section>
+
+<!-- ===================== ROADMAP ===================== -->
+<section class="panel" id="roadmap">
+  <h2>90-day execution roadmap</h2>
+  <p class="lead">Tick items off as you go — progress saves in your browser. Sequence: lay the foundation, ignite trades, clone to wellness, then optimise &amp; scale.</p>
+  <div class="progwrap"><div class="muted" style="font-size:.85rem;font-weight:600">Progress</div><div class="progbar"><div class="progfill" id="progfill"></div></div><div class="progpct" id="progpct">0%</div></div>
+  <div id="checklist"></div>
+</section>
+
+<!-- ===================== NUMBERS ===================== -->
+<section class="panel" id="numbers">
+  <h2>KPI targets</h2>
+  <table>
+    <tr><th>Metric</th><th>30-day</th><th>60-day</th><th>90-day</th></tr>
+    <tr><td>Qualified leads / month</td><td>15–25</td><td>30–45</td><td>50+</td></tr>
+    <tr><td>Discovery calls / month</td><td>6–10</td><td>12–18</td><td>20+</td></tr>
+    <tr><td>New retainer clients (cumulative)</td><td>3–5</td><td>8–12</td><td>15–25</td></tr>
+    <tr class="hl"><td><strong>MRR</strong></td><td class="price">£600–1.2k</td><td class="price">£2–3k</td><td class="price">£3.5–6k</td></tr>
+    <tr><td>Blended CAC</td><td>&lt; £600</td><td>&lt; £450</td><td>&lt; £400</td></tr>
+    <tr><td>Proposal → close rate</td><td>25%</td><td>30%</td><td>35%+</td></tr>
+    <tr><td>LTV : CAC</td><td>—</td><td>&gt; 2:1</td><td>&gt; 3:1</td></tr>
+  </table>
+
+  <h2>MRR &amp; unit-economics calculator</h2>
+  <p class="lead">Drag the sliders to model the recurring business. Defaults reflect a blended Foundation/Growth client.</p>
+  <div class="calc">
+    <div class="controls card">
+      <div class="row"><label>Retainer clients <span class="v" id="vClients">20</span></label><input type="range" id="clients" min="1" max="100" value="20"></div>
+      <div class="row"><label>Avg monthly fee <span class="v" id="vFee">£220</span></label><input type="range" id="fee" min="99" max="749" step="10" value="220"></div>
+      <div class="row"><label>Avg setup fee <span class="v" id="vSetup">£600</span></label><input type="range" id="setup" min="0" max="1500" step="50" value="600"></div>
+      <div class="row"><label>Gross margin on monthly <span class="v" id="vMargin">85%</span></label><input type="range" id="margin" min="50" max="95" value="85"></div>
+      <div class="row"><label>Avg retention (months) <span class="v" id="vRet">21</span></label><input type="range" id="ret" min="6" max="48" value="21"></div>
+      <div class="row"><label>Cost to acquire a client (CAC) <span class="v" id="vCac">£400</span></label><input type="range" id="cac" min="50" max="1500" step="10" value="400"></div>
+    </div>
+    <div>
+      <div class="out">
+        <div class="outcard"><div class="big" id="oMRR">£4,400</div><div class="lbl">Monthly recurring revenue</div></div>
+        <div class="outcard"><div class="big" id="oARR">£52,800</div><div class="lbl">Annual recurring revenue</div></div>
+        <div class="outcard"><div class="big cyan" id="oLTV">£4,527</div><div class="lbl">Lifetime value / client</div></div>
+        <div class="outcard"><div class="big amber" id="oRatio">11.3:1</div><div class="lbl">LTV : CAC ratio</div></div>
+      </div>
+      <div class="outcard" style="margin-top:12px"><div class="muted" style="font-size:.85rem">CAC payback incl. setup fee</div><div class="big" id="oPayback" style="font-size:1.25rem">0.0 months</div><div class="note" id="oVerdict"></div></div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:24px">MRR ramp — illustrative client growth</h3>
+  <div class="ramp" id="ramp"></div>
+  <p class="note" style="margin-top:30px">Flywheel: each setup fee funds next month's ads → each client adds compounding MRR + a case study + referrals → each niche template makes delivery cheaper. Scale without scaling spend.</p>
+
+  <h2>Lead-magnet: "Missed-Call Revenue" calculator</h2>
+  <p class="lead">This is the trades hook as an interactive tool — embed a version on the landing page. It quantifies the prospect's pain in pounds, then routes to a call.</p>
+  <div class="calc">
+    <div class="controls card">
+      <div class="row"><label>Missed calls per week <span class="v" id="vMiss">7</span></label><input type="range" id="miss" min="1" max="40" value="7"></div>
+      <div class="row"><label>% of calls that are real jobs <span class="v" id="vConv">40%</span></label><input type="range" id="conv" min="5" max="90" value="40"></div>
+      <div class="row"><label>Average job value <span class="v" id="vJob">£300</span></label><input type="range" id="job" min="50" max="2000" step="25" value="300"></div>
+    </div>
+    <div class="out">
+      <div class="outcard"><div class="big amber" id="oWeek">£840</div><div class="lbl">Revenue leaking per week</div></div>
+      <div class="outcard"><div class="big amber" id="oYear">£43,680</div><div class="lbl">Per year — gone to the next plumber on Google</div></div>
+      <div class="outcard" style="grid-column:1/-1"><div class="muted" style="font-size:.88rem">A <strong style="color:var(--primary)">£149–£249/mo</strong> "Never Miss a Job" plan that catches even <strong id="oCatch">a fraction</strong> of these pays for itself many times over. That is the entire sales conversation.</div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <strong style="color:var(--muted)">Nullshift Development Ltd — Marketing Command Center.</strong> Full written strategy: <span style="color:var(--muted)">marketing/Nullshift-Marketing-Strategy.md</span> · Reusable agent: <span style="color:var(--muted)">.claude/agents/marketing-advisor.md</span><br>
+  Figures from June 2026 research (ONS, IBISWorld, British Chambers of Commerce, FSB/GOV.UK, industry sources). Illustrative models — validate against your live numbers as data comes in.
+</footer>
+
+</div>
+
+<script>
+(function(){
+  // ---- Tabs ----
+  var tabs=document.querySelectorAll('.tab'), panels=document.querySelectorAll('.panel');
+  tabs.forEach(function(t){t.addEventListener('click',function(){
+    tabs.forEach(function(x){x.classList.remove('active')}); t.classList.add('active');
+    var id=t.getAttribute('data-t');
+    panels.forEach(function(p){p.classList.toggle('show',p.id===id)});
+    window.scrollTo({top:0,behavior:'smooth'});
+  })});
+
+  // ---- Checklist ----
+  var DATA=[
+    {p:'Phase 0',t:'Foundation — this week',items:[
+      ['Lock the trades wedge & pick 2–3 target towns','Decide where to point Google Ads + local SEO'],
+      ['Build the "Never Miss a Job" landing page','Use Systems Lab demos as proof'],
+      ['Repackage pricing page to the Growth System ladder','Setup + monthly, "Own your system. Subscribe to results."'],
+      ['Ship the Missed-Call Revenue calculator','Lead magnet — quantifies pain in £'],
+      ['Set up tracking: GA4, call tracking, simple CRM, Google Business Profile','You can\'t optimise what you can\'t see'],
+      ['Write/film one flagship case study','Seed it with the booking-system testimonial already on site']
+    ]},
+    {p:'Phase 1',t:'Ignite trades — weeks 1–4',items:[
+      ['Launch Google Search ads on high-intent trade terms (£300–700/mo)','Hottest intent, tight geography'],
+      ['Founder outbound: 20 personalised Loom teardowns / week','Best channel for the first clients'],
+      ['Publish 4 niche SEO pages (trade × town)','Compounding organic'],
+      ['Cut 6–8 short-form videos from Systems Lab + the £24k hook','Cheap, demonstrative creative'],
+      ['🎯 Target: first 3–5 retainer clients','£600–1.2k MRR']
+    ]},
+    {p:'Phase 2',t:'Clone to wellness & compound — weeks 5–8',items:[
+      ['Launch "Zero No-Show" landing page + No-Show calculator','Mirror the trades playbook for salons/clinics'],
+      ['Add Meta retargeting (£150–300/mo)','Re-engage demo & calculator visitors'],
+      ['Stand up the referral program + 1–2 partnerships','Suppliers, associations, chambers'],
+      ['Weekly content cadence: 2–3 videos + 1 SEO page','Keep the flywheel turning'],
+      ['🎯 Target: 8–12 total retainer clients','~£2–3k MRR']
+    ]},
+    {p:'Phase 3',t:'Optimise & scale — weeks 9–12',items:[
+      ['Optimise CAC — pause losers, double down on winners','Protect the budget'],
+      ['Upsell Foundation → Growth/Pro; add annual-prepay (2 months free)','Lift ARPU + lock retention'],
+      ['Systematise delivery with niche templates','Each build faster & cheaper'],
+      ['🎯 Target: 15–25 clients, £3.5–6k MRR, LTV:CAC > 3:1','Run-rate to scale']
+    ]}
+  ];
+  var KEY='nullshift_mkt_checklist_v1';
+  var state={}; try{state=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){state={}}
+  var cl=document.getElementById('checklist'); var total=0, idx=0;
+  DATA.forEach(function(ph){
+    var wrap=document.createElement('div'); wrap.className='phase';
+    wrap.innerHTML='<div class="phasehd"><span class="n">'+ph.p+'</span><strong>'+ph.t+'</strong></div>';
+    ph.items.forEach(function(it){
+      total++; var id='c'+(idx++);
+      var done=!!state[id];
+      var row=document.createElement('div'); row.className='check'+(done?' done':''); row.setAttribute('data-id',id);
+      row.innerHTML='<div class="box">'+(done?'✓':'')+'</div><div><div class="ct">'+it[0]+'</div><div class="cs">'+it[1]+'</div></div>';
+      row.addEventListener('click',function(){
+        state[id]=!state[id]; localStorage.setItem(KEY,JSON.stringify(state));
+        row.classList.toggle('done',state[id]);
+        row.querySelector('.box').textContent=state[id]?'✓':''; updateProg();
+      });
+      wrap.appendChild(row);
+    });
+    cl.appendChild(wrap);
+  });
+  function updateProg(){
+    var done=0; for(var k in state){if(state[k])done++}
+    var pct=Math.round(done/total*100);
+    document.getElementById('progfill').style.width=pct+'%';
+    document.getElementById('progpct').textContent=pct+'%';
+  }
+  updateProg();
+
+  // ---- Helpers ----
+  var $=function(id){return document.getElementById(id)};
+  function gbp(n){return '£'+Math.round(n).toLocaleString('en-GB')}
+
+  // ---- MRR calculator (explicit refs, no implicit globals) ----
+  var elClients=$('clients'), elFee=$('fee'), elSetup=$('setup'), elMargin=$('margin'), elRet=$('ret'), elCac=$('cac');
+  function calcMRR(){
+    var c=+elClients.value, f=+elFee.value, s=+elSetup.value, m=+elMargin.value/100, r=+elRet.value, cac=+elCac.value;
+    $('vClients').textContent=c; $('vFee').textContent=gbp(f); $('vSetup').textContent=gbp(s);
+    $('vMargin').textContent=(m*100).toFixed(0)+'%'; $('vRet').textContent=r; $('vCac').textContent=gbp(cac);
+    var mrr=c*f, arr=mrr*12;
+    var ltv=s + (f*m*r);
+    var ratio=cac>0 ? ltv/cac : 0;
+    // payback: months of gross profit to recover CAC, crediting the setup fee up front
+    var monthlyGP=f*m;
+    var net=cac - s;
+    var payback = net<=0 ? 0 : net/monthlyGP;
+    $('oMRR').textContent=gbp(mrr);
+    $('oARR').textContent=gbp(arr);
+    $('oLTV').textContent=gbp(ltv);
+    $('oRatio').textContent=ratio.toFixed(1)+':1';
+    $('oPayback').textContent=payback.toFixed(1)+' months';
+    var v=$('oVerdict');
+    if(ratio>=3){v.textContent='✅ Healthy — LTV:CAC above the 3:1 benchmark. Press the accelerator.';v.style.color='var(--primary)';}
+    else if(ratio>=2){v.textContent='🟡 Workable — improve retention or lower CAC to clear 3:1.';v.style.color='var(--warning)';}
+    else{v.textContent='🔴 Tight — CAC too high vs LTV. Cut acquisition cost or raise fee/retention.';v.style.color='var(--danger)';}
+    drawRamp(f);
+  }
+  [elClients,elFee,elSetup,elMargin,elRet,elCac].forEach(function(el){el.addEventListener('input',calcMRR)});
+
+  function drawRamp(f){
+    var ramp=$('ramp'); ramp.innerHTML='';
+    var steps=[5,10,15,25,40,50]; var max=50*f;
+    steps.forEach(function(n){
+      var mrr=n*f; var h=Math.max(6,(mrr/max)*100);
+      var b=document.createElement('div'); b.className='rampbar'; b.style.height=h+'%';
+      b.innerHTML='<span>'+gbp(mrr)+'</span><small>'+n+' clients</small>';
+      ramp.appendChild(b);
+    });
+  }
+
+  // ---- Missed-call calculator ----
+  var elMiss=$('miss'), elConv=$('conv'), elJob=$('job');
+  function calcMiss(){
+    var mi=+elMiss.value, cv=+elConv.value/100, j=+elJob.value;
+    $('vMiss').textContent=mi; $('vConv').textContent=(cv*100).toFixed(0)+'%'; $('vJob').textContent=gbp(j);
+    var week=mi*cv*j, year=week*52;
+    $('oWeek').textContent=gbp(week);
+    $('oYear').textContent=gbp(year);
+  }
+  [elMiss,elConv,elJob].forEach(function(el){el.addEventListener('input',calcMiss)});
+
+  calcMRR(); calcMiss();
+})();
+</script>
+</body>
+</html>

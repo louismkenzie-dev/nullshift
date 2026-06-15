@@ -1,0 +1,25 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Radius scale" subtitle="6 · 10 · 16 · 24 · full" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  html, body { margin: 0; background: var(--bg); }
+  .row { padding: 24px 28px; display: flex; gap: 22px; align-items: flex-end; }
+  .sw { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .box { width: 64px; height: 52px; background: var(--primary-soft); border: 1px solid var(--primary); }
+  .lab { font-family: var(--font-mono); font-size: var(--text-mono-sm); color: var(--fg); }
+  .use { font-family: var(--font-sans); font-size: var(--text-mono-xs); color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="box" style="border-radius: var(--radius-sm);"></div><div class="lab">sm · 6</div><div class="use">badges</div></div>
+    <div class="sw"><div class="box" style="border-radius: var(--radius-md);"></div><div class="lab">md · 10</div><div class="use">buttons</div></div>
+    <div class="sw"><div class="box" style="border-radius: var(--radius-lg);"></div><div class="lab">lg · 16</div><div class="use">cards</div></div>
+    <div class="sw"><div class="box" style="border-radius: var(--radius-xl);"></div><div class="lab">xl · 24</div><div class="use">hero</div></div>
+    <div class="sw"><div class="box" style="border-radius: var(--radius-full);"></div><div class="lab">full</div><div class="use">pills</div></div>
+  </div>
+</body>
+</html>

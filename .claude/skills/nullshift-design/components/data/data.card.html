@@ -1,0 +1,44 @@
+<!-- @dsCard group="Components" viewport="700x520" name="Data — stats & pricing" subtitle="StatCard · PricingCard" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../styles.css" />
+<style>
+  html, body { margin: 0; background: var(--bg); }
+  .wrap { padding: 26px 28px; display: flex; flex-direction: column; gap: 20px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+</style>
+</head>
+<body>
+  <div id="root" class="wrap"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel">
+    const { StatCard, PricingCard } = window.NullshiftDesignSystem_7b523b;
+    function Demo() {
+      return (
+        <>
+          <div className="stats">
+            <StatCard label="Expected income" value="£8,400" sublabel="Jun 2025 · signed proposals" />
+            <StatCard label="New enquiries" value="3" sublabel="Awaiting action" accent="var(--warning)" />
+            <StatCard label="Missing brief" value="1" sublabel="Active clients" accent="var(--info)" />
+          </div>
+          <div className="plans">
+            <PricingCard tier="Starter" price="£1,200" bestFor="A clean one-page launch"
+              benefits={["1 page", "Bespoke design", { text: "CMS", checked: false }]} cta="Get started" />
+            <PricingCard tier="Pro" price="£2,400" bestFor="Growing businesses ready to scale" highlighted
+              benefits={["Up to 8 pages", "Bespoke design", "CMS + blog"]} cta="Start your build" />
+            <PricingCard tier="Custom" price="Let's talk" bestFor="Bespoke systems & integrations"
+              benefits={["Unlimited pages", "Custom workflows", "Priority support"]} cta="Book a call" />
+          </div>
+        </>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+  </script>
+</body>
+</html>
