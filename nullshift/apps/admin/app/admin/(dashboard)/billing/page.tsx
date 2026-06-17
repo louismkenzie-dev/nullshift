@@ -121,6 +121,28 @@ export default async function BillingPage() {
   const invoiceList = (invoices ?? []) as Invoice[];
   const nameOf = (id: string) => tenantList.find((t) => t.id === id)?.name ?? "—";
 
+  // Per-tenant usage footprint (cost guardrail). A pricing trigger fires when a
+  // tenant carries real activity but little/no recurring fee to cover it.
+  const { data: footprintRows } = await supabase.rpc("tenant_footprint");
+  type Footprint = {
+    tenant_id: string;
+    name: string;
+    documents: number;
+    change_requests: number;
+    tasks: number;
+    invoices: number;
+    audit_rows: number;
+    mrr: number;
+  };
+  const footprint = ((footprintRows ?? []) as Footprint[]).map((f) => {
+    const score =
+      Number(f.documents) +
+      Number(f.change_requests) +
+      Number(f.tasks) +
+      Number(f.audit_rows) / 10;
+    return { ...f, score, flag: score >= 15 && Number(f.mrr) < 49 };
+  });
+
   return (
     <div>
       <div
@@ -332,6 +354,92 @@ export default async function BillingPage() {
           }))}
           empty="No invoices yet."
         />
+      </section>
+
+      {/* ── Usage footprint / cost guardrail ────────────────── */}
+      <section style={{ marginTop: 28 }}>
+        <h2 style={sectionH}>Usage footprint (cost guardrail)</h2>
+        <p
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.82rem",
+            color: T.muted,
+            margin: "6px 0 14px",
+            maxWidth: "64ch",
+          }}
+        >
+          A proxy for each client&apos;s resource footprint vs its recurring fee. A flag
+          is a pricing trigger — raise the plan, never absorb the cost.
+        </p>
+        {footprint.length === 0 ? (
+          <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>
+            No client tenants yet.
+          </p>
+        ) : (
+          <div
+            style={{
+              background: T.surface,
+              border: `1px solid ${T.border}`,
+              borderRadius: T.r.lg,
+              overflow: "hidden",
+            }}
+          >
+            {footprint.map((f, idx) => (
+              <div
+                key={f.tenant_id}
+                className="flex items-center justify-between gap-3"
+                style={{
+                  padding: "12px 16px",
+                  borderTop: idx ? `1px solid ${T.border}` : "none",
+                }}
+              >
+                <div
+                  className="flex items-center gap-4 flex-wrap"
+                  style={{ fontFamily: T.mono, fontSize: "0.74rem", color: T.muted }}
+                >
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.86rem",
+                      color: T.fg,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {f.name}
+                  </span>
+                  <span>docs {f.documents}</span>
+                  <span>reqs {f.change_requests}</span>
+                  <span>tasks {f.tasks}</span>
+                  <span>audit {f.audit_rows}</span>
+                  <span>{gbp(Number(f.mrr))}/mo</span>
+                </div>
+                {f.flag ? (
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "10px",
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                      color: T.warning,
+                      background: `${T.warning}14`,
+                      border: `1px solid ${T.warning}40`,
+                      borderRadius: 999,
+                      padding: "2px 9px",
+                    }}
+                  >
+                    ⚠ review pricing
+                  </span>
+                ) : (
+                  <span
+                    style={{ fontFamily: T.mono, fontSize: "10px", color: T.success }}
+                  >
+                    ✓ healthy
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
