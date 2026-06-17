@@ -14,6 +14,7 @@ const links = [
   { label: "Tasks", href: "/admin/tasks", icon: "◰" },
   { label: "Billing", href: "/admin/billing", icon: "£" },
   { label: "Compliance", href: "/admin/compliance", icon: "❖" },
+  { label: "Security", href: "/admin/security", icon: "⊕" },
   { label: "Marketing", href: "/admin/marketing", icon: "◆" },
   { label: "Users", href: "/admin/users", icon: "◫" },
   { label: "Enquiries", href: "/admin/enquiries", icon: "◈" },
