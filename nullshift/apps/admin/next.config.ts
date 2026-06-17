@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     "@nullshift/ui",
     "@nullshift/db",
     "@nullshift/auth",
+    "@nullshift/billing",
     "@nullshift/config",
     "@nullshift/content",
   ],

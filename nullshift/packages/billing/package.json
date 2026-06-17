@@ -6,7 +6,10 @@
   "exports": {
     "./config": "./src/config.ts",
     "./subscriptions": "./src/subscriptions.ts",
-    "./pricing": "./src/pricing.ts"
+    "./pricing": "./src/pricing.ts",
+    "./fees": "./src/fees.ts",
+    "./mrr": "./src/mrr.ts",
+    "./stripe": "./src/stripe.ts"
   },
   "dependencies": {
     "@nullshift/db": "workspace:*",
