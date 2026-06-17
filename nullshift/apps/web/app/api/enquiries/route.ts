@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
+import { recordLead } from "@nullshift/db/leads";
 
 /* Public endpoint — the website contact + booking forms POST here.
    Saves the enquiry to Supabase, then emails a notification via Resend. */
@@ -23,7 +24,8 @@ export async function POST(request: Request) {
     source,
     name,
     email,
-    business_name: ((body.business as string) || (body.business_name as string) || null) ?? null,
+    business_name:
+      ((body.business as string) || (body.business_name as string) || null) ?? null,
     phone: ((body.phone as string) || null) ?? null,
     message: ((body.message as string) || (body.brief as string) || null) ?? null,
     preferred_date: ((body.date as string) || null) ?? null,
@@ -43,6 +45,17 @@ export async function POST(request: Request) {
     console.error("Supabase not configured:", e);
     return NextResponse.json({ error: "Backend not configured." }, { status: 500 });
   }
+
+  // ---- Also write the canonical multi-tenant `leads` row (transitional dual-write) ----
+  const lead = await recordLead({
+    name,
+    email,
+    source,
+    vertical: ((body.industry as string) || (body.vertical as string) || null) ?? null,
+    quizAnswers: record,
+    status: "new",
+  });
+  if (!lead.ok) console.error("Lead insert error:", lead.error);
 
   // ---- Email notification (best-effort; never blocks the user) ----
   try {

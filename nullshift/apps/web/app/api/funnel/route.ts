@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
+import { recordLead } from "@nullshift/db/leads";
 import { scoreLead, type Answers } from "@/lib/funnel";
 import { clientEmail, ownerEmail } from "@/lib/funnelEmails";
 
@@ -30,7 +31,8 @@ export async function POST(request: Request) {
 
   // ── Bot traps: pretend success, store nothing. ──
   if (body.website && body.website.trim() !== "") return NextResponse.json({ ok: true });
-  if (typeof body.elapsedMs === "number" && body.elapsedMs < 1500) return NextResponse.json({ ok: true });
+  if (typeof body.elapsedMs === "number" && body.elapsedMs < 1500)
+    return NextResponse.json({ ok: true });
 
   const name = body.contact?.name?.trim();
   const email = body.contact?.email?.trim().toLowerCase();
@@ -38,7 +40,10 @@ export async function POST(request: Request) {
   const answers = body.answers ?? {};
 
   if (!name || !email || !EMAIL_RE.test(email)) {
-    return NextResponse.json({ error: "A valid name and email are required." }, { status: 400 });
+    return NextResponse.json(
+      { error: "A valid name and email are required." },
+      { status: 400 }
+    );
   }
 
   // Authoritative scoring happens on the server.
@@ -64,27 +69,75 @@ export async function POST(request: Request) {
     console.error("Supabase not configured:", e);
   }
 
+  // ── Also write the canonical multi-tenant `leads` row (Phase 1 schema). The
+  //    enquiries write above stays during the transition so the legacy admin
+  //    keeps showing leads until the ops hub reads `leads` directly (Phase 3). ──
+  const lead = await recordLead({
+    name,
+    email,
+    source: "funnel",
+    vertical: answers.industry || null,
+    quizAnswers: { answers, recommendation },
+    leadScore: score,
+    status: segment === "qualified" ? "qualified" : "new",
+  });
+  if (!lead.ok) console.error("Lead insert error:", lead.error);
+
   // ── Branded emails via Resend (best-effort) ──
   try {
     const apiKey = process.env.RESEND_API_KEY;
     if (apiKey) {
-      const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(/\/$/, "");
+      const siteUrl = (
+        process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk"
+      ).replace(/\/$/, "");
       const resourceUrl = process.env.FUNNEL_RESOURCE_URL || `${siteUrl}/resources`;
       const bookUrl = `${siteUrl}/book?segment=${segment}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
-      const from = process.env.ENQUIRY_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || "Nullshift <onboarding@resend.dev>";
+      const from =
+        process.env.ENQUIRY_FROM_EMAIL ||
+        process.env.RESEND_FROM_EMAIL ||
+        "Nullshift <onboarding@resend.dev>";
       const notify = process.env.ENQUIRY_NOTIFY_EMAIL;
 
       const { Resend } = await import("resend");
       const resend = new Resend(apiKey);
 
       // Tailored, lead-generating email to the visitor.
-      const ce = clientEmail({ name, segment, recommendation, answers, resourceUrl, bookUrl });
-      await resend.emails.send({ from, to: email, subject: ce.subject, html: ce.html, text: ce.text });
+      const ce = clientEmail({
+        name,
+        segment,
+        recommendation,
+        answers,
+        resourceUrl,
+        bookUrl,
+      });
+      await resend.emails.send({
+        from,
+        to: email,
+        subject: ce.subject,
+        html: ce.html,
+        text: ce.text,
+      });
 
       // Branded new-lead notification to Nullshift.
       if (notify) {
-        const oe = ownerEmail({ name, email, phone, segment, score, answers, recommendation, resourceUrl });
-        await resend.emails.send({ from, to: notify, replyTo: email, subject: oe.subject, html: oe.html, text: oe.text });
+        const oe = ownerEmail({
+          name,
+          email,
+          phone,
+          segment,
+          score,
+          answers,
+          recommendation,
+          resourceUrl,
+        });
+        await resend.emails.send({
+          from,
+          to: notify,
+          replyTo: email,
+          subject: oe.subject,
+          html: oe.html,
+          text: oe.text,
+        });
       }
 
       // Add the lead to a Resend audience for ongoing nurture (best-effort).

@@ -72,12 +72,20 @@ export const STEPS: FunnelStep[] = [
     question: "What kind of business are you?",
     help: "Pick the closest — we tailor everything to your world.",
     options: [
-      { id: "trades", label: "Trades", desc: "Builder, plumber, electrician…" },
-      { id: "salon", label: "Salon & beauty", desc: "Hair, nails, aesthetics" },
+      {
+        id: "clinic",
+        label: "Clinic / allied health",
+        desc: "Physio, osteo, chiro, private therapy",
+      },
       { id: "wellness", label: "Health & wellness", desc: "Gym, coach, nutrition" },
-      { id: "therapy", label: "Therapy / clinic", desc: "Therapist, physio, dental" },
+      { id: "salon", label: "Salon & beauty", desc: "Hair, nails, aesthetics" },
+      { id: "trades", label: "Trades", desc: "Builder, plumber, electrician…" },
       { id: "hospitality", label: "Hospitality", desc: "Café, restaurant, venue" },
-      { id: "professional", label: "Professional services", desc: "Legal, finance, consulting" },
+      {
+        id: "professional",
+        label: "Professional services",
+        desc: "Legal, finance, consulting",
+      },
       { id: "retail", label: "Retail / e-commerce", desc: "A shop or online store" },
       { id: "other", label: "Something else", other: true },
     ],
@@ -114,18 +122,25 @@ export const STEPS: FunnelStep[] = [
       { id: "unsure", label: "Not sure" },
     ],
   },
+  // ── The cuttable bill — what they currently rent (scored: a bigger bill is a
+  //    bigger win to own outright, so it qualifies harder). Asked of everyone. ──
   {
-    id: "costs",
+    id: "software_spend",
     stage: 2,
-    showIf: (a) => a.has_site === "yes",
-    question: "What do you pay to keep it running?",
-    help: "A rough idea is fine — it helps us compare like for like.",
+    question:
+      "Roughly what do you pay each month for the software that runs your business?",
+    help: "Booking, reminders, payments, records, your site — add up the subscriptions. A ballpark is fine.",
     options: [
-      { id: "monthly", label: "A monthly subscription" },
-      { id: "commission", label: "Commission or per-booking fees" },
-      { id: "annual", label: "Annual hosting + domain" },
-      { id: "developer", label: "I pay a developer ongoing" },
-      { id: "nothing", label: "Nothing / not sure" },
+      { id: "under50", label: "Under £50 / month", score: 0 },
+      { id: "50to150", label: "£50 – £150 / month", score: 2 },
+      { id: "150to400", label: "£150 – £400 / month", score: 3 },
+      {
+        id: "400plus",
+        label: "£400+ / month",
+        desc: "Often per-practitioner fees",
+        score: 4,
+      },
+      { id: "unsure", label: "Not sure", score: 1 },
     ],
   },
 
@@ -138,7 +153,12 @@ export const STEPS: FunnelStep[] = [
       { id: "new", label: "A new website", desc: "Build from scratch", score: 2 },
       { id: "redesign", label: "A redesign", desc: "Refresh what I have", score: 2 },
       { id: "branding", label: "Branding", desc: "Logo, identity, guidelines", score: 1 },
-      { id: "ongoing", label: "Ongoing dev support", desc: "Build & run it for me", score: 3 },
+      {
+        id: "ongoing",
+        label: "Ongoing dev support",
+        desc: "Build & run it for me",
+        score: 3,
+      },
     ],
   },
   {
@@ -163,18 +183,20 @@ export const STEPS: FunnelStep[] = [
       { id: "exploring", label: "Just exploring", score: 0 },
     ],
   },
-  // Trust / personalisation — unscored, skippable.
+  // ── Biggest admin pain — the qualification signal (where it hurts). Skippable. ──
   {
-    id: "blocker",
+    id: "admin_pain",
     stage: 2,
-    question: "What's holding you back the most?",
-    help: "Optional — tell us where it hurts and we'll speak to it.",
+    question: "Where does most of your admin time or money go?",
+    help: "Optional — tell us where it hurts and we'll build to fix it first.",
     optional: true,
     options: [
-      { id: "outdated", label: "It looks outdated" },
-      { id: "noleads", label: "It doesn't bring in leads" },
-      { id: "hardupdate", label: "It's hard to update" },
-      { id: "nothing", label: "Nothing — starting fresh" },
+      { id: "noshows", label: "Missed calls & no-shows" },
+      { id: "reminders", label: "Manual reminders & rebooking" },
+      { id: "tools", label: "Juggling too many tools & subscriptions" },
+      { id: "payments", label: "Taking & chasing payments" },
+      { id: "records", label: "Client records, notes & forms" },
+      { id: "nothing", label: "Nothing major — just exploring" },
     ],
   },
 ];
@@ -217,11 +239,11 @@ const STEP_TITLES: Record<string, string> = {
   industry: "Industry",
   provider: "Current platform",
   build: "Built by",
-  costs: "Ongoing costs",
+  software_spend: "Monthly software spend",
   need: "What they need",
   budget: "Budget",
   timeline: "Timeline",
-  blocker: "Biggest blocker",
+  admin_pain: "Biggest admin pain",
 };
 
 /** A tailored, human-readable summary of everything the lead told us —
@@ -229,7 +251,10 @@ const STEP_TITLES: Record<string, string> = {
 export function answeredSummary(answers: Answers): { label: string; value: string }[] {
   return visibleSteps(answers)
     .filter((s) => answers[s.id])
-    .map((s) => ({ label: STEP_TITLES[s.id] ?? s.id, value: answerLabel(answers, s.id) }));
+    .map((s) => ({
+      label: STEP_TITLES[s.id] ?? s.id,
+      value: answerLabel(answers, s.id),
+    }));
 }
 
 /* ── Recommendation builder ─────────────────────────────────────── */
@@ -264,14 +289,16 @@ export function resourceName(answers: Answers): string {
 function recommendationFor(answers: Answers, segment: Segment): Recommendation {
   const service = SERVICE_PHRASE[answers.need] ?? "a bespoke website";
   const budgetBand = optionLabel("budget", answers.budget) || "your budget";
-  const timeline = optionLabel("timeline", answers.timeline).toLowerCase() || "your timeline";
+  const timeline =
+    optionLabel("timeline", answers.timeline).toLowerCase() || "your timeline";
 
   if (segment === "qualified") {
     return {
       service,
       budgetBand,
       timeline,
-      planSuggestion: PLAN_QUALIFIED[answers.need] ?? "a bespoke build plus a Growth plan",
+      planSuggestion:
+        PLAN_QUALIFIED[answers.need] ?? "a bespoke build plus a Growth plan",
       headline: "You're a great fit.",
       body: `Based on your answers, we'd recommend ${service} — most likely ${
         PLAN_QUALIFIED[answers.need] ?? "a bespoke build plus a Growth plan"
