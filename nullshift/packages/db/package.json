@@ -9,6 +9,7 @@
     "./env": "./src/env.ts",
     "./leads": "./src/leads.ts",
     "./audit": "./src/audit.ts",
+    "./documents": "./src/documents.ts",
     "./types": "./src/types.ts"
   },
   "scripts": {

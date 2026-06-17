@@ -59,6 +59,18 @@ export function PortalHeader({ email }: { email: string }) {
         >
           Requests
         </Link>
+        <Link
+          href="/portal/deliverables"
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.8125rem",
+            fontWeight: 500,
+            color: T.muted,
+            textDecoration: "none",
+          }}
+        >
+          Deliverables
+        </Link>
         <span
           style={{
             fontFamily: T.mono,

@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
+import { uploadDeliverable } from "@nullshift/db/documents";
 import { T } from "@nullshift/ui/tokens";
 
 /**
@@ -24,6 +25,13 @@ type CR = {
 };
 type Project = { id: string; tenant_id: string; name: string; stage: string };
 type Tenant = { id: string; name: string; vertical: string | null };
+type Doc = {
+  id: string;
+  project_id: string;
+  kind: string;
+  storage_path: string;
+  version: number;
+};
 
 const NEXT_STATUS: Record<string, string> = {
   approved: "in_progress",
@@ -112,6 +120,35 @@ async function advanceRequest(formData: FormData) {
   revalidatePath("/admin/delivery");
 }
 
+async function uploadDoc(formData: FormData) {
+  "use server";
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  const kind = String(formData.get("kind") || "asset");
+  const file = formData.get("file");
+  if (!tenantId || !projectId || !(file instanceof File) || file.size === 0) return;
+  const supabase = await createClient();
+  const res = await uploadDeliverable(supabase, {
+    tenantId,
+    projectId,
+    kind,
+    fileName: file.name,
+    body: await file.arrayBuffer(),
+    contentType: file.type || undefined,
+  });
+  if (res.ok) {
+    await logAudit({
+      action: "document.uploaded",
+      target: `project:${projectId}`,
+      tenantId,
+      metadata: { path: res.path, version: res.version },
+    });
+  } else {
+    console.error("uploadDoc failed:", res.error);
+  }
+  revalidatePath("/admin/delivery");
+}
+
 // ── UI bits ────────────────────────────────────────────────────
 const STATUS_TONE: Record<string, string> = {
   submitted: T.info,
@@ -174,24 +211,30 @@ const input = {
 
 export default async function DeliveryPage() {
   const supabase = await createClient();
-  const [{ data: tenants }, { data: projects }, { data: requests }] = await Promise.all([
-    supabase
-      .from("tenants")
-      .select("id, name, vertical")
-      .eq("type", "client")
-      .order("name"),
-    supabase.from("projects").select("id, tenant_id, name, stage").order("created_at"),
-    supabase
-      .from("change_requests")
-      .select(
-        "id, tenant_id, project_id, description, status, estimate_hours, quoted_price"
-      )
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: tenants }, { data: projects }, { data: requests }, { data: documents }] =
+    await Promise.all([
+      supabase
+        .from("tenants")
+        .select("id, name, vertical")
+        .eq("type", "client")
+        .order("name"),
+      supabase.from("projects").select("id, tenant_id, name, stage").order("created_at"),
+      supabase
+        .from("change_requests")
+        .select(
+          "id, tenant_id, project_id, description, status, estimate_hours, quoted_price"
+        )
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("documents")
+        .select("id, project_id, kind, storage_path, version")
+        .order("created_at", { ascending: false }),
+    ]);
 
   const tenantList = (tenants ?? []) as Tenant[];
   const projectList = (projects ?? []) as Project[];
   const requestList = (requests ?? []) as CR[];
+  const docList = (documents ?? []) as Doc[];
 
   return (
     <div>
@@ -451,6 +494,67 @@ export default async function DeliveryPage() {
                           </div>
                         </div>
                       ))}
+                    </div>
+
+                    {/* Deliverables — versioned document store */}
+                    <div style={{ marginTop: 12 }}>
+                      <div
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: "10px",
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          color: T.muted,
+                          marginBottom: 6,
+                        }}
+                      >
+                        Deliverables
+                      </div>
+                      {docList
+                        .filter((d) => d.project_id === project.id)
+                        .map((d) => (
+                          <div
+                            key={d.id}
+                            className="flex items-center gap-2"
+                            style={{
+                              fontFamily: T.mono,
+                              fontSize: "11px",
+                              color: T.muted,
+                              padding: "2px 0",
+                            }}
+                          >
+                            <span style={{ color: T.primary }}>v{d.version}</span>
+                            <span style={{ color: T.faint }}>{d.kind}</span>
+                            <span>{d.storage_path.split("/").pop()}</span>
+                          </div>
+                        ))}
+                      <form
+                        action={uploadDoc}
+                        className="flex items-center gap-2"
+                        style={{ marginTop: 6, flexWrap: "wrap" }}
+                      >
+                        <input type="hidden" name="tenant_id" value={tenant.id} />
+                        <input type="hidden" name="project_id" value={project.id} />
+                        <select
+                          name="kind"
+                          defaultValue="asset"
+                          style={{ ...input, width: 110 }}
+                        >
+                          <option value="asset">asset</option>
+                          <option value="brief">brief</option>
+                          <option value="contract">contract</option>
+                          <option value="consent">consent</option>
+                        </select>
+                        <input
+                          type="file"
+                          name="file"
+                          required
+                          style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}
+                        />
+                        <button type="submit" style={btn(T.surface2, T.fg)}>
+                          Upload
+                        </button>
+                      </form>
                     </div>
                   </div>
                 );
