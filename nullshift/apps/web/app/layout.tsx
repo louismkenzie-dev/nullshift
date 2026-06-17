@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@nullshift/ui/styles/fonts.css";
 import "./globals.css";
 import { SmoothScroll } from "@/components/SmoothScroll";
+import { ConsentBanner } from "@/components/ConsentBanner";
 
 const SITE_URL = "https://nullshift.co.uk";
 const TITLE = "Nullshift — Web Design & Development";
@@ -67,6 +68,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <SmoothScroll>{children}</SmoothScroll>
+        <ConsentBanner />
       </body>
     </html>
   );

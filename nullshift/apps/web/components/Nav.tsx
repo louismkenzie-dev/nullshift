@@ -8,10 +8,11 @@ import { Logo, LogoMark } from "@nullshift/ui/components/Logo";
 import { cn } from "@nullshift/ui/utils";
 
 const links = [
-  { label: "For Trades",  href: "/trades" },
-  { label: "For Salons",  href: "/wellness" },
+  { label: "For Clinics", href: "/clinics" },
+  { label: "For Trades", href: "/trades" },
+  { label: "For Salons", href: "/wellness" },
   { label: "Systems Lab", href: "/systems-lab" },
-  { label: "Pricing",     href: "/pricing" },
+  { label: "Pricing", href: "/pricing" },
 ];
 
 export function Nav() {
@@ -19,7 +20,9 @@ export function Nav() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => { setOpen(false); }, [pathname]);
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -29,7 +32,9 @@ export function Nav() {
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [open]);
 
   return (
@@ -70,8 +75,14 @@ export function Nav() {
                       textDecoration: "none",
                       transition: `color ${T.duration.base} ${T.ease}`,
                     }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = T.fg}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = active ? T.fg : T.muted}
+                    onMouseEnter={(e) =>
+                      ((e.currentTarget as HTMLElement).style.color = T.fg)
+                    }
+                    onMouseLeave={(e) =>
+                      ((e.currentTarget as HTMLElement).style.color = active
+                        ? T.fg
+                        : T.muted)
+                    }
                   >
                     {label}
                   </Link>
@@ -100,12 +111,12 @@ export function Nav() {
                 textDecoration: "none",
                 transition: `background ${T.duration.base} ${T.ease}, color ${T.duration.base} ${T.ease}, border-color ${T.duration.base} ${T.ease}`,
               }}
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLElement;
                 el.style.background = T.surface2;
                 el.style.color = T.fg;
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement;
                 el.style.background = "transparent";
                 el.style.color = T.muted;
@@ -132,15 +143,19 @@ export function Nav() {
                 boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
                 transition: `background ${T.duration.base} ${T.ease}`,
               }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.primaryHover}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = T.primary}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLElement).style.background = T.primaryHover)
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLElement).style.background = T.primary)
+              }
             >
               Get my free plan
             </Link>
 
             {/* Hamburger — mobile only */}
             <button
-              onClick={() => setOpen(v => !v)}
+              onClick={() => setOpen((v) => !v)}
               className="md:hidden flex flex-col justify-center items-center gap-[5px] w-9 h-9"
               style={{
                 background: open ? T.surface2 : "transparent",
@@ -149,9 +164,39 @@ export function Nav() {
               }}
               aria-label="Toggle menu"
             >
-              <span style={{ display: "block", width: 18, height: 1.5, background: T.fg, borderRadius: 2, transition: "transform .2s, opacity .2s", transform: open ? "translateY(6.5px) rotate(45deg)" : "none" }} />
-              <span style={{ display: "block", width: 18, height: 1.5, background: T.fg, borderRadius: 2, transition: "opacity .2s", opacity: open ? 0 : 1 }} />
-              <span style={{ display: "block", width: 18, height: 1.5, background: T.fg, borderRadius: 2, transition: "transform .2s, opacity .2s", transform: open ? "translateY(-6.5px) rotate(-45deg)" : "none" }} />
+              <span
+                style={{
+                  display: "block",
+                  width: 18,
+                  height: 1.5,
+                  background: T.fg,
+                  borderRadius: 2,
+                  transition: "transform .2s, opacity .2s",
+                  transform: open ? "translateY(6.5px) rotate(45deg)" : "none",
+                }}
+              />
+              <span
+                style={{
+                  display: "block",
+                  width: 18,
+                  height: 1.5,
+                  background: T.fg,
+                  borderRadius: 2,
+                  transition: "opacity .2s",
+                  opacity: open ? 0 : 1,
+                }}
+              />
+              <span
+                style={{
+                  display: "block",
+                  width: 18,
+                  height: 1.5,
+                  background: T.fg,
+                  borderRadius: 2,
+                  transition: "transform .2s, opacity .2s",
+                  transform: open ? "translateY(-6.5px) rotate(-45deg)" : "none",
+                }}
+              />
             </button>
           </div>
         </nav>
@@ -181,17 +226,56 @@ export function Nav() {
           }}
         >
           {/* Drawer header */}
-          <div className="flex items-center justify-between px-6 h-16 shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
+          <div
+            className="flex items-center justify-between px-6 h-16 shrink-0"
+            style={{ borderBottom: `1px solid ${T.border}` }}
+          >
             <div className="flex items-center gap-2.5">
               <LogoMark size={18} />
-              <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.9375rem", letterSpacing: "-0.01em", color: T.fg }}>Nullshift</span>
+              <span
+                style={{
+                  fontFamily: T.sans,
+                  fontWeight: 600,
+                  fontSize: "0.9375rem",
+                  letterSpacing: "-0.01em",
+                  color: T.fg,
+                }}
+              >
+                Nullshift
+              </span>
             </div>
-            <button onClick={() => setOpen(false)} style={{ color: T.muted, fontFamily: T.mono, fontSize: 20, lineHeight: 1, background: "none", border: "none", cursor: "pointer" }}>×</button>
+            <button
+              onClick={() => setOpen(false)}
+              style={{
+                color: T.muted,
+                fontFamily: T.mono,
+                fontSize: 20,
+                lineHeight: 1,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              ×
+            </button>
           </div>
 
           {/* Drawer nav */}
           <nav className="flex flex-col gap-1 px-4 py-6 flex-1">
-            <p style={{ fontFamily: T.sans, fontSize: "0.6875rem", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: T.faint, paddingLeft: 12, marginBottom: 8 }}>Navigation</p>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.6875rem",
+                fontWeight: 500,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: T.faint,
+                paddingLeft: 12,
+                marginBottom: 8,
+              }}
+            >
+              Navigation
+            </p>
             {links.map((l) => {
               const active = pathname === l.href;
               return (
@@ -205,20 +289,47 @@ export function Nav() {
                     borderRadius: T.r.md,
                     transition: `background ${T.duration.base} ${T.ease}`,
                   }}
-                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = T.elevated; }}
-                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                  onMouseEnter={(e) => {
+                    if (!active)
+                      (e.currentTarget as HTMLElement).style.background = T.elevated;
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active)
+                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                  }}
                 >
-                  <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.9375rem", letterSpacing: "-0.01em", color: active ? T.primary : T.fg }}>
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: 600,
+                      fontSize: "0.9375rem",
+                      letterSpacing: "-0.01em",
+                      color: active ? T.primary : T.fg,
+                    }}
+                  >
                     {l.label}
                   </span>
-                  {active && <span style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: T.primary }} />}
+                  {active && (
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        background: T.primary,
+                      }}
+                    />
+                  )}
                 </Link>
               );
             })}
           </nav>
 
           {/* Drawer footer */}
-          <div className="px-6 py-5 shrink-0 flex flex-col gap-2" style={{ borderTop: `1px solid ${T.border}` }}>
+          <div
+            className="px-6 py-5 shrink-0 flex flex-col gap-2"
+            style={{ borderTop: `1px solid ${T.border}` }}
+          >
             <Link
               href="/portal"
               className="w-full h-11 inline-flex items-center justify-center"
