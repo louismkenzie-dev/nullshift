@@ -19,13 +19,21 @@ type ProjectUpdate = {
   client_choice: string | null;
 };
 type Proposal = {
-  id: string; status: string; project_name: string | null; title: string;
-  summary: string | null; total: number; currency: string;
+  id: string;
+  status: string;
+  project_name: string | null;
+  title: string;
+  summary: string | null;
+  total: number;
+  currency: string;
   line_items: Array<{ label: string; qty: number; unit_price: number }>;
-  accepted_at: string | null; accepted_name: string | null;
+  accepted_at: string | null;
+  accepted_name: string | null;
 };
 type BrandGuideline = {
-  brand_name: string | null; tagline: string | null; mission: string | null;
+  brand_name: string | null;
+  tagline: string | null;
+  mission: string | null;
   colours: Array<{ name: string; hex: string; role: string }>;
   typography: Array<{ role: string; font: string; weights: string; usage: string }>;
   voice: string | null;
@@ -34,11 +42,11 @@ type BrandGuideline = {
 
 // ── Phase metadata ─────────────────────────────────────────────────────────
 const PHASES = [
-  { key: "discovery",   label: "Discovery" },
-  { key: "design",      label: "Design" },
+  { key: "discovery", label: "Discovery" },
+  { key: "design", label: "Design" },
   { key: "development", label: "Development" },
-  { key: "review",      label: "Review" },
-  { key: "live",        label: "Live ✓" },
+  { key: "review", label: "Review" },
+  { key: "live", label: "Live ✓" },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -50,7 +58,7 @@ function relativeDate(iso: string) {
   const days = Math.floor(diff / 86400000);
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
-  if (days < 7)  return `${days} days ago`;
+  if (days < 7) return `${days} days ago`;
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
@@ -58,10 +66,36 @@ function relativeDate(iso: string) {
 
 function SectionHead({ label, children }: { label: string; children?: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 16,
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.primary, display: "inline-block", boxShadow: `0 0 0 3px ${T.primarySoft}`, flexShrink: 0 }} />
-        <span style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: T.primary,
+            display: "inline-block",
+            boxShadow: `0 0 0 3px ${T.primarySoft}`,
+            flexShrink: 0,
+          }}
+        />
+        <span
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.75rem",
+            fontWeight: 500,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: T.muted,
+          }}
+        >
           {label}
         </span>
       </div>
@@ -72,8 +106,17 @@ function SectionHead({ label, children }: { label: string; children?: React.Reac
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div style={{ background: T.surface, border: `1px dashed ${T.border}`, borderRadius: T.r.md, padding: "20px 24px" }}>
-      <p style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.faint }}>{message}</p>
+    <div
+      style={{
+        background: T.surface,
+        border: `1px dashed ${T.border}`,
+        borderRadius: T.r.md,
+        padding: "20px 24px",
+      }}
+    >
+      <p style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.faint }}>
+        {message}
+      </p>
     </div>
   );
 }
@@ -81,39 +124,83 @@ function EmptyState({ message }: { message: string }) {
 // Update card for non-interactive updates
 function UpdateCard({ update }: { update: ProjectUpdate }) {
   const TYPE_COLOUR: Record<string, string> = {
-    update:   T.primary,
+    update: T.primary,
     decision: T.warning,
     branding: "#818cf8",
   };
   const colour = TYPE_COLOUR[update.type] ?? T.primary;
 
   return (
-    <div style={{
-      background: T.surface,
-      border: `1px solid ${T.border}`,
-      borderRadius: T.r.md,
-      padding: "18px 20px",
-    }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: update.body || update.image_urls?.length ? 10 : 0 }}>
+    <div
+      style={{
+        background: T.surface,
+        border: `1px solid ${T.border}`,
+        borderRadius: T.r.md,
+        padding: "18px 20px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: update.body || update.image_urls?.length ? 10 : 0,
+        }}
+      >
         <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
-          <span style={{
-            fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase",
-            color: colour, background: `${colour}18`, padding: "2px 8px",
-            borderRadius: T.r.full, display: "inline-block", alignSelf: "flex-start",
-          }}>
+          <span
+            style={{
+              fontFamily: T.mono,
+              fontSize: "9px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: colour,
+              background: `${colour}18`,
+              padding: "2px 8px",
+              borderRadius: T.r.full,
+              display: "inline-block",
+              alignSelf: "flex-start",
+            }}
+          >
             Update
           </span>
-          <h4 style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.9375rem", letterSpacing: "-0.01em", color: T.fg, margin: 0 }}>
+          <h4
+            style={{
+              fontFamily: T.sans,
+              fontWeight: 600,
+              fontSize: "0.9375rem",
+              letterSpacing: "-0.01em",
+              color: T.fg,
+              margin: 0,
+            }}
+          >
             {update.title}
           </h4>
         </div>
-        <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.faint, flexShrink: 0, paddingTop: 2 }}>
+        <span
+          style={{
+            fontFamily: T.mono,
+            fontSize: "10px",
+            color: T.faint,
+            flexShrink: 0,
+            paddingTop: 2,
+          }}
+        >
           {relativeDate(update.created_at)}
         </span>
       </div>
 
       {update.body && (
-        <p style={{ fontFamily: T.sans, fontSize: "0.875rem", lineHeight: 1.65, color: T.muted, margin: "0 0 12px" }}>
+        <p
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.875rem",
+            lineHeight: 1.65,
+            color: T.muted,
+            margin: "0 0 12px",
+          }}
+        >
           {update.body}
         </p>
       )}
@@ -121,11 +208,25 @@ function UpdateCard({ update }: { update: ProjectUpdate }) {
       {update.image_urls?.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {update.image_urls.map((url, i) => (
-            <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: "block" }}>
+            <a
+              key={i}
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              style={{ display: "block" }}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={url} alt=""
-                style={{ width: 120, height: 90, objectFit: "cover", borderRadius: T.r.sm, border: `1px solid ${T.border}`, display: "block" }}
+                src={url}
+                alt=""
+                style={{
+                  width: 120,
+                  height: 90,
+                  objectFit: "cover",
+                  borderRadius: T.r.sm,
+                  border: `1px solid ${T.border}`,
+                  display: "block",
+                }}
               />
             </a>
           ))}
@@ -133,7 +234,11 @@ function UpdateCard({ update }: { update: ProjectUpdate }) {
       )}
 
       <div style={{ marginTop: 10, fontFamily: T.mono, fontSize: "9px", color: T.faint }}>
-        {new Date(update.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+        {new Date(update.created_at).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })}
       </div>
     </div>
   );
@@ -142,37 +247,62 @@ function UpdateCard({ update }: { update: ProjectUpdate }) {
 // Brief display from brief_data JSON
 function BriefSection({ brief }: { brief: Record<string, unknown> }) {
   const sections: Array<{ label: string; key: string }> = [
-    { label: "Project type",         key: "projectType" },
-    { label: "Goals",                key: "goals" },
-    { label: "Target audience",      key: "targetAudience" },
-    { label: "Design style",         key: "designStyle" },
-    { label: "Competitors",          key: "competitors" },
-    { label: "Budget",               key: "budget" },
-    { label: "Timeline",             key: "timeline" },
-    { label: "Pages / features",     key: "pages" },
-    { label: "Additional notes",     key: "notes" },
+    { label: "Project type", key: "projectType" },
+    { label: "Goals", key: "goals" },
+    { label: "Target audience", key: "targetAudience" },
+    { label: "Design style", key: "designStyle" },
+    { label: "Competitors", key: "competitors" },
+    { label: "Budget", key: "budget" },
+    { label: "Timeline", key: "timeline" },
+    { label: "Pages / features", key: "pages" },
+    { label: "Additional notes", key: "notes" },
   ];
 
-  const filled = sections.filter(s => {
+  const filled = sections.filter((s) => {
     const v = brief[s.key];
     return v && (Array.isArray(v) ? v.length > 0 : String(v).trim());
   });
 
-  if (!filled.length) return (
-    <p style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.faint }}>Brief submitted — details will appear here.</p>
-  );
+  if (!filled.length)
+    return (
+      <p style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.faint }}>
+        Brief submitted — details will appear here.
+      </p>
+    );
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      {filled.map(s => {
+      {filled.map((s) => {
         const val = brief[s.key];
         const text = Array.isArray(val) ? val.join(", ") : String(val);
         return (
-          <div key={s.key} style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 12 }}>
-            <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, marginBottom: 4 }}>
+          <div
+            key={s.key}
+            style={{ borderBottom: `1px solid ${T.border}`, paddingBottom: 12 }}
+          >
+            <div
+              style={{
+                fontFamily: T.mono,
+                fontSize: "10px",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: T.muted,
+                marginBottom: 4,
+              }}
+            >
               {s.label}
             </div>
-            <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.6, color: T.fg, margin: 0 }}>{text}</p>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.9rem",
+                lineHeight: 1.6,
+                color: T.fg,
+                margin: 0,
+              }}
+            >
+              {text}
+            </p>
           </div>
         );
       })}
@@ -183,71 +313,180 @@ function BriefSection({ brief }: { brief: Record<string, unknown> }) {
 // Proposal / quote section
 function ProposalSection({ proposal }: { proposal: Proposal }) {
   const statusColour: Record<string, string> = {
-    draft:    T.faint,
-    sent:     "#facc15",
+    draft: T.faint,
+    sent: "#facc15",
     accepted: T.primary,
     declined: T.danger,
   };
   const status = proposal.status ?? "draft";
   const colour = statusColour[status] ?? T.muted;
-  const regular  = (proposal.line_items ?? []).filter(li => (li.unit_price ?? 0) >= 0);
-  const discount = (proposal.line_items ?? []).find(li => (li.unit_price ?? 0) < 0);
+  const regular = (proposal.line_items ?? []).filter((li) => (li.unit_price ?? 0) >= 0);
+  const discount = (proposal.line_items ?? []).find((li) => (li.unit_price ?? 0) < 0);
   const subtotal = regular.reduce((s, li) => s + (li.qty ?? 0) * (li.unit_price ?? 0), 0);
   const discountAmt = discount ? subtotal * (Math.abs(discount.unit_price) / 100) : 0;
 
   return (
     <div>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
         <div>
-          <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.1rem", letterSpacing: "-0.01em", color: T.fg, margin: "0 0 4px" }}>
+          <h3
+            style={{
+              fontFamily: T.display,
+              fontWeight: 600,
+              fontSize: "1.1rem",
+              letterSpacing: "-0.01em",
+              color: T.fg,
+              margin: "0 0 4px",
+            }}
+          >
             {proposal.project_name || proposal.title}
           </h3>
           {proposal.summary && (
-            <p style={{ fontFamily: T.sans, fontSize: "0.875rem", lineHeight: 1.6, color: T.muted, margin: 0, maxWidth: "52ch" }}>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.875rem",
+                lineHeight: 1.6,
+                color: T.muted,
+                margin: 0,
+                maxWidth: "52ch",
+              }}
+            >
               {proposal.summary}
             </p>
           )}
         </div>
-        <span style={{
-          fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase",
-          color: colour, background: `${colour}18`, padding: "4px 10px", borderRadius: T.r.full,
-          flexShrink: 0,
-        }}>
+        <span
+          style={{
+            fontFamily: T.mono,
+            fontSize: "9px",
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: colour,
+            background: `${colour}18`,
+            padding: "4px 10px",
+            borderRadius: T.r.full,
+            flexShrink: 0,
+          }}
+        >
           {status === "accepted" ? "Accepted ✓" : status}
         </span>
       </div>
 
       {/* Line items */}
       {regular.length > 0 && (
-        <div style={{ border: `1px solid ${T.border}`, borderRadius: T.r.md, overflow: "hidden", marginBottom: 16 }}>
+        <div
+          style={{
+            border: `1px solid ${T.border}`,
+            borderRadius: T.r.md,
+            overflow: "hidden",
+            marginBottom: 16,
+          }}
+        >
           {regular.map((li, i) => (
             <div
               key={i}
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: i < regular.length - 1 ? `1px solid ${T.border}` : "none" }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "12px 16px",
+                borderBottom: i < regular.length - 1 ? `1px solid ${T.border}` : "none",
+              }}
             >
-              <span style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.fg }}>{li.label}</span>
-              <span style={{ fontFamily: T.mono, fontSize: "0.875rem", color: T.muted, flexShrink: 0 }}>
+              <span style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.fg }}>
+                {li.label}
+              </span>
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.875rem",
+                  color: T.muted,
+                  flexShrink: 0,
+                }}
+              >
                 {money((li.qty ?? 0) * (li.unit_price ?? 0), proposal.currency)}
               </span>
             </div>
           ))}
           {discount && (
             <>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 16px", background: T.elevated, borderTop: `1px solid ${T.border}` }}>
-                <span style={{ fontFamily: T.mono, fontSize: "0.8rem", color: T.muted }}>Subtotal</span>
-                <span style={{ fontFamily: T.mono, fontSize: "0.8rem", color: T.muted }}>{money(subtotal, proposal.currency)}</span>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "10px 16px",
+                  background: T.elevated,
+                  borderTop: `1px solid ${T.border}`,
+                }}
+              >
+                <span style={{ fontFamily: T.mono, fontSize: "0.8rem", color: T.muted }}>
+                  Subtotal
+                </span>
+                <span style={{ fontFamily: T.mono, fontSize: "0.8rem", color: T.muted }}>
+                  {money(subtotal, proposal.currency)}
+                </span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 16px", background: T.elevated, borderTop: `1px solid ${T.border}` }}>
-                <span style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.warning }}>{discount.label || "Discount"} (−{Math.abs(discount.unit_price)}%)</span>
-                <span style={{ fontFamily: T.mono, fontSize: "0.875rem", color: T.warning }}>−{money(discountAmt, proposal.currency)}</span>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "10px 16px",
+                  background: T.elevated,
+                  borderTop: `1px solid ${T.border}`,
+                }}
+              >
+                <span
+                  style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.warning }}
+                >
+                  {discount.label || "Discount"} (−{Math.abs(discount.unit_price)}%)
+                </span>
+                <span
+                  style={{ fontFamily: T.mono, fontSize: "0.875rem", color: T.warning }}
+                >
+                  −{money(discountAmt, proposal.currency)}
+                </span>
               </div>
             </>
           )}
           {/* Total */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px", background: T.elevated, borderTop: `1px solid ${T.border}` }}>
-            <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.9rem", color: T.fg }}>Total investment</span>
-            <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.25rem", color: T.primary }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 16px",
+              background: T.elevated,
+              borderTop: `1px solid ${T.border}`,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: T.sans,
+                fontWeight: 600,
+                fontSize: "0.9rem",
+                color: T.fg,
+              }}
+            >
+              Total investment
+            </span>
+            <span
+              style={{
+                fontFamily: T.display,
+                fontWeight: 600,
+                fontSize: "1.25rem",
+                color: T.primary,
+              }}
+            >
               {money(proposal.total ?? 0, proposal.currency)}
             </span>
           </div>
@@ -258,7 +497,16 @@ function ProposalSection({ proposal }: { proposal: Proposal }) {
       <Link
         href={`/proposal/${proposal.id}`}
         target="_blank"
-        style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, color: T.primary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+        style={{
+          fontFamily: T.sans,
+          fontSize: "0.875rem",
+          fontWeight: 500,
+          color: T.primary,
+          textDecoration: "none",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
       >
         View full proposal ↗
       </Link>
@@ -272,26 +520,104 @@ function BrandSection({ brand }: { brand: BrandGuideline }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {brand.brand_name && (
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, marginBottom: 4 }}>Brand name</div>
-          <p style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.5rem", letterSpacing: "-0.02em", color: T.fg, margin: 0 }}>{brand.brand_name}</p>
-          {brand.tagline && <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted, margin: "6px 0 0" }}>{brand.tagline}</p>}
+          <div
+            style={{
+              fontFamily: T.mono,
+              fontSize: "10px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: T.muted,
+              marginBottom: 4,
+            }}
+          >
+            Brand name
+          </div>
+          <p
+            style={{
+              fontFamily: T.display,
+              fontWeight: 600,
+              fontSize: "1.5rem",
+              letterSpacing: "-0.02em",
+              color: T.fg,
+              margin: 0,
+            }}
+          >
+            {brand.brand_name}
+          </p>
+          {brand.tagline && (
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.9rem",
+                color: T.muted,
+                margin: "6px 0 0",
+              }}
+            >
+              {brand.tagline}
+            </p>
+          )}
         </div>
       )}
       {brand.mission && (
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, marginBottom: 6 }}>Mission</div>
-          <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.7, color: T.muted, margin: 0 }}>{brand.mission}</p>
+          <div
+            style={{
+              fontFamily: T.mono,
+              fontSize: "10px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: T.muted,
+              marginBottom: 6,
+            }}
+          >
+            Mission
+          </div>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.9rem",
+              lineHeight: 1.7,
+              color: T.muted,
+              margin: 0,
+            }}
+          >
+            {brand.mission}
+          </p>
         </div>
       )}
       {brand.colours?.length > 0 && (
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, marginBottom: 10 }}>Colours</div>
+          <div
+            style={{
+              fontFamily: T.mono,
+              fontSize: "10px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: T.muted,
+              marginBottom: 10,
+            }}
+          >
+            Colours
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
             {brand.colours.map((c, i) => (
               <div key={i} style={{ textAlign: "center" }}>
-                <div style={{ width: 52, height: 52, borderRadius: T.r.md, background: c.hex, border: `1px solid ${T.borderStr}`, marginBottom: 6 }} />
-                <div style={{ fontFamily: T.mono, fontSize: "9px", color: T.fg }}>{c.name}</div>
-                <div style={{ fontFamily: T.mono, fontSize: "9px", color: T.muted }}>{c.hex}</div>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: T.r.md,
+                    background: c.hex,
+                    border: `1px solid ${T.borderStr}`,
+                    marginBottom: 6,
+                  }}
+                />
+                <div style={{ fontFamily: T.mono, fontSize: "9px", color: T.fg }}>
+                  {c.name}
+                </div>
+                <div style={{ fontFamily: T.mono, fontSize: "9px", color: T.muted }}>
+                  {c.hex}
+                </div>
               </div>
             ))}
           </div>
@@ -299,13 +625,46 @@ function BrandSection({ brand }: { brand: BrandGuideline }) {
       )}
       {brand.typography?.length > 0 && (
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, marginBottom: 10 }}>Typography</div>
+          <div
+            style={{
+              fontFamily: T.mono,
+              fontSize: "10px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: T.muted,
+              marginBottom: 10,
+            }}
+          >
+            Typography
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {brand.typography.map((t, i) => (
-              <div key={i} style={{ display: "flex", gap: 16, borderBottom: `1px solid ${T.border}`, paddingBottom: 8 }}>
-                <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.primary, minWidth: 80, textTransform: "uppercase" }}>{t.role}</span>
-                <span style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.fg }}>{t.font}</span>
-                <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted }}>{t.weights}</span>
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  borderBottom: `1px solid ${T.border}`,
+                  paddingBottom: 8,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    color: T.primary,
+                    minWidth: 80,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {t.role}
+                </span>
+                <span style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.fg }}>
+                  {t.font}
+                </span>
+                <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted }}>
+                  {t.weights}
+                </span>
               </div>
             ))}
           </div>
@@ -313,8 +672,29 @@ function BrandSection({ brand }: { brand: BrandGuideline }) {
       )}
       {brand.voice && (
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, marginBottom: 6 }}>Brand voice</div>
-          <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.7, color: T.muted, margin: 0 }}>{brand.voice}</p>
+          <div
+            style={{
+              fontFamily: T.mono,
+              fontSize: "10px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: T.muted,
+              marginBottom: 6,
+            }}
+          >
+            Brand voice
+          </div>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.9rem",
+              lineHeight: 1.7,
+              color: T.muted,
+              margin: 0,
+            }}
+          >
+            {brand.voice}
+          </p>
         </div>
       )}
     </div>
@@ -324,17 +704,115 @@ function BrandSection({ brand }: { brand: BrandGuideline }) {
 function SetupMessage() {
   return (
     <div style={{ padding: 40 }}>
-      <p style={{ fontFamily: T.sans, color: T.muted }}>Portal unavailable — Supabase not configured.</p>
+      <p style={{ fontFamily: T.sans, color: T.muted }}>
+        Portal unavailable — Supabase not configured.
+      </p>
     </div>
   );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
+// New multi-tenant model summary: project stage + open approvals + deliverables.
+const NS_STAGES = ["discovery", "build", "review", "live", "care"] as const;
+
+function ProjectSummary({
+  projects,
+  awaitingCount,
+}: {
+  projects: { id: string; name: string; stage: string }[];
+  awaitingCount: number;
+}) {
+  if (projects.length === 0) return null;
+  return (
+    <div
+      style={{
+        background: T.surface,
+        border: `1px solid ${T.border}`,
+        borderRadius: T.r.lg,
+        padding: "20px 22px",
+        marginBottom: 28,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: T.mono,
+          fontSize: "10px",
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: T.primary,
+          marginBottom: 14,
+        }}
+      >
+        {"// Your project"}
+      </div>
+      {projects.map((p) => {
+        const idx = NS_STAGES.indexOf(p.stage as (typeof NS_STAGES)[number]);
+        return (
+          <div key={p.id} style={{ marginBottom: 12 }}>
+            <div
+              style={{
+                fontFamily: T.sans,
+                fontWeight: 600,
+                fontSize: "0.95rem",
+                color: T.fg,
+                marginBottom: 8,
+              }}
+            >
+              {p.name}
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {NS_STAGES.map((s, i) => (
+                <span
+                  key={s}
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "9px",
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    color: i <= idx ? T.primaryFg : T.muted,
+                    background: i <= idx ? T.primary : "transparent",
+                    border: `1px solid ${i <= idx ? T.primary : T.border}`,
+                    borderRadius: 999,
+                    padding: "2px 9px",
+                  }}
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      <div
+        className="flex items-center gap-3 flex-wrap"
+        style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}` }}
+      >
+        <Link href="/portal/requests" style={summaryLink}>
+          {awaitingCount > 0 ? `${awaitingCount} awaiting your approval →` : "Requests →"}
+        </Link>
+        <Link href="/portal/deliverables" style={summaryLink}>
+          Deliverables →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+const summaryLink = {
+  fontFamily: T.sans,
+  fontSize: "0.82rem",
+  fontWeight: 500,
+  color: T.primary,
+  textDecoration: "none",
+} as const;
+
 export default async function PortalDashboard() {
   if (!hasSupabaseBrowserConfig()) return <SetupMessage />;
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user?.email) return <SetupMessage />;
 
   const service = createServiceClient();
@@ -366,7 +844,9 @@ export default async function PortalDashboard() {
   const { data: proposal, error: proposalErr } = client
     ? await service
         .from("proposals")
-        .select("id, title, project_name, summary, status, total, currency, line_items, accepted_at, accepted_name")
+        .select(
+          "id, title, project_name, summary, status, total, currency, line_items, accepted_at, accepted_name"
+        )
         .eq("client_id", client.id)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -397,50 +877,143 @@ export default async function PortalDashboard() {
     : { data: null, error: null };
   if (brandErr) console.error("Portal: brand_guidelines error:", brandErr.message);
 
-  const displayName  = client?.name ?? user.email.split("@")[0];
+  const displayName = client?.name ?? user.email.split("@")[0];
   const currentPhase = client?.project_phase ?? null;
-  const phaseIndex   = PHASES.findIndex(p => p.key === currentPhase);
+  const phaseIndex = PHASES.findIndex((p) => p.key === currentPhase);
 
   // Split updates into action-required vs. informational
-  const actionItems = updates.filter(u => u.requires_action && !u.action_resolved && (u.type === "decision" || u.type === "branding"));
-  const feedUpdates = updates.filter(u => !(u.requires_action && !u.action_resolved && (u.type === "decision" || u.type === "branding")));
+  const actionItems = updates.filter(
+    (u) =>
+      u.requires_action &&
+      !u.action_resolved &&
+      (u.type === "decision" || u.type === "branding")
+  );
+  const feedUpdates = updates.filter(
+    (u) =>
+      !(
+        u.requires_action &&
+        !u.action_resolved &&
+        (u.type === "decision" || u.type === "branding")
+      )
+  );
+
+  // New multi-tenant model: this client's projects + open approvals (RLS-scoped
+  // to their tenant via the authenticated client).
+  const { data: nsProjects } = await supabase
+    .from("projects")
+    .select("id, name, stage")
+    .order("created_at");
+  const { data: nsApprovals } = await supabase
+    .from("change_requests")
+    .select("id")
+    .eq("status", "awaiting_approval");
+  const newProjects = (nsProjects ?? []) as { id: string; name: string; stage: string }[];
+  const awaitingCount = (nsApprovals ?? []).length;
 
   // ── Layout ────────────────────────────────────────────────────────────────
   return (
     <div style={{ padding: "40px 24px", maxWidth: 860, margin: "0 auto" }}>
+      <ProjectSummary projects={newProjects} awaitingCount={awaitingCount} />
 
       {/* ── Welcome header ──────────────────────────────────── */}
       <div style={{ marginBottom: 36 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 3px ${T.primarySoft}`, display: "inline-block" }} />
-          <span style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: T.primary,
+              boxShadow: `0 0 0 3px ${T.primarySoft}`,
+              display: "inline-block",
+            }}
+          />
+          <span
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.75rem",
+              fontWeight: 500,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: T.muted,
+            }}
+          >
             Client portal
           </span>
         </div>
-        <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.75rem, 4vw, 2.5rem)", letterSpacing: "-0.03em", lineHeight: 1.04, color: T.fg, margin: "0 0 6px" }}>
+        <h1
+          style={{
+            fontFamily: T.display,
+            fontWeight: 600,
+            fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
+            letterSpacing: "-0.03em",
+            lineHeight: 1.04,
+            color: T.fg,
+            margin: "0 0 6px",
+          }}
+        >
           Welcome back, {displayName}.
         </h1>
         {client?.business_name && (
-          <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted, margin: 0 }}>{client.business_name}</p>
+          <p
+            style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted, margin: 0 }}
+          >
+            {client.business_name}
+          </p>
         )}
       </div>
 
       {!client ? (
         /* No client record yet */
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.lg, padding: 32, maxWidth: 480 }}>
-          <p style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: T.primary, marginBottom: 12 }}>
+        <div
+          style={{
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: T.r.lg,
+            padding: 32,
+            maxWidth: 480,
+          }}
+        >
+          <p
+            style={{
+              fontFamily: T.mono,
+              fontSize: "10px",
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: T.primary,
+              marginBottom: 12,
+            }}
+          >
             Account pending
           </p>
-          <p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.65, color: T.muted, margin: "0 0 20px" }}>
-            Your account is set up and your project will appear here once it&apos;s been activated by our team. If you have any questions in the meantime, get in touch.
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.9375rem",
+              lineHeight: 1.65,
+              color: T.muted,
+              margin: "0 0 20px",
+            }}
+          >
+            Your account is set up and your project will appear here once it&apos;s been
+            activated by our team. If you have any questions in the meantime, get in
+            touch.
           </p>
-          <Link href="/contact" style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, color: T.primary, textDecoration: "none" }}>
+          <Link
+            href="/contact"
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.875rem",
+              fontWeight: 500,
+              color: T.primary,
+              textDecoration: "none",
+            }}
+          >
             Contact us →
           </Link>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
-
           {/* ── Project status & phase ─────────────────────────── */}
           <section>
             <div
@@ -455,46 +1028,137 @@ export default async function PortalDashboard() {
             >
               {/* Subtle glow behind phase */}
               {currentPhase && (
-                <div style={{ position: "absolute", top: 0, right: 0, width: "40%", height: "100%", background: `radial-gradient(ellipse 80% 80% at 100% 50%, ${T.primary}10, transparent)`, pointerEvents: "none" }} />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    right: 0,
+                    width: "40%",
+                    height: "100%",
+                    background: `radial-gradient(ellipse 80% 80% at 100% 50%, ${T.primary}10, transparent)`,
+                    pointerEvents: "none",
+                  }}
+                />
               )}
 
               <div style={{ position: "relative" }}>
                 {/* Phase label */}
-                <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: T.muted, marginBottom: 6 }}>
+                <div
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: T.muted,
+                    marginBottom: 6,
+                  }}
+                >
                   Project status
                 </div>
 
                 {currentPhase ? (
                   <>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 3px ${T.primarySoft}`, display: "inline-block", flexShrink: 0 }} />
-                      <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.5rem", letterSpacing: "-0.02em", color: T.fg }}>
-                        {PHASES.find(p => p.key === currentPhase)?.label ?? currentPhase}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        marginBottom: 20,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: T.primary,
+                          boxShadow: `0 0 0 3px ${T.primarySoft}`,
+                          display: "inline-block",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontFamily: T.display,
+                          fontWeight: 600,
+                          fontSize: "1.5rem",
+                          letterSpacing: "-0.02em",
+                          color: T.fg,
+                        }}
+                      >
+                        {PHASES.find((p) => p.key === currentPhase)?.label ??
+                          currentPhase}
                       </span>
                     </div>
 
                     {/* Phase stepper */}
                     <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
                       {PHASES.map((phase, i) => {
-                        const isActive   = i === phaseIndex;
+                        const isActive = i === phaseIndex;
                         const isComplete = i < phaseIndex;
                         return (
-                          <div key={phase.key} style={{ display: "flex", alignItems: "center", flex: i < PHASES.length - 1 ? 1 : 0, minWidth: 0 }}>
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                              <div style={{
-                                width: isActive ? 14 : 10,
-                                height: isActive ? 14 : 10,
-                                borderRadius: "50%",
-                                background: isActive ? T.primary : isComplete ? `${T.primary}60` : T.border,
-                                boxShadow: isActive ? `0 0 0 4px ${T.primarySoft}` : "none",
-                                transition: "all 0.2s",
-                              }} />
-                              <span style={{ fontFamily: T.mono, fontSize: "8px", letterSpacing: "0.06em", textTransform: "uppercase", color: isActive ? T.primary : isComplete ? T.muted : T.faint, whiteSpace: "nowrap" }}>
+                          <div
+                            key={phase.key}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              flex: i < PHASES.length - 1 ? 1 : 0,
+                              minWidth: 0,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: 6,
+                                flexShrink: 0,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: isActive ? 14 : 10,
+                                  height: isActive ? 14 : 10,
+                                  borderRadius: "50%",
+                                  background: isActive
+                                    ? T.primary
+                                    : isComplete
+                                      ? `${T.primary}60`
+                                      : T.border,
+                                  boxShadow: isActive
+                                    ? `0 0 0 4px ${T.primarySoft}`
+                                    : "none",
+                                  transition: "all 0.2s",
+                                }}
+                              />
+                              <span
+                                style={{
+                                  fontFamily: T.mono,
+                                  fontSize: "8px",
+                                  letterSpacing: "0.06em",
+                                  textTransform: "uppercase",
+                                  color: isActive
+                                    ? T.primary
+                                    : isComplete
+                                      ? T.muted
+                                      : T.faint,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
                                 {phase.label}
                               </span>
                             </div>
                             {i < PHASES.length - 1 && (
-                              <div style={{ flex: 1, height: 1, background: i < phaseIndex ? `${T.primary}60` : T.border, margin: "0 4px", marginBottom: 18 }} />
+                              <div
+                                style={{
+                                  flex: 1,
+                                  height: 1,
+                                  background:
+                                    i < phaseIndex ? `${T.primary}60` : T.border,
+                                  margin: "0 4px",
+                                  marginBottom: 18,
+                                }}
+                              />
                             )}
                           </div>
                         );
@@ -502,21 +1166,52 @@ export default async function PortalDashboard() {
                     </div>
                   </>
                 ) : (
-                  <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted, margin: "6px 0 0" }}>
-                    Your project hasn&apos;t kicked off yet — we&apos;ll update this as soon as it begins.
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.9rem",
+                      color: T.muted,
+                      margin: "6px 0 0",
+                    }}
+                  >
+                    Your project hasn&apos;t kicked off yet — we&apos;ll update this as
+                    soon as it begins.
                   </p>
                 )}
 
                 {/* Latest update preview */}
                 {updates.length > 0 && (
-                  <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
-                    <span style={{ fontFamily: T.mono, fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted }}>
+                  <div
+                    style={{
+                      marginTop: 20,
+                      paddingTop: 16,
+                      borderTop: `1px solid ${T.border}`,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "9px",
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: T.muted,
+                      }}
+                    >
                       Latest —{" "}
                     </span>
-                    <span style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.muted }}>
+                    <span
+                      style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.muted }}
+                    >
                       {updates[0].title}
                     </span>
-                    <span style={{ fontFamily: T.mono, fontSize: "9px", color: T.faint, marginLeft: 8 }}>
+                    <span
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "9px",
+                        color: T.faint,
+                        marginLeft: 8,
+                      }}
+                    >
                       {relativeDate(updates[0].created_at)}
                     </span>
                   </div>
@@ -528,9 +1223,11 @@ export default async function PortalDashboard() {
           {/* ── Action items ──────────────────────────────────── */}
           {actionItems.length > 0 && (
             <section>
-              <SectionHead label={`Action required — ${actionItems.length} item${actionItems.length > 1 ? "s" : ""}`} />
+              <SectionHead
+                label={`Action required — ${actionItems.length} item${actionItems.length > 1 ? "s" : ""}`}
+              />
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {actionItems.map(u => (
+                {actionItems.map((u) => (
                   <ChoiceCard
                     key={u.id}
                     updateId={u.id}
@@ -553,8 +1250,8 @@ export default async function PortalDashboard() {
               <EmptyState message="Updates from our team will appear here as your project progresses." />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {feedUpdates.map(u =>
-                  (u.type === "decision" || u.type === "branding") ? (
+                {feedUpdates.map((u) =>
+                  u.type === "decision" || u.type === "branding" ? (
                     <ChoiceCard
                       key={u.id}
                       updateId={u.id}
@@ -575,9 +1272,15 @@ export default async function PortalDashboard() {
 
           {/* ── Lower sections ────────────────────────────────── */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 24 }}>
-
             {/* Proposal & investment */}
-            <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.lg, padding: "24px 28px" }}>
+            <section
+              style={{
+                background: T.surface,
+                border: `1px solid ${T.border}`,
+                borderRadius: T.r.lg,
+                padding: "24px 28px",
+              }}
+            >
               <SectionHead label="Proposal & investment" />
               {proposal ? (
                 <ProposalSection proposal={proposal as Proposal} />
@@ -588,7 +1291,14 @@ export default async function PortalDashboard() {
 
             {/* Brand guidelines */}
             {brand && (
-              <section style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.lg, padding: "24px 28px" }}>
+              <section
+                style={{
+                  background: T.surface,
+                  border: `1px solid ${T.border}`,
+                  borderRadius: T.r.lg,
+                  padding: "24px 28px",
+                }}
+              >
                 <SectionHead label="Brand guidelines" />
                 <BrandSection brand={brand as BrandGuideline} />
               </section>

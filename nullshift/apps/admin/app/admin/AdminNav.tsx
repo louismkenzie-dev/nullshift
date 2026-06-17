@@ -11,6 +11,7 @@ const links = [
   { label: "Dashboard", href: "/admin", icon: "○" },
   { label: "Pipeline", href: "/admin/pipeline", icon: "◉" },
   { label: "Delivery", href: "/admin/delivery", icon: "◧" },
+  { label: "Tasks", href: "/admin/tasks", icon: "◰" },
   { label: "Billing", href: "/admin/billing", icon: "£" },
   { label: "Compliance", href: "/admin/compliance", icon: "❖" },
   { label: "Marketing", href: "/admin/marketing", icon: "◆" },
