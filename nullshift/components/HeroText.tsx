@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { T } from "@/lib/tokens";
-import { DashboardShowcase } from "@/components/DashboardShowcase";
+import { HeroVideo } from "@/components/HeroVideo";
 import { ScrollDissolve } from "@/components/ScrollDissolve";
 
 /* ── Animation variants ───────────────────────────────── */
@@ -202,14 +202,14 @@ export default function HeroText() {
                       }}
                     >
                       <a
-                        href="/book"
+                        href="/start"
                         className="inline-flex items-center justify-center font-medium transition-opacity hover:opacity-90"
                         style={{
                           fontFamily: T.sans,
                           fontSize: "0.9375rem",
                           fontWeight: 500,
                           letterSpacing: "-0.005em",
-                          height: 44,
+                          height: 46,
                           paddingInline: 22,
                           background: T.primary,
                           color: T.primaryFg,
@@ -220,14 +220,14 @@ export default function HeroText() {
                           display: "inline-flex",
                         }}
                       >
-                        Book a discovery call
+                        Get my free plan
                       </a>
                     </div>
                   </motion.div>
 
                   <motion.div variants={fadeUp}>
                     <a
-                      href="/systems-lab"
+                      href="/book"
                       className="inline-flex items-center justify-center font-medium"
                       style={{
                         fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500,
@@ -236,9 +236,27 @@ export default function HeroText() {
                         border: `1px solid ${T.borderStr}`, textDecoration: "none", whiteSpace: "nowrap",
                       }}
                     >
-                      Try the live demos
+                      Book a call
                     </a>
                   </motion.div>
+                </motion.div>
+
+                {/* Tertiary — live demos text link */}
+                <motion.div
+                  variants={fadeUp} initial="hidden" animate="visible"
+                  className="mt-4 flex items-center justify-center"
+                >
+                  <a
+                    href="/systems-lab"
+                    className="inline-flex items-center gap-1 transition-opacity hover:opacity-75"
+                    style={{
+                      fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500,
+                      letterSpacing: "-0.005em", color: T.faint, textDecoration: "none",
+                    }}
+                  >
+                    Try the live demos
+                    <ChevronRight size={14} />
+                  </a>
                 </motion.div>
 
                 {/* Vertical chooser — surface the two wedge offers */}
@@ -255,21 +273,9 @@ export default function HeroText() {
               </ScrollDissolve>
             </div>
 
-            {/* Product showcase — auto-playing dashboard */}
+            {/* Hero video — autoplaying interview */}
             <div className="relative mt-10 px-4 sm:mt-12 md:mt-14">
-
-              {/* Bottom fade-out gradient */}
-              <div
-                aria-hidden
-                className="absolute inset-x-0 bottom-0 z-10 pointer-events-none"
-                style={{
-                  height: "30%",
-                  background: `linear-gradient(to bottom, transparent 0%, ${T.bg} 100%)`,
-                }}
-              />
-              <div className="relative mx-auto max-w-6xl">
-                <DashboardShowcase />
-              </div>
+              <HeroVideo />
             </div>
           </div>
         </section>

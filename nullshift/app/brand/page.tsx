@@ -518,6 +518,73 @@ export default function BrandPage() {
             </Reveal>
           </section>
 
+          {/* 07 — Brand assets / Downloads */}
+          <section className="py-20" style={{ borderTop: `1px solid ${T.border}` }}>
+            <Reveal><SectionTag>// 07 — Downloads</SectionTag></Reveal>
+            <Reveal delay={0.05}><H2>Brand assets</H2></Reveal>
+            <Reveal delay={0.08}>
+              <p className="mb-12 max-w-[58ch]" style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.65, color: T.muted }}>
+                Take the logo files and the animated intro with you — for slides, socials, email signatures, partner sites, or anywhere the brand needs to show up. High-resolution transparent PNGs, plus the logo opener as an MP4.
+              </p>
+            </Reveal>
+
+            {/* Logo files — transparent PNGs for dark and light backgrounds */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+              {[
+                { label: "Mark — on dark", file: "/logos/nullshift-mark-dark.png", download: "nullshift-mark-dark.png", tileBg: T.bg },
+                { label: "Mark — on light", file: "/logos/nullshift-mark-light.png", download: "nullshift-mark-light.png", tileBg: "#F2F4F8" },
+                { label: "Wordmark", file: "/logos/nullshift-wordmark.png", download: "nullshift-wordmark.png", tileBg: T.bg },
+              ].map((f, i) => (
+                <Reveal key={f.label} delay={i * 0.06}>
+                  <div className="rounded-lg border overflow-hidden h-full flex flex-col" style={{ background: T.surface, borderColor: T.border }}>
+                    <div className="flex items-center justify-center" style={{ height: 140, background: f.tileBg }}>
+                      <div role="img" aria-label={f.label} style={{ width: "80%", height: 88, backgroundImage: `url(${f.file})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center" }} />
+                    </div>
+                    <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: `1px solid ${T.border}` }}>
+                      <span style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.04em", color: T.fg }}>{f.label}</span>
+                      <a href={f.file} download={f.download} className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-80"
+                        style={{ fontFamily: T.mono, fontSize: "0.7rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.primary, textDecoration: "none" }}>
+                        PNG
+                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden><path d="M7 1V9M7 9L4 6M7 9L10 6M2 12H12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      </a>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+            {/* Animated intro */}
+            <Reveal delay={0.1}>
+              <div className="rounded-lg border overflow-hidden grid md:grid-cols-2" style={{ background: T.surface, borderColor: T.border }}>
+                <div style={{ background: T.bg }}>
+                  <video src="/nullshift-logo-opener.mp4" autoPlay muted loop playsInline aria-label="Nullshift animated logo opener"
+                    style={{ width: "100%", height: "100%", minHeight: 240, objectFit: "cover", display: "block" }} />
+                </div>
+                <div className="flex flex-col justify-center gap-4 p-8">
+                  <div style={{ fontFamily: T.mono, fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T.primary }}>// The Nullshift intro</div>
+                  <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.5rem", lineHeight: 1.1, letterSpacing: "-0.02em", color: T.fg }}>A cinematic logo opener.</h3>
+                  <p style={{ fontFamily: T.sans, fontSize: "0.875rem", lineHeight: 1.65, color: T.muted }}>
+                    A 1080p brand reveal you can drop into videos, socials or presentations. Download the MP4, or open the full interactive version (with sound) that greets first-time visitors.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3 mt-1">
+                    <a href="/nullshift-logo-opener.mp4" download="nullshift-logo-opener.mp4"
+                      className="inline-flex items-center gap-2 px-5 h-11 font-medium transition-opacity hover:opacity-90"
+                      style={{ fontFamily: T.sans, fontSize: "0.875rem", background: T.primary, color: T.primaryFg, borderRadius: T.r.md, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`, textDecoration: "none" }}>
+                      Download MP4
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden><path d="M7 1V9M7 9L4 6M7 9L10 6M2 12H12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </a>
+                    <a href="/nullshift-intro.html" target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-5 h-11 transition-opacity hover:opacity-90"
+                      style={{ fontFamily: T.sans, fontSize: "0.875rem", color: T.fg, border: `1px solid ${T.borderStr}`, borderRadius: T.r.md, textDecoration: "none" }}>
+                      Open full version
+                      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden><path d="M5 3h6v6M11 3L3 11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </section>
+
           {/* Footer download CTA */}
           <section className="py-20 flex flex-col md:flex-row items-start md:items-center justify-between gap-6" style={{ borderTop: `1px solid ${T.border}` }}>
             <div>

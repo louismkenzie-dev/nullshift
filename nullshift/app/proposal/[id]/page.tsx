@@ -5,6 +5,8 @@ import { money, proposalRef } from "@/lib/format";
 import { AcceptForm } from "./AcceptForm";
 import { Logo } from "@/components/Logo";
 import { ProposalActions } from "./ProposalActions";
+import Link from "next/link";
+import { LEGAL_ENTITY, SUB_PROCESSORS } from "@/lib/legalEntity";
 
 type LineItem = { label: string; qty: number; unit_price: number };
 type Phase = { phase: string; items: string[] };
@@ -24,6 +26,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
   const timeline: Week[] = (p.timeline ?? []).filter((w: Week) => w.week || w.title || w.description);
   const items: LineItem[] = (p.line_items ?? []).filter((l: LineItem) => l.label);
   const accepted = !!p.accepted_at;
+  const dpaOn = p.dpa_enabled !== false;
 
   const wrap: React.CSSProperties = { minHeight: "100vh", background: T.bg, padding: "48px 24px" };
   const sectionTitle: React.CSSProperties = { fontFamily: T.display, fontWeight: 600, fontSize: "1.5rem", letterSpacing: "0.02em", textTransform: "uppercase", color: T.fg };
@@ -197,6 +200,40 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
           </section>
         )}
 
+        {/* 07 Data Processing Agreement — signed as part of this proposal */}
+        {dpaOn && (
+          <section style={{ marginBottom: 48 }}>
+            <SectionHead n="07" label="Data Processing Agreement" />
+            <div style={card}>
+              <p style={{ fontFamily: T.sans, lineHeight: 1.7, color: T.fg, marginBottom: 20 }}>
+                As part of this proposal we enter into a Data Processing Agreement (DPA) that governs how we process personal data on your behalf, in line with UK GDPR. Accepting this proposal also accepts the DPA — there is nothing separate to sign.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {[
+                  ["Controller", clientName],
+                  ["Processor", LEGAL_ENTITY.name],
+                  ["Effective", accepted ? new Date(p.accepted_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : "On acceptance"],
+                  ["Special category data", p.dpa_special_category ? "Yes — extra safeguards apply" : "None"],
+                ].map(([k, v]) => (
+                  <div key={k} style={{ border: `1px solid ${T.border}`, borderRadius: 8, padding: 16 }}>
+                    <p style={{ ...mono, fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase", color: T.muted, marginBottom: 4 }}>{k}</p>
+                    <p style={{ fontFamily: T.sans, color: T.fg }}>{v}</p>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
+                <p style={{ ...mono, fontSize: "0.72rem", letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted, marginBottom: 8 }}>Authorised sub-processors</p>
+                <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted, lineHeight: 1.7 }}>
+                  {SUB_PROCESSORS.map(s => s.name.replace(/\s*\(.*?\)\s*/g, "")).join(" · ")}
+                </p>
+              </div>
+              <Link href={`/proposal/${id}/dpa`} className="no-print" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 20, fontFamily: T.mono, fontSize: "0.78rem", letterSpacing: "0.06em", textTransform: "uppercase", color: T.primary, textDecoration: "none" }}>
+                Read the full Data Processing Agreement →
+              </Link>
+            </div>
+          </section>
+        )}
+
         {/* Acceptance — hidden when printing (already signed; PDF is the record) */}
         <section className="no-print" style={{ marginBottom: 48 }}>
           <div style={{ background: `linear-gradient(135deg, ${T.surface}, ${T.surface2})`, border: `2px solid ${T.primary}`, borderRadius: 12, padding: 36 }}>
@@ -209,8 +246,8 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
               </p>
             ) : (
               <>
-                <p style={{ textAlign: "center", fontFamily: T.sans, color: T.fg, maxWidth: 560, margin: "0 auto 28px" }}>
-                  Sign below to accept this proposal and begin your project. We&apos;ll schedule a kickoff call within 48 hours.
+                <p style={{ textAlign: "center", fontFamily: T.sans, color: T.fg, maxWidth: 580, margin: "0 auto 28px" }}>
+                  Sign below to accept this proposal{dpaOn ? " and the attached Data Processing Agreement" : ""} and begin your project. We&apos;ll schedule a kickoff call within 48 hours.
                 </p>
                 <AcceptForm proposalId={id} />
               </>

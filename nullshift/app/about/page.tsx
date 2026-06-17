@@ -6,6 +6,12 @@ import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import { T } from "@/lib/tokens";
 import Link from "next/link";
+import { Gyroscope } from "@/components/assets/Gyroscope";
+import { NoTemplates } from "@/components/assets/NoTemplates";
+import { SystemsSphere } from "@/components/assets/SystemsSphere";
+import { AutomationFlow } from "@/components/assets/AutomationFlow";
+import { ClientPortal } from "@/components/assets/ClientPortal";
+import { ProcessTimeline } from "@/components/assets/ProcessTimeline";
 
 /* ── Halo eyebrow (dot + ring + label-sm) ─────── */
 function Eyebrow({ children, tone = T.primary }: { children: React.ReactNode; tone?: string }) {
@@ -23,15 +29,20 @@ function PageHero() {
       background: `${T.bg}`,
       backgroundImage: `radial-gradient(ellipse 60% 50% at 70% 40%, color-mix(in oklab, ${T.primary} 6%, transparent) 0%, transparent 70%)`,
     }}>
-      <div className="max-w-5xl pb-20">
-        <div className="mb-7"><Eyebrow>About us</Eyebrow></div>
-        <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(3rem,9vw,7.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
-          We build the web<br />
-          <span className="hero-glow" style={{ color: T.primary }}>your business owns.</span>
-        </h1>
-        <p className="mt-8 max-w-[46ch]" style={{ fontFamily: T.sans, fontSize: "1.0625rem", lineHeight: 1.65, letterSpacing: "-0.005em", color: T.muted }}>
-          No Wix. No templates. No monthly ransom. Just bespoke code your business keeps forever.
-        </p>
+      <div className="w-full pb-20 grid md:grid-cols-[1fr_auto] gap-10 md:gap-16 items-end">
+        <div className="max-w-5xl">
+          <div className="mb-7"><Eyebrow>About us</Eyebrow></div>
+          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(3rem,9vw,7.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+            We build the web<br />
+            <span className="hero-glow" style={{ color: T.primary }}>your business owns.</span>
+          </h1>
+          <p className="mt-8 max-w-[46ch]" style={{ fontFamily: T.sans, fontSize: "1.0625rem", lineHeight: 1.65, letterSpacing: "-0.005em", color: T.muted }}>
+            No Wix. No templates. No monthly ransom. Just bespoke code your business keeps forever.
+          </p>
+        </div>
+        <div className="w-full md:w-[clamp(300px,32vw,420px)] order-first md:order-none">
+          <Gyroscope style={{ height: "clamp(300px,32vw,420px)", minHeight: "clamp(300px,32vw,420px)" }} />
+        </div>
       </div>
     </section>
   );
@@ -110,8 +121,11 @@ function HowWeBuild() {
       <div className="grid md:grid-cols-2 gap-16 items-start">
         <Reveal delay={0.1}>
           <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.25rem,5vw,4rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
-            Precision code.<br /><span style={{ color: T.primary }}>Fast delivery.</span>
+            Precision code.<br /><span style={{ color: T.muted }}>Fast delivery.</span>
           </h2>
+          <div className="mt-10">
+            <NoTemplates style={{ height: 300, minHeight: 300 }} />
+          </div>
         </Reveal>
         <Reveal delay={0.2}>
           <div className="flex flex-col gap-6">
@@ -127,6 +141,70 @@ function HowWeBuild() {
             <div className="pt-2"><Eyebrow>Bespoke code · No builders · Your ownership</Eyebrow></div>
           </div>
         </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function WhatWeBuild() {
+  const caps = [
+    { Asset: SystemsSphere, title: "Connected as one.", caption: "CRM, booking, portals — wired into a single system that fits how you actually work." },
+    { Asset: AutomationFlow, title: "Work that runs itself.", caption: "Emails, follow-ups, workflows — triggered on time, every time, with no one watching." },
+    { Asset: ClientPortal, title: "A place to log in.", caption: "Dashboards and portals your clients actually want to open — their data, their tools, one login." },
+  ];
+  return (
+    <section style={{ borderTop: `1px solid ${T.border}`, background: T.bg }}>
+      <div className="px-10 md:px-16 pt-20 pb-12">
+        <Reveal>
+          <div className="mb-7" style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.primary }}>// WHAT WE BUILD</div>
+        </Reveal>
+        <Reveal delay={0.05}>
+          <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.25rem,5vw,4rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+            More than a site. <span style={{ color: T.muted }}>A system.</span>
+          </h2>
+        </Reveal>
+      </div>
+      <div className="grid md:grid-cols-3" style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}` }}>
+        {caps.map(({ Asset, title, caption }, i) => (
+          <Reveal key={title} delay={i * 0.1}>
+            <div className="flex flex-col h-full" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
+              <div style={{ borderBottom: `1px solid ${T.border}` }}>
+                <Asset style={{ height: 200, minHeight: 200 }} />
+              </div>
+              <div className="p-8 md:p-10">
+                <h3 className="mb-3" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.25rem", letterSpacing: "-0.015em", color: T.fg }}>{title}</h3>
+                <p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted }}>{caption}</p>
+              </div>
+            </div>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProcessBand() {
+  return (
+    <section style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
+      <div className="grid md:grid-cols-[auto_1fr] items-center">
+        <div className="p-10 md:p-16 md:max-w-sm" style={{ borderBottom: `1px solid ${T.border}` }}>
+          <Reveal>
+            <div className="mb-7"><Eyebrow>How it works</Eyebrow></div>
+          </Reveal>
+          <Reveal delay={0.05}>
+            <h2 className="mb-5" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2rem,4vw,3rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
+              Discover to <span style={{ color: T.muted }}>launch.</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.65, letterSpacing: "-0.005em", color: T.muted, maxWidth: "40ch" }}>
+              A clear path from first conversation to live site. Fixed pricing, no surprises.
+            </p>
+          </Reveal>
+        </div>
+        <div className="md:border-l" style={{ borderColor: T.border, borderBottom: `1px solid ${T.border}` }}>
+          <ProcessTimeline style={{ height: 220, minHeight: 220 }} />
+        </div>
       </div>
     </section>
   );
@@ -168,7 +246,7 @@ function Founder() {
           </Reveal>
           <Reveal delay={0.05}>
             <h2 className="mb-6" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2rem,4vw,3rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
-              Meet the <span style={{ color: T.primary }}>maker.</span>
+              Meet the <span style={{ color: T.muted }}>maker.</span>
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
@@ -211,7 +289,7 @@ function Commitment() {
       <div className="px-10 md:px-16 pt-20 pb-12">
         <Reveal>
           <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.25rem,5vw,4rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
-            Our <span style={{ color: T.primary }}>commitment.</span>
+            Our <span style={{ color: T.muted }}>commitment.</span>
           </h2>
         </Reveal>
       </div>
@@ -239,14 +317,24 @@ function CtaStrip() {
         </h2>
       </Reveal>
       <Reveal delay={0.1}>
-        <Link href="/book"
-          className="inline-flex items-center gap-2 font-medium"
-          style={{ fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", height: 48, paddingInline: 24, background: T.primary, color: T.primaryFg, borderRadius: T.r.md, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`, whiteSpace: "nowrap", textDecoration: "none", transition: `background ${T.duration.base} ${T.ease}` }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.primaryHover}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = T.primary}
-        >
-          Book a discovery call →
-        </Link>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <Link href="/start"
+            className="inline-flex items-center justify-center gap-2 font-medium"
+            style={{ fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", height: 48, paddingInline: 24, background: T.primary, color: T.primaryFg, borderRadius: T.r.md, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`, whiteSpace: "nowrap", textDecoration: "none", transition: `background ${T.duration.base} ${T.ease}` }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.primaryHover}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = T.primary}
+          >
+            Get my free plan →
+          </Link>
+          <Link href="/book"
+            className="inline-flex items-center justify-center gap-2 font-medium"
+            style={{ fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500, letterSpacing: "-0.005em", height: 48, paddingInline: 24, background: "transparent", color: T.fg, borderRadius: T.r.md, border: `1px solid ${T.borderStr}`, whiteSpace: "nowrap", textDecoration: "none", transition: `border-color ${T.duration.base} ${T.ease}, background ${T.duration.base} ${T.ease}` }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = T.primary; (e.currentTarget as HTMLElement).style.background = T.primarySoft; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = T.borderStr; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+          >
+            Book a call
+          </Link>
+        </div>
       </Reveal>
     </section>
   );
@@ -260,6 +348,8 @@ export default function AboutPage() {
         <PageHero />
         <TheProblem />
         <HowWeBuild />
+        <WhatWeBuild />
+        <ProcessBand />
         <Founder />
         <Commitment />
         <CtaStrip />

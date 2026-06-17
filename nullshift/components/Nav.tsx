@@ -114,9 +114,9 @@ export function Nav() {
               Client login
             </Link>
 
-            {/* Book a call — primary button */}
+            {/* Get started — primary button (the /start qualification funnel) */}
             <Link
-              href="/book"
+              href="/start"
               className="hidden md:inline-flex items-center font-medium"
               style={{
                 fontFamily: T.sans,
@@ -135,7 +135,7 @@ export function Nav() {
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.primaryHover}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = T.primary}
             >
-              Book a call
+              Get my free plan
             </Link>
 
             {/* Hamburger — mobile only */}
@@ -238,7 +238,7 @@ export function Nav() {
               Client login
             </Link>
             <Link
-              href="/book"
+              href="/start"
               className="w-full h-11 inline-flex items-center justify-center"
               style={{
                 fontFamily: T.sans,
@@ -252,7 +252,7 @@ export function Nav() {
                 textDecoration: "none",
               }}
             >
-              Book a call →
+              Get my free plan →
             </Link>
           </div>
         </aside>

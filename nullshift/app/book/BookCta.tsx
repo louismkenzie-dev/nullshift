@@ -1,12 +1,26 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { T } from "@/lib/tokens";
 
 export function BookCta() {
+  // Carry funnel prefill (name/email) through to the signup form, if present.
+  const [href, setHref] = useState("/client-signup");
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const q = new URLSearchParams();
+    const name = p.get("name");
+    const email = p.get("email");
+    if (name) q.set("name", name);
+    if (email) q.set("email", email);
+    const s = q.toString();
+    setHref("/client-signup" + (s ? `?${s}` : ""));
+  }, []);
+
   return (
     <Link
-      href="/client-signup"
+      href={href}
       className="w-full flex items-center justify-between px-5 font-medium"
       style={{
         height: 48,
@@ -24,7 +38,7 @@ export function BookCta() {
       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = T.primaryHover}
       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = T.primary}
     >
-      <span>Get started</span>
+      <span>Book my call</span>
       <span>→</span>
     </Link>
   );

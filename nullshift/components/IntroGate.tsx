@@ -44,6 +44,8 @@ export function IntroGate() {
       }
       document.documentElement.style.overflow = "";
     };
+    // Default hand-off: the intro is part of the site now, so a natural finish
+    // or "enter" reveals the homepage underneath (it does NOT force the funnel).
     const dismiss = () => {
       if (dismissed.current) return;
       dismissed.current = true;
@@ -51,21 +53,25 @@ export function IntroGate() {
       setFading(true);
       window.setTimeout(() => setShow(false), 900);
     };
-    // Primary conversion CTA: take the visitor straight to the booking brief.
-    const goBook = () => {
+    // Explicit opt-in only: the visitor tapped the intro's "free tailored plan"
+    // CTA, so hand them straight to the qualification funnel.
+    const goFunnel = () => {
       if (dismissed.current) return;
       dismissed.current = true;
       markSeen();
-      window.location.href = "/book";
+      window.location.href = "/start";
     };
 
-    // safety net: never trap the visitor if the intro never signals
+    // safety net: never trap the visitor if the intro never signals — reveal
+    // the homepage (never auto-redirect into the funnel).
     const failSafe = window.setTimeout(dismiss, 45000);
 
     const onMsg = (e: MessageEvent) => {
       // same-origin iframe; accept the intro's signals
       if (e.data === "ns-intro-done") dismiss();
-      else if (e.data === "ns-intro-book") goBook();
+      else if (e.data === "ns-intro-explore") dismiss();
+      // Explicit lead-magnet opt-in from inside the intro → the funnel.
+      else if (e.data === "ns-intro-funnel") goFunnel();
       // The conversion frame is up and the visitor is in control — cancel the
       // auto-dismiss so it stays until they pick a CTA (no quick fade-away).
       else if (e.data === "ns-intro-closer") window.clearTimeout(failSafe);
@@ -82,7 +88,6 @@ export function IntroGate() {
 
   return (
     <div
-      aria-hidden
       style={{
         position: "fixed",
         inset: 0,

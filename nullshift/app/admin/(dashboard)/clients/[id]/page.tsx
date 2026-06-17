@@ -9,6 +9,7 @@ import { formatCallDate, formatCallTime, money, proposalRef } from "@/lib/format
 import { BriefViewer } from "@/components/BriefViewer";
 import type { BriefData } from "@/lib/brief";
 import { ProjectUpdatesSection } from "./ProjectUpdatesSection";
+import { SUB_PROCESSORS } from "@/lib/legalEntity";
 
 type Client = { id: string; name: string; business_name: string | null; email: string | null; phone: string | null; status: string; notes: string | null; requested_date: string | null; requested_time: string | null; brief_completed_at: string | null; project_phase: string | null; auth_user_id: string | null };
 type Call = { id: string; client_id: string; call_date: string; call_time: string; duration_min: number; status: string; meeting_link: string | null; meeting_id: string | null; meeting_password: string | null };
@@ -22,6 +23,14 @@ type Proposal = {
   overview: string | null; scope: Phase[]; deliverables: string[]; timeline: Week[];
   accepted_at: string | null; accepted_name: string | null; accepted_signature: string | null;
   payment_terms: string | null;
+  // Data Processing Agreement (requires migration 013) — signed with the proposal.
+  dpa_enabled: boolean | null;
+  dpa_client_country: string | null;
+  dpa_client_company_number: string | null;
+  dpa_client_registered_address: string | null;
+  dpa_personal_data: string | null;
+  dpa_special_category: boolean | null;
+  dpa_special_category_detail: string | null;
 };
 
 // The public booking form offers slots; map them to a concrete start time
@@ -43,6 +52,23 @@ const Card = ({ title, children }: { title: string; children: React.ReactNode })
     <h2 className="mb-4" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.1rem", letterSpacing: "0.04em", textTransform: "uppercase", color: T.primary }}>{title}</h2>
     {children}
   </section>
+);
+
+// Small Yes/No (or On/Off) segmented toggle. Module scope keeps identity stable.
+const Seg = ({ value, onChange, yes = "On", no = "Off" }: { value: boolean; onChange: (v: boolean) => void; yes?: string; no?: string }) => (
+  <div style={{ display: "inline-flex", border: `1px solid ${T.border}`, borderRadius: T.r.full, overflow: "hidden" }}>
+    {([[false, no], [true, yes]] as [boolean, string][]).map(([v, lbl]) => {
+      const active = value === v;
+      return (
+        <button key={String(v)} type="button" onClick={() => onChange(v)}
+          style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", padding: "5px 16px", cursor: "pointer",
+            background: active ? (v ? `${T.primary}20` : T.surface2) : "transparent",
+            color: active ? (v ? T.primary : T.fg) : T.muted }}>
+          {lbl}
+        </button>
+      );
+    })}
+  </div>
 );
 
 export default function ClientDetail() {
@@ -112,6 +138,8 @@ export default function ClientDetail() {
       pr.scope = (pr.scope?.length ? pr.scope : DEFAULT_PHASES).map(s => ({ phase: s.phase, items: s.items?.length ? s.items : [""] }));
       pr.deliverables = pr.deliverables?.length ? pr.deliverables : [""];
       pr.timeline = pr.timeline?.length ? pr.timeline : [{ week: "Week 1", title: "", description: "" }];
+      pr.dpa_enabled = pr.dpa_enabled ?? true;
+      pr.dpa_client_country = pr.dpa_client_country || "United Kingdom";
       setProposal(pr);
 
       // Keep the client status in sync with the proposal lifecycle:
@@ -198,6 +226,17 @@ export default function ClientDetail() {
       team_size: proposal.team_size, overview: proposal.overview,
       scope: proposal.scope, deliverables: proposal.deliverables, timeline: proposal.timeline,
       payment_terms: proposal.payment_terms || null,
+    }).eq("id", proposal.id);
+    // DPA fields are a separate update so the core proposal save still succeeds
+    // if migration 013 (the dpa_* columns) hasn't been applied yet.
+    await supabase.from("proposals").update({
+      dpa_enabled: proposal.dpa_enabled ?? true,
+      dpa_client_country: proposal.dpa_client_country || "United Kingdom",
+      dpa_client_company_number: proposal.dpa_client_company_number || null,
+      dpa_client_registered_address: proposal.dpa_client_registered_address || null,
+      dpa_personal_data: proposal.dpa_personal_data || null,
+      dpa_special_category: !!proposal.dpa_special_category,
+      dpa_special_category_detail: proposal.dpa_special_category ? (proposal.dpa_special_category_detail || null) : null,
     }).eq("id", proposal.id);
     setSaving(false);
     setSaved(true);
@@ -681,6 +720,79 @@ export default function ClientDetail() {
               onChange={e => setDoc("payment_terms", e.target.value || null)}
               placeholder={"e.g. 50% deposit on acceptance, 50% on launch.\nAll payments due within 14 days of invoice."}
             />
+          </Card>
+
+          <Card title="Data Processing Agreement">
+            <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted, lineHeight: 1.6, maxWidth: "62ch", marginBottom: 16 }}>
+              A DPA is generated from these fields and signed as part of this proposal — the client signs once. Effective on acceptance; the five sub-processors below are included in every case.
+            </p>
+
+            <div className="flex items-center gap-3 mb-5">
+              <span style={{ ...labelS, marginBottom: 0 }}>Attach DPA to this proposal</span>
+              <Seg value={proposal.dpa_enabled ?? true} onChange={v => setDoc("dpa_enabled", v)} />
+            </div>
+
+            {(proposal.dpa_enabled ?? true) && (
+              <div className="flex flex-col gap-3">
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label style={labelS}>Client legal name (auto)</label>
+                    <input readOnly value={client?.business_name || client?.name || ""} style={{ ...input, opacity: 0.65 }} />
+                  </div>
+                  <div>
+                    <label style={labelS}>Country of registration</label>
+                    <input style={input} value={proposal.dpa_client_country ?? "United Kingdom"} onChange={e => setDoc("dpa_client_country", e.target.value)} placeholder="United Kingdom" />
+                  </div>
+                  <div>
+                    <label style={labelS}>Client company number</label>
+                    <input style={input} value={proposal.dpa_client_company_number ?? ""} onChange={e => setDoc("dpa_client_company_number", e.target.value)} placeholder="e.g. 12345678" />
+                  </div>
+                  <div>
+                    <label style={labelS}>Client registered address</label>
+                    <textarea rows={2} style={{ ...input, resize: "vertical" }} value={proposal.dpa_client_registered_address ?? ""} onChange={e => setDoc("dpa_client_registered_address", e.target.value)} placeholder="Registered office address" />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={labelS}>Types of personal data processed (Annex 1)</label>
+                  <textarea rows={3} style={{ ...input, resize: "vertical" }} value={proposal.dpa_personal_data ?? ""} onChange={e => setDoc("dpa_personal_data", e.target.value)} placeholder="e.g. names, email addresses, phone numbers, booking/order details, IP addresses…" />
+                </div>
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span style={{ ...labelS, marginBottom: 0 }}>Special category data? (e.g. health / wellness — needs extra safeguards)</span>
+                  <Seg value={!!proposal.dpa_special_category} onChange={v => setDoc("dpa_special_category", v)} yes="Yes" no="No" />
+                </div>
+
+                {proposal.dpa_special_category && (
+                  <div>
+                    <label style={labelS}>Which data, and what category?</label>
+                    <textarea rows={2} style={{ ...input, resize: "vertical" }} value={proposal.dpa_special_category_detail ?? ""} onChange={e => setDoc("dpa_special_category_detail", e.target.value)} placeholder="e.g. Health information (special category under UK GDPR Art. 9) — client intake notes for a wellness clinic." />
+                  </div>
+                )}
+
+                <div className="mt-1 p-3 rounded" style={{ background: T.bg, border: `1px solid ${T.border}` }}>
+                  <div style={{ ...labelS, marginBottom: 8 }}>Authorised sub-processors — included in all cases</div>
+                  <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 5 }}>
+                    {SUB_PROCESSORS.map(s => (
+                      <li key={s.name} style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.muted }}>
+                        <span style={{ color: T.primary }}>•</span> {s.name} <span style={{ color: `${T.muted}99` }}>— {s.service}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="flex items-center justify-between flex-wrap gap-3 mt-1">
+                  {!(proposal.dpa_client_company_number && proposal.dpa_client_registered_address && proposal.dpa_personal_data) ? (
+                    <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.04em", color: T.warning }}>
+                      ⚠ Add company number, registered address &amp; personal-data types before sending.
+                    </span>
+                  ) : (
+                    <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.04em", color: T.primary }}>✓ DPA ready</span>
+                  )}
+                  <a href={`/proposal/${proposal.id}/dpa`} target="_blank" rel="noreferrer" style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: T.primary }}>Preview DPA ↗</a>
+                </div>
+              </div>
+            )}
           </Card>
 
           <Card title="Investment — pulled from the quote">

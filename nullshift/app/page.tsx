@@ -1,329 +1,128 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import { ScrollProgress } from "@/components/ScrollProgress";
 import HeroText from "@/components/HeroText";
-import ScrollVideoSection from "@/components/ScrollVideoSection";
 import { IntroGate } from "@/components/IntroGate";
 import { T } from "@/lib/tokens";
 
-/* ── Section label (Halo eyebrow) ───────────── */
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <Reveal>
-      <div className="flex items-center gap-2 mb-8">
-        <span
-          className="inline-flex items-center gap-2"
-          style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}
-        >
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primary}20`, flexShrink: 0, display: "inline-block" }} />
-          {children}
-        </span>
-      </div>
-    </Reveal>
-  );
-}
+/* ── Brand assets ───────────────────────────── */
+import { ExplodedBuild } from "@/components/assets/ExplodedBuild";
+import { SystemsSphere } from "@/components/assets/SystemsSphere";
+import { ResponsiveDevices } from "@/components/assets/ResponsiveDevices";
+import { AutomationFlow } from "@/components/assets/AutomationFlow";
+import { BookingCalendar } from "@/components/assets/BookingCalendar";
+import { EmailCampaign } from "@/components/assets/EmailCampaign";
+import { ClientPortal } from "@/components/assets/ClientPortal";
+import { AnalyticsChart } from "@/components/assets/AnalyticsChart";
+import { PerformanceGauge } from "@/components/assets/PerformanceGauge";
+import { ProcessTimeline } from "@/components/assets/ProcessTimeline";
+import { FixedPricing } from "@/components/assets/FixedPricing";
+import { SystemHorizon } from "@/components/assets/SystemHorizon";
 
-/* ── Primary button (Halo btn-primary) ──────── */
-function PrimaryBtn({ href, children }: { href: string; children: React.ReactNode }) {
+/* ── System marker (JetBrains Mono eyebrow) ───── */
+function Marker({ children }: { children: React.ReactNode }) {
   return (
-    <a href={href} className="inline-flex items-center gap-2 font-medium transition-opacity hover:opacity-90"
+    <span
       style={{
-        fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em",
-        height: 40, paddingInline: 18,
-        background: T.primary, color: T.primaryFg,
-        borderRadius: "10px",
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 20px ${T.primary}30`,
-        textDecoration: "none",
-      }}>
+        fontFamily: T.mono,
+        fontSize: "0.75rem",
+        fontWeight: 500,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        color: T.primary,
+      }}
+    >
       {children}
-    </a>
+    </span>
   );
 }
 
-/* ── HERO ───────────────────────────────────── */
-/* ── SERVICES ───────────────────────────────── */
-function Services() {
-  const cards = [
-    { num: "01", title: "Websites that win you work", desc: "Fast, bespoke sites built to convert — then we run the missed-call recovery, booking and instant follow-up that turn visitors into booked jobs. Live in 2–4 weeks, and you own it.", tag: "BESPOKE_BUILD / NO_TEMPLATES" },
-    { num: "02", title: "Systems that run your business", desc: "Booking, CRM, client portals, automated email and custom AI — the bespoke systems that bring customers in and save you hours, on one monthly plan you can cancel and keep. We report the £ recovered.", tag: "AUTOMATION / OWNED" },
-  ];
+/* ── Mono tag (with leading hairline) ─────────── */
+function MonoTag({ children }: { children: React.ReactNode }) {
   return (
-    <section id="services" style={{ borderTop: `1px solid ${T.border}` }}>
-      <div className="grid md:grid-cols-[300px_1fr] h-full">
-        <div className="p-8 md:p-10 flex flex-col justify-between gap-8" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <div>
-            <Label>02 — Services</Label>
-            <Reveal delay={0.1}>
-              <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.2rem,4.5vw,4rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
-                What we<br /><span style={{ color: T.muted }}>do.</span>
-              </h2>
-            </Reveal>
-          </div>
-          <Reveal delay={0.2}><PrimaryBtn href="/about">About us →</PrimaryBtn></Reveal>
-        </div>
-        <div className="grid grid-rows-1 md:grid-rows-2 h-full" style={{ borderLeft: `1px solid ${T.border}` }}>
-          {cards.map((card, i) => (
-            <article key={card.num} className="group relative p-8 md:p-10 grid grid-cols-[48px_1fr] gap-5 content-center"
-              style={{ borderBottom: i === 0 ? `1px solid ${T.border}` : "none", transition: `background ${T.ease} 150ms, border-color 150ms` }}
-              onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-              <span className="absolute top-0 left-0 h-px" style={{ width: 0, background: T.primary, transition: "width 500ms cubic-bezier(.2,.8,.2,1)" }}
-                ref={el => { if (!el) return; const art = el.parentElement!; art.addEventListener("mouseenter", () => { el.style.width = "100%"; }); art.addEventListener("mouseleave", () => { el.style.width = "0"; }); }} />
-              <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1.5rem", lineHeight: 1, color: `${T.primary}38`, paddingTop: "3px" }}>{card.num}</div>
-              <div className="flex flex-col gap-3">
-                <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.125rem,2vw,1.5rem)", letterSpacing: "-0.015em", lineHeight: 1.2, color: T.fg }}>{card.title}</h3>
-                <p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "46ch" }}>{card.desc}</p>
-                <span className="flex items-center gap-2 mt-1" style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.primary }}>
-                  <span style={{ height: 1, width: 12, background: `${T.primary}70`, flexShrink: 0, display: "inline-block" }} />{card.tag}
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
+    <span
+      className="inline-flex items-center gap-2"
+      style={{
+        fontFamily: T.mono,
+        fontSize: "0.75rem",
+        fontWeight: 500,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        color: T.primary,
+      }}
+    >
+      <span style={{ height: 1, width: 12, background: `${T.primary}70`, flexShrink: 0, display: "inline-block" }} />
+      {children}
+    </span>
   );
 }
 
-/* ── WHO WE HELP ────────────────────────────── */
-function WhoWeHelp() {
-  const tags = ["Trades", "Health & Wellness", "Hospitality", "Professional Services", "Retail"];
+/* ── Band heading ─────────────────────────────── */
+function BandHeading({ children }: { children: React.ReactNode }) {
   return (
-    <section id="clients" className="px-8 md:px-12 py-10 grid md:grid-cols-2 gap-12 md:gap-20 items-center h-full" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
-      <div>
-        <Label>03 — Clients</Label>
-        <Reveal delay={0.1}>
-          <h2 className="mb-7" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.2rem,5.5vw,4.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
-            Built for<br /><span style={{ color: T.muted }}>businesses</span><br /><span style={{ color: T.primary }}>doing the work.</span>
-          </h2>
-        </Reveal>
-        <Reveal delay={0.2}><PrimaryBtn href="/systems-lab">What we create →</PrimaryBtn></Reveal>
-      </div>
-      <div className="flex flex-col gap-9">
-        <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontWeight: 400, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "46ch" }}>We build more than websites. From bespoke booking systems and automated email campaigns to interactive courses and custom business workflows, we create digital solutions tailored to your brand that save time, improve customer experiences, and help your business grow.</p></Reveal>
-        <Reveal delay={0.3}>
-          <div className="flex flex-wrap gap-2">
-            {tags.map(tag => (
-              <span key={tag} className="inline-flex items-center cursor-default transition-colors"
-                style={{ fontFamily: T.mono, fontWeight: 500, fontSize: "0.75rem", letterSpacing: "0em", height: 28, paddingInline: 12, background: `${T.primary}14`, color: T.primary, borderRadius: "999px", border: `1px solid ${T.primary}30`, transition: "background 150ms, border-color 150ms" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${T.primary}22`; (e.currentTarget as HTMLElement).style.borderColor = `${T.primary}55`; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = `${T.primary}14`; (e.currentTarget as HTMLElement).style.borderColor = `${T.primary}30`; }}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        </Reveal>
-      </div>
-    </section>
+    <h2
+      style={{
+        fontFamily: T.display,
+        fontWeight: 600,
+        fontSize: "clamp(2.2rem,4.6vw,3.6rem)",
+        lineHeight: 1.04,
+        letterSpacing: "-0.03em",
+        color: T.fg,
+      }}
+    >
+      {children}
+    </h2>
   );
 }
 
-/* ── PROCESS ────────────────────────────────── */
-function Process() {
-  const steps = [
-    { num: "001", title: "Discovery", desc: "We learn your business, your goals, and your customers. No assumptions — just honest conversation." },
-    { num: "002", title: "Design", desc: "A bespoke visual direction built around your brand. We present options, you give feedback, we refine." },
-    { num: "003", title: "Build", desc: "Fast, clean code. Mobile-first. No templates, no page builders — a real website crafted for you." },
-    { num: "004", title: "Launch", desc: "We handle hosting, domain, deployment. You just go live — with ongoing support whenever you need us." },
-  ];
+/* ── Thin SystemHorizon divider between bands ─── */
+function HorizonDivider() {
   return (
-    <section id="process" className="flex flex-col h-full" style={{ borderTop: `1px solid ${T.border}` }}>
-      <div className="px-8 md:px-12 pt-10 pb-8 flex flex-col md:flex-row items-start md:items-end justify-between gap-6 shrink-0">
-        <div>
-          <Label>04 — How it works</Label>
-          <Reveal delay={0.1}><h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.2rem,4.5vw,4rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>The <span style={{ color: T.muted }}>process.</span></h2></Reveal>
-        </div>
-        <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "36ch" }}>A clear, four-step process to get your business online with minimal friction.</p></Reveal>
-      </div>
-      <Reveal delay={0.1} className="flex-1 min-h-0">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 h-full" style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}` }}>
-          {steps.map(step => (
-            <article key={step.num} className="group relative flex flex-col justify-center gap-4 p-8 md:p-10" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, transition: `background 150ms` }}
-              onMouseEnter={e => (e.currentTarget.style.background = T.surface2)}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-              <span className="absolute bottom-0 left-0 h-px" style={{ width: 0, background: T.primary, transition: "width 500ms cubic-bezier(.2,.8,.2,1)" }}
-                ref={el => { if (!el) return; const art = el.parentElement!; art.addEventListener("mouseenter", () => { el.style.width = "100%"; }); art.addEventListener("mouseleave", () => { el.style.width = "0"; }); }} />
-              <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "2rem", lineHeight: 1, color: `${T.primary}25` }}>{step.num}</div>
-              <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.125rem,1.6vw,1.5rem)", letterSpacing: "-0.015em", lineHeight: 1.2, color: T.fg }}>{step.title}</h3>
-              <div className="w-5 h-px" style={{ background: T.border }} />
-              <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.55, letterSpacing: "-0.003em", color: T.muted }}>{step.desc}</p>
-            </article>
-          ))}
-        </div>
-      </Reveal>
-    </section>
-  );
-}
-
-/* ── WHY NULLSHIFT ──────────────────────────── */
-function WhyNullshift() {
-  const props = [
-    { n: "01", title: "Live in 2–4 weeks", desc: "Bespoke and built fast — not 2–4 months. No templates, no page builders, and fixed pricing you'll know before we start." },
-    { n: "02", title: "You own everything", desc: "The code and every account — hosting, domain, booking, AI — are in your name. Cancel anytime and keep it all. No monthly ransom." },
-    { n: "03", title: "We show you the results", desc: "We don't hand over a website and vanish — we run the system that recovers revenue, and report the £ recovered every month." },
-  ];
-  return (
-    <section id="why" className="relative overflow-hidden w-full h-full" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
-      <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 60% 50% at 50% 50%, color-mix(in oklab, ${T.primary} 6%, transparent) 0%, transparent 70%)` }} />
-      <div className="relative z-10 h-full px-8 md:px-12 py-10 flex flex-col items-center justify-center text-center">
-        <Reveal>
-          <div className="flex items-center justify-center gap-2 mb-10">
-            <span className="inline-flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primary}20`, flexShrink: 0, display: "inline-block" }} />
-              05 — Why us
-            </span>
-          </div>
-        </Reveal>
-        <Reveal delay={0.08}>
-          <div className="text-center mb-12" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.5rem,6vw,5.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em" }}>
-            <span className="block" style={{ color: T.fg }}>No templates.</span>
-            <span className="block" style={{ color: T.muted }}>No bloat.</span>
-            <span className="block hero-glow" style={{ color: T.primary }}>No nonsense.</span>
-          </div>
-        </Reveal>
-        <Reveal delay={0.16}>
-          <div className="grid md:grid-cols-3 w-full max-w-5xl" style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}` }}>
-            {props.map(p => (
-              <div key={p.n} className="p-8 text-left" style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
-                <div className="mb-4" style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "1rem", letterSpacing: "-0.02em", color: `${T.primary}60` }}>{p.n}</div>
-                <h3 className="mb-2" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.125rem", letterSpacing: "-0.01em", lineHeight: 1.3, color: T.fg }}>{p.title}</h3>
-                <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.55, letterSpacing: "-0.003em", color: T.muted }}>{p.desc}</p>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-/* ── CONTACT ────────────────────────────────── */
-function Contact() {
-  return (
-    <section id="contact" className="h-full" style={{ borderTop: `1px solid ${T.border}` }}>
-      <div className="grid md:grid-cols-2 h-full">
-        <div className="p-8 md:px-12 md:py-10 flex flex-col justify-center gap-8" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <div>
-            <Label>06 — Get in touch</Label>
-            <Reveal delay={0.1}>
-              <h2 className="mb-4" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.2rem,4.5vw,4rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}>
-                Ready to<br /><span className="hero-glow" style={{ color: T.primary }}>go online?</span>
-              </h2>
-            </Reveal>
-            <Reveal delay={0.2}><p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "40ch" }}>Tell us about your business and we&apos;ll be in touch within 24 hours. No commitment required.</p></Reveal>
-          </div>
-          <Reveal delay={0.3}>
-            <div className="flex flex-col gap-3 pt-10" style={{ borderTop: `1px solid ${T.border}` }}>
-              <div className="flex items-center gap-2.5" style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.04em", color: T.muted }}>
-                <span className="size-1.5 rounded-full pulse-dot flex-shrink-0" style={{ background: T.primary }} />Response within 24 hours
-              </div>
-              <div style={{ fontFamily: T.mono, fontSize: "0.75rem", letterSpacing: "0.04em", color: `${T.muted}88`, paddingLeft: "20px" }}>UK-based — Global reach</div>
-            </div>
-          </Reveal>
-        </div>
-        <div className="p-10 md:px-12 md:py-10 flex items-center justify-center" style={{ borderLeft: `1px solid ${T.border}` }}>
-          <Reveal delay={0.2} className="w-full max-w-md">
-            <div className="flex flex-col gap-6">
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primary}20`, flexShrink: 0, display: "inline-block" }} />
-                  <span style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>5-step brief</span>
-                </div>
-                <h3 className="mb-3" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.75rem", lineHeight: 1.08, letterSpacing: "-0.025em", color: T.fg }}>
-                  Tell us about<br />your project.
-                </h3>
-                <p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "38ch" }}>
-                  A quick 2-minute brief — pages, style, budget, timeline. We&apos;ll send back a clear proposal.
-                </p>
-              </div>
-              <Link
-                href="/book"
-                className="inline-flex items-center justify-between font-medium transition-opacity hover:opacity-90"
-                style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em", height: 48, paddingInline: 20, background: T.primary, color: T.primaryFg, borderRadius: "10px", boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 24px ${T.primary}30` }}
-              >
-                <span>Tell us more</span>
-                <span>→</span>
-              </Link>
-              <div style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.04em", color: `${T.muted}70` }}>
-                ~2 min · no commitment
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* Uniform frosted-glass card — every card is the same size so that when one
-   slides up and pins, it fully covers the identical card beneath it. */
-function StackCard({ children, z }: { children: React.ReactNode; z: number }) {
-  return (
-    /* Sticky directly within <main> so each card pins centred and STAYS while
-       the next card slides up and covers it. Higher z stacks over lower. */
-    <div className="sticky-stick px-3 sm:px-5 md:px-8" style={{ zIndex: z }}>
-      <div
-        data-stack-card
-        className="glass-card max-w-6xl mx-auto w-full overflow-hidden rounded-2xl"
-        style={{
-          height: "var(--card-h)",
-          minHeight: "var(--card-h)",
-          background: "rgba(10,10,14,0.94)",
-          backdropFilter: "blur(20px) saturate(130%)",
-          WebkitBackdropFilter: "blur(20px) saturate(130%)",
-          border: `1px solid #3d3d42`,
-          boxShadow: "0 0 0 1px rgba(255,255,255,0.03) inset, 0 50px 120px -16px rgba(0,0,0,0.9)",
-          transformOrigin: "center center",
-          willChange: "transform, filter",
-        }}
-      >
-        {children}
-      </div>
+    <div
+      aria-hidden
+      className="relative w-full overflow-hidden"
+      style={{ height: 96, borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, background: T.bg }}
+    >
+      <SystemHorizon style={{ height: 96, minHeight: 96, opacity: 0.55 }} />
     </div>
   );
 }
 
+/* ── 03 capability tiles ──────────────────────── */
+type Tile = { Asset: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; nn: string; label: string; title: string; caption: string };
+
+const CAPABILITY_TILES: Tile[] = [
+  { Asset: SystemsSphere, nn: "01", label: "CUSTOM SYSTEMS", title: "Connected as one.", caption: "CRM, booking, portals — wired into a single system that fits how you actually work." },
+  { Asset: AutomationFlow, nn: "02", label: "AUTOMATIONS", title: "Work that runs itself.", caption: "Emails, follow-ups, workflows — triggered on time, every time, with no one watching." },
+  { Asset: BookingCalendar, nn: "03", label: "BOOKING", title: "Booked in seconds.", caption: "Clients pick a slot, you get the details, and calendars stay in sync — no back-and-forth." },
+  { Asset: EmailCampaign, nn: "04", label: "EMAIL CAMPAIGNS", title: "Right message, right time.", caption: "Automated campaigns that land — segmented, scheduled, and on brand from the first send." },
+  { Asset: ClientPortal, nn: "05", label: "CLIENT PORTALS", title: "A place to log in.", caption: "Dashboards and portals your clients actually want to open — their data, their tools, one login." },
+  { Asset: AnalyticsChart, nn: "06", label: "ANALYTICS", title: "See it working.", caption: "Clear analytics built in — so you can see exactly what's working, and what to do next." },
+  { Asset: PerformanceGauge, nn: "07", label: "PERFORMANCE", title: "Fast by default.", caption: "Built lean — fast to load and fast to rank. Performance is part of the build, not an afterthought." },
+  { Asset: ResponsiveDevices, nn: "08", label: "RESPONSIVE", title: "Looks right everywhere.", caption: "One build, every screen — desktop to phone, tuned to look deliberate at each size." },
+];
+
+/* ── Process steps ────────────────────────────── */
+const PROCESS_STEPS = [
+  { num: "001", title: "Discovery", desc: "We learn your business, your goals, and your customers. No assumptions — just honest conversation." },
+  { num: "002", title: "Design", desc: "A bespoke visual direction built around your brand. We present options, you give feedback, we refine." },
+  { num: "003", title: "Build", desc: "Fast, clean code. Mobile-first. No templates, no page builders — a real website crafted for you." },
+  { num: "004", title: "Launch", desc: "We handle hosting, domain, deployment. You just go live — with ongoing support whenever you need us." },
+];
+
+/* ── Why-us value props ───────────────────────── */
+const WHY_PROPS = [
+  { n: "01", title: "Live in 2–4 weeks", desc: "Bespoke and built fast — not 2–4 months. No templates, no page builders, and fixed pricing you'll know before we start." },
+  { n: "02", title: "You own everything", desc: "The code and every account — hosting, domain, booking, AI — are in your name. Cancel anytime and keep it all. No monthly ransom." },
+  { n: "03", title: "We show you the results", desc: "We don't hand over a website and vanish — we run the system that recovers revenue, and report the £ recovered every month." },
+];
+
 export default function Page() {
-  // ── Stacked-card depth ──────────────────────────────────────────
-  // As each pinned card is covered by the next, scale it back and dim it
-  // so the stack reads with real z-depth (Apple "cards receding" feel).
-  // Disabled on mobile where the cards flow statically.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 767px)");
-    const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-stack-card]"));
-    if (cards.length < 2) return;
-
-    let raf = 0;
-    const apply = () => {
-      raf = requestAnimationFrame(apply);
-      if (mq.matches) {
-        for (const c of cards) { c.style.transform = ""; c.style.filter = ""; }
-        return;
-      }
-      for (let i = 0; i < cards.length; i++) {
-        const cur = cards[i];
-        const next = cards[i + 1];
-        if (!next) { cur.style.transform = ""; cur.style.filter = ""; continue; }
-        const cr = cur.getBoundingClientRect();
-        const nr = next.getBoundingClientRect();
-        const curBottom = cr.top + cr.height;
-        const coverage = Math.max(0, Math.min(1, (curBottom - nr.top) / cr.height));
-        const scale = 1 - coverage * 0.06;
-        const bright = 1 - coverage * 0.26;
-        cur.style.transform = `scale(${scale})`;
-        cur.style.filter = `brightness(${bright})`;
-      }
-    };
-    raf = requestAnimationFrame(apply);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
   return (
     <>
       {/* First-visit immersive intro (once per session), fades into the site */}
@@ -333,54 +132,347 @@ export default function Page() {
       <div className="noise-layer" aria-hidden />
 
       <Nav />
-      {/* Hero — headline recedes into depth as you scroll (handled inside) */}
+
+      {/* Hero — owned by HeroText, do not edit here */}
       <div className="relative z-10">
         <HeroText />
       </div>
 
-      {/* Scroll-driven gyroscope section */}
-      <ScrollVideoSection />
+      <main className="relative z-10">
+        {/* ═══════════════ 02 — WHAT WE DO ═══════════════ */}
+        <Reveal>
+          <section id="what-we-do" style={{ borderTop: `1px solid ${T.border}`, background: T.bg }}>
+            <div style={{ maxWidth: T.containerMax, margin: "0 auto", paddingInline: T.containerPad, paddingBlock: "clamp(64px,9vw,112px)" }}>
+              <div className="mb-6"><Marker>// 02 — WHAT WE DO</Marker></div>
+              <BandHeading>
+                We build it. We run it.<br />You own it.
+              </BandHeading>
+              <p
+                className="mt-6"
+                style={{ fontFamily: T.sans, fontSize: "1.0625rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "60ch" }}
+              >
+                A bespoke site, then the systems that bring customers in and the automations that save you hours — one team, start to finish.
+              </p>
 
-      {/* Uniform cards stack over one another. The first pins centred; each
-          subsequent card slides up, covers it, then pins in its place. */}
-      <main className="relative">
-        <StackCard z={1}><Services /></StackCard>
-        <StackCard z={2}><WhoWeHelp /></StackCard>
-        <StackCard z={3}><Process /></StackCard>
-        <StackCard z={4}><WhyNullshift /></StackCard>
-        <StackCard z={5}><Contact /></StackCard>
+              {/* ExplodedBuild feature surface card */}
+              <Reveal delay={0.08}>
+                <figure
+                  className="mt-10 overflow-hidden"
+                  style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.xl }}
+                >
+                  <div style={{ height: "clamp(360px,42vw,520px)" }}>
+                    <ExplodedBuild style={{ height: "100%", minHeight: 0 }} />
+                  </div>
+                  <figcaption
+                    className="px-6 py-5 md:px-8"
+                    style={{ borderTop: `1px solid ${T.border}` }}
+                  >
+                    <span style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.0625rem", letterSpacing: "-0.015em", color: T.fg }}>
+                      Every layer, hand-built.
+                    </span>
+                    <span style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, color: T.muted, marginLeft: 12 }}>
+                      Foundation to interface — built layer by layer, nothing off the shelf. The systems are part of the structure, not bolted on after.
+                    </span>
+                  </figcaption>
+                </figure>
+              </Reveal>
+
+              {/* Two pillar cards — bordered 2-col grid */}
+              <Reveal delay={0.12}>
+                <div
+                  className="mt-8 grid grid-cols-1 md:grid-cols-2"
+                  style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}`, borderRadius: T.r.lg, overflow: "hidden" }}
+                >
+                  {/* Pillar 1 — Websites */}
+                  <article
+                    className="flex flex-col p-8 md:p-10"
+                    style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, background: T.surface }}
+                  >
+                    <div style={{ height: 200 }}>
+                      <ResponsiveDevices style={{ height: 200, minHeight: 0 }} />
+                    </div>
+                    <h3 className="mt-6 mb-3" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.25rem,2vw,1.5rem)", letterSpacing: "-0.015em", lineHeight: 1.2, color: T.fg }}>
+                      Websites that win you work
+                    </h3>
+                    <p className="mb-5" style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "46ch" }}>
+                      Fast, bespoke sites built to convert — then the missed-call recovery, booking and instant follow-up that turn visitors into booked jobs. Live in 2–4 weeks, and you own it.
+                    </p>
+                    <div className="mt-auto"><MonoTag>BESPOKE_BUILD / NO_TEMPLATES</MonoTag></div>
+                  </article>
+
+                  {/* Pillar 2 — Systems */}
+                  <article
+                    className="flex flex-col p-8 md:p-10"
+                    style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, background: T.surface }}
+                  >
+                    <div style={{ height: 200 }}>
+                      <SystemsSphere style={{ height: 200, minHeight: 0 }} />
+                    </div>
+                    <h3 className="mt-6 mb-3" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.25rem,2vw,1.5rem)", letterSpacing: "-0.015em", lineHeight: 1.2, color: T.fg }}>
+                      Systems that run your business
+                    </h3>
+                    <p className="mb-5" style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "46ch" }}>
+                      Booking, CRM, client portals, automated email and custom AI — bespoke systems that bring customers in and save you hours, on one monthly plan you can cancel and keep.
+                    </p>
+                    <div className="mt-auto"><MonoTag>AUTOMATION / OWNED</MonoTag></div>
+                  </article>
+                </div>
+              </Reveal>
+            </div>
+          </section>
+        </Reveal>
+
+        <HorizonDivider />
+
+        {/* ═══════════════ 03 — WHAT WE CAN BUILD ═══════════════ */}
+        <Reveal>
+          <section id="capabilities" style={{ borderTop: `1px solid ${T.border}`, background: T.bg }}>
+            <div style={{ maxWidth: T.containerMax, margin: "0 auto", paddingInline: T.containerPad, paddingTop: "clamp(64px,9vw,112px)", paddingBottom: "clamp(48px,6vw,72px)" }}>
+              <div className="mb-6"><Marker>// 03 — WHAT WE CAN BUILD</Marker></div>
+              <BandHeading>Everything your business runs on.</BandHeading>
+            </div>
+
+            {/* auto-fit tile grid — cells joined by hairlines, not gaps */}
+            <div style={{ borderTop: `1px solid ${T.border}` }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                  borderLeft: `1px solid ${T.border}`,
+                }}
+              >
+                {CAPABILITY_TILES.map((t) => (
+                  <article
+                    key={t.nn}
+                    className="flex flex-col p-8 md:p-9"
+                    style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, background: T.surface }}
+                  >
+                    <div style={{ height: 200 }}>
+                      <t.Asset style={{ height: 200, minHeight: 0 }} />
+                    </div>
+                    <div className="mt-6 mb-3">
+                      <Marker>{`// ${t.nn} — ${t.label}`}</Marker>
+                    </div>
+                    <h3 className="mb-2" style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.25rem", letterSpacing: "-0.015em", lineHeight: 1.2, color: T.fg }}>
+                      {t.title}
+                    </h3>
+                    <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.55, letterSpacing: "-0.003em", color: T.muted }}>
+                      {t.caption}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        </Reveal>
+
+        <HorizonDivider />
+
+        {/* ═══════════════ 04 — HOW IT WORKS ═══════════════ */}
+        <Reveal>
+          <section id="process" style={{ borderTop: `1px solid ${T.border}`, background: T.bg }}>
+            <div style={{ maxWidth: T.containerMax, margin: "0 auto", paddingInline: T.containerPad, paddingTop: "clamp(64px,9vw,112px)", paddingBottom: "clamp(48px,6vw,72px)" }}>
+              <div className="mb-6"><Marker>// 04 — HOW IT WORKS</Marker></div>
+              <BandHeading>From first conversation to live.</BandHeading>
+
+              {/* ProcessTimeline wide banner */}
+              <Reveal delay={0.08}>
+                <div
+                  className="mt-10 overflow-hidden"
+                  style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: T.r.xl, height: 220 }}
+                >
+                  <ProcessTimeline style={{ height: 220, minHeight: 0 }} />
+                </div>
+              </Reveal>
+            </div>
+
+            {/* 4-col bordered step grid */}
+            <Reveal delay={0.1}>
+              <div
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4"
+                style={{ borderTop: `1px solid ${T.border}`, borderLeft: `1px solid ${T.border}` }}
+              >
+                {PROCESS_STEPS.map((step) => (
+                  <article
+                    key={step.num}
+                    className="flex flex-col justify-start gap-4 p-8 md:p-10"
+                    style={{ borderRight: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}`, background: T.surface }}
+                  >
+                    <div style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "2rem", lineHeight: 1, color: `${T.primary}25` }}>{step.num}</div>
+                    <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.125rem,1.6vw,1.5rem)", letterSpacing: "-0.015em", lineHeight: 1.2, color: T.fg }}>{step.title}</h3>
+                    <div className="w-5 h-px" style={{ background: T.border }} />
+                    <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.55, letterSpacing: "-0.003em", color: T.muted }}>{step.desc}</p>
+                  </article>
+                ))}
+              </div>
+            </Reveal>
+
+            <div style={{ maxWidth: T.containerMax, margin: "0 auto", paddingInline: T.containerPad, paddingBlock: "28px" }}>
+              <Marker>MOST PROJECTS · 2–4 WEEKS · FIXED PRICING</Marker>
+            </div>
+          </section>
+        </Reveal>
+
+        <HorizonDivider />
+
+        {/* ═══════════════ 05 — WHY US ═══════════════ */}
+        <Reveal>
+          <section id="why" style={{ borderTop: `1px solid ${T.border}`, background: T.surface }}>
+            <div style={{ maxWidth: T.containerMax, margin: "0 auto", paddingInline: T.containerPad, paddingBlock: "clamp(64px,9vw,112px)" }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
+                {/* Left — headline + value props */}
+                <div>
+                  <div className="mb-6"><Marker>// 05 — WHY US</Marker></div>
+                  <div
+                    className="mb-10"
+                    style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.5rem,5vw,4.5rem)", lineHeight: 1.04, letterSpacing: "-0.03em" }}
+                  >
+                    <span className="block" style={{ color: T.fg }}>No templates.</span>
+                    <span className="block" style={{ color: T.muted }}>No bloat.</span>
+                    <span className="block hero-glow" style={{ color: T.primary }}>No nonsense.</span>
+                  </div>
+                  <div style={{ borderTop: `1px solid ${T.border}` }}>
+                    {WHY_PROPS.map((p) => (
+                      <div key={p.n} className="py-6" style={{ borderBottom: `1px solid ${T.border}` }}>
+                        <div className="flex items-baseline gap-3 mb-2">
+                          <span style={{ fontFamily: T.mono, fontWeight: 600, fontSize: "0.9rem", letterSpacing: "-0.02em", color: `${T.primary}60` }}>{p.n}</span>
+                          <h3 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.125rem", letterSpacing: "-0.01em", lineHeight: 1.3, color: T.fg }}>{p.title}</h3>
+                        </div>
+                        <p style={{ fontFamily: T.sans, fontSize: "0.9rem", lineHeight: 1.55, letterSpacing: "-0.003em", color: T.muted, paddingLeft: 28 }}>{p.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right — FixedPricing asset */}
+                <Reveal delay={0.1} direction="left">
+                  <div
+                    className="overflow-hidden"
+                    style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: T.r.xl, height: 300 }}
+                  >
+                    <FixedPricing style={{ height: 300, minHeight: 0 }} />
+                  </div>
+                </Reveal>
+              </div>
+            </div>
+          </section>
+        </Reveal>
+
+        {/* ═══════════════ 06 — FREE TAILORED PLAN ═══════════════ */}
+        <Reveal>
+          <section id="free-plan" className="relative overflow-hidden" style={{ borderTop: `1px solid ${T.border}`, background: T.bg }}>
+            {/* Ambient SystemHorizon backdrop */}
+            <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 0, opacity: 0.5 }} aria-hidden>
+              <SystemHorizon style={{ height: "100%", minHeight: 0 }} />
+            </div>
+            {/* Fade so content stays legible over the backdrop */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              aria-hidden
+              style={{ zIndex: 1, background: `radial-gradient(ellipse 70% 70% at 50% 45%, ${T.bg} 30%, transparent 100%)` }}
+            />
+
+            <div
+              className="relative flex flex-col items-center text-center"
+              style={{ zIndex: 2, maxWidth: 760, margin: "0 auto", paddingInline: T.containerPad, paddingBlock: "clamp(80px,11vw,140px)" }}
+            >
+              <div className="mb-6"><Marker>// 06 — FREE TAILORED PLAN</Marker></div>
+              <h2
+                style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(2.4rem,5.2vw,4rem)", lineHeight: 1.04, letterSpacing: "-0.03em", color: T.fg }}
+              >
+                Get a free, tailored plan<br />for your business.
+              </h2>
+              <p
+                className="mt-6"
+                style={{ fontFamily: T.sans, fontSize: "1.0625rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "52ch" }}
+              >
+                Answer a few quick questions — under a minute — and we&apos;ll show you exactly what we&apos;d build for you and what it would cost. No commitment.
+              </p>
+
+              <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
+                {/* PRIMARY — free plan funnel */}
+                <Link
+                  href="/start"
+                  className="inline-flex items-center justify-center gap-2 font-medium transition-opacity hover:opacity-90"
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.9375rem",
+                    fontWeight: 500,
+                    letterSpacing: "-0.005em",
+                    height: 48,
+                    paddingInline: 24,
+                    background: T.primary,
+                    color: T.primaryFg,
+                    borderRadius: T.r.md,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 28px ${T.primary}35`,
+                    textDecoration: "none",
+                  }}
+                >
+                  Get my free plan →
+                </Link>
+                {/* SECONDARY — ghost, book a call */}
+                <Link
+                  href="/book"
+                  className="inline-flex items-center justify-center gap-2 font-medium transition-colors"
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.9375rem",
+                    fontWeight: 500,
+                    letterSpacing: "-0.005em",
+                    height: 48,
+                    paddingInline: 24,
+                    background: "transparent",
+                    color: T.fg,
+                    border: `1px solid ${T.borderStr}`,
+                    borderRadius: T.r.md,
+                    textDecoration: "none",
+                  }}
+                >
+                  Book a call
+                </Link>
+              </div>
+
+              <div
+                className="mt-8"
+                style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.04em", color: T.muted }}
+              >
+                Response within 24 hours · UK-based, global reach
+              </div>
+            </div>
+          </section>
+        </Reveal>
       </main>
 
       {/* Systems Lab promo */}
-      <div className="relative" style={{ zIndex: 6, marginTop: "12vh", borderTop: `1px solid ${T.border}`, background: T.surface, padding: "72px 24px" }}>
+      <div className="relative z-10" style={{ borderTop: `1px solid ${T.border}`, background: T.surface, padding: "72px 24px" }}>
         <Reveal>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }} className="md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-5">
-              <span className="inline-flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primary}20`, flexShrink: 0, display: "inline-block" }} />
-                New — Systems Lab
-              </span>
+          <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }} className="md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-5">
+                <span className="inline-flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.75rem", fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: T.muted }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.primary, boxShadow: `0 0 0 4px ${T.primary}20`, flexShrink: 0, display: "inline-block" }} />
+                  New — Systems Lab
+                </span>
+              </div>
+              <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.75rem,3.5vw,2.75rem)", lineHeight: 1.04, letterSpacing: "-0.025em", color: T.fg }}>
+                Experience our systems<br /><span style={{ color: T.muted }}>before you build.</span>
+              </h2>
+              <p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "50ch", marginTop: 16 }}>
+                12 live interactive demos — booking systems, CRMs, client portals, AI chatbots and more. Click around and see exactly what we build.
+              </p>
             </div>
-            <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.75rem,3.5vw,2.75rem)", lineHeight: 1.08, letterSpacing: "-0.025em", color: T.fg }}>
-              Experience our systems<br /><span style={{ color: T.muted }}>before you build.</span>
-            </h2>
-            <p style={{ fontFamily: T.sans, fontSize: "0.9375rem", lineHeight: 1.55, letterSpacing: "-0.005em", color: T.muted, maxWidth: "50ch", marginTop: 16 }}>
-              12 live interactive demos — booking systems, CRMs, client portals, AI chatbots and more. Click around and see exactly what we build.
-            </p>
+            <Link
+              href="/systems-lab"
+              className="inline-flex items-center gap-3 font-medium transition-opacity hover:opacity-90 shrink-0"
+              style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em", height: 44, paddingInline: 22, background: "transparent", color: T.fg, borderRadius: 10, border: `1px solid ${T.borderStr}` }}
+            >
+              Enter Systems Lab →
+            </Link>
           </div>
-          <Link
-            href="/systems-lab"
-            className="inline-flex items-center gap-3 font-medium transition-opacity hover:opacity-90 shrink-0"
-            style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, letterSpacing: "-0.005em", height: 44, paddingInline: 22, background: T.primary, color: T.primaryFg, borderRadius: 10, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 24px ${T.primary}35` }}
-          >
-            Enter Systems Lab →
-          </Link>
-        </div>
         </Reveal>
       </div>
 
-      <div className="relative" style={{ zIndex: 6 }}>
+      <div className="relative z-10">
         <Footer />
       </div>
     </>

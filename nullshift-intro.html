@@ -611,14 +611,21 @@
     stage.classList.add('diving');
     setTimeout(function(){
       if (embedded) { try { window.parent.postMessage('ns-intro-done', '*'); } catch(e){} }
-      else { document.body.style.transition = 'opacity .6s'; document.body.style.opacity = '0'; }
+      else { window.location.href = '/start'; }
     }, 850);
   }
   function finishToBook() {
     if (finished) return; finished = true;
     if (actx) { airSwell(now(), 0.8, 0.06); tone(now(), 392, 0.1, 1.4); }
     if (embedded) { try { window.parent.postMessage('ns-intro-book', '*'); } catch(e){} }
-    else { window.location.href = '/book'; }
+    else { window.location.href = '/start'; }
+  }
+  // Explicit "explore the site" escape — go to the homepage instead of the funnel.
+  function finishToExplore() {
+    if (finished) return; finished = true;
+    if (actx) { tone(now(), 262, 0.08, 1.4); }
+    if (embedded) { try { window.parent.postMessage('ns-intro-explore', '*'); } catch(e){} }
+    else { window.location.href = '/'; }
   }
 
   /* ============================================================
@@ -846,7 +853,7 @@
   enterBtn.addEventListener('click', function(){ if(actx) tick(now(),0.02); enter(); });
   seeMoreBtn.addEventListener('click', function(){ if(actx) tick(now(),0.02); seeMore(); });
   bookBtn.addEventListener('click', function(){ if(actx) tick(now(),0.02); finishToBook(); });
-  exploreSiteBtn.addEventListener('click', function(){ if(actx) tick(now(),0.02); finish(); });
+  exploreSiteBtn.addEventListener('click', function(){ if(actx) tick(now(),0.02); finishToExplore(); });
   soundBtn.addEventListener('click', function(){ ensureAudio(); if (actx && actx.state==='suspended') actx.resume(); setMuted(!muted); if(!muted && actx) tick(now(),0.02); });
   skipBtn.addEventListener('click', function(){ stopAll(); finish(); });
   document.addEventListener('keydown', function(e){
