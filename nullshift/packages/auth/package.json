@@ -1,0 +1,23 @@
+{
+  "name": "@nullshift/auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./admin": "./src/admin.ts",
+    "./confirmation-email": "./src/confirmation-email.ts",
+    "./resend-rate-limit": "./src/resend-rate-limit.ts",
+    "./guards": "./src/guards.ts"
+  },
+  "dependencies": {
+    "@nullshift/db": "workspace:*",
+    "@supabase/supabase-js": "^2.107.0",
+    "resend": "^6.12.4"
+  },
+  "peerDependencies": {
+    "next": ">=15"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

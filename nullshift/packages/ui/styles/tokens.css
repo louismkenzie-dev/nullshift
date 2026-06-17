@@ -1,0 +1,8 @@
+/* Nullshift design tokens — single shared source for every app.
+   Import once per app from its globals.css:  @import "@nullshift/ui/styles/tokens.css";
+   (Colours, typography, spacing, effects, base resets.) */
+@import "./colors.css";
+@import "./typography.css";
+@import "./spacing.css";
+@import "./effects.css";
+@import "./base.css";

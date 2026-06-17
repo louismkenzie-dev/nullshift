@@ -1,0 +1,19 @@
+{
+  "name": "@nullshift/billing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./config": "./src/config.ts",
+    "./subscriptions": "./src/subscriptions.ts",
+    "./pricing": "./src/pricing.ts"
+  },
+  "dependencies": {
+    "@nullshift/db": "workspace:*",
+    "@stripe/stripe-js": "^9.8.0",
+    "stripe": "^22.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}
