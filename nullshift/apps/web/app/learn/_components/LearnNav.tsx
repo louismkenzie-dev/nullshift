@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
-import { LogoMark } from "@/components/Logo";
+import { LogoMark } from "@nullshift/ui/components/Logo";
 import type { SubscriptionTier } from "@nullshift/billing/subscriptions";
 
 const TIER_LABEL: Record<SubscriptionTier, string> = {

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { BriefViewer } from "@/components/BriefViewer";
-import type { BriefData } from "@/lib/brief";
+import type { BriefData } from "@nullshift/content/brief";
 
 type Enquiry = {
   id: string;

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
-import { LogoMark } from "@/components/Logo";
+import { LogoMark } from "@nullshift/ui/components/Logo";
 
 const links = [
   { label: "Dashboard",  href: "/admin",            icon: "○" },

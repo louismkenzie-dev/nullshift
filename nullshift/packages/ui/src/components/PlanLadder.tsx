@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { T } from "@nullshift/ui/tokens";
-import { TRADES, WELLNESS, type VerticalConfig } from "@/lib/marketing";
+import { T } from "../tokens";
+import { TRADES, WELLNESS, type VerticalConfig } from "@nullshift/content/marketing";
 
 const VERTS: { key: string; label: string; cfg: VerticalConfig }[] = [
   { key: "trades", label: "Trades · Never Miss a Job", cfg: TRADES },

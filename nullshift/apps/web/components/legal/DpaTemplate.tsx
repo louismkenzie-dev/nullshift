@@ -2,7 +2,7 @@
 
 import React from "react";
 import { T } from "@nullshift/ui/tokens";
-import { LEGAL_ENTITY, SUB_PROCESSORS } from "@/lib/legalEntity";
+import { LEGAL_ENTITY, SUB_PROCESSORS } from "@nullshift/content/legalEntity";
 
 /* ============================================================
    Shared Data Processing Agreement renderer.

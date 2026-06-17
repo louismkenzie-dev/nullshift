@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
-import { LogoMark } from "@/components/Logo";
+import { LogoMark } from "@nullshift/ui/components/Logo";
 import { hasSupabaseBrowserConfig, getMissingSupabaseBrowserEnv } from "@nullshift/db/env";
 
 export default function AdminLoginPage() {

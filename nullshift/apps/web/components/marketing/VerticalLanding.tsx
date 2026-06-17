@@ -3,8 +3,8 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import { T } from "@nullshift/ui/tokens";
-import { PROOF_PILLARS, BRAND_LINE, type VerticalConfig } from "@/lib/marketing";
-import { RevenueCalculator } from "@/components/marketing/RevenueCalculator";
+import { PROOF_PILLARS, BRAND_LINE, type VerticalConfig } from "@nullshift/content/marketing";
+import { RevenueCalculator } from "@nullshift/ui/components/RevenueCalculator";
 
 const PrimaryBtn = ({ href, children }: { href: string; children: React.ReactNode }) => (
   <Link href={href} className="inline-flex items-center justify-center gap-2 font-medium transition-opacity hover:opacity-90"

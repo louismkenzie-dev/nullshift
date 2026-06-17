@@ -7,9 +7,9 @@ import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { formatCallDate, formatCallTime, money, proposalRef } from "@nullshift/ui/format";
 import { BriefViewer } from "@/components/BriefViewer";
-import type { BriefData } from "@/lib/brief";
+import type { BriefData } from "@nullshift/content/brief";
 import { ProjectUpdatesSection } from "./ProjectUpdatesSection";
-import { SUB_PROCESSORS } from "@/lib/legalEntity";
+import { SUB_PROCESSORS } from "@nullshift/content/legalEntity";
 
 type Client = { id: string; name: string; business_name: string | null; email: string | null; phone: string | null; status: string; notes: string | null; requested_date: string | null; requested_time: string | null; brief_completed_at: string | null; project_phase: string | null; auth_user_id: string | null };
 type Call = { id: string; client_id: string; call_date: string; call_time: string; duration_min: number; status: string; meeting_link: string | null; meeting_id: string | null; meeting_password: string | null };

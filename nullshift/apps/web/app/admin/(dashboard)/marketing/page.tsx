@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { T } from "@nullshift/ui/tokens";
-import { TRADES, WELLNESS } from "@/lib/marketing";
-import { PlanLadder } from "@/components/marketing/PlanLadder";
-import { RevenueCalculator } from "@/components/marketing/RevenueCalculator";
+import { TRADES, WELLNESS } from "@nullshift/content/marketing";
+import { PlanLadder } from "@nullshift/ui/components/PlanLadder";
+import { RevenueCalculator } from "@nullshift/ui/components/RevenueCalculator";
 
 const TABS = ["Advisor", "Strategy", "Offer & Pricing", "Channels", "90-Day Roadmap", "Numbers"] as const;
 type Tab = typeof TABS[number];

@@ -3,10 +3,10 @@ import { createServiceClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
 import { money, proposalRef } from "@nullshift/ui/format";
 import { AcceptForm } from "./AcceptForm";
-import { Logo } from "@/components/Logo";
+import { Logo } from "@nullshift/ui/components/Logo";
 import { ProposalActions } from "./ProposalActions";
 import Link from "next/link";
-import { LEGAL_ENTITY, SUB_PROCESSORS } from "@/lib/legalEntity";
+import { LEGAL_ENTITY, SUB_PROCESSORS } from "@nullshift/content/legalEntity";
 
 type LineItem = { label: string; qty: number; unit_price: number };
 type Phase = { phase: string; items: string[] };

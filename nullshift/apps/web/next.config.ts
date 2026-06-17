@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     "@nullshift/auth",
     "@nullshift/billing",
     "@nullshift/config",
+    "@nullshift/content",
   ],
   images: {
     remotePatterns: [

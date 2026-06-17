@@ -7,7 +7,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer
 import { createClient } from "@nullshift/db/client";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
 import { T } from "@nullshift/ui/tokens";
-import { Logo } from "@/components/Logo";
+import { Logo } from "@nullshift/ui/components/Logo";
 import { Atmosphere } from "@/components/funnel/Atmosphere";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -44,6 +44,9 @@ importers:
       '@nullshift/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@nullshift/content':
+        specifier: workspace:*
+        version: link:../../packages/content
       '@nullshift/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -196,6 +199,12 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  packages/content:
+    devDependencies:
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   packages/db:
     dependencies:
       '@supabase/ssr':
@@ -214,6 +223,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@nullshift/content':
+        specifier: workspace:*
+        version: link:../content
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -221,6 +233,21 @@ importers:
         specifier: ^3.6.0
         version: 3.6.0
     devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.17)
+      next:
+        specifier: 16.2.7
+        version: 16.2.7(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: 19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: 19.2.4
+        version: 19.2.4(react@19.2.4)
       typescript:
         specifier: ^5
         version: 5.9.3

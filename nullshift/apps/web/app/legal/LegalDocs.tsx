@@ -2,7 +2,7 @@
 
 import React from "react";
 import { T } from "@nullshift/ui/tokens";
-import { LEGAL_ENTITY } from "@/lib/legalEntity";
+import { LEGAL_ENTITY } from "@nullshift/content/legalEntity";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
 
 /* ============================================================

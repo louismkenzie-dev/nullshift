@@ -2,7 +2,7 @@ import { T } from "@nullshift/ui/tokens";
 import {
   PAGE_OPTIONS, DESIGN_STYLES, PURPOSES, TIMELINES, LOGO_STATES,
   BUDGET_MIN, formatBudget, labelFor, type BriefData,
-} from "@/lib/brief";
+} from "@nullshift/content/brief";
 
 /** Read-only display of a submitted client brief. Used by the admin Enquiries
  *  inbox and the per-client dashboard. */

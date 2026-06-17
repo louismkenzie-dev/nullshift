@@ -16,7 +16,7 @@ import {
   Clock,
   AlertCircle,
 } from "lucide-react";
-import { LogoMark } from "@/components/Logo";
+import { LogoMark } from "@nullshift/ui/components/Logo";
 import { T } from "@nullshift/ui/tokens";
 
 /* ════════════════════════════════════════════════════════════════

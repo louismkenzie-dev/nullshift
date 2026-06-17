@@ -12,7 +12,7 @@ import {
   PAGE_OPTIONS, DESIGN_STYLES, PURPOSES, TIMELINES, LOGO_STATES,
   BUDGET_MIN, BUDGET_MAX, BUDGET_STEP, formatBudget, labelFor,
   emptyBrief, type BriefData,
-} from "@/lib/brief";
+} from "@nullshift/content/brief";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 const STEPS: { id: Step; label: string }[] = [

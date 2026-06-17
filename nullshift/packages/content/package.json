@@ -1,0 +1,14 @@
+{
+  "name": "@nullshift/content",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./brief": "./src/brief.ts",
+    "./legalEntity": "./src/legalEntity.ts",
+    "./marketing": "./src/marketing.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

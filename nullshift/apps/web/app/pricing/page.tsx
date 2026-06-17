@@ -4,10 +4,10 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
 import { PricingCard } from "@/components/PricingCard";
-import { PlanLadder } from "@/components/marketing/PlanLadder";
+import { PlanLadder } from "@nullshift/ui/components/PlanLadder";
 import { T } from "@nullshift/ui/tokens";
 import { pricingPlans } from "@nullshift/billing/pricing";
-import { PROOF_PILLARS, BRAND_LINE } from "@/lib/marketing";
+import { PROOF_PILLARS, BRAND_LINE } from "@nullshift/content/marketing";
 import Link from "next/link";
 
 const learningTiers = pricingPlans; // Core / Grow / Pro / Partner

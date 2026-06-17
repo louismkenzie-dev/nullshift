@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { T } from "@nullshift/ui/tokens";
-import type { VerticalConfig } from "@/lib/marketing";
+import { T } from "../tokens";
+import type { VerticalConfig } from "@nullshift/content/marketing";
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 

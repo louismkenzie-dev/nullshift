@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { VerticalLanding } from "@/components/marketing/VerticalLanding";
-import { TRADES } from "@/lib/marketing";
+import { TRADES } from "@nullshift/content/marketing";
 
 export const metadata: Metadata = {
   title: "Never Miss a Job — Websites + lead systems for UK trades | Nullshift",

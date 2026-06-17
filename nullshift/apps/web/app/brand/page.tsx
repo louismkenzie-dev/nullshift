@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Reveal } from "@/components/Reveal";
-import { Logo, LogoMark } from "@/components/Logo";
+import { Logo, LogoMark } from "@nullshift/ui/components/Logo";
 import { T } from "@nullshift/ui/tokens";
 import { COLORS, TYPE, PRINCIPLES, generateBrandPdf } from "@/lib/brandPdf";
 

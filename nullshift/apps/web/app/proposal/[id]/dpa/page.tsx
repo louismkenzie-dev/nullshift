@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
 import { proposalRef } from "@nullshift/ui/format";
-import { Logo } from "@/components/Logo";
+import { Logo } from "@nullshift/ui/components/Logo";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
 
 export const dynamic = "force-dynamic";

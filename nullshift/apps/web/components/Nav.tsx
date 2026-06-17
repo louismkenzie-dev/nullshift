@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
-import { Logo, LogoMark } from "@/components/Logo";
+import { Logo, LogoMark } from "@nullshift/ui/components/Logo";
 import { cn } from "@nullshift/ui/utils";
 
 const links = [

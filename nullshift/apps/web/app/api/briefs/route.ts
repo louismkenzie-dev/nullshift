@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
-import { BUDGET_MIN, formatBudget, labelFor, PAGE_OPTIONS, DESIGN_STYLES, PURPOSES, TIMELINES, LOGO_STATES, type BriefData } from "@/lib/brief";
+import { BUDGET_MIN, formatBudget, labelFor, PAGE_OPTIONS, DESIGN_STYLES, PURPOSES, TIMELINES, LOGO_STATES, type BriefData } from "@nullshift/content/brief";
 
 /* Public endpoint — the /brief intake form posts here.
  *  • Saves to `enquiries` with source='brief' and the full brief in `brief_data`.

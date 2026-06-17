@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
-import { LogoMark } from "@/components/Logo";
+import { LogoMark } from "@nullshift/ui/components/Logo";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
 
 import { PLAN_META_ONBOARD } from "@nullshift/billing/pricing";

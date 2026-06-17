@@ -1,4 +1,4 @@
-import { T } from "@nullshift/ui/tokens";
+import { T } from "../tokens";
 
 /**
  * Nullshift parallel-pill mark — two staggered rounded pills, taken from the

@@ -4,7 +4,7 @@ import { useReducer, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
 import { T } from "@nullshift/ui/tokens";
-import { Logo } from "@/components/Logo";
+import { Logo } from "@nullshift/ui/components/Logo";
 import { visibleSteps, scoreLead, type Answers, type Segment, type Recommendation } from "@/lib/funnel";
 import { funnelSound } from "@/lib/funnelAudio";
 import { ProgressBar } from "@/components/funnel/ProgressBar";

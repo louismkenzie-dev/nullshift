@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { VerticalLanding } from "@/components/marketing/VerticalLanding";
-import { WELLNESS } from "@/lib/marketing";
+import { WELLNESS } from "@nullshift/content/marketing";
 
 export const metadata: Metadata = {
   title: "Zero No-Show — Booking systems for salons, clinics & gyms | Nullshift",
