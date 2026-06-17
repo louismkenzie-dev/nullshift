@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# Nullshift pre-commit: format + lint staged files in the monorepo.
+# The repo root is a parent of this monorepo, so we run lint-staged from here.
+# Enable once per clone:  pnpm hooks:install   (run from nullshift/)
+cd "$(dirname "$0")/.." || exit 1
+pnpm exec lint-staged

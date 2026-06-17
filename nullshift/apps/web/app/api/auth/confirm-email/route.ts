@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       : defaultRedirect;
 
   const cookieStore = await cookies();
-  let response = NextResponse.redirect(redirectTo);
+  const response = NextResponse.redirect(redirectTo);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

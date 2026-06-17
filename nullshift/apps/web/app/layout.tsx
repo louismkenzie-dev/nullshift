@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "./fonts.css";
+import "@nullshift/ui/styles/fonts.css";
 import "./globals.css";
 import { SmoothScroll } from "@/components/SmoothScroll";
 

@@ -7,7 +7,11 @@
     "./admin": "./src/admin.ts",
     "./confirmation-email": "./src/confirmation-email.ts",
     "./resend-rate-limit": "./src/resend-rate-limit.ts",
-    "./guards": "./src/guards.ts"
+    "./guards": "./src/guards.ts",
+    "./routes/client-signup": "./src/routes/client-signup.ts",
+    "./routes/resend-confirmation": "./src/routes/resend-confirmation.ts",
+    "./routes/verify-code": "./src/routes/verify-code.ts",
+    "./routes/signout": "./src/routes/signout.ts"
   },
   "dependencies": {
     "@nullshift/db": "workspace:*",

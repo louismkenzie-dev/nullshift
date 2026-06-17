@@ -70,6 +70,9 @@ export default function ClientSignupPage() {
 
   // OTP
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
+  // Fixed-length (6) array → hook order is stable across renders, so this is
+  // safe despite calling useRef in a callback. (OTP digit inputs.)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const inputRefs = Array.from({ length: 6 }, () => useRef<HTMLInputElement>(null));
   const [resendBusy, setResendBusy] = useState(false);
   const [resendMsg, setResendMsg] = useState<string | null>(null);

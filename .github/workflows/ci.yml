@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths: ["nullshift/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["nullshift/**", ".github/workflows/ci.yml"]
+
+defaults:
+  run:
+    working-directory: nullshift
+
+jobs:
+  verify:
+    name: typecheck · lint · build
+    runs-on: ubuntu-latest
+    # Placeholder public env so `next build` can construct the Supabase browser
+    # client during static prerender. These are NOT secrets and never connect.
+    # PHASE 5: make auth-gated admin/portal pages dynamic so even this isn't needed.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key-for-build-only
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack (pnpm)
+        run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: nullshift/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -w typecheck
+
+      - name: Lint
+        run: pnpm -w lint
+
+      - name: Build
+        run: pnpm -w build
+
+      # RLS-touching changes must keep tenants isolated (Phase 1+).
+      # The cross-tenant test runs here once packages/db ships it.
+      - name: RLS cross-tenant test
+        run: pnpm -w test
+        continue-on-error: false

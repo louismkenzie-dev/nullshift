@@ -17,7 +17,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,css,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,css,json}\"",
     "test": "turbo run test",
-    "prepare": "husky"
+    "hooks:install": "git -C \"$(git rev-parse --show-toplevel)\" config core.hooksPath \"$(pwd)/.husky\""
   },
   "devDependencies": {
     "husky": "^9.1.7",

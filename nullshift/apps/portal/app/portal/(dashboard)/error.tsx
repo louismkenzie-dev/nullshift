@@ -17,7 +17,7 @@ export default function PortalError({
   return (
     <div style={{ padding: "60px 24px", maxWidth: 520, margin: "0 auto" }}>
       <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: T.danger, marginBottom: 12 }}>
-        // Portal error
+        {"// Portal error"}
       </div>
       <h2 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1.4rem", color: T.fg, marginBottom: 12 }}>
         Something went wrong
