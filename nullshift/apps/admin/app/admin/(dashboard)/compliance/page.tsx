@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
@@ -36,6 +37,19 @@ async function recordCompliance(formData: FormData) {
     target: `tenant:${tenantId}`,
     tenantId,
   });
+  revalidatePath("/admin/compliance");
+}
+
+// Retention + right-to-erasure: hard-delete a tenant (cascades to all its data).
+async function deleteTenant(formData: FormData) {
+  "use server";
+  const tenantId = String(formData.get("tenant_id") || "");
+  const confirm = String(formData.get("confirm") || "");
+  if (!tenantId || confirm !== "DELETE") return;
+  const supabase = await createClient();
+  // Audit BEFORE the row (and its audit rows) cascade away.
+  await logAudit({ action: "tenant.erased", target: `tenant:${tenantId}`, tenantId });
+  await supabase.from("tenants").delete().eq("id", tenantId);
   revalidatePath("/admin/compliance");
 }
 
@@ -171,6 +185,75 @@ export default async function CompliancePage() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Data subject rights — SAR export + right to erasure */}
+              <div
+                className="flex items-center gap-3 flex-wrap"
+                style={{
+                  marginTop: 14,
+                  paddingTop: 12,
+                  borderTop: `1px solid ${T.border}`,
+                }}
+              >
+                <Link
+                  href={`/api/sar/${tenant.id}`}
+                  prefetch={false}
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    height: 26,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    paddingInline: 10,
+                    background: T.surface2,
+                    color: T.fg,
+                    border: `1px solid ${T.border}`,
+                    borderRadius: 5,
+                    textDecoration: "none",
+                  }}
+                >
+                  ↓ Export data (SAR)
+                </Link>
+                <form action={deleteTenant} className="flex items-center gap-2">
+                  <input type="hidden" name="tenant_id" value={tenant.id} />
+                  <input
+                    name="confirm"
+                    placeholder="type DELETE"
+                    autoComplete="off"
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "10px",
+                      height: 26,
+                      padding: "0 8px",
+                      width: 96,
+                      background: T.bg,
+                      color: T.fg,
+                      border: `1px solid ${T.danger}40`,
+                      borderRadius: 5,
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "10px",
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                      height: 26,
+                      paddingInline: 10,
+                      background: "transparent",
+                      color: T.danger,
+                      border: `1px solid ${T.danger}40`,
+                      borderRadius: 5,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Erase tenant
+                  </button>
+                </form>
               </div>
             </section>
           );
