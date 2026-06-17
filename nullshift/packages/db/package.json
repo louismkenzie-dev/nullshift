@@ -6,7 +6,11 @@
   "exports": {
     ".": "./src/server.ts",
     "./client": "./src/client.ts",
-    "./env": "./src/env.ts"
+    "./env": "./src/env.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "test": "node src/rls.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
@@ -16,6 +20,7 @@
     "next": ">=15"
   },
   "devDependencies": {
+    "pg": "^8.13.1",
     "typescript": "^5"
   }
 }
