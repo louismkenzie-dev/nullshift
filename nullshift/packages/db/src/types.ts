@@ -435,6 +435,8 @@ export type Database = {
         | "scoped"
         | "awaiting_approval"
         | "approved"
+        | "in_progress"
+        | "review"
         | "rejected"
         | "shipped";
       compliance_kind: "dpa_signed" | "data_register" | "breach" | "sar" | "backup_check";

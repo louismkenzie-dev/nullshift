@@ -32,18 +32,41 @@ export function PortalHeader({ email }: { email: string }) {
           gap: 10,
         }}
       >
-        <span style={{
-          width: 8, height: 8, borderRadius: "50%",
-          background: T.primary,
-          boxShadow: `0 0 0 4px ${T.primarySoft}`,
-          display: "inline-block",
-          flexShrink: 0,
-        }} />
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: T.primary,
+            boxShadow: `0 0 0 4px ${T.primarySoft}`,
+            display: "inline-block",
+            flexShrink: 0,
+          }}
+        />
         Client Portal
       </Link>
 
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <span style={{ fontFamily: T.mono, fontSize: "0.75rem", fontWeight: 500, color: T.muted }}>
+        <Link
+          href="/portal/requests"
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.8125rem",
+            fontWeight: 500,
+            color: T.muted,
+            textDecoration: "none",
+          }}
+        >
+          Requests
+        </Link>
+        <span
+          style={{
+            fontFamily: T.mono,
+            fontSize: "0.75rem",
+            fontWeight: 500,
+            color: T.muted,
+          }}
+        >
           {email}
         </span>
         <form action="/api/auth/signout" method="post">
@@ -62,11 +85,11 @@ export function PortalHeader({ email }: { email: string }) {
               cursor: "pointer",
               transition: `color ${T.duration.base} ${T.ease}, border-color ${T.duration.base} ${T.ease}`,
             }}
-            onMouseOver={e => {
+            onMouseOver={(e) => {
               (e.currentTarget as HTMLElement).style.color = T.fg;
               (e.currentTarget as HTMLElement).style.borderColor = T.borderStr;
             }}
-            onMouseOut={e => {
+            onMouseOut={(e) => {
               (e.currentTarget as HTMLElement).style.color = T.muted;
               (e.currentTarget as HTMLElement).style.borderColor = T.border;
             }}
