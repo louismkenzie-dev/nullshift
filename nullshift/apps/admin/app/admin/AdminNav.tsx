@@ -3,25 +3,62 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import {
+  LayoutDashboard,
+  Inbox,
+  FolderKanban,
+  Receipt,
+  ShieldCheck,
+  ListChecks,
+  Calendar,
+  Megaphone,
+  KeyRound,
+  UsersRound,
+  Mail,
+  Building2,
+  FileText,
+  FileSignature,
+  type LucideIcon,
+} from "lucide-react";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { LogoMark } from "@nullshift/ui/components/Logo";
 
-const links = [
-  { label: "Dashboard", href: "/admin", icon: "○" },
-  { label: "Pipeline", href: "/admin/pipeline", icon: "◉" },
-  { label: "Delivery", href: "/admin/delivery", icon: "◧" },
-  { label: "Tasks", href: "/admin/tasks", icon: "◰" },
-  { label: "Billing", href: "/admin/billing", icon: "£" },
-  { label: "Compliance", href: "/admin/compliance", icon: "❖" },
-  { label: "Security", href: "/admin/security", icon: "⊕" },
-  { label: "Marketing", href: "/admin/marketing", icon: "◆" },
-  { label: "Users", href: "/admin/users", icon: "◫" },
-  { label: "Enquiries", href: "/admin/enquiries", icon: "◈" },
-  { label: "Clients", href: "/admin/clients", icon: "◇" },
-  { label: "Calendar", href: "/admin/calendar", icon: "◻" },
-  { label: "Quotes", href: "/admin/quotes", icon: "◈" },
-  { label: "Proposals", href: "/admin/proposals", icon: "◈" },
+type NavItem = { label: string; href: string; Icon: LucideIcon };
+type NavGroup = { section: string; items: NavItem[] };
+
+// Ordered by the client lifecycle: inquiry → call (Pipeline) → portal, proposal,
+// DPA, build edits, notes (Delivery) → itemised invoice (Billing) → compliance.
+const groups: NavGroup[] = [
+  {
+    section: "Lifecycle",
+    items: [
+      { label: "Dashboard", href: "/admin", Icon: LayoutDashboard },
+      { label: "Pipeline", href: "/admin/pipeline", Icon: Inbox },
+      { label: "Delivery", href: "/admin/delivery", Icon: FolderKanban },
+      { label: "Billing", href: "/admin/billing", Icon: Receipt },
+      { label: "Compliance", href: "/admin/compliance", Icon: ShieldCheck },
+    ],
+  },
+  {
+    section: "Tools",
+    items: [
+      { label: "Tasks", href: "/admin/tasks", Icon: ListChecks },
+      { label: "Calendar", href: "/admin/calendar", Icon: Calendar },
+      { label: "Marketing", href: "/admin/marketing", Icon: Megaphone },
+      { label: "Security", href: "/admin/security", Icon: KeyRound },
+      { label: "Users", href: "/admin/users", Icon: UsersRound },
+    ],
+  },
+  {
+    section: "Legacy",
+    items: [
+      { label: "Enquiries", href: "/admin/enquiries", Icon: Mail },
+      { label: "Clients", href: "/admin/clients", Icon: Building2 },
+      { label: "Quotes", href: "/admin/quotes", Icon: FileText },
+      { label: "Proposals", href: "/admin/proposals", Icon: FileSignature },
+    ],
+  },
 ];
 
 export function AdminNav({ email }: { email: string }) {
@@ -195,71 +232,70 @@ export function AdminNav({ email }: { email: string }) {
           </button>
         </div>
 
-        {/* Nav links */}
-        <nav className="flex flex-col gap-1 px-4 py-6 flex-1 overflow-y-auto">
-          <div
-            style={{
-              fontFamily: T.mono,
-              fontSize: "9px",
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: T.muted,
-              paddingLeft: "12px",
-              marginBottom: "8px",
-            }}
-          >
-            Navigation
-          </div>
-          {links.map((l, idx) => {
-            const active = isActive(l.href);
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors"
+        {/* Nav links — grouped by lifecycle */}
+        <nav className="flex flex-col gap-1 px-4 py-5 flex-1 overflow-y-auto">
+          {groups.map((group) => (
+            <div key={group.section} className="mb-2">
+              <div
                 style={{
-                  background: active ? `${T.primary}18` : "transparent",
-                  borderLeft: `2px solid ${active ? T.primary : "transparent"}`,
-                  animationDelay: `${idx * 40}ms`,
+                  fontFamily: T.mono,
+                  fontSize: "9px",
+                  letterSpacing: "0.2em",
+                  textTransform: "uppercase",
+                  color: T.faint,
+                  paddingLeft: "12px",
+                  marginTop: "10px",
+                  marginBottom: "6px",
                 }}
               >
-                <span
-                  style={{
-                    fontFamily: T.mono,
-                    fontSize: "11px",
-                    color: active ? T.primary : T.muted,
-                    width: 16,
-                    textAlign: "center",
-                  }}
-                >
-                  {l.icon}
-                </span>
-                <span
-                  style={{
-                    fontFamily: T.display,
-                    fontWeight: 600,
-                    fontSize: "1rem",
-                    letterSpacing: "0.04em",
-                    color: active ? T.primary : T.fg,
-                  }}
-                >
-                  {l.label}
-                </span>
-                {active && (
-                  <span
+                {group.section}
+              </div>
+              {group.items.map((l) => {
+                const active = isActive(l.href);
+                return (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
                     style={{
-                      marginLeft: "auto",
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: T.primary,
+                      background: active ? `${T.primary}18` : "transparent",
+                      borderLeft: `2px solid ${active ? T.primary : "transparent"}`,
                     }}
-                  />
-                )}
-              </Link>
-            );
-          })}
+                  >
+                    <l.Icon
+                      size={17}
+                      strokeWidth={1.75}
+                      color={active ? T.primary : T.muted}
+                      style={{ flexShrink: 0 }}
+                    />
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontWeight: 500,
+                        fontSize: "0.9375rem",
+                        letterSpacing: "-0.005em",
+                        color: active ? T.primary : T.fg,
+                      }}
+                    >
+                      {l.label}
+                    </span>
+                    {active && (
+                      <span
+                        style={{
+                          marginLeft: "auto",
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: T.primary,
+                        }}
+                      />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Drawer footer */}

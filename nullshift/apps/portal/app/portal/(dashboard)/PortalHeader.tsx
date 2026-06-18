@@ -48,6 +48,18 @@ export function PortalHeader({ email }: { email: string }) {
 
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <Link
+          href="/portal/proposal"
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.8125rem",
+            fontWeight: 500,
+            color: T.muted,
+            textDecoration: "none",
+          }}
+        >
+          Proposal
+        </Link>
+        <Link
           href="/portal/requests"
           style={{
             fontFamily: T.sans,

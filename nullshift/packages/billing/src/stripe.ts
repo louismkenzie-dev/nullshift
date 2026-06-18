@@ -46,6 +46,54 @@ export async function createBuildInvoice(params: {
   return invoice;
 }
 
+/**
+ * Create + finalize + send an ITEMISED invoice (one line per build module) to a
+ * client by email — the "compile the builds into an invoice and send it" flow.
+ * Finds or creates the Stripe customer, adds a line item per module, finalizes
+ * and emails it. Returns the Stripe id + hosted payment URL. Amounts in PENCE.
+ */
+export async function createItemisedStripeInvoice(params: {
+  customerEmail: string;
+  customerName?: string;
+  items: { name: string; amountPence: number; quantity?: number }[];
+  currency?: string;
+}): Promise<{ id: string; url: string | null } | null> {
+  const stripe = getStripe();
+  if (!stripe || params.items.length === 0) return null;
+  const currency = params.currency ?? "gbp";
+
+  const found = await stripe.customers.list({ email: params.customerEmail, limit: 1 });
+  const customer =
+    found.data[0] ??
+    (await stripe.customers.create({
+      email: params.customerEmail,
+      name: params.customerName,
+    }));
+
+  const invoice = await stripe.invoices.create({
+    customer: customer.id,
+    collection_method: "send_invoice",
+    days_until_due: 14,
+    auto_advance: false,
+  });
+  if (!invoice.id) return null;
+
+  for (const it of params.items) {
+    await stripe.invoiceItems.create({
+      customer: customer.id,
+      invoice: invoice.id,
+      amount: Math.round(it.amountPence) * (it.quantity ?? 1),
+      currency,
+      description: it.name,
+    });
+  }
+
+  await stripe.invoices.finalizeInvoice(invoice.id);
+  await stripe.invoices.sendInvoice(invoice.id);
+  const fresh = await stripe.invoices.retrieve(invoice.id);
+  return { id: invoice.id, url: fresh.hosted_invoice_url ?? null };
+}
+
 /** Create a care subscription (recurring MRR) for a customer on a price. */
 export async function createCareSubscription(params: {
   customerId: string;

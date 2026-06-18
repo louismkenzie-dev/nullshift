@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
@@ -364,6 +365,20 @@ export default async function DeliveryPage() {
                         {project.name}
                       </span>
                       <Pill status={project.stage} />
+                      <Link
+                        href={`/admin/delivery/${project.id}`}
+                        style={{
+                          marginLeft: "auto",
+                          fontFamily: T.mono,
+                          fontSize: 10,
+                          letterSpacing: "0.05em",
+                          textTransform: "uppercase",
+                          color: T.primary,
+                          textDecoration: "none",
+                        }}
+                      >
+                        Open project →
+                      </Link>
                     </div>
 
                     {crs.length === 0 && (

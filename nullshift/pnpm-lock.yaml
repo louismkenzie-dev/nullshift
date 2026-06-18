@@ -50,6 +50,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.107.0
         version: 2.108.2
+      lucide-react:
+        specifier: ^1.17.0
+        version: 1.20.0(react@19.2.4)
       next:
         specifier: 16.2.7
         version: 16.2.7(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
