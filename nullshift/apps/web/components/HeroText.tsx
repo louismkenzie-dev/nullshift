@@ -30,9 +30,9 @@ const staggerSlow = {
 };
 
 // Sequenced headline phases — loops after final hold.
-// Repositioned to the recurring / outcome message: more than a website →
-// we run the system → (trades) catches every job → (wellness) fills every
-// chair → the brand line.
+// Clinic-niche arc: the problem (rented per-seat software) → own it instead →
+// the specifics (booking, records, payments) → the benefit (no per-seat fees)
+// → the brand line.
 const PHASES = [
   {
     text: "Your clinic runs on\nrented software.",

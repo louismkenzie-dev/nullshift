@@ -7,29 +7,13 @@ import { PricingCard } from "@/components/PricingCard";
 import { PlanLadder } from "@nullshift/ui/components/PlanLadder";
 import { T } from "@nullshift/ui/tokens";
 import { pricingPlans } from "@nullshift/billing/pricing";
-import { PROOF_PILLARS, BRAND_LINE } from "@nullshift/content/marketing";
+import { PROOF_PILLARS, BRAND_LINE, CLINIC } from "@nullshift/content/marketing";
 import Link from "next/link";
 
 const learningTiers = pricingPlans; // Core / Grow / Pro / Partner
 
-const faqs = [
-  {
-    q: "Why monthly — I thought you let me own it?",
-    a: "You do. You own the code and every account (hosting, domain, booking, AI), and can cancel anytime and keep everything. The monthly isn't rent on your website — it's us running the system that brings you customers, and reporting the revenue we recover. No hostage situation, no rebilled-tool markups.",
-  },
-  {
-    q: "What's the setup fee for?",
-    a: "It covers the bespoke build — your fast, custom site and the automations wired to your business. It makes acquisition pay back almost immediately, so the monthly is pure value from day one.",
-  },
-  {
-    q: "Too expensive — I'll just use Wix.",
-    a: "Wix is ~£30/mo forever and you never own it. One missed job (or a week of no-shows) costs more than a month with us — and we recover that for you while you own the asset. We compete on outcome and ownership, never on cheapest monthly.",
-  },
-  {
-    q: "What's the Partner tier?",
-    a: '"Done-with-you": we build your site or system and spend 12 months teaching you to own and run it yourself. By month 12 you\'re fully independent. Perfect for ambitious owners who want capability, not dependency.',
-  },
-];
+// Clinic-relevant objection handling (data/DPA, migration, why a care plan, overkill).
+const faqs = CLINIC.faqs;
 
 export default function PricingPage() {
   return (
@@ -91,9 +75,10 @@ export default function PricingPage() {
               color: T.muted,
             }}
           >
-            A small setup fee builds your bespoke site. Then a simple monthly plan runs
-            the system that brings the work in — and we show you the revenue recovered,
-            every month. You own everything, and you can cancel anytime.
+            One build fee for the booking, records and payments system your clinic owns
+            outright. Then a simple care plan hosts, backs up and runs it — for a fraction
+            of the per-practitioner SaaS it replaces. You own everything, and you can
+            cancel anytime.
           </p>
 
           {/* Clinic-first anchor */}

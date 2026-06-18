@@ -1,9 +1,10 @@
 /**
- * Marketing strategy data — single source for the recurring-revenue
- * repositioning (see marketing/Nullshift-Marketing-Strategy.md).
+ * Marketing strategy data — single source for the clinic-niche positioning.
  *
- * Vertical-first: Trades ("Never Miss a Job") → Wellness ("Zero No-Show").
- * Brand line: "Own your system. Subscribe to results."
+ * The site is now focused on allied-health clinics: the CLINIC config drives the
+ * homepage + pricing. TRADES/WELLNESS are retained only as legacy data (their
+ * pages now redirect to the clinic homepage) and are no longer surfaced in nav.
+ * Brand line: "Own your system. Cut the bill."
  */
 
 export interface CarePlan {

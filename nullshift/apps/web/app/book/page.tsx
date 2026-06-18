@@ -207,7 +207,7 @@ export default function BookPage() {
                 className="text-center"
                 style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.faint }}
               >
-                Free · No obligation · 30-minute call
+                Free · No obligation · 15-minute call
               </p>
             </div>
           </div>

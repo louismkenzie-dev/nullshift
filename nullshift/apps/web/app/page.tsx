@@ -974,8 +974,8 @@ export default function Page() {
                   marginTop: 16,
                 }}
               >
-                Live, interactive demos — booking, patient records, the client portal,
-                automations. Click around and see exactly what you&apos;d own.
+                Live, interactive demos — booking, the client portal, CRM and automations.
+                Click around and see exactly what you&apos;d own.
               </p>
             </div>
             <Link
