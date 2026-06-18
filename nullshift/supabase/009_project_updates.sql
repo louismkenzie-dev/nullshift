@@ -47,10 +47,7 @@ CREATE POLICY "client_read_own_updates"
     client_id IN (
       SELECT id FROM public.clients
       WHERE lower(email) = lower(
-        coalesce(
-          auth.jwt() -> 'user_metadata' ->> 'email',
-          auth.jwt() ->> 'email'
-        )
+        (select auth.email())  -- verified JWT claim; user_metadata is end-user-editable
       )
     )
   );
@@ -63,10 +60,7 @@ CREATE POLICY "client_update_choice"
     client_id IN (
       SELECT id FROM public.clients
       WHERE lower(email) = lower(
-        coalesce(
-          auth.jwt() -> 'user_metadata' ->> 'email',
-          auth.jwt() ->> 'email'
-        )
+        (select auth.email())  -- verified JWT claim; user_metadata is end-user-editable
       )
     )
   )
@@ -74,10 +68,7 @@ CREATE POLICY "client_update_choice"
     client_id IN (
       SELECT id FROM public.clients
       WHERE lower(email) = lower(
-        coalesce(
-          auth.jwt() -> 'user_metadata' ->> 'email',
-          auth.jwt() ->> 'email'
-        )
+        (select auth.email())  -- verified JWT claim; user_metadata is end-user-editable
       )
     )
   );
