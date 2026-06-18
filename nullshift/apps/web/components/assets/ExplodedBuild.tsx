@@ -1,6 +1,12 @@
 import React from "react";
 
-export function ExplodedBuild({ className, style }: { className?: string; style?: React.CSSProperties }) {
+export function ExplodedBuild({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <div
       aria-hidden
@@ -46,9 +52,9 @@ export function ExplodedBuild({ className, style }: { className?: string; style?
               <div style="width:100%; height:100%; border-radius:10px; background:var(--surface); border:1px solid var(--border); animation:ns-zbob 7s ease-in-out infinite; animation-delay:-2.2s; box-sizing:border-box; padding:14px; display:flex; flex-direction:column; gap:12px;">
                 <span style="font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; color:var(--faint);">03 / SYSTEMS</span>
                 <div style="display:flex; gap:9px; flex:1;">
-                  <div style="flex:1; border-radius:6px; background:color-mix(in srgb, var(--ac,#10B981) 8%, transparent); border:1px solid color-mix(in srgb, var(--ac,#10B981) 42%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ac,#10B981) 16%, transparent); display:flex; align-items:flex-end; padding:7px; font-family:var(--font-mono); font-size:9px; color:var(--ac,#10B981);">CRM</div>
                   <div style="flex:1; border-radius:6px; background:color-mix(in srgb, var(--ac,#10B981) 8%, transparent); border:1px solid color-mix(in srgb, var(--ac,#10B981) 42%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ac,#10B981) 16%, transparent); display:flex; align-items:flex-end; padding:7px; font-family:var(--font-mono); font-size:9px; color:var(--ac,#10B981);">BOOK</div>
-                  <div style="flex:1; border-radius:6px; background:color-mix(in srgb, var(--ac,#10B981) 8%, transparent); border:1px solid color-mix(in srgb, var(--ac,#10B981) 42%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ac,#10B981) 16%, transparent); display:flex; align-items:flex-end; padding:7px; font-family:var(--font-mono); font-size:9px; color:var(--ac,#10B981);">AUTO</div>
+                  <div style="flex:1; border-radius:6px; background:color-mix(in srgb, var(--ac,#10B981) 8%, transparent); border:1px solid color-mix(in srgb, var(--ac,#10B981) 42%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ac,#10B981) 16%, transparent); display:flex; align-items:flex-end; padding:7px; font-family:var(--font-mono); font-size:9px; color:var(--ac,#10B981);">RECORDS</div>
+                  <div style="flex:1; border-radius:6px; background:color-mix(in srgb, var(--ac,#10B981) 8%, transparent); border:1px solid color-mix(in srgb, var(--ac,#10B981) 42%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ac,#10B981) 16%, transparent); display:flex; align-items:flex-end; padding:7px; font-family:var(--font-mono); font-size:9px; color:var(--ac,#10B981);">PAY</div>
                 </div>
               </div>
             </div>

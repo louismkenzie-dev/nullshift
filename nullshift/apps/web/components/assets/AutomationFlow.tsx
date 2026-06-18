@@ -1,6 +1,12 @@
 import React from "react";
 
-export function AutomationFlow({ className, style }: { className?: string; style?: React.CSSProperties }) {
+export function AutomationFlow({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <div
       aria-hidden
@@ -29,13 +35,13 @@ export function AutomationFlow({ className, style }: { className?: string; style
           <!-- nodes -->
           <g style="font-family:var(--font-mono); font-size:8px;">
             <rect x="22" y="86" width="38" height="28" rx="7" style="fill:var(--elevated); stroke:color-mix(in srgb, var(--ac,#10B981) 45%, transparent);" stroke-width="1"/>
-            <text x="41" y="103" text-anchor="middle" style="fill:var(--ac,#10B981);">IN</text>
+            <text x="41" y="103" text-anchor="middle" style="fill:var(--ac,#10B981);">BOOK</text>
             <rect x="132" y="38" width="40" height="24" rx="6" style="fill:var(--surface); stroke:var(--border-strong);" stroke-width="1"/>
-            <text x="152" y="53" text-anchor="middle" style="fill:var(--muted);">MAIL</text>
+            <text x="152" y="53" text-anchor="middle" style="fill:var(--muted);">SMS</text>
             <rect x="132" y="88" width="40" height="24" rx="6" style="fill:var(--surface); stroke:var(--border-strong);" stroke-width="1"/>
-            <text x="152" y="103" text-anchor="middle" style="fill:var(--muted);">SYNC</text>
+            <text x="152" y="103" text-anchor="middle" style="fill:var(--muted);">EMAIL</text>
             <rect x="132" y="138" width="40" height="24" rx="6" style="fill:var(--surface); stroke:var(--border-strong);" stroke-width="1"/>
-            <text x="152" y="153" text-anchor="middle" style="fill:var(--muted);">TASK</text>
+            <text x="152" y="153" text-anchor="middle" style="fill:var(--muted);">RECALL</text>
             <rect x="240" y="86" width="40" height="28" rx="7" style="fill:var(--elevated); stroke:color-mix(in srgb, var(--ac,#10B981) 45%, transparent);" stroke-width="1"/>
             <text x="260" y="103" text-anchor="middle" style="fill:var(--ac,#10B981);">DONE</text>
           </g>

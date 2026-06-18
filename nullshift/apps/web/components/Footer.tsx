@@ -4,10 +4,10 @@ import Link from "next/link";
 import { T } from "@nullshift/ui/tokens";
 
 const navLinks = [
-  { label: "About",   href: "/about" },
-  { label: "FAQ",     href: "/faq" },
-  { label: "Brand",   href: "/brand" },
-  { label: "Legal",   href: "/legal" },
+  { label: "About", href: "/about" },
+  { label: "FAQ", href: "/faq" },
+  { label: "Brand", href: "/brand" },
+  { label: "Legal", href: "/legal" },
 ];
 
 export function Footer() {
@@ -21,10 +21,28 @@ export function Footer() {
       }}
     >
       {/* Brand */}
-      <Link href="/" className="flex items-center gap-2.5" style={{ textDecoration: "none" }}>
+      <Link
+        href="/"
+        className="flex items-center gap-2.5"
+        style={{ textDecoration: "none" }}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logos/nullshift-pill-dark.svg" alt="Nullshift" width={28} height={28} style={{ borderRadius: T.r.sm }} />
-        <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.9375rem", letterSpacing: "-0.01em", color: T.fg }}>
+        <img
+          src="/logos/nullshift-pill-dark.svg"
+          alt="Nullshift"
+          width={28}
+          height={28}
+          style={{ borderRadius: T.r.sm }}
+        />
+        <span
+          style={{
+            fontFamily: T.sans,
+            fontWeight: 600,
+            fontSize: "0.9375rem",
+            letterSpacing: "-0.01em",
+            color: T.fg,
+          }}
+        >
           Nullshift
         </span>
       </Link>
@@ -45,8 +63,12 @@ export function Footer() {
                   textDecoration: "none",
                   transition: `color ${T.duration.base} ${T.ease}`,
                 }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = T.fg}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = T.muted}
+                onMouseEnter={(e) =>
+                  ((e.currentTarget as HTMLElement).style.color = T.fg)
+                }
+                onMouseLeave={(e) =>
+                  ((e.currentTarget as HTMLElement).style.color = T.muted)
+                }
               >
                 {label}
               </Link>
@@ -58,7 +80,7 @@ export function Footer() {
       {/* Copyright + admin */}
       <div className="flex items-center gap-3">
         <span style={{ fontFamily: T.mono, fontSize: "0.75rem", color: T.faint }}>
-          © 2025 Nullshift.
+          © 2026 Nullshift.
         </span>
         <Link
           href="/admin/login"
@@ -76,8 +98,8 @@ export function Footer() {
             textDecoration: "none",
             transition: `color ${T.duration.base} ${T.ease}`,
           }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = T.fg}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = T.muted}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = T.fg)}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = T.muted)}
         >
           Admin
         </Link>

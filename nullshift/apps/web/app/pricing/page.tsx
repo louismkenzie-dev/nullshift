@@ -98,7 +98,7 @@ export default function PricingPage() {
 
           {/* Clinic-first anchor */}
           <Link
-            href="/clinics"
+            href="/#savings"
             className="mt-8 inline-flex flex-col gap-1.5 max-w-[60ch]"
             style={{
               background: T.surface,
@@ -196,7 +196,7 @@ export default function PricingPage() {
                 color: T.fg,
               }}
             >
-              The Growth System.
+              Build it. Own it. We run it.
             </h2>
             <p
               className="mt-3 max-w-[60ch]"
@@ -207,8 +207,9 @@ export default function PricingPage() {
                 color: T.muted,
               }}
             >
-              Productised plans for the businesses we serve. Pick your world — the build
-              is the on-ramp, the monthly plan is the machine.
+              One build fee for the clinic system you own outright, then a care plan that
+              hosts, backs up and runs it — a fraction of the per-practitioner SaaS it
+              replaces, cancellable any time.
             </p>
           </Reveal>
           <div className="mt-8">

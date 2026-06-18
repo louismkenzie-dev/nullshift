@@ -8,11 +8,10 @@ import { Logo, LogoMark } from "@nullshift/ui/components/Logo";
 import { cn } from "@nullshift/ui/utils";
 
 const links = [
-  { label: "For Clinics", href: "/clinics" },
-  { label: "For Trades", href: "/trades" },
-  { label: "For Salons", href: "/wellness" },
+  { label: "What we build", href: "/#capabilities" },
   { label: "Systems Lab", href: "/systems-lab" },
   { label: "Pricing", href: "/pricing" },
+  { label: "About", href: "/about" },
 ];
 
 export function Nav() {

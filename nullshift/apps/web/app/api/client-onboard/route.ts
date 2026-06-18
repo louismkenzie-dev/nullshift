@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
+import { recordLead } from "@nullshift/db/leads";
 
 /**
  * POST /api/client-onboard
@@ -33,7 +34,11 @@ export async function POST(request: Request) {
   }
 
   const supabase = (() => {
-    try { return createServiceClient(); } catch { return null; }
+    try {
+      return createServiceClient();
+    } catch {
+      return null;
+    }
   })();
   if (!supabase) {
     return NextResponse.json({ error: "Backend not configured." }, { status: 500 });
@@ -76,39 +81,68 @@ export async function POST(request: Request) {
 
     if (error || !newClient) {
       console.error("Client insert error:", error?.message);
-      return NextResponse.json({ error: "Could not create client record." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Could not create client record." },
+        { status: 500 }
+      );
     }
     clientId = newClient.id;
   }
+
+  // ── Also write a canonical leads row so booked calls appear in the admin
+  //    Pipeline (not just the Clients list). This closes the gap where every
+  //    marketing CTA except the quiz funnel skipped the pipeline. ──────────
+  const lead = await recordLead({
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    source: "book",
+    vertical: "clinic",
+    quizAnswers: { business_name: business_name ?? null, requested_date, requested_time },
+    status: "call_booked",
+  });
+  if (!lead.ok) console.error("Lead insert error (book):", lead.error);
 
   // ── Admin notification email (best-effort, non-blocking) ──────────────
   try {
     const apiKey = process.env.RESEND_API_KEY;
     const from = process.env.ENQUIRY_FROM_EMAIL || "Nullshift <onboarding@resend.dev>";
-    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(/\/$/, "");
+    const siteUrl = (
+      process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk"
+    ).replace(/\/$/, "");
     const adminLink = `${siteUrl}/admin/clients/${clientId}`;
 
     const timeLabels: Record<string, string> = {
-      morning:   "Morning (9am–12pm)",
+      morning: "Morning (9am–12pm)",
       afternoon: "Afternoon (12pm–5pm)",
-      evening:   "Evening (5pm–8pm)",
+      evening: "Evening (5pm–8pm)",
     };
 
     const rows: [string, string][] = [
-      ["Name",   name.trim()],
-      ["Email",  email.trim()],
-      ...(business_name?.trim() ? [["Business", business_name.trim()] as [string, string]] : []),
+      ["Name", name.trim()],
+      ["Email", email.trim()],
+      ...(business_name?.trim()
+        ? [["Business", business_name.trim()] as [string, string]]
+        : []),
       ...(requested_date ? [["Preferred date", requested_date] as [string, string]] : []),
-      ...(requested_time ? [["Preferred time", timeLabels[requested_time] || requested_time] as [string, string]] : []),
+      ...(requested_time
+        ? [
+            ["Preferred time", timeLabels[requested_time] || requested_time] as [
+              string,
+              string,
+            ],
+          ]
+        : []),
     ];
 
     const textLines = rows.map(([k, v]) => `${k}: ${v}`).join("\n");
     const tableRows = rows
-      .map(([k, v]) => `
+      .map(
+        ([k, v]) => `
         <tr>
           <td style="padding:8px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:#9AA0AE;width:140px;vertical-align:top;">${k}</td>
           <td style="padding:8px 0;font-size:14px;color:#F2F4F8;">${v}</td>
-        </tr>`)
+        </tr>`
+      )
       .join("");
 
     if (apiKey) {

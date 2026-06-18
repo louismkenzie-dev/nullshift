@@ -34,20 +34,59 @@ const staggerSlow = {
 // we run the system → (trades) catches every job → (wellness) fills every
 // chair → the brand line.
 const PHASES = [
-  { text: "We build more\nthan websites.",          size: "clamp(2.8rem, 6.5vw, 5.5rem)", color: T.fg,      glow: false, hold: 3800, fast: false },
-  { text: "We run the system",                      size: "clamp(2.8rem, 6.5vw, 5.5rem)", color: T.primary, glow: true,  hold: 2400, fast: false },
-  { text: "that catches\nevery job",                size: "clamp(3rem, 8vw, 6.5rem)",     color: T.primary, glow: true,  hold: 1600, fast: true  },
-  { text: "fills\nevery chair",                     size: "clamp(3rem, 8vw, 6.5rem)",     color: T.primary, glow: true,  hold: 1600, fast: true  },
-  { text: "Own your system.\nSubscribe to results.", size: "clamp(2.4rem, 5.5vw, 4.6rem)", color: T.primary, glow: true,  hold: 20000, fast: false },
+  {
+    text: "Your clinic runs on\nrented software.",
+    size: "clamp(2.6rem, 6vw, 5.2rem)",
+    color: T.fg,
+    glow: false,
+    hold: 3600,
+    fast: false,
+  },
+  {
+    text: "Own it instead.",
+    size: "clamp(2.8rem, 6.5vw, 5.5rem)",
+    color: T.primary,
+    glow: true,
+    hold: 2200,
+    fast: false,
+  },
+  {
+    text: "Booking. Records.\nPayments.",
+    size: "clamp(2.8rem, 7vw, 6rem)",
+    color: T.primary,
+    glow: true,
+    hold: 1700,
+    fast: true,
+  },
+  {
+    text: "No more\nper-seat fees.",
+    size: "clamp(2.8rem, 7vw, 6rem)",
+    color: T.primary,
+    glow: true,
+    hold: 1700,
+    fast: true,
+  },
+  {
+    text: "Own your system.\nCut the bill.",
+    size: "clamp(2.4rem, 5.5vw, 4.6rem)",
+    color: T.primary,
+    glow: true,
+    hold: 20000,
+    fast: false,
+  },
 ] as const;
 
 const phaseEnter = { opacity: 0, filter: "blur(20px)", y: 24 };
 const phaseVisible = (fast: boolean) => ({
-  opacity: 1, filter: "blur(0px)", y: 0,
+  opacity: 1,
+  filter: "blur(0px)",
+  y: 0,
   transition: { duration: fast ? 0.5 : 1.1, ease: [0.2, 0.6, 0.2, 1] as const },
 });
 const phaseExit = (fast: boolean) => ({
-  opacity: 0, filter: "blur(12px)", y: -18,
+  opacity: 0,
+  filter: "blur(12px)",
+  y: -18,
   transition: { duration: fast ? 0.35 : 0.6, ease: [0.4, 0, 1, 1] as const },
 });
 
@@ -67,7 +106,12 @@ function AnimatedHeadline() {
   return (
     <div
       className="relative mx-auto w-full"
-      style={{ minHeight: "clamp(160px, 20vw, 280px)", display: "flex", alignItems: "center", justifyContent: "center" }}
+      style={{
+        minHeight: "clamp(160px, 20vw, 280px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
       <AnimatePresence mode="wait">
         <motion.h1
@@ -95,10 +139,10 @@ function AnimatedHeadline() {
 }
 
 const stats = [
-  { label: "Avg. delivery", value: "2–4 weeks" },
-  { label: "Ownership", value: "100% yours" },
-  { label: "Lock-in", value: "None" },
-  { label: "We report", value: "£ recovered" },
+  { label: "Live in", value: "2–4 weeks" },
+  { label: "You own", value: "100%" },
+  { label: "Per-seat fees", value: "None" },
+  { label: "Patient payments", value: "Stripe + 2%" },
 ];
 
 export default function HeroText() {
@@ -111,10 +155,19 @@ export default function HeroText() {
           aria-hidden
           className="z-[2] absolute inset-0 pointer-events-none isolate opacity-60 contain-strict hidden lg:block"
         >
-          <div className="w-[35rem] h-[80rem] -translate-y-[350px] absolute left-0 top-0 -rotate-45 rounded-full"
-            style={{ background: `radial-gradient(68.54% 68.72% at 55.02% 31.46%, ${T.primary}14 0, ${T.primary}05 50%, transparent 80%)` }} />
-          <div className="h-[80rem] absolute left-0 top-0 w-56 -rotate-45 rounded-full"
-            style={{ background: `radial-gradient(50% 50% at 50% 50%, ${T.primary}0a 0, ${T.primary}04 80%, transparent 100%)`, translate: "5% -50%" }} />
+          <div
+            className="w-[35rem] h-[80rem] -translate-y-[350px] absolute left-0 top-0 -rotate-45 rounded-full"
+            style={{
+              background: `radial-gradient(68.54% 68.72% at 55.02% 31.46%, ${T.primary}14 0, ${T.primary}05 50%, transparent 80%)`,
+            }}
+          />
+          <div
+            className="h-[80rem] absolute left-0 top-0 w-56 -rotate-45 rounded-full"
+            style={{
+              background: `radial-gradient(50% 50% at 50% 50%, ${T.primary}0a 0, ${T.primary}04 80%, transparent 100%)`,
+              translate: "5% -50%",
+            }}
+          />
         </div>
 
         <section>
@@ -123,12 +176,13 @@ export default function HeroText() {
             <div
               aria-hidden
               className="absolute inset-0 -z-10 size-full"
-              style={{ background: `radial-gradient(125% 125% at 50% 100%, transparent 0%, ${T.bg} 75%)` }}
+              style={{
+                background: `radial-gradient(125% 125% at 50% 100%, transparent 0%, ${T.bg} 75%)`,
+              }}
             />
 
             <div className="mx-auto max-w-7xl px-6">
               <ScrollDissolve className="text-center sm:mx-auto lg:mr-auto lg:mt-0">
-
                 {/* Announcement badge */}
                 <motion.div variants={stagger} initial="hidden" animate="visible">
                   <motion.div variants={fadeUp}>
@@ -141,10 +195,24 @@ export default function HeroText() {
                         boxShadow: "0 1px 8px rgba(0,0,0,0.3)",
                       }}
                     >
-                      <span style={{ fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500, color: T.muted }}>
+                      <span
+                        style={{
+                          fontFamily: T.sans,
+                          fontSize: "0.875rem",
+                          fontWeight: 500,
+                          color: T.muted,
+                        }}
+                      >
                         New — Systems Lab is now live
                       </span>
-                      <span style={{ display: "block", height: 16, width: 1, background: T.border }} />
+                      <span
+                        style={{
+                          display: "block",
+                          height: 16,
+                          width: 1,
+                          background: T.border,
+                        }}
+                      />
                       <div
                         className="size-7 overflow-hidden rounded-full"
                         style={{ background: T.surface2 }}
@@ -179,10 +247,10 @@ export default function HeroText() {
                       color: T.muted,
                     }}
                   >
-                    We build your bespoke site, then run the system that brings the
-                    customers in — booking, missed-call recovery, automations and AI.
-                    You own all of it, live in weeks, and we report the revenue we
-                    recover every month.
+                    We build allied-health clinics a bespoke booking, records and payments
+                    system — one you own outright. Patients book online, deposits cut
+                    no-shows, and you take payments at a fraction. Live in weeks, with no
+                    per-practitioner fees.
                   </motion.p>
                 </motion.div>
 
@@ -230,10 +298,18 @@ export default function HeroText() {
                       href="/book"
                       className="inline-flex items-center justify-center font-medium"
                       style={{
-                        fontFamily: T.sans, fontSize: "0.9375rem", fontWeight: 500,
-                        letterSpacing: "-0.005em", height: 46, paddingInline: 22,
-                        background: "transparent", color: T.muted, borderRadius: "10px",
-                        border: `1px solid ${T.borderStr}`, textDecoration: "none", whiteSpace: "nowrap",
+                        fontFamily: T.sans,
+                        fontSize: "0.9375rem",
+                        fontWeight: 500,
+                        letterSpacing: "-0.005em",
+                        height: 46,
+                        paddingInline: 22,
+                        background: "transparent",
+                        color: T.muted,
+                        borderRadius: "10px",
+                        border: `1px solid ${T.borderStr}`,
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       Book a call
@@ -243,15 +319,21 @@ export default function HeroText() {
 
                 {/* Tertiary — live demos text link */}
                 <motion.div
-                  variants={fadeUp} initial="hidden" animate="visible"
+                  variants={fadeUp}
+                  initial="hidden"
+                  animate="visible"
                   className="mt-4 flex items-center justify-center"
                 >
                   <a
                     href="/systems-lab"
                     className="inline-flex items-center gap-1 transition-opacity hover:opacity-75"
                     style={{
-                      fontFamily: T.sans, fontSize: "0.875rem", fontWeight: 500,
-                      letterSpacing: "-0.005em", color: T.faint, textDecoration: "none",
+                      fontFamily: T.sans,
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                      letterSpacing: "-0.005em",
+                      color: T.faint,
+                      textDecoration: "none",
                     }}
                   >
                     Try the live demos
@@ -259,16 +341,21 @@ export default function HeroText() {
                   </a>
                 </motion.div>
 
-                {/* Vertical chooser — surface the two wedge offers */}
+                {/* Who it's for — the niche, stated plainly */}
                 <motion.div
-                  variants={fadeUp} initial="hidden" animate="visible"
+                  variants={fadeUp}
+                  initial="hidden"
+                  animate="visible"
                   className="mt-6 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1"
-                  style={{ fontFamily: T.mono, fontSize: "0.72rem", letterSpacing: "0.04em", textTransform: "uppercase", color: T.faint }}
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "0.72rem",
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                    color: T.faint,
+                  }}
                 >
-                  <span>Built for</span>
-                  <a href="/trades" style={{ color: T.primary, textDecoration: "none" }}>Trades →</a>
-                  <span style={{ color: T.border }}>·</span>
-                  <a href="/wellness" style={{ color: T.primary, textDecoration: "none" }}>Salons &amp; clinics →</a>
+                  <span>Built for physio · osteo · chiro · private therapy clinics</span>
                 </motion.div>
               </ScrollDissolve>
             </div>
@@ -281,17 +368,19 @@ export default function HeroText() {
         </section>
 
         {/* ── Stats / trust row ───────────────────── */}
-        <section
-          className="pb-16 pt-16 md:pb-24"
-          style={{ background: T.bg }}
-        >
+        <section className="pb-16 pt-16 md:pb-24" style={{ background: T.bg }}>
           <div className="group relative mx-auto max-w-5xl px-6">
             {/* Hover CTA */}
             <div className="absolute inset-0 z-10 flex scale-95 items-center justify-center opacity-0 duration-500 group-hover:scale-100 group-hover:opacity-100">
               <Link
                 href="/about"
                 className="flex items-center gap-1 text-sm duration-150 hover:opacity-75"
-                style={{ fontFamily: T.sans, fontWeight: 500, color: T.fg, textDecoration: "none" }}
+                style={{
+                  fontFamily: T.sans,
+                  fontWeight: 500,
+                  color: T.fg,
+                  textDecoration: "none",
+                }}
               >
                 <span>Why choose Nullshift</span>
                 <ChevronRight size={14} />

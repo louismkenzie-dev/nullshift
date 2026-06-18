@@ -1,6 +1,12 @@
 import React from "react";
 
-export function ClientPortal({ className, style }: { className?: string; style?: React.CSSProperties }) {
+export function ClientPortal({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <div
       aria-hidden
@@ -34,11 +40,11 @@ export function ClientPortal({ className, style }: { className?: string; style?:
               <div style="flex:1; padding:13px; display:flex; flex-direction:column; gap:10px;">
                 <div style="display:flex; gap:9px;">
                   <div style="flex:1; border:1px solid var(--border); border-radius:8px; padding:8px;">
-                    <div style="font-family:var(--font-mono); font-size:7px; color:var(--faint); letter-spacing:0.06em;">INCOME</div>
+                    <div style="font-family:var(--font-mono); font-size:7px; color:var(--faint); letter-spacing:0.06em;">DEPOSITS</div>
                     <div style="font-family:var(--font-display); font-weight:600; font-size:15px; color:var(--ac,#10B981); letter-spacing:-0.02em;">£8,400</div>
                   </div>
                   <div style="flex:1; border:1px solid var(--border); border-radius:8px; padding:8px;">
-                    <div style="font-family:var(--font-mono); font-size:7px; color:var(--faint); letter-spacing:0.06em;">ENQUIRIES</div>
+                    <div style="font-family:var(--font-mono); font-size:7px; color:var(--faint); letter-spacing:0.06em;">NEW PATIENTS</div>
                     <div style="font-family:var(--font-display); font-weight:600; font-size:15px; letter-spacing:-0.02em;">3</div>
                   </div>
                 </div>
