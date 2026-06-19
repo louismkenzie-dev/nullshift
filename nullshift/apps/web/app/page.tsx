@@ -8,6 +8,8 @@ import { Reveal } from "@/components/Reveal";
 import { ScrollProgress } from "@/components/ScrollProgress";
 import HeroText from "@/components/HeroText";
 import { IntroGate } from "@/components/IntroGate";
+import { WebGLBackdrop } from "@/components/WebGLBackdrop";
+import { StackCards } from "@/components/StackCards";
 import { T } from "@nullshift/ui/tokens";
 import { RevenueCalculator } from "@nullshift/ui/components/RevenueCalculator";
 import { CLINIC } from "@nullshift/content/marketing";
@@ -233,6 +235,9 @@ export default function Page() {
       {/* First-visit immersive intro (once per session), fades into the site */}
       <IntroGate />
       <ScrollProgress />
+      {/* The site's single WebGL context — a scroll-reactive shader field that
+          shows through the transparent capability band. */}
+      <WebGLBackdrop />
       {/* Film-grain atmosphere over the whole experience */}
       <div className="noise-layer" aria-hidden />
 
@@ -435,82 +440,56 @@ export default function Page() {
 
         <HorizonDivider />
 
-        {/* ═══════════════ 03 — WHAT WE CAN BUILD ═══════════════ */}
-        <Reveal>
-          <section
-            id="capabilities"
-            style={{ borderTop: `1px solid ${T.border}`, background: T.bg }}
-          >
+        {/* ═══════════════ 03 — WHAT WE CAN BUILD (scroll-stacking) ═══════════════ */}
+        {/* Transparent band so the WebGL field flows behind the frosted cards. */}
+        <section
+          id="capabilities"
+          className="relative"
+          style={{ borderTop: `1px solid ${T.border}`, background: "transparent" }}
+        >
+          <Reveal>
             <div
               style={{
                 maxWidth: T.containerMax,
                 margin: "0 auto",
                 paddingInline: T.containerPad,
                 paddingTop: "clamp(64px,9vw,112px)",
-                paddingBottom: "clamp(48px,6vw,72px)",
+                paddingBottom: "clamp(24px,4vw,48px)",
               }}
             >
               <div className="mb-6">
                 <Marker>// 03 — WHAT WE BUILD</Marker>
               </div>
               <BandHeading>Everything your clinic runs on.</BandHeading>
-            </div>
-
-            {/* auto-fit tile grid — cells joined by hairlines, not gaps */}
-            <div style={{ borderTop: `1px solid ${T.border}` }}>
-              <div
+              <p
+                className="mt-6"
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                  borderLeft: `1px solid ${T.border}`,
+                  fontFamily: T.sans,
+                  fontSize: "1.0625rem",
+                  lineHeight: 1.55,
+                  letterSpacing: "-0.005em",
+                  color: T.muted,
+                  maxWidth: "56ch",
                 }}
               >
-                {CAPABILITY_TILES.map((t) => (
-                  <article
-                    key={t.nn}
-                    className="flex flex-col p-8 md:p-9"
-                    style={{
-                      borderRight: `1px solid ${T.border}`,
-                      borderBottom: `1px solid ${T.border}`,
-                      background: T.surface,
-                    }}
-                  >
-                    <div style={{ height: 200 }}>
-                      <t.Asset style={{ height: 200, minHeight: 0 }} />
-                    </div>
-                    <div className="mt-6 mb-3">
-                      <Marker>{`// ${t.nn} — ${t.label}`}</Marker>
-                    </div>
-                    <h3
-                      className="mb-2"
-                      style={{
-                        fontFamily: T.display,
-                        fontWeight: 600,
-                        fontSize: "1.25rem",
-                        letterSpacing: "-0.015em",
-                        lineHeight: 1.2,
-                        color: T.fg,
-                      }}
-                    >
-                      {t.title}
-                    </h3>
-                    <p
-                      style={{
-                        fontFamily: T.sans,
-                        fontSize: "0.9rem",
-                        lineHeight: 1.55,
-                        letterSpacing: "-0.003em",
-                        color: T.muted,
-                      }}
-                    >
-                      {t.caption}
-                    </p>
-                  </article>
-                ))}
-              </div>
+                Keep scrolling — each capability stacks onto the last, the way the system
+                itself layers together into one thing you own.
+              </p>
             </div>
-          </section>
-        </Reveal>
+          </Reveal>
+
+          {/* Scroll-stacking layered cards */}
+          <div
+            style={{
+              maxWidth: T.containerMax,
+              margin: "0 auto",
+              paddingInline: T.containerPad,
+              paddingBottom: "clamp(48px,8vw,120px)",
+            }}
+          >
+            <StackCards tiles={CAPABILITY_TILES} />
+          </div>
+        </section>
 
         <HorizonDivider />
 
