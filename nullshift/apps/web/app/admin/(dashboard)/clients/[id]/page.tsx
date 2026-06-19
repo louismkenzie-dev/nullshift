@@ -6,8 +6,16 @@ import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
 import { CATALOG } from "@nullshift/content/catalog";
 import { T } from "@nullshift/ui/tokens";
+import { clientRef } from "@nullshift/ui/format";
 import { CARE_PLANS, CARE_PLAN_MRR, carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
+import { sendEmail } from "@/lib/sendEmail";
+import { portalReadyEmail, documentsReadyEmail } from "@/lib/clientEmails";
+
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
+  /\/$/,
+  ""
+);
 
 /**
  * Unified Client hub — ONE page per client, keyed by the tenant. Everything for a
@@ -111,6 +119,34 @@ async function sendProposal(formData: FormData) {
     .update({ proposal_status: "sent", proposal_sent_at: new Date().toISOString() })
     .eq("id", projectId);
   await logAudit({ action: "proposal.sent", target: `project:${projectId}`, tenantId });
+
+  // Email the client that they have documents to review + sign in their portal.
+  const service = createServiceClient();
+  const { data: tenant } = await service
+    .from("tenants")
+    .select("contact_name, contact_email")
+    .eq("id", tenantId)
+    .maybeSingle();
+  let to = tenant?.contact_email ?? null;
+  const { data: membership } = await service
+    .from("memberships")
+    .select("user_id")
+    .eq("tenant_id", tenantId)
+    .eq("role", "client_admin")
+    .limit(1)
+    .maybeSingle();
+  if (membership?.user_id) {
+    const { data: u } = await service.auth.admin.getUserById(membership.user_id);
+    to = u.user?.email ?? to;
+  }
+  if (to) {
+    const mail = documentsReadyEmail({
+      name: tenant?.contact_name ?? "there",
+      portalUrl: `${SITE_URL}/portal`,
+    });
+    await sendEmail({ to, subject: mail.subject, html: mail.html, text: mail.text });
+  }
+
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -125,6 +161,69 @@ async function setProposedPlan(formData: FormData) {
     .from("projects")
     .update({ proposed_plan: plan || null })
     .eq("id", projectId);
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/** Light authoring of the proposal document + the DPA detail fields that
+ *  prepopulate the client's Data Processing Agreement. */
+async function setProposalDoc(formData: FormData) {
+  "use server";
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  if (!projectId) return;
+  const str = (k: string) => String(formData.get(k) || "").trim() || null;
+  const supabase = await createClient();
+  await supabase
+    .from("projects")
+    .update({
+      overview: str("overview"),
+      payment_terms: str("payment_terms"),
+      dpa_client_country: str("dpa_client_country") ?? "United Kingdom",
+      dpa_client_company_number: str("dpa_client_company_number"),
+      dpa_client_registered_address: str("dpa_client_registered_address"),
+      dpa_personal_data: str("dpa_personal_data"),
+      dpa_special_category: formData.get("dpa_special_category") === "yes",
+      dpa_special_category_detail: str("dpa_special_category_detail"),
+    })
+    .eq("id", projectId);
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+async function setLiveUrl(formData: FormData) {
+  "use server";
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  const url = String(formData.get("live_url") || "").trim();
+  if (!projectId) return;
+  const supabase = await createClient();
+  await supabase
+    .from("projects")
+    .update({ live_url: url || null })
+    .eq("id", projectId);
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/** Post a progress update the client sees in their project hub. */
+async function postUpdate(formData: FormData) {
+  "use server";
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  const title = String(formData.get("title") || "").trim();
+  const body = String(formData.get("body") || "").trim() || null;
+  if (!projectId || !title) return;
+  const supabase = await createClient();
+  await supabase.from("project_updates").insert({
+    tenant_id: tenantId,
+    project_id: projectId,
+    type: "update",
+    title,
+    body,
+  });
+  await logAudit({
+    action: "project_update.posted",
+    target: `project:${projectId}`,
+    tenantId,
+  });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -355,6 +454,7 @@ async function createPortalAccount(formData: FormData) {
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") || "");
+  const name = String(formData.get("name") || "").trim() || "there";
   if (!tenantId || !email || password.length < 8) return;
   const service = createServiceClient();
 
@@ -394,6 +494,16 @@ async function createPortalAccount(formData: FormData) {
     tenantId,
     metadata: { email },
   });
+
+  // Email the client their portal login (username = email, password = reference).
+  const mail = portalReadyEmail({
+    name,
+    email,
+    password,
+    loginUrl: `${SITE_URL}/portal/login`,
+  });
+  await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text });
+
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -503,7 +613,9 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   // Primary project (most recent). Tenant-scoped sections work without one.
   const { data: projects } = await supabase
     .from("projects")
-    .select("id, name, stage, proposal_status, proposed_plan")
+    .select(
+      "id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, accepted_name, accepted_at, live_url"
+    )
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false });
   const project = (projects ?? [])[0] as
@@ -513,6 +625,17 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
         stage: string;
         proposal_status: string;
         proposed_plan: string | null;
+        overview: string | null;
+        payment_terms: string | null;
+        dpa_client_country: string | null;
+        dpa_client_company_number: string | null;
+        dpa_client_registered_address: string | null;
+        dpa_personal_data: string | null;
+        dpa_special_category: boolean | null;
+        dpa_special_category_detail: string | null;
+        accepted_name: string | null;
+        accepted_at: string | null;
+        live_url: string | null;
       }
     | undefined;
   const projectId = project?.id ?? null;
@@ -637,7 +760,24 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               color: T.fg,
             }}
           >
-            {t.name}
+            {t.name}{" "}
+            <span
+              title="Client reference"
+              style={{
+                fontFamily: T.mono,
+                fontSize: 11,
+                fontWeight: 400,
+                letterSpacing: "0.04em",
+                color: T.muted,
+                background: T.surface2,
+                border: `1px solid ${T.border}`,
+                borderRadius: 999,
+                padding: "2px 9px",
+                verticalAlign: "middle",
+              }}
+            >
+              {clientRef(tenantId)}
+            </span>
           </h1>
           <p
             style={{
@@ -1000,6 +1140,130 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
             )}
           </section>
 
+          {/* Proposal document + DPA details (authoring) */}
+          <section style={card}>
+            <h2 style={h2}>Proposal document &amp; DPA details</h2>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.82rem",
+                color: T.faint,
+                marginTop: -6,
+                marginBottom: 14,
+              }}
+            >
+              These prefill the proposal + DPA documents the client reads and signs in
+              their portal.
+            </p>
+            <form action={setProposalDoc} className="flex flex-col gap-3">
+              {htid}
+              {hpid}
+              <textarea
+                name="overview"
+                rows={3}
+                defaultValue={project.overview ?? ""}
+                placeholder="Overview (optional) — a short summary of the project and approach."
+                style={{
+                  ...inp,
+                  height: "auto",
+                  padding: "8px 10px",
+                  resize: "vertical",
+                }}
+              />
+              <textarea
+                name="payment_terms"
+                rows={2}
+                defaultValue={project.payment_terms ?? ""}
+                placeholder="Payment terms (default: 50% deposit on acceptance, 50% on completion, due within 14 days)"
+                style={{
+                  ...inp,
+                  height: "auto",
+                  padding: "8px 10px",
+                  resize: "vertical",
+                }}
+              />
+              <div
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 10,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: T.muted,
+                  paddingTop: 8,
+                  borderTop: `1px solid ${T.border}`,
+                }}
+              >
+                DPA details (prefill the agreement)
+              </div>
+              <div className="grid sm:grid-cols-2 gap-2">
+                <input
+                  name="dpa_client_country"
+                  defaultValue={project.dpa_client_country ?? "United Kingdom"}
+                  placeholder="Country of registration"
+                  style={inp}
+                />
+                <input
+                  name="dpa_client_company_number"
+                  defaultValue={project.dpa_client_company_number ?? ""}
+                  placeholder="Client company number"
+                  style={inp}
+                />
+              </div>
+              <textarea
+                name="dpa_client_registered_address"
+                rows={2}
+                defaultValue={project.dpa_client_registered_address ?? ""}
+                placeholder="Client registered address"
+                style={{
+                  ...inp,
+                  height: "auto",
+                  padding: "8px 10px",
+                  resize: "vertical",
+                }}
+              />
+              <textarea
+                name="dpa_personal_data"
+                rows={2}
+                defaultValue={project.dpa_personal_data ?? ""}
+                placeholder="Types of personal data processed (e.g. names, emails, phone numbers, booking details)"
+                style={{
+                  ...inp,
+                  height: "auto",
+                  padding: "8px 10px",
+                  resize: "vertical",
+                }}
+              />
+              <div className="flex items-center gap-2 flex-wrap">
+                <span style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.fg }}>
+                  Special category data? (e.g. health)
+                </span>
+                <select
+                  name="dpa_special_category"
+                  defaultValue={project.dpa_special_category ? "yes" : "no"}
+                  style={{ ...inp, width: 90 }}
+                >
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </div>
+              <textarea
+                name="dpa_special_category_detail"
+                rows={2}
+                defaultValue={project.dpa_special_category_detail ?? ""}
+                placeholder="If yes: which data + category (e.g. health information for a clinic)"
+                style={{
+                  ...inp,
+                  height: "auto",
+                  padding: "8px 10px",
+                  resize: "vertical",
+                }}
+              />
+              <button type="submit" style={btn(T.surface2, T.fg)}>
+                Save document &amp; DPA details
+              </button>
+            </form>
+          </section>
+
           {/* Invoice */}
           <section style={card}>
             <div className="flex items-center justify-between">
@@ -1259,6 +1523,63 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               )}
             </div>
           </section>
+
+          {/* Live site + client-facing updates */}
+          <section style={card}>
+            <h2 style={h2}>Live site &amp; client updates</h2>
+            <form
+              action={setLiveUrl}
+              className="flex items-center gap-2 flex-wrap"
+              style={{ marginBottom: 14 }}
+            >
+              {htid}
+              {hpid}
+              <input
+                name="live_url"
+                type="url"
+                placeholder="https://their-live-site.co.uk"
+                defaultValue={project.live_url ?? ""}
+                style={{ ...inp, flex: "1 1 260px" }}
+              />
+              <button type="submit" style={btn(T.surface2, T.fg)}>
+                Save live link
+              </button>
+            </form>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.8rem",
+                color: T.faint,
+                marginBottom: 10,
+              }}
+            >
+              Post a progress update the client sees on their project page.
+            </p>
+            <form action={postUpdate} className="flex flex-col gap-2">
+              {htid}
+              {hpid}
+              <input
+                name="title"
+                required
+                placeholder="Update title (e.g. Homepage design ready for review)"
+                style={inp}
+              />
+              <textarea
+                name="body"
+                rows={2}
+                placeholder="Details (optional)"
+                style={{
+                  ...inp,
+                  height: "auto",
+                  padding: "8px 10px",
+                  resize: "vertical",
+                }}
+              />
+              <button type="submit" className="self-start" style={btn(T.surface2, T.fg)}>
+                Post update
+              </button>
+            </form>
+          </section>
         </>
       )}
 
@@ -1372,6 +1693,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               className="flex items-center gap-2 flex-wrap"
             >
               {htid}
+              <input type="hidden" name="name" value={t.contact_name ?? t.name} />
               <input
                 name="email"
                 type="email"
@@ -1385,13 +1707,25 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 type="text"
                 required
                 minLength={8}
-                placeholder="Temp password (8+ chars)"
+                placeholder="Password (8+ chars)"
+                defaultValue={clientRef(tenantId)}
                 style={{ ...inp, width: 200 }}
               />
               <button type="submit" style={btn(T.primary, T.primaryFg)}>
-                Create portal login
+                Create portal login &amp; email it
               </button>
             </form>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.78rem",
+                color: T.faint,
+                marginTop: 8,
+              }}
+            >
+              The password defaults to their reference. On create we email the client
+              their login (username = email, password as shown).
+            </p>
           </>
         )}
       </section>

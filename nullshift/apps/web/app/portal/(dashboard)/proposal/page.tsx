@@ -2,8 +2,12 @@ import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
+import { clientRef } from "@nullshift/ui/format";
 import { carePlan, CARE_PLAN_MRR } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
+import { DpaTemplate } from "@/components/legal/DpaTemplate";
+import { ProposalDocument } from "@/components/portal/ProposalDocument";
+import { SignatureField } from "@/components/portal/SignatureField";
 
 /**
  * Client portal — proposal & invoices. The client reviews the itemised proposal
@@ -21,6 +25,17 @@ type Project = {
   stage: string;
   proposal_status: string;
   proposed_plan: string | null;
+  overview: string | null;
+  payment_terms: string | null;
+  dpa_client_country: string | null;
+  dpa_client_company_number: string | null;
+  dpa_client_registered_address: string | null;
+  dpa_personal_data: string | null;
+  dpa_special_category: boolean | null;
+  dpa_special_category_detail: string | null;
+  accepted_name: string | null;
+  accepted_at: string | null;
+  tenants: { name: string } | null;
 };
 type Item = { id: string; project_id: string; name: string; amount: number };
 type Invoice = {
@@ -37,7 +52,8 @@ const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 async function acceptProposal(formData: FormData) {
   "use server";
   const projectId = String(formData.get("project_id") || "");
-  if (!projectId) return;
+  const signature = String(formData.get("signature") || "").trim();
+  if (!projectId || !signature) return;
   const supabase = await createClient();
   const {
     data: { user },
@@ -52,16 +68,23 @@ async function acceptProposal(formData: FormData) {
     .maybeSingle();
   if (!project || project.proposal_status !== "sent") return;
 
-  // Trusted writes (projects + compliance are staff-write under RLS).
+  // Trusted writes (projects + compliance are staff-write under RLS). The typed
+  // signature is recorded on the project and the DPA compliance record.
+  const now = new Date().toISOString();
   const service = createServiceClient();
   await service
     .from("projects")
-    .update({ proposal_status: "accepted" })
+    .update({
+      proposal_status: "accepted",
+      accepted_name: signature,
+      accepted_signature: signature,
+      accepted_at: now,
+    })
     .eq("id", projectId);
   await service.from("compliance_records").insert({
     tenant_id: project.tenant_id,
     kind: "dpa_signed",
-    detail: { signed_by: user.id, via: "portal" },
+    detail: { signed_by: user.id, signed_name: signature, via: "portal" },
   });
 
   await logAudit({
@@ -183,7 +206,9 @@ export default async function PortalProposal() {
     await Promise.all([
       supabase
         .from("projects")
-        .select("id, tenant_id, name, stage, proposal_status, proposed_plan")
+        .select(
+          "id, tenant_id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, accepted_name, accepted_at, tenants(name)"
+        )
         .order("created_at"),
       supabase
         .from("project_items")
@@ -196,7 +221,7 @@ export default async function PortalProposal() {
         .order("created_at", { ascending: false }),
       supabase.from("invoice_items").select("invoice_id, name, amount, quantity"),
     ]);
-  const projectList = (projects ?? []) as Project[];
+  const projectList = (projects ?? []) as unknown as Project[];
   const itemList = (items ?? []) as Item[];
   const invoiceList = (invoices ?? []) as Invoice[];
   const invItemList = (invItems ?? []) as InvItem[];
@@ -253,153 +278,157 @@ export default async function PortalProposal() {
               <Badge s={project.stage} />
             </div>
 
-            {/* Proposal */}
-            {pItems.length > 0 && (
-              <div
-                style={{
-                  background: T.surface,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: T.r.lg,
-                  padding: "20px 22px",
-                  marginBottom: 14,
-                }}
-              >
-                <div
-                  className="flex items-center justify-between"
-                  style={{ marginBottom: 12 }}
+            {/* Proposal + DPA documents */}
+            {(pItems.length > 0 || project.proposal_status !== "draft") && (
+              <div style={{ marginBottom: 14 }}>
+                <ProposalDocument
+                  reference={clientRef(project.tenant_id)}
+                  clientName={project.tenants?.name ?? "Client"}
+                  businessName={project.tenants?.name}
+                  date={new Date().toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                  overview={project.overview}
+                  items={pItems.map((i) => ({ name: i.name, amount: i.amount }))}
+                  total={total}
+                  carePlan={
+                    carePlan(project.proposed_plan)
+                      ? {
+                          label: carePlan(project.proposed_plan)!.label,
+                          mrr: carePlan(project.proposed_plan)!.mrr,
+                        }
+                      : null
+                  }
+                  paymentTerms={project.payment_terms}
+                  accepted={
+                    project.accepted_at
+                      ? { name: project.accepted_name ?? "", at: project.accepted_at }
+                      : null
+                  }
+                />
+
+                {/* Full DPA (expandable) */}
+                <details
+                  style={{
+                    marginTop: 12,
+                    background: T.surface,
+                    border: `1px solid ${T.border}`,
+                    borderRadius: T.r.lg,
+                    padding: "14px 18px",
+                  }}
                 >
-                  <span
+                  <summary
                     style={{
+                      cursor: "pointer",
                       fontFamily: T.sans,
                       fontWeight: 600,
                       fontSize: "0.95rem",
                       color: T.fg,
                     }}
                   >
-                    Proposed build
-                  </span>
-                  <Badge s={project.proposal_status} />
-                </div>
-                {pItems.map((it) => (
-                  <div
-                    key={it.id}
-                    className="flex items-center justify-between"
-                    style={{ padding: "8px 0", borderTop: `1px solid ${T.border}` }}
-                  >
-                    <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>
-                      {it.name}
-                    </span>
-                    <span
-                      style={{ fontFamily: T.mono, fontSize: "0.85rem", color: T.muted }}
-                    >
-                      {gbp(Number(it.amount))}
-                    </span>
-                  </div>
-                ))}
-                <div
-                  className="flex items-center justify-between"
-                  style={{
-                    padding: "12px 0 0",
-                    borderTop: `1px solid ${T.border}`,
-                    marginTop: 4,
-                  }}
-                >
-                  <span style={{ fontFamily: T.sans, fontWeight: 600, color: T.fg }}>
-                    Total
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: T.display,
-                      fontWeight: 700,
-                      fontSize: "1.3rem",
-                      color: T.fg,
-                    }}
-                  >
-                    {gbp(total)}
-                  </span>
-                </div>
-
-                {carePlan(project.proposed_plan) && (
-                  <div
-                    className="flex items-center justify-between"
-                    style={{
-                      padding: "12px 0 0",
-                      marginTop: 8,
-                      borderTop: `1px solid ${T.border}`,
-                    }}
-                  >
-                    <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>
-                      Ongoing care · {carePlan(project.proposed_plan)!.label}
-                    </span>
-                    <span
-                      style={{ fontFamily: T.mono, fontSize: "0.85rem", color: T.muted }}
-                    >
-                      {gbp(carePlan(project.proposed_plan)!.mrr)}/mo
-                    </span>
-                  </div>
-                )}
-
-                {project.proposal_status === "sent" && (
+                    View the full Data Processing Agreement
+                  </summary>
                   <div style={{ marginTop: 16 }}>
+                    <DpaTemplate
+                      mode="proposal"
+                      client={{
+                        name: project.tenants?.name ?? "Client",
+                        country: project.dpa_client_country,
+                        companyNumber: project.dpa_client_company_number,
+                        registeredAddress: project.dpa_client_registered_address,
+                      }}
+                      effectiveDate={
+                        project.accepted_at
+                          ? new Date(project.accepted_at).toLocaleDateString("en-GB")
+                          : null
+                      }
+                      personalDataTypes={project.dpa_personal_data}
+                      specialCategory={{
+                        present: !!project.dpa_special_category,
+                        detail: project.dpa_special_category_detail,
+                      }}
+                      accepted={
+                        project.accepted_at
+                          ? { name: project.accepted_name ?? "", at: project.accepted_at }
+                          : null
+                      }
+                    />
+                  </div>
+                </details>
+
+                {/* Sign / decline */}
+                {project.proposal_status === "sent" && (
+                  <div
+                    style={{
+                      marginTop: 14,
+                      background: T.surface,
+                      border: `1px solid ${T.primary}55`,
+                      borderRadius: T.r.lg,
+                      padding: "20px 22px",
+                    }}
+                  >
                     <p
                       style={{
                         fontFamily: T.sans,
-                        fontSize: "0.82rem",
+                        fontSize: "0.9rem",
                         color: T.muted,
-                        marginBottom: 12,
                         lineHeight: 1.6,
+                        marginBottom: 16,
                       }}
                     >
-                      Accepting confirms this scope and price
+                      Please review the proposal and DPA above. Signing accepts the scope
+                      and price
                       {carePlan(project.proposed_plan)
                         ? ` and the ${carePlan(project.proposed_plan)!.label} care plan`
                         : ""}
-                      , and signs the Data Processing Agreement so we can begin.
-                      We&apos;ll email your invoice straight away.
+                      , and the Data Processing Agreement so we can begin. We&apos;ll
+                      email your invoice straight away.
                     </p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <form action={acceptProposal}>
-                        <input type="hidden" name="project_id" value={project.id} />
-                        <button
-                          type="submit"
-                          style={{
-                            fontFamily: T.sans,
-                            fontWeight: 600,
-                            fontSize: "0.9rem",
-                            height: 44,
-                            paddingInline: 22,
-                            background: T.primary,
-                            color: T.primaryFg,
-                            border: "none",
-                            borderRadius: T.r.md,
-                            cursor: "pointer",
-                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
-                          }}
-                        >
-                          Accept proposal &amp; sign DPA →
-                        </button>
-                      </form>
-                      <form action={declineProposal}>
-                        <input type="hidden" name="project_id" value={project.id} />
-                        <button
-                          type="submit"
-                          style={{
-                            fontFamily: T.sans,
-                            fontWeight: 600,
-                            fontSize: "0.9rem",
-                            height: 44,
-                            paddingInline: 18,
-                            background: "transparent",
-                            color: T.muted,
-                            border: `1px solid ${T.border}`,
-                            borderRadius: T.r.md,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </form>
-                    </div>
+                    <form action={acceptProposal}>
+                      <input type="hidden" name="project_id" value={project.id} />
+                      <SignatureField />
+                      <button
+                        type="submit"
+                        style={{
+                          marginTop: 16,
+                          fontFamily: T.sans,
+                          fontWeight: 600,
+                          fontSize: "0.95rem",
+                          height: 46,
+                          paddingInline: 24,
+                          background: T.primary,
+                          color: T.primaryFg,
+                          border: "none",
+                          borderRadius: T.r.md,
+                          cursor: "pointer",
+                          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
+                        }}
+                      >
+                        Accept &amp; sign →
+                      </button>
+                    </form>
+                    <form action={declineProposal} style={{ marginTop: 10 }}>
+                      <input type="hidden" name="project_id" value={project.id} />
+                      <button
+                        type="submit"
+                        style={{
+                          fontFamily: T.sans,
+                          fontWeight: 600,
+                          fontSize: "0.85rem",
+                          height: 40,
+                          paddingInline: 18,
+                          background: "transparent",
+                          color: T.muted,
+                          border: `1px solid ${T.border}`,
+                          borderRadius: T.r.md,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Decline
+                      </button>
+                    </form>
                   </div>
                 )}
                 {project.proposal_status === "declined" && (
@@ -412,18 +441,6 @@ export default async function PortalProposal() {
                     }}
                   >
                     You declined this proposal. Contact us if you&apos;d like changes.
-                  </p>
-                )}
-                {project.proposal_status === "accepted" && (
-                  <p
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: 11,
-                      color: T.primary,
-                      marginTop: 14,
-                    }}
-                  >
-                    Accepted · DPA signed ✓ — we&apos;re on it.
                   </p>
                 )}
                 {project.proposal_status === "draft" && (

@@ -8,6 +8,10 @@ export const LONDON_TZ = "Europe/London";
  *  Stable for a given proposal — used for invoicing and on the proposal document. */
 export const proposalRef = (id: string) => `NS-${id.slice(0, 8).toUpperCase()}`;
 
+/** A stable human-friendly client reference derived from the tenant UUID, e.g.
+ *  "NS-6B16CD56". Shown on the client hub and used as the initial portal password. */
+export const clientRef = (id: string) => `NS-${id.slice(0, 8).toUpperCase()}`;
+
 /** Format a number as GBP, e.g. £1,000.00 */
 export const money = (n: number, currency = "GBP") =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(n);
@@ -17,7 +21,11 @@ export function formatCallDate(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   return new Intl.DateTimeFormat("en-GB", {
-    weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
   }).format(dt);
 }
 
