@@ -3,6 +3,9 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
 
+// Lists auth users via the service client — never prerender at build time.
+export const dynamic = "force-dynamic";
+
 type MembershipTier = "none" | "core" | "grow" | "pro" | "partner";
 type MembershipStatus = "active" | "trialing" | "past_due" | "cancelled";
 
@@ -43,26 +46,33 @@ function isTier(value: unknown): value is Exclude<MembershipTier, "none"> {
 }
 
 function isStatus(value: unknown): value is MembershipStatus {
-  return value === "active" || value === "trialing" || value === "past_due" || value === "cancelled";
+  return (
+    value === "active" ||
+    value === "trialing" ||
+    value === "past_due" ||
+    value === "cancelled"
+  );
 }
 
 function normalizeMembership(user: AdminUserRow, subscription?: SubscriptionRow | null) {
   const metaTier = user.app_metadata.subscription_tier;
   const metaStatus = user.app_metadata.subscription_status;
 
-  const tier = subscription && isTier(subscription.tier)
-    ? subscription.tier
-    : isTier(metaTier)
-      ? metaTier
-      : "none";
+  const tier =
+    subscription && isTier(subscription.tier)
+      ? subscription.tier
+      : isTier(metaTier)
+        ? metaTier
+        : "none";
 
-  const status = subscription?.status && isStatus(subscription.status)
-    ? subscription.status
-    : isStatus(metaStatus)
-      ? metaStatus
-      : tier === "none"
-        ? "cancelled"
-        : "active";
+  const status =
+    subscription?.status && isStatus(subscription.status)
+      ? subscription.status
+      : isStatus(metaStatus)
+        ? metaStatus
+        : tier === "none"
+          ? "cancelled"
+          : "active";
 
   return {
     tier,
@@ -84,9 +94,7 @@ async function fetchAllUsers() {
       throw error;
     }
 
-    users.push(
-      ...(data.users as AdminUserRow[])
-    );
+    users.push(...(data.users as AdminUserRow[]));
     total = data.total ?? total;
     if (!data.nextPage) break;
     page = data.nextPage;
@@ -100,7 +108,9 @@ async function fetchAllUsers() {
   for (const row of (subscriptionRows ?? []) as SubscriptionRow[]) {
     if (row.status !== "active") continue;
     const current = activeSubscriptionByUser.get(row.user_id);
-    const currentStamp = current ? new Date(current.updated_at ?? current.created_at).getTime() : 0;
+    const currentStamp = current
+      ? new Date(current.updated_at ?? current.created_at).getTime()
+      : 0;
     const rowStamp = new Date(row.updated_at ?? row.created_at).getTime();
     if (!current || rowStamp >= currentStamp) {
       activeSubscriptionByUser.set(row.user_id, row);
@@ -117,18 +127,24 @@ async function updateMembership(formData: FormData) {
   const userId = String(formData.get("user_id") ?? "");
   const rawTier = String(formData.get("tier") ?? "none");
   const rawStatus = String(formData.get("status") ?? "cancelled");
-  const tier = (TIER_OPTIONS.find((opt) => opt.value === rawTier)?.value ?? "none") as MembershipTier;
-  const status = (STATUS_OPTIONS.find((opt) => opt.value === rawStatus)?.value ?? "cancelled") as MembershipStatus;
+  const tier = (TIER_OPTIONS.find((opt) => opt.value === rawTier)?.value ??
+    "none") as MembershipTier;
+  const status = (STATUS_OPTIONS.find((opt) => opt.value === rawStatus)?.value ??
+    "cancelled") as MembershipStatus;
 
   if (!userId) return;
 
-  const { data: currentUser, error: userError } = await admin.auth.admin.getUserById(userId);
+  const { data: currentUser, error: userError } =
+    await admin.auth.admin.getUserById(userId);
   if (userError || !currentUser.user) {
     return;
   }
 
   const now = new Date().toISOString();
-  const currentMetadata = (currentUser.user.app_metadata ?? {}) as Record<string, unknown>;
+  const currentMetadata = (currentUser.user.app_metadata ?? {}) as Record<
+    string,
+    unknown
+  >;
   const nextMetadata = { ...currentMetadata };
 
   if (tier === "none") {
@@ -149,7 +165,11 @@ async function updateMembership(formData: FormData) {
 
   if (!tableLookupError) {
     if (tier === "none") {
-      await admin.from("subscriptions").delete().eq("user_id", userId).eq("status", "active");
+      await admin
+        .from("subscriptions")
+        .delete()
+        .eq("user_id", userId)
+        .eq("status", "active");
     } else {
       const payload = {
         user_id: userId,
@@ -166,7 +186,11 @@ async function updateMembership(formData: FormData) {
         .maybeSingle();
 
       if (existing) {
-        await admin.from("subscriptions").update(payload).eq("user_id", userId).eq("status", "active");
+        await admin
+          .from("subscriptions")
+          .update(payload)
+          .eq("user_id", userId)
+          .eq("status", "active");
       } else {
         await admin.from("subscriptions").insert({ ...payload, started_at: now });
       }
@@ -207,33 +231,92 @@ export default async function UsersPage() {
     <div>
       <div className="flex items-start justify-between gap-6 mb-8">
         <div>
-          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary, marginBottom: "8px" }}>
+          <div
+            style={{
+              fontFamily: T.mono,
+              fontSize: "10px",
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: T.primary,
+              marginBottom: "8px",
+            }}
+          >
             ACCESS CONTROL
           </div>
-          <h1 style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2.4rem", letterSpacing: "0.01em", color: T.fg }}>
+          <h1
+            style={{
+              fontFamily: T.display,
+              fontWeight: 600,
+              fontSize: "2.4rem",
+              letterSpacing: "0.01em",
+              color: T.fg,
+            }}
+          >
             USERS
           </h1>
-          <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted, marginTop: "8px", maxWidth: "60ch" }}>
-            View every signed-up user, inspect their current membership, adjust their access tier, or delete them from Auth.
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.9rem",
+              color: T.muted,
+              marginTop: "8px",
+              maxWidth: "60ch",
+            }}
+          >
+            View every signed-up user, inspect their current membership, adjust their
+            access tier, or delete them from Auth.
           </p>
         </div>
         <div className="text-right">
-          <div style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>
+          <div
+            style={{
+              fontFamily: T.mono,
+              fontSize: "10px",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: T.muted,
+            }}
+          >
             Total users
           </div>
-          <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "2rem", color: T.fg, marginTop: "4px" }}>
+          <div
+            style={{
+              fontFamily: T.display,
+              fontWeight: 600,
+              fontSize: "2rem",
+              color: T.fg,
+              marginTop: "4px",
+            }}
+          >
             {total || rows.length}
           </div>
         </div>
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl p-8" style={{ background: T.surface, border: `1px solid ${T.border}`, boxShadow: T.shadow.sm }}>
+        <div
+          className="rounded-2xl p-8"
+          style={{
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            boxShadow: T.shadow.sm,
+          }}
+        >
           <p style={{ fontFamily: T.sans, color: T.muted }}>No users found yet.</p>
         </div>
       ) : (
-        <div className="rounded-3xl overflow-hidden" style={{ border: `1px solid ${T.border}`, background: T.surface, boxShadow: T.shadow.md }}>
-          <div className="grid grid-cols-[1.5fr_1fr_0.9fr_1.3fr] gap-4 px-6 py-4" style={{ borderBottom: `1px solid ${T.border}` }}>
+        <div
+          className="rounded-3xl overflow-hidden"
+          style={{
+            border: `1px solid ${T.border}`,
+            background: T.surface,
+            boxShadow: T.shadow.md,
+          }}
+        >
+          <div
+            className="grid grid-cols-[1.5fr_1fr_0.9fr_1.3fr] gap-4 px-6 py-4"
+            style={{ borderBottom: `1px solid ${T.border}` }}
+          >
             <HeaderCell>Account</HeaderCell>
             <HeaderCell>Membership</HeaderCell>
             <HeaderCell>Signals</HeaderCell>
@@ -242,17 +325,34 @@ export default async function UsersPage() {
 
           <div className="divide-y" style={{ borderColor: T.border }}>
             {rows.map(({ user, membership }) => (
-              <div key={user.id} className="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[1.5fr_1fr_0.9fr_1.3fr] lg:items-center">
+              <div
+                key={user.id}
+                className="grid grid-cols-1 gap-4 px-6 py-5 lg:grid-cols-[1.5fr_1fr_0.9fr_1.3fr] lg:items-center"
+              >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <div style={{ fontFamily: T.display, fontWeight: 600, fontSize: "1rem", letterSpacing: "-0.02em", color: T.fg }}>
+                    <div
+                      style={{
+                        fontFamily: T.display,
+                        fontWeight: 600,
+                        fontSize: "1rem",
+                        letterSpacing: "-0.02em",
+                        color: T.fg,
+                      }}
+                    >
                       {user.email ?? "No email"}
                     </div>
-                    {user.email_confirmed_at && (
-                      <Chip tone="primary">Confirmed</Chip>
-                    )}
+                    {user.email_confirmed_at && <Chip tone="primary">Confirmed</Chip>}
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-3" style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted, letterSpacing: "0.08em" }}>
+                  <div
+                    className="mt-2 flex flex-wrap items-center gap-3"
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "10px",
+                      color: T.muted,
+                      letterSpacing: "0.08em",
+                    }}
+                  >
                     <span>{user.id}</span>
                     <span>•</span>
                     <span>Joined {formatDate(user.created_at)}</span>
@@ -260,23 +360,58 @@ export default async function UsersPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <Chip tone={membership.tier === "none" ? "muted" : "primary"}>{membership.tier.toUpperCase()}</Chip>
-                  <Chip tone={membership.status === "active" ? "success" : membership.status === "past_due" ? "warning" : "muted"}>
+                  <Chip tone={membership.tier === "none" ? "muted" : "primary"}>
+                    {membership.tier.toUpperCase()}
+                  </Chip>
+                  <Chip
+                    tone={
+                      membership.status === "active"
+                        ? "success"
+                        : membership.status === "past_due"
+                          ? "warning"
+                          : "muted"
+                    }
+                  >
                     {membership.status}
                   </Chip>
-                  <span style={{ fontFamily: T.mono, fontSize: "9px", color: T.muted, letterSpacing: "0.08em" }}>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "9px",
+                      color: T.muted,
+                      letterSpacing: "0.08em",
+                    }}
+                  >
                     {membership.source}
                   </span>
                 </div>
 
-                <div className="space-y-1" style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted, letterSpacing: "0.08em" }}>
-                  <div>Last sign in: {user.last_sign_in_at ? formatDateTime(user.last_sign_in_at) : "Never"}</div>
+                <div
+                  className="space-y-1"
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    color: T.muted,
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  <div>
+                    Last sign in:{" "}
+                    {user.last_sign_in_at
+                      ? formatDateTime(user.last_sign_in_at)
+                      : "Never"}
+                  </div>
                   <div>Email verified: {user.email_confirmed_at ? "Yes" : "No"}</div>
                 </div>
 
-                <form action={updateMembership} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] lg:justify-end">
+                <form
+                  action={updateMembership}
+                  className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] lg:justify-end"
+                >
                   <input type="hidden" name="user_id" value={user.id} />
-                  <label className="sr-only" htmlFor={`tier-${user.id}`}>Membership tier</label>
+                  <label className="sr-only" htmlFor={`tier-${user.id}`}>
+                    Membership tier
+                  </label>
                   <select
                     id={`tier-${user.id}`}
                     name="tier"
@@ -291,7 +426,9 @@ export default async function UsersPage() {
                     ))}
                   </select>
 
-                  <label className="sr-only" htmlFor={`status-${user.id}`}>Membership status</label>
+                  <label className="sr-only" htmlFor={`status-${user.id}`}>
+                    Membership status
+                  </label>
                   <select
                     id={`status-${user.id}`}
                     name="status"
@@ -350,15 +487,36 @@ export default async function UsersPage() {
   );
 }
 
-function HeaderCell({ children, className = "" }: { children: ReactNode; className?: string }) {
+function HeaderCell({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className={className} style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: T.muted }}>
+    <div
+      className={className}
+      style={{
+        fontFamily: T.mono,
+        fontSize: "10px",
+        letterSpacing: "0.14em",
+        textTransform: "uppercase",
+        color: T.muted,
+      }}
+    >
       {children}
     </div>
   );
 }
 
-function Chip({ children, tone }: { children: ReactNode; tone: "primary" | "success" | "warning" | "muted" }) {
+function Chip({
+  children,
+  tone,
+}: {
+  children: ReactNode;
+  tone: "primary" | "success" | "warning" | "muted";
+}) {
   const bg =
     tone === "primary"
       ? `${T.primary}12`

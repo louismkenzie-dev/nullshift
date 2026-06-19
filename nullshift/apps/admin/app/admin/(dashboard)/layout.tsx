@@ -5,6 +5,10 @@ import { AdminNav } from "../AdminNav";
 import { T } from "@nullshift/ui/tokens";
 import { hasSupabaseServerConfig, getMissingSupabaseEnv } from "@nullshift/db/env";
 
+// Auth-gated dashboard — always render per request, never statically prerender,
+// so `next build` can't try to reach Supabase with placeholder CI/build env.
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {
