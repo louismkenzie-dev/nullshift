@@ -4,9 +4,10 @@ import Link from "next/link";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
-import { createItemisedStripeInvoice } from "@nullshift/billing/stripe";
 import { CATALOG } from "@nullshift/content/catalog";
 import { T } from "@nullshift/ui/tokens";
+import { CARE_PLANS, CARE_PLAN_MRR, carePlan } from "@/lib/carePlans";
+import { generateProjectInvoice } from "@/lib/projectInvoice";
 
 /**
  * Unified Client hub — ONE page per client, keyed by the tenant. Everything for a
@@ -56,14 +57,6 @@ const CR_NEXT: Record<string, string> = {
   in_progress: "review",
   review: "shipped",
 };
-const PLANS: { id: string; label: string; mrr: number }[] = [
-  { id: "care_basic", label: "Care Basic", mrr: 49 },
-  { id: "care_pro", label: "Care Pro", mrr: 149 },
-  { id: "transaction", label: "Transaction", mrr: 39 },
-];
-const PLAN_MRR: Record<string, number> = Object.fromEntries(
-  PLANS.map((p) => [p.id, p.mrr])
-);
 
 // ── server actions ─────────────────────────────────────────────
 async function ensureProject(formData: FormData) {
@@ -121,6 +114,20 @@ async function sendProposal(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
+async function setProposedPlan(formData: FormData) {
+  "use server";
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  const plan = String(formData.get("plan") || "");
+  if (!projectId) return;
+  const supabase = await createClient();
+  await supabase
+    .from("projects")
+    .update({ proposed_plan: plan || null })
+    .eq("id", projectId);
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
 async function setStage(formData: FormData) {
   "use server";
   const tenantId = String(formData.get("tenant_id") || "");
@@ -153,14 +160,12 @@ async function addNote(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  await supabase
-    .from("project_notes")
-    .insert({
-      project_id: projectId,
-      tenant_id: tenantId,
-      body,
-      author: user?.id ?? null,
-    });
+  await supabase.from("project_notes").insert({
+    project_id: projectId,
+    tenant_id: tenantId,
+    body,
+    author: user?.id ?? null,
+  });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -234,92 +239,18 @@ async function generateInvoice(formData: FormData) {
   "use server";
   const tenantId = String(formData.get("tenant_id") || "");
   const projectId = String(formData.get("project_id") || "");
-  const supabase = await createClient();
-
-  const { data: items } = await supabase
-    .from("project_items")
-    .select("name, amount")
-    .eq("project_id", projectId);
-  const lines = (items ?? []) as { name: string; amount: number }[];
-  if (lines.length === 0) return;
-  const total = lines.reduce((s, l) => s + Number(l.amount), 0);
-
-  const { data: invoice, error } = await supabase
-    .from("invoices")
-    .insert({
-      tenant_id: tenantId,
-      project_id: projectId,
-      type: "build_milestone",
-      amount: total,
-      status: "draft",
-      project_item_count: lines.length,
-    })
-    .select("id")
-    .single();
-  if (error || !invoice) {
-    console.error("generateInvoice:", error?.message);
-    return;
-  }
-  await supabase.from("invoice_items").insert(
-    lines.map((l) => ({
-      invoice_id: invoice.id,
-      tenant_id: tenantId,
-      name: l.name,
-      amount: l.amount,
-      quantity: 1,
-    }))
-  );
-
-  // Send via Stripe to the client's email (the client_admin on this tenant).
-  const service = createServiceClient();
-  const { data: membership } = await service
-    .from("memberships")
-    .select("user_id")
-    .eq("tenant_id", tenantId)
-    .eq("role", "client_admin")
-    .limit(1)
-    .maybeSingle();
-  let email: string | null = null;
-  if (membership?.user_id) {
-    const { data: u } = await service.auth.admin.getUserById(membership.user_id);
-    email = u.user?.email ?? null;
-  }
-
-  if (email) {
-    try {
-      const stripeInv = await createItemisedStripeInvoice({
-        customerEmail: email,
-        items: lines.map((l) => ({
-          name: l.name,
-          amountPence: Math.round(Number(l.amount) * 100),
-        })),
-      });
-      if (stripeInv) {
-        await supabase
-          .from("invoices")
-          .update({
-            status: "open",
-            stripe_invoice_id: stripeInv.id,
-            hosted_invoice_url: stripeInv.url,
-          })
-          .eq("id", invoice.id);
-      } else {
-        await supabase.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-      }
-    } catch (e) {
-      console.error("Stripe invoice send failed:", e);
-      await supabase.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-    }
-  } else {
-    await supabase.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-  }
-
-  await logAudit({
-    action: "invoice.generated",
-    target: `project:${projectId}`,
+  if (!tenantId || !projectId) return;
+  const res = await generateProjectInvoice(createServiceClient(), {
     tenantId,
-    metadata: { total, lines: lines.length },
+    projectId,
   });
+  if (res.ok)
+    await logAudit({
+      action: "invoice.generated",
+      target: `project:${projectId}`,
+      tenantId,
+      metadata: { total: res.total },
+    });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -388,12 +319,12 @@ async function addSubscription(formData: FormData) {
   "use server";
   const tenantId = String(formData.get("tenant_id") || "");
   const plan = String(formData.get("plan") || "");
-  if (!tenantId || !(plan in PLAN_MRR)) return;
+  if (!tenantId || !(plan in CARE_PLAN_MRR)) return;
   const supabase = await createClient();
   await supabase.from("subscriptions").insert({
     tenant_id: tenantId,
     plan,
-    mrr: PLAN_MRR[plan],
+    mrr: CARE_PLAN_MRR[plan],
     status: "active",
     started_at: new Date().toISOString(),
   });
@@ -401,7 +332,7 @@ async function addSubscription(formData: FormData) {
     action: "subscription.added",
     target: `tenant:${tenantId}`,
     tenantId,
-    metadata: { plan, mrr: PLAN_MRR[plan] },
+    metadata: { plan, mrr: CARE_PLAN_MRR[plan] },
   });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
@@ -572,11 +503,17 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   // Primary project (most recent). Tenant-scoped sections work without one.
   const { data: projects } = await supabase
     .from("projects")
-    .select("id, name, stage, proposal_status")
+    .select("id, name, stage, proposal_status, proposed_plan")
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false });
   const project = (projects ?? [])[0] as
-    | { id: string; name: string; stage: string; proposal_status: string }
+    | {
+        id: string;
+        name: string;
+        stage: string;
+        proposal_status: string;
+        proposed_plan: string | null;
+      }
     | undefined;
   const projectId = project?.id ?? null;
 
@@ -991,6 +928,43 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 </form>
               ))}
             </div>
+            {/* Ongoing care plan — part of the proposal the client accepts. */}
+            <div
+              className="flex items-center gap-2 flex-wrap"
+              style={{
+                marginTop: 14,
+                paddingTop: 14,
+                borderTop: `1px solid ${T.border}`,
+              }}
+            >
+              <span style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.fg }}>
+                Ongoing care plan
+              </span>
+              <form action={setProposedPlan} className="flex items-center gap-2">
+                {htid}
+                {hpid}
+                <select
+                  name="plan"
+                  defaultValue={project.proposed_plan ?? ""}
+                  style={{ ...inp, width: 180 }}
+                >
+                  <option value="">No care plan</option>
+                  {CARE_PLANS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label} — £{p.mrr}/mo
+                    </option>
+                  ))}
+                </select>
+                <button type="submit" style={btn(T.surface2, T.fg)}>
+                  Save plan
+                </button>
+              </form>
+              {project.proposed_plan && (
+                <span style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}>
+                  {carePlan(project.proposed_plan)?.label} · activates on acceptance
+                </span>
+              )}
+            </div>
             {itemList.length > 0 && project.proposal_status === "draft" && (
               <form action={sendProposal} style={{ marginTop: 14 }}>
                 {htid}
@@ -1334,7 +1308,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               style={{ padding: "7px 0", borderTop: `1px solid ${T.border}` }}
             >
               <span style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.fg }}>
-                {PLANS.find((p) => p.id === s.plan)?.label ?? s.plan}{" "}
+                {carePlan(s.plan)?.label ?? s.plan}{" "}
                 <span style={{ color: T.muted, fontFamily: T.mono, fontSize: 11 }}>
                   {gbp(Number(s.mrr))}/mo
                 </span>
@@ -1357,7 +1331,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
         <form action={addSubscription} className="flex items-center gap-2">
           {htid}
           <select name="plan" defaultValue="care_basic" style={{ ...inp, width: 160 }}>
-            {PLANS.map((p) => (
+            {CARE_PLANS.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label} — £{p.mrr}/mo
               </option>

@@ -2,6 +2,8 @@ import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
+import { carePlan, CARE_PLAN_MRR } from "@/lib/carePlans";
+import { generateProjectInvoice } from "@/lib/projectInvoice";
 
 /**
  * Client portal — proposal & invoices. The client reviews the itemised proposal
@@ -18,6 +20,7 @@ type Project = {
   name: string;
   stage: string;
   proposal_status: string;
+  proposed_plan: string | null;
 };
 type Item = { id: string; project_id: string; name: string; amount: number };
 type Invoice = {
@@ -44,7 +47,7 @@ async function acceptProposal(formData: FormData) {
   // Confirm the caller can see this project (RLS only returns their tenant's).
   const { data: project } = await supabase
     .from("projects")
-    .select("id, tenant_id, proposal_status")
+    .select("id, tenant_id, proposal_status, proposed_plan")
     .eq("id", projectId)
     .maybeSingle();
   if (!project || project.proposal_status !== "sent") return;
@@ -69,6 +72,76 @@ async function acceptProposal(formData: FormData) {
   await logAudit({
     action: "dpa.signed",
     target: `tenant:${project.tenant_id}`,
+    tenantId: project.tenant_id,
+  });
+
+  // Activate the proposed care plan (if any) — only if there's no active
+  // subscription yet, so re-accepting can't double-subscribe.
+  if (project.proposed_plan && project.proposed_plan in CARE_PLAN_MRR) {
+    const { data: activeSub } = await service
+      .from("subscriptions")
+      .select("id")
+      .eq("tenant_id", project.tenant_id)
+      .eq("status", "active")
+      .limit(1);
+    if (!activeSub?.length) {
+      await service.from("subscriptions").insert({
+        tenant_id: project.tenant_id,
+        plan: project.proposed_plan,
+        mrr: CARE_PLAN_MRR[project.proposed_plan],
+        status: "active",
+        started_at: new Date().toISOString(),
+      });
+      await logAudit({
+        action: "subscription.activated",
+        target: `tenant:${project.tenant_id}`,
+        tenantId: project.tenant_id,
+        metadata: { plan: project.proposed_plan },
+      });
+    }
+  }
+
+  // Auto-draft & send the itemised build invoice on acceptance.
+  const inv = await generateProjectInvoice(service, {
+    tenantId: project.tenant_id,
+    projectId,
+  });
+  if (inv.ok)
+    await logAudit({
+      action: "invoice.generated",
+      target: `project:${projectId}`,
+      tenantId: project.tenant_id,
+      metadata: { total: inv.total, via: "auto-accept" },
+    });
+
+  revalidatePath("/portal/proposal");
+}
+
+async function declineProposal(formData: FormData) {
+  "use server";
+  const projectId = String(formData.get("project_id") || "");
+  if (!projectId) return;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, tenant_id, proposal_status")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project || project.proposal_status !== "sent") return;
+
+  const service = createServiceClient();
+  await service
+    .from("projects")
+    .update({ proposal_status: "declined" })
+    .eq("id", projectId);
+  await logAudit({
+    action: "proposal.declined",
+    target: `project:${projectId}`,
     tenantId: project.tenant_id,
   });
   revalidatePath("/portal/proposal");
@@ -110,7 +183,7 @@ export default async function PortalProposal() {
     await Promise.all([
       supabase
         .from("projects")
-        .select("id, tenant_id, name, stage, proposal_status")
+        .select("id, tenant_id, name, stage, proposal_status, proposed_plan")
         .order("created_at"),
       supabase
         .from("project_items")
@@ -246,9 +319,28 @@ export default async function PortalProposal() {
                   </span>
                 </div>
 
+                {carePlan(project.proposed_plan) && (
+                  <div
+                    className="flex items-center justify-between"
+                    style={{
+                      padding: "12px 0 0",
+                      marginTop: 8,
+                      borderTop: `1px solid ${T.border}`,
+                    }}
+                  >
+                    <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>
+                      Ongoing care · {carePlan(project.proposed_plan)!.label}
+                    </span>
+                    <span
+                      style={{ fontFamily: T.mono, fontSize: "0.85rem", color: T.muted }}
+                    >
+                      {gbp(carePlan(project.proposed_plan)!.mrr)}/mo
+                    </span>
+                  </div>
+                )}
+
                 {project.proposal_status === "sent" && (
-                  <form action={acceptProposal} style={{ marginTop: 16 }}>
-                    <input type="hidden" name="project_id" value={project.id} />
+                  <div style={{ marginTop: 16 }}>
                     <p
                       style={{
                         fontFamily: T.sans,
@@ -258,28 +350,69 @@ export default async function PortalProposal() {
                         lineHeight: 1.6,
                       }}
                     >
-                      Accepting confirms this scope and price, and signs the Data
-                      Processing Agreement so we can begin (and take your project live).
+                      Accepting confirms this scope and price
+                      {carePlan(project.proposed_plan)
+                        ? ` and the ${carePlan(project.proposed_plan)!.label} care plan`
+                        : ""}
+                      , and signs the Data Processing Agreement so we can begin.
+                      We&apos;ll email your invoice straight away.
                     </p>
-                    <button
-                      type="submit"
-                      style={{
-                        fontFamily: T.sans,
-                        fontWeight: 600,
-                        fontSize: "0.9rem",
-                        height: 44,
-                        paddingInline: 22,
-                        background: T.primary,
-                        color: T.primaryFg,
-                        border: "none",
-                        borderRadius: T.r.md,
-                        cursor: "pointer",
-                        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
-                      }}
-                    >
-                      Accept proposal &amp; sign DPA →
-                    </button>
-                  </form>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <form action={acceptProposal}>
+                        <input type="hidden" name="project_id" value={project.id} />
+                        <button
+                          type="submit"
+                          style={{
+                            fontFamily: T.sans,
+                            fontWeight: 600,
+                            fontSize: "0.9rem",
+                            height: 44,
+                            paddingInline: 22,
+                            background: T.primary,
+                            color: T.primaryFg,
+                            border: "none",
+                            borderRadius: T.r.md,
+                            cursor: "pointer",
+                            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
+                          }}
+                        >
+                          Accept proposal &amp; sign DPA →
+                        </button>
+                      </form>
+                      <form action={declineProposal}>
+                        <input type="hidden" name="project_id" value={project.id} />
+                        <button
+                          type="submit"
+                          style={{
+                            fontFamily: T.sans,
+                            fontWeight: 600,
+                            fontSize: "0.9rem",
+                            height: 44,
+                            paddingInline: 18,
+                            background: "transparent",
+                            color: T.muted,
+                            border: `1px solid ${T.border}`,
+                            borderRadius: T.r.md,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Decline
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                )}
+                {project.proposal_status === "declined" && (
+                  <p
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 11,
+                      color: T.danger,
+                      marginTop: 14,
+                    }}
+                  >
+                    You declined this proposal. Contact us if you&apos;d like changes.
+                  </p>
                 )}
                 {project.proposal_status === "accepted" && (
                   <p
