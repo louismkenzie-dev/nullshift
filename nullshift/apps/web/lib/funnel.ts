@@ -192,6 +192,12 @@ export const STEPS: FunnelStep[] = [
         desc: "Build & run it for me",
         score: 3,
       },
+      {
+        id: "optimise",
+        label: "Optimise my operations",
+        desc: "Automate the admin, cut the busywork",
+        score: 3,
+      },
     ],
   },
   {
@@ -229,6 +235,7 @@ export const STEPS: FunnelStep[] = [
       { id: "tools", label: "Juggling too many tools & subscriptions" },
       { id: "payments", label: "Taking & chasing payments" },
       { id: "records", label: "Client records, notes & forms" },
+      { id: "admin_overload", label: "Admin overload — drowning in manual admin" },
       { id: "nothing", label: "Nothing major — just exploring" },
     ],
   },

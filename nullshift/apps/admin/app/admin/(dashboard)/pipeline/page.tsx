@@ -35,6 +35,7 @@ const PAIN_LABEL: Record<string, string> = {
   tools: "too many tools",
   payments: "payments",
   records: "records",
+  admin_overload: "admin overload",
   nothing: "exploring",
 };
 
@@ -86,6 +87,7 @@ function Card({ lead }: { lead: Lead }) {
   const a = lead.quiz_answers?.answers ?? {};
   const spend = a.software_spend ? SPEND_LABEL[a.software_spend] : null;
   const pain = a.admin_pain ? PAIN_LABEL[a.admin_pain] : null;
+  const describe = a.describe?.trim();
   return (
     <div
       style={{
@@ -124,6 +126,23 @@ function Card({ lead }: { lead: Lead }) {
         {spend && <Tag tone={T.warning}>{spend}</Tag>}
         {pain && <Tag>{pain}</Tag>}
       </div>
+      {describe && (
+        <p
+          title={describe}
+          style={{
+            fontFamily: T.sans,
+            fontSize: "11px",
+            lineHeight: 1.45,
+            color: T.muted,
+            fontStyle: "italic",
+            marginTop: 8,
+            borderLeft: `2px solid ${T.border}`,
+            paddingLeft: 8,
+          }}
+        >
+          &ldquo;{describe}&rdquo;
+        </p>
+      )}
       <div className="flex flex-wrap gap-1" style={{ marginTop: 10 }}>
         {lead.status !== "won" && (
           <form action={promoteLead}>
