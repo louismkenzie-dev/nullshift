@@ -5,22 +5,20 @@ import { createServiceClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
 import { Footer } from "@/components/Footer";
-import { Blueprint } from "@/components/funnel/Blueprint";
-import type { Blueprint as BlueprintData } from "@nullshift/content/blueprint";
-import type { BrandSpec } from "@/lib/brandSpec";
+import { ScalingPlan } from "@/components/funnel/ScalingPlan";
+import type { ScalingPlan as ScalingPlanData } from "@nullshift/content/scalingPlan";
 
 /**
- * The permanent, shareable home of a prospect's auto-generated Build Blueprint.
+ * The permanent, shareable home of a prospect's auto-generated Free Scaling Plan.
  * Reached by an unguessable plan_token (minted in the funnel, persisted on the
  * lead). Read via the trusted service client (leads are staff-only under RLS);
- * the token is the capability. Renders the same Blueprint component as the
+ * the token is the capability. Renders the same ScalingPlan component as the
  * funnel result, so the page and the in-funnel reveal never drift.
  */
 export const dynamic = "force-dynamic";
 
 type StoredPlan = {
-  blueprint?: BlueprintData;
-  brandSpec?: BrandSpec | null;
+  scalingPlan?: ScalingPlanData;
   businessName?: string;
   name?: string;
 };
@@ -50,7 +48,9 @@ export async function generateMetadata({
   const plan = await loadPlan(token);
   const who = plan?.businessName || plan?.name;
   return {
-    title: who ? `Build plan — ${who} · Nullshift` : "Your build plan · Nullshift",
+    title: who
+      ? `Scaling plan — ${who} · Nullshift`
+      : "Your free scaling plan · Nullshift",
     robots: { index: false, follow: false }, // private to the recipient
   };
 }
@@ -62,7 +62,7 @@ export default async function PlanPage({
 }) {
   const { token } = await params;
   const plan = await loadPlan(token);
-  if (!plan?.blueprint) notFound();
+  if (!plan?.scalingPlan) notFound();
 
   const first = plan.name?.split(" ")[0];
 
@@ -117,7 +117,7 @@ export default async function PlanPage({
             marginBottom: 10,
           }}
         >
-          // Your build plan
+          // Your free scaling plan
         </div>
         <h1
           style={{
@@ -130,10 +130,10 @@ export default async function PlanPage({
           }}
         >
           {plan.businessName
-            ? `A system for ${plan.businessName}.`
+            ? `A scaling plan for ${plan.businessName}.`
             : first
-              ? `${first}, here's your plan.`
-              : "Your build plan."}
+              ? `${first}, here's your scaling plan.`
+              : "Your free scaling plan."}
         </h1>
         <p
           className="mt-4 mb-9"
@@ -145,11 +145,12 @@ export default async function PlanPage({
             maxWidth: "54ch",
           }}
         >
-          A preview of your own software, exactly what we&apos;d build you, and what you
-          stop renting the day you own it. Saved here for whenever you&apos;re ready.
+          Where you are now, the software you could stop renting, and what we&apos;d build
+          and own in its place — tailored to your business. Saved here for whenever
+          you&apos;re ready.
         </p>
 
-        <Blueprint blueprint={plan.blueprint} brandSpec={plan.brandSpec} />
+        <ScalingPlan plan={plan.scalingPlan} />
 
         {/* CTA */}
         <div

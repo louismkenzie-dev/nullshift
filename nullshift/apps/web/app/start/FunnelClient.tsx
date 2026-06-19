@@ -13,10 +13,9 @@ import {
   type Recommendation,
 } from "@/lib/funnel";
 import {
-  buildBlueprint,
-  type Blueprint as BlueprintData,
-} from "@nullshift/content/blueprint";
-import type { BrandSpec } from "@/lib/brandSpec";
+  buildScalingPlan,
+  type ScalingPlan as ScalingPlanData,
+} from "@nullshift/content/scalingPlan";
 import { funnelSound } from "@/lib/funnelAudio";
 import { ProgressBar } from "@/components/funnel/ProgressBar";
 import { QuestionCard } from "@/components/funnel/QuestionCard";
@@ -38,10 +37,8 @@ type State = {
   segment?: Segment;
   recommendation?: Recommendation;
   contact?: Contact;
-  blueprint?: BlueprintData;
+  plan?: ScalingPlanData;
   planToken?: string;
-  brandSpec?: BrandSpec | null;
-  brandPending?: boolean;
 };
 
 type Action =
@@ -49,8 +46,7 @@ type Action =
   | { type: "SKIP" }
   | { type: "GOTO"; index: number }
   | { type: "HOLD_DONE"; segment: Segment; recommendation: Recommendation }
-  | { type: "CAPTURED"; contact: Contact; blueprint: BlueprintData; planToken: string }
-  | { type: "SET_BRAND"; brandSpec: BrandSpec | null }
+  | { type: "CAPTURED"; contact: Contact; plan: ScalingPlanData; planToken: string }
   | { type: "RESET" }
   | { type: "HYDRATE"; state: Partial<State> };
 
@@ -90,12 +86,9 @@ function reducer(state: State, action: Action): State {
         ...state,
         status: "result",
         contact: action.contact,
-        blueprint: action.blueprint,
+        plan: action.plan,
         planToken: action.planToken,
-        brandPending: true,
       };
-    case "SET_BRAND":
-      return { ...state, brandSpec: action.brandSpec, brandPending: false };
     case "RESET":
       return { index: 0, answers: {}, status: "question" };
     case "HYDRATE":
@@ -261,11 +254,11 @@ export function FunnelClient() {
     } catch {
       /* ignore */
     }
-    // Generate the Build Blueprint up front (pure) so the result reveals instantly,
+    // Generate the Free Scaling Plan up front (pure) so the result reveals instantly,
     // and mint a token so the permanent /plan link is known without awaiting the
     // server. The server re-computes authoritatively and persists under this token.
     const segment: Segment = state.segment ?? "nurture";
-    const blueprint = buildBlueprint(answersRef.current, {
+    const plan = buildScalingPlan(answersRef.current, {
       segment,
       businessName: c.business,
     });
@@ -274,56 +267,29 @@ export function FunnelClient() {
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
-    // Reveal the result instantly (blueprint + system preview), with the homepage
-    // concept in a pending state while the AI designs it.
     dispatch({
       type: "CAPTURED",
       contact: { name: c.name, business: c.business, email: c.email, phone: c.phone },
-      blueprint,
+      plan,
       planToken,
     });
 
-    // Generate the tailored homepage concept, reveal it, then persist the lead +
-    // plan (incl. the concept) — all in the background so the reveal never waits.
-    void (async () => {
-      let brandSpec: BrandSpec | null = null;
-      try {
-        const r = await fetch("/api/brand-preview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            businessName: c.business,
-            vertical: answersRef.current.industry,
-            description: answersRef.current.describe,
-          }),
-        });
-        if (r.ok) brandSpec = (await r.json())?.spec ?? null;
-      } catch {
-        /* ignore — concept is a bonus, never blocks the result */
-      }
-      dispatch({ type: "SET_BRAND", brandSpec });
-
-      void fetch("/api/funnel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          answers: answersRef.current,
-          contact: {
-            name: c.name,
-            business: c.business,
-            email: c.email,
-            phone: c.phone,
-          },
-          utm: utmRef.current,
-          planToken,
-          brandSpec,
-          website: c.website,
-          elapsedMs: c.elapsedMs,
-        }),
-      }).catch(() => {
-        /* ignore — the result is the value to the visitor */
-      });
-    })();
+    // Persist the lead + plan in the background — fire-and-forget so the result
+    // reveals instantly and is never gated on the network.
+    void fetch("/api/funnel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        answers: answersRef.current,
+        contact: { name: c.name, business: c.business, email: c.email, phone: c.phone },
+        utm: utmRef.current,
+        planToken,
+        website: c.website,
+        elapsedMs: c.elapsedMs,
+      }),
+    }).catch(() => {
+      /* ignore — the result is the value to the visitor */
+    });
   };
 
   const panel: Variants = reduce
@@ -516,9 +482,7 @@ export function FunnelClient() {
                     recommendation={state.recommendation}
                     answers={state.answers}
                     contact={state.contact}
-                    blueprint={state.blueprint}
-                    brandSpec={state.brandSpec}
-                    brandPending={state.brandPending}
+                    plan={state.plan}
                     planToken={state.planToken}
                     onRestart={handleReset}
                   />
@@ -527,9 +491,7 @@ export function FunnelClient() {
                     recommendation={state.recommendation}
                     answers={state.answers}
                     contact={state.contact}
-                    blueprint={state.blueprint}
-                    brandSpec={state.brandSpec}
-                    brandPending={state.brandPending}
+                    plan={state.plan}
                     planToken={state.planToken}
                     onRestart={handleReset}
                   />

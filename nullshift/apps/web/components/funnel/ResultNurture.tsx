@@ -3,29 +3,23 @@
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { T } from "@nullshift/ui/tokens";
-import type { Blueprint as BlueprintData } from "@nullshift/content/blueprint";
-import type { BrandSpec } from "@/lib/brandSpec";
+import type { ScalingPlan as ScalingPlanData } from "@nullshift/content/scalingPlan";
 import { type Answers, type Recommendation } from "@/lib/funnel";
-import { Blueprint } from "@/components/funnel/Blueprint";
+import { ScalingPlan } from "@/components/funnel/ScalingPlan";
 import { SavedPlanLink } from "@/components/funnel/SavedPlanLink";
 
-/** Nurture result — never a dead-end. Still gives the full personalised Build
- *  Blueprint (visual + itemised build + savings) and a saved link, with a softer
- *  CTA than the qualified path. */
+/** Nurture result — never a dead-end. Still gives the full personalised Free
+ *  Scaling Plan and a saved link, with a softer CTA than the qualified path. */
 export function ResultNurture({
   contact,
-  blueprint,
-  brandSpec,
-  brandPending,
+  plan,
   planToken,
   onRestart,
 }: {
   recommendation: Recommendation;
   answers: Answers;
   contact?: { name?: string; business?: string; email?: string; phone?: string };
-  blueprint?: BlueprintData;
-  brandSpec?: BrandSpec | null;
-  brandPending?: boolean;
+  plan?: ScalingPlanData;
   planToken?: string;
   onRestart: () => void;
 }) {
@@ -68,7 +62,7 @@ export function ResultNurture({
             boxShadow: `0 0 0 4px ${T.primarySoft}`,
           }}
         />
-        Your build plan
+        Your free scaling plan
       </motion.span>
 
       <motion.h1
@@ -96,18 +90,14 @@ export function ResultNurture({
           color: T.muted,
         }}
       >
-        No pressure and no commitment — here&apos;s a preview of your own system, what
-        we&apos;d build, and what you&apos;d save. It&apos;s saved to a link and in your
-        inbox for whenever you&apos;re ready.
+        No pressure and no commitment — here&apos;s where you are now, what you could stop
+        renting, and what we&apos;d build in its place. Saved to a link and in your inbox
+        for whenever you&apos;re ready.
       </motion.p>
 
-      {blueprint && (
+      {plan && (
         <motion.div variants={item} className="mt-8">
-          <Blueprint
-            blueprint={blueprint}
-            brandSpec={brandSpec}
-            brandPending={brandPending}
-          />
+          <ScalingPlan plan={plan} />
         </motion.div>
       )}
 
@@ -160,7 +150,7 @@ export function ResultNurture({
             textDecoration: "none",
           }}
         >
-          Book a quick call
+          Book a free consultation
         </Link>
       </motion.div>
 
