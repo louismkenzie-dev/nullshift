@@ -16,6 +16,10 @@ export type RecordLeadInput = {
   quizAnswers?: unknown;
   leadScore?: number | null;
   status?: "new" | "qualified" | "call_booked" | "won" | "lost";
+  /** Unguessable token for the public /plan/[token] page. */
+  planToken?: string | null;
+  /** Generated Build Blueprint payload ({ blueprint, businessName, name, segment }). */
+  plan?: unknown;
 };
 
 export async function recordLead(
@@ -44,6 +48,8 @@ export async function recordLead(
       quiz_answers: input.quizAnswers ?? null,
       lead_score: input.leadScore ?? null,
       status: input.status ?? "new",
+      plan_token: input.planToken ?? null,
+      plan: input.plan ?? null,
     });
 
     if (error) return { ok: false, error: error.message };

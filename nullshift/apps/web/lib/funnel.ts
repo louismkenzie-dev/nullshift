@@ -144,6 +144,22 @@ export const STEPS: FunnelStep[] = [
     ],
   },
 
+  // ── Practitioner count — clinics only. Powers the exact per-practitioner
+  //    savings figure in the Build Blueprint. Unscored, conditional. ──
+  {
+    id: "practitioners",
+    stage: 2,
+    showIf: (a) => a.industry === "clinic",
+    question: "How many practitioners work in your clinic?",
+    help: "This lets us show your per-practitioner savings precisely.",
+    options: [
+      { id: "1", label: "Just me" },
+      { id: "2to3", label: "2 – 3" },
+      { id: "4to6", label: "4 – 6" },
+      { id: "7plus", label: "7+" },
+    ],
+  },
+
   // ── Stage 2 — filter / qualify (scored) ──
   {
     id: "need",
@@ -240,6 +256,7 @@ const STEP_TITLES: Record<string, string> = {
   provider: "Current platform",
   build: "Built by",
   software_spend: "Monthly software spend",
+  practitioners: "Practitioners",
   need: "What they need",
   budget: "Budget",
   timeline: "Timeline",

@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
 import { recordLead } from "@nullshift/db/leads";
+import { buildBlueprint } from "@nullshift/content/blueprint";
 import { scoreLead, type Answers } from "@/lib/funnel";
-import { clientEmail, ownerEmail } from "@/lib/funnelEmails";
+import { blueprintEmail, ownerEmail } from "@/lib/funnelEmails";
 
 /* Public endpoint — the /start quiz funnel posts here on contact capture.
  *  Re-scores server-side (never trust the client), saves the lead to the
@@ -15,11 +17,14 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Body = {
   answers?: Answers;
-  contact?: { name?: string; email?: string; phone?: string };
+  contact?: { name?: string; business?: string; email?: string; phone?: string };
   utm?: Record<string, string>;
+  planToken?: string; // client-minted token for the permanent /plan link
   website?: string; // honeypot
   elapsedMs?: number; // time-trap
 };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
   let body: Body;
@@ -35,6 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
 
   const name = body.contact?.name?.trim();
+  const business = body.contact?.business?.trim() || null;
   const email = body.contact?.email?.trim().toLowerCase();
   const phone = body.contact?.phone?.trim() || null;
   const answers = body.answers ?? {};
@@ -46,8 +52,18 @@ export async function POST(request: Request) {
     );
   }
 
-  // Authoritative scoring happens on the server.
+  // Authoritative scoring + Build Blueprint happen on the server (never trust the
+  // client). The token is the public key for the permanent /plan page — accept a
+  // well-formed client-minted one (so the link is known instantly) or mint our own.
   const { score, segment, recommendation } = scoreLead(answers);
+  const blueprint = buildBlueprint(answers, {
+    segment,
+    businessName: business ?? undefined,
+  });
+  const planToken =
+    typeof body.planToken === "string" && UUID_RE.test(body.planToken)
+      ? body.planToken
+      : randomUUID();
 
   // ── Save to Supabase (best-effort — never blocks the emails) ──
   try {
@@ -80,6 +96,8 @@ export async function POST(request: Request) {
     quizAnswers: { answers, recommendation },
     leadScore: score,
     status: segment === "qualified" ? "qualified" : "new",
+    planToken,
+    plan: { blueprint, businessName: business, name, segment },
   });
   if (!lead.ok) console.error("Lead insert error:", lead.error);
 
@@ -91,6 +109,7 @@ export async function POST(request: Request) {
         process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk"
       ).replace(/\/$/, "");
       const resourceUrl = process.env.FUNNEL_RESOURCE_URL || `${siteUrl}/resources`;
+      const planUrl = `${siteUrl}/plan/${planToken}`;
       const bookUrl = `${siteUrl}/book?segment=${segment}&name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
       const from =
         process.env.ENQUIRY_FROM_EMAIL ||
@@ -101,13 +120,13 @@ export async function POST(request: Request) {
       const { Resend } = await import("resend");
       const resend = new Resend(apiKey);
 
-      // Tailored, lead-generating email to the visitor.
-      const ce = clientEmail({
+      // The personalised Build Blueprint, with a link to the permanent plan page.
+      const ce = blueprintEmail({
         name,
+        businessName: business ?? undefined,
         segment,
-        recommendation,
-        answers,
-        resourceUrl,
+        blueprint,
+        planUrl,
         bookUrl,
       });
       await resend.emails.send({
@@ -129,6 +148,7 @@ export async function POST(request: Request) {
           answers,
           recommendation,
           resourceUrl,
+          planUrl,
         });
         await resend.emails.send({
           from,

@@ -5,7 +5,17 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
 import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
-import { visibleSteps, scoreLead, type Answers, type Segment, type Recommendation } from "@/lib/funnel";
+import {
+  visibleSteps,
+  scoreLead,
+  type Answers,
+  type Segment,
+  type Recommendation,
+} from "@/lib/funnel";
+import {
+  buildBlueprint,
+  type Blueprint as BlueprintData,
+} from "@nullshift/content/blueprint";
 import { funnelSound } from "@/lib/funnelAudio";
 import { ProgressBar } from "@/components/funnel/ProgressBar";
 import { QuestionCard } from "@/components/funnel/QuestionCard";
@@ -19,7 +29,7 @@ import { ResultNurture } from "@/components/funnel/ResultNurture";
 /* ── State machine ──────────────────────────────────────────────── */
 
 type Status = "question" | "holding" | "capturing" | "result";
-type Contact = { name: string; email: string; phone: string };
+type Contact = { name: string; business?: string; email: string; phone: string };
 type State = {
   index: number;
   answers: Answers;
@@ -27,6 +37,8 @@ type State = {
   segment?: Segment;
   recommendation?: Recommendation;
   contact?: Contact;
+  blueprint?: BlueprintData;
+  planToken?: string;
 };
 
 type Action =
@@ -34,7 +46,7 @@ type Action =
   | { type: "SKIP" }
   | { type: "GOTO"; index: number }
   | { type: "HOLD_DONE"; segment: Segment; recommendation: Recommendation }
-  | { type: "CAPTURED"; contact: Contact }
+  | { type: "CAPTURED"; contact: Contact; blueprint: BlueprintData; planToken: string }
   | { type: "RESET" }
   | { type: "HYDRATE"; state: Partial<State> };
 
@@ -42,13 +54,15 @@ const STORAGE_KEY = "ns_funnel_v1";
 
 /** The number of questions shown for a given answer set (conditional). */
 const stepCount = (a: Answers) => visibleSteps(a).length;
-const statusFor = (i: number, a: Answers): Status => (i >= stepCount(a) ? "holding" : "question");
+const statusFor = (i: number, a: Answers): Status =>
+  i >= stepCount(a) ? "holding" : "question";
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "ANSWER": {
       const answers = { ...state.answers, [action.stepId]: action.value };
-      if (action.otherText !== undefined) answers[`${action.stepId}_other`] = action.otherText;
+      if (action.otherText !== undefined)
+        answers[`${action.stepId}_other`] = action.otherText;
       const index = Math.min(state.index + 1, stepCount(answers));
       return { ...state, index, answers, status: statusFor(index, answers) };
     }
@@ -61,9 +75,20 @@ function reducer(state: State, action: Action): State {
       return { ...state, index, status: statusFor(index, state.answers) };
     }
     case "HOLD_DONE":
-      return { ...state, status: "capturing", segment: action.segment, recommendation: action.recommendation };
+      return {
+        ...state,
+        status: "capturing",
+        segment: action.segment,
+        recommendation: action.recommendation,
+      };
     case "CAPTURED":
-      return { ...state, status: "result", contact: action.contact };
+      return {
+        ...state,
+        status: "result",
+        contact: action.contact,
+        blueprint: action.blueprint,
+        planToken: action.planToken,
+      };
     case "RESET":
       return { index: 0, answers: {}, status: "question" };
     case "HYDRATE":
@@ -98,18 +123,25 @@ function firstIncompleteIndex(a: Answers): number {
 /* ── Component ──────────────────────────────────────────────────── */
 
 export function FunnelClient() {
-  const [state, dispatch] = useReducer(reducer, { index: 0, answers: {}, status: "question" });
+  const [state, dispatch] = useReducer(reducer, {
+    index: 0,
+    answers: {},
+    status: "question",
+  });
   const reduce = useReducedMotion();
   const answersRef = useRef(state.answers);
   answersRef.current = state.answers;
   const utmRef = useRef<Record<string, string>>({});
 
-  const syncUrl = useCallback((index: number, mode: "push" | "replace", answers: Answers) => {
-    const url = `/start?step=${stepIdForIndex(answers, index)}`;
-    const data = { nsFunnelIndex: index };
-    if (mode === "push") window.history.pushState(data, "", url);
-    else window.history.replaceState(data, "", url);
-  }, []);
+  const syncUrl = useCallback(
+    (index: number, mode: "push" | "replace", answers: Answers) => {
+      const url = `/start?step=${stepIdForIndex(answers, index)}`;
+      const data = { nsFunnelIndex: index };
+      if (mode === "push") window.history.pushState(data, "", url);
+      else window.history.replaceState(data, "", url);
+    },
+    []
+  );
 
   // Hydrate once: answers from sessionStorage, step from URL (clamped), and
   // capture UTM attribution from the landing URL before we rewrite it.
@@ -120,7 +152,13 @@ export function FunnelClient() {
 
     const params = new URLSearchParams(window.location.search);
     const utm: Record<string, string> = {};
-    for (const k of ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"]) {
+    for (const k of [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+    ]) {
       const v = params.get(k);
       if (v) utm[k.replace("utm_", "")] = v;
     }
@@ -135,8 +173,14 @@ export function FunnelClient() {
       /* storage unavailable */
     }
 
-    const index = Math.min(indexForStepId(answers, params.get("step")), firstIncompleteIndex(answers));
-    dispatch({ type: "HYDRATE", state: { index, answers, status: statusFor(index, answers) } });
+    const index = Math.min(
+      indexForStepId(answers, params.get("step")),
+      firstIncompleteIndex(answers)
+    );
+    dispatch({
+      type: "HYDRATE",
+      state: { index, answers, status: statusFor(index, answers) },
+    });
     syncUrl(index, "replace", answers);
   }, [syncUrl]);
 
@@ -210,6 +254,19 @@ export function FunnelClient() {
     } catch {
       /* ignore */
     }
+    // Generate the Build Blueprint up front (pure) so the result reveals instantly,
+    // and mint a token so the permanent /plan link is known without awaiting the
+    // server. The server re-computes authoritatively and persists under this token.
+    const segment: Segment = state.segment ?? "nurture";
+    const blueprint = buildBlueprint(answersRef.current, {
+      segment,
+      businessName: c.business,
+    });
+    const planToken =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+
     // Persist the lead in the background — fire-and-forget so the visitor's
     // result reveals instantly and is never gated on the network.
     void fetch("/api/funnel", {
@@ -217,41 +274,76 @@ export function FunnelClient() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         answers: answersRef.current,
-        contact: { name: c.name, email: c.email, phone: c.phone },
+        contact: { name: c.name, business: c.business, email: c.email, phone: c.phone },
         utm: utmRef.current,
+        planToken,
         website: c.website,
         elapsedMs: c.elapsedMs,
       }),
     }).catch(() => {
       /* ignore — the result is the value to the visitor */
     });
-    dispatch({ type: "CAPTURED", contact: { name: c.name, email: c.email, phone: c.phone } });
+    dispatch({
+      type: "CAPTURED",
+      contact: { name: c.name, business: c.business, email: c.email, phone: c.phone },
+      blueprint,
+      planToken,
+    });
   };
 
   const panel: Variants = reduce
     ? { enter: { opacity: 0 }, center: { opacity: 1 }, exit: { opacity: 0 } }
     : {
         enter: { opacity: 0, x: 28, filter: "blur(8px)" },
-        center: { opacity: 1, x: 0, filter: "blur(0px)", transition: { duration: 0.36, ease: [0.16, 1, 0.3, 1] } },
-        exit: { opacity: 0, x: -24, filter: "blur(8px)", transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } },
+        center: {
+          opacity: 1,
+          x: 0,
+          filter: "blur(0px)",
+          transition: { duration: 0.36, ease: [0.16, 1, 0.3, 1] },
+        },
+        exit: {
+          opacity: 0,
+          x: -24,
+          filter: "blur(8px)",
+          transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] },
+        },
       };
   const fade: Variants = reduce
     ? { enter: { opacity: 0 }, center: { opacity: 1 }, exit: { opacity: 0 } }
     : {
         enter: { opacity: 0, scale: 0.98, filter: "blur(8px)" },
-        center: { opacity: 1, scale: 1, filter: "blur(0px)", transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
-        exit: { opacity: 0, scale: 1.01, filter: "blur(8px)", transition: { duration: 0.25 } },
+        center: {
+          opacity: 1,
+          scale: 1,
+          filter: "blur(0px)",
+          transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+        },
+        exit: {
+          opacity: 0,
+          scale: 1.01,
+          filter: "blur(8px)",
+          transition: { duration: 0.25 },
+        },
       };
 
   const viewKey =
-    state.status === "question" ? `q-${step?.id}` : state.status === "holding" ? "hold" : state.status === "capturing" ? "capture" : "result";
+    state.status === "question"
+      ? `q-${step?.id}`
+      : state.status === "holding"
+        ? "hold"
+        : state.status === "capturing"
+          ? "capture"
+          : "result";
 
   return (
     <main className="relative min-h-[100dvh] flex flex-col" style={{ background: T.bg }}>
       <Atmosphere />
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-5 sm:px-8" style={{ height: 64 }}>
+      <header
+        className="relative z-10 flex items-center justify-between px-5 sm:px-8"
+        style={{ height: 64 }}
+      >
         <Link href="/" aria-label="Nullshift home">
           <Logo markSize={18} />
         </Link>
@@ -259,7 +351,13 @@ export function FunnelClient() {
           <SoundToggle />
           <Link
             href="/"
-            style={{ fontFamily: T.mono, fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", color: T.faint }}
+            style={{
+              fontFamily: T.mono,
+              fontSize: "11px",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: T.faint,
+            }}
           >
             Exit
           </Link>
@@ -271,7 +369,13 @@ export function FunnelClient() {
         <div className="w-full max-w-xl">
           <AnimatePresence mode="wait" initial={false}>
             {state.status === "question" && step && (
-              <motion.div key={viewKey} variants={panel} initial="enter" animate="center" exit="exit">
+              <motion.div
+                key={viewKey}
+                variants={panel}
+                initial="enter"
+                animate="center"
+                exit="exit"
+              >
                 <ProgressBar current={current} total={total} />
                 <div className="mt-10">
                   <QuestionCard
@@ -294,9 +398,19 @@ export function FunnelClient() {
                       background: T.surface,
                     }}
                   >
-                    <span aria-hidden style={{ fontSize: 14 }}>🎁</span>
-                    <span style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.muted }}>
-                      Takes under a minute — and you&apos;ll get a <span style={{ color: T.fg, fontWeight: 500 }}>free resource</span> tailored to your business.
+                    <span aria-hidden style={{ fontSize: 14 }}>
+                      🎁
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.8125rem",
+                        color: T.muted,
+                      }}
+                    >
+                      Takes under a minute — and you&apos;ll get a{" "}
+                      <span style={{ color: T.fg, fontWeight: 500 }}>free resource</span>{" "}
+                      tailored to your business.
                     </span>
                   </div>
                 )}
@@ -316,30 +430,59 @@ export function FunnelClient() {
                   >
                     ← Back
                   </button>
-                  <span style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.1em", color: T.faint }}>Tap to continue</span>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "10px",
+                      letterSpacing: "0.1em",
+                      color: T.faint,
+                    }}
+                  >
+                    Tap to continue
+                  </span>
                 </div>
               </motion.div>
             )}
 
             {state.status === "holding" && (
-              <motion.div key={viewKey} variants={fade} initial="enter" animate="center" exit="exit">
+              <motion.div
+                key={viewKey}
+                variants={fade}
+                initial="enter"
+                animate="center"
+                exit="exit"
+              >
                 <HoldScreen answers={state.answers} onResult={handleHoldDone} />
               </motion.div>
             )}
 
             {state.status === "capturing" && (
-              <motion.div key={viewKey} variants={fade} initial="enter" animate="center" exit="exit">
+              <motion.div
+                key={viewKey}
+                variants={fade}
+                initial="enter"
+                animate="center"
+                exit="exit"
+              >
                 <CaptureForm onCapture={handleCapture} />
               </motion.div>
             )}
 
             {state.status === "result" && state.recommendation && (
-              <motion.div key={viewKey} variants={fade} initial="enter" animate="center" exit="exit">
+              <motion.div
+                key={viewKey}
+                variants={fade}
+                initial="enter"
+                animate="center"
+                exit="exit"
+              >
                 {state.segment === "qualified" ? (
                   <ResultQualified
                     recommendation={state.recommendation}
                     answers={state.answers}
                     contact={state.contact}
+                    blueprint={state.blueprint}
+                    planToken={state.planToken}
                     onRestart={handleReset}
                   />
                 ) : (
@@ -347,6 +490,8 @@ export function FunnelClient() {
                     recommendation={state.recommendation}
                     answers={state.answers}
                     contact={state.contact}
+                    blueprint={state.blueprint}
+                    planToken={state.planToken}
                     onRestart={handleReset}
                   />
                 )}

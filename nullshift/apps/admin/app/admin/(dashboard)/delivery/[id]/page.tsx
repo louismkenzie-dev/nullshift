@@ -5,6 +5,7 @@ import { createClient, createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
 import { createItemisedStripeInvoice } from "@nullshift/billing/stripe";
+import { CATALOG } from "@nullshift/content/catalog";
 import { T } from "@nullshift/ui/tokens";
 
 /**
@@ -42,18 +43,9 @@ const CR_NEXT: Record<string, string> = {
   review: "shipped",
 };
 
-// Common clinic build modules for one-click add.
-const CATALOG = [
-  ["Website front-end", 300],
-  ["Online booking", 500],
-  ["Patient records", 500],
-  ["Automated reminders", 300],
-  ["Patient payments (Stripe)", 400],
-  ["Client portal", 400],
-  ["Intake & consent forms", 250],
-  ["Recall & follow-up", 250],
-  ["Data migration", 350],
-] as const;
+// Build modules for one-click add — shared with the public Build Blueprint
+// generator (@nullshift/content/catalog) so the proposal and the lead magnet
+// never drift on scope or price.
 
 // ── server actions ─────────────────────────────────────────────
 async function addItem(formData: FormData) {
@@ -130,14 +122,12 @@ async function addNote(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  await supabase
-    .from("project_notes")
-    .insert({
-      project_id: projectId,
-      tenant_id: tenantId,
-      body,
-      author: user?.id ?? null,
-    });
+  await supabase.from("project_notes").insert({
+    project_id: projectId,
+    tenant_id: tenantId,
+    body,
+    author: user?.id ?? null,
+  });
   revalidatePath(`/admin/delivery/${projectId}`);
 }
 
@@ -238,17 +228,15 @@ async function generateInvoice(formData: FormData) {
     console.error("generateInvoice:", error?.message);
     return;
   }
-  await supabase
-    .from("invoice_items")
-    .insert(
-      lines.map((l) => ({
-        invoice_id: invoice.id,
-        tenant_id: tenantId,
-        name: l.name,
-        amount: l.amount,
-        quantity: 1,
-      }))
-    );
+  await supabase.from("invoice_items").insert(
+    lines.map((l) => ({
+      invoice_id: invoice.id,
+      tenant_id: tenantId,
+      name: l.name,
+      amount: l.amount,
+      quantity: 1,
+    }))
+  );
 
   // Send via Stripe to the client's email (the client_admin on this tenant).
   const service = createServiceClient();
@@ -612,12 +600,12 @@ export default async function ProjectDetail({
           </button>
         </form>
         <div className="flex flex-wrap gap-1.5" style={{ marginTop: 10 }}>
-          {CATALOG.map(([name, amount]) => (
-            <form key={name} action={addItem}>
+          {CATALOG.map((m) => (
+            <form key={m.key} action={addItem}>
               {hid}
               {htid}
-              <input type="hidden" name="name" value={name} />
-              <input type="hidden" name="amount" value={amount} />
+              <input type="hidden" name="name" value={m.name} />
+              <input type="hidden" name="amount" value={m.price} />
               <button
                 type="submit"
                 style={{
@@ -632,7 +620,7 @@ export default async function ProjectDetail({
                   cursor: "pointer",
                 }}
               >
-                + {name} {gbp(amount)}
+                + {m.name} {gbp(m.price)}
               </button>
             </form>
           ))}

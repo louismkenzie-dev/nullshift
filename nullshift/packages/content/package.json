@@ -6,7 +6,10 @@
   "exports": {
     "./brief": "./src/brief.ts",
     "./legalEntity": "./src/legalEntity.ts",
-    "./marketing": "./src/marketing.ts"
+    "./marketing": "./src/marketing.ts",
+    "./catalog": "./src/catalog.ts",
+    "./savings": "./src/savings.ts",
+    "./blueprint": "./src/blueprint.ts"
   },
   "devDependencies": {
     "typescript": "^5"

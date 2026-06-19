@@ -7,6 +7,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export type CaptureContact = {
   name: string;
+  business: string;
   email: string;
   phone: string;
   website: string; // honeypot
@@ -17,9 +18,14 @@ export type CaptureContact = {
  *  hold). Name + email required, phone optional. Lightweight bot protection:
  *  a hidden honeypot field + a time-trap (mount timestamp). On submit the
  *  parent persists the lead and reveals the personalised result. */
-export function CaptureForm({ onCapture }: { onCapture: (c: CaptureContact) => Promise<void> }) {
+export function CaptureForm({
+  onCapture,
+}: {
+  onCapture: (c: CaptureContact) => Promise<void>;
+}) {
   const mountedAt = useRef(Date.now());
   const [name, setName] = useState("");
+  const [business, setBusiness] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState(""); // honeypot
@@ -37,6 +43,7 @@ export function CaptureForm({ onCapture }: { onCapture: (c: CaptureContact) => P
     setBusy(true);
     await onCapture({
       name: name.trim(),
+      business: business.trim(),
       email: email.trim(),
       phone: phone.trim(),
       website,
@@ -50,27 +57,62 @@ export function CaptureForm({ onCapture }: { onCapture: (c: CaptureContact) => P
     <div>
       <span
         className="inline-flex items-center gap-2"
-        style={{ fontFamily: T.mono, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: T.primary }}
+        style={{
+          fontFamily: T.mono,
+          fontSize: "10px",
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          color: T.primary,
+        }}
       >
-        <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.primary, display: "inline-block", boxShadow: `0 0 0 4px ${T.primarySoft}` }} />
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: T.primary,
+            display: "inline-block",
+            boxShadow: `0 0 0 4px ${T.primarySoft}`,
+          }}
+        />
         Last step
       </span>
 
       <h1
         className="mt-4"
-        style={{ fontFamily: T.display, fontWeight: 600, fontSize: "clamp(1.9rem,5.2vw,2.75rem)", lineHeight: 1.06, letterSpacing: "-0.03em", color: T.fg }}
+        style={{
+          fontFamily: T.display,
+          fontWeight: 600,
+          fontSize: "clamp(1.9rem,5.2vw,2.75rem)",
+          lineHeight: 1.06,
+          letterSpacing: "-0.03em",
+          color: T.fg,
+        }}
       >
-        Your recommendation
+        Your build plan
         <br />
         is ready.
       </h1>
-      <p className="mt-3 max-w-[46ch]" style={{ fontFamily: T.sans, fontSize: "1rem", lineHeight: 1.6, color: T.muted }}>
-        Tell us where to send it and we&apos;ll reveal it now — plus a copy for your inbox. No spam, ever.
+      <p
+        className="mt-3 max-w-[46ch]"
+        style={{ fontFamily: T.sans, fontSize: "1rem", lineHeight: 1.6, color: T.muted }}
+      >
+        See exactly what we&apos;d build you — itemised and priced — plus a preview of
+        your own system. We&apos;ll save it to a link and email you a copy. No spam, ever.
       </p>
 
       <form onSubmit={submit} className="mt-8 flex flex-col gap-4" noValidate>
         {/* Honeypot — visually hidden, off the tab order, ignored by humans */}
-        <div aria-hidden style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: "-9999px",
+            width: 1,
+            height: 1,
+            overflow: "hidden",
+          }}
+        >
           <label>
             Company website
             <input
@@ -94,6 +136,17 @@ export function CaptureForm({ onCapture }: { onCapture: (c: CaptureContact) => P
               if (errors.name) setErrors((x) => ({ ...x, name: undefined }));
             }}
             placeholder="Alex Johnson"
+          />
+        </Field>
+
+        <Field label="Business name" note="optional">
+          <input
+            className="brief-input"
+            type="text"
+            autoComplete="organization"
+            value={business}
+            onChange={(e) => setBusiness(e.target.value)}
+            placeholder="e.g. Riverside Physio"
           />
         </Field>
 
@@ -143,33 +196,67 @@ export function CaptureForm({ onCapture }: { onCapture: (c: CaptureContact) => P
         </button>
 
         <p style={{ fontFamily: T.sans, fontSize: "0.75rem", color: T.faint }}>
-          🔒 We&apos;ll only use this to send your recommendation and follow up. Unsubscribe anytime.
+          🔒 We&apos;ll only use this to send your recommendation and follow up.
+          Unsubscribe anytime.
         </p>
       </form>
 
       {/* No-commitment escape — let them browse the site instead. */}
-      <div className="mt-7 pt-5 text-center" style={{ borderTop: `1px solid ${T.border}` }}>
+      <div
+        className="mt-7 pt-5 text-center"
+        style={{ borderTop: `1px solid ${T.border}` }}
+      >
         <a
           href="/"
-          style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.muted, textDecoration: "none" }}
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.8125rem",
+            color: T.muted,
+            textDecoration: "none",
+          }}
         >
-          Not ready? <span style={{ color: T.fg, fontWeight: 500 }}>Browse the site</span> to see how we work →
+          Not ready? <span style={{ color: T.fg, fontWeight: 500 }}>Browse the site</span>{" "}
+          to see how we work →
         </a>
       </div>
     </div>
   );
 }
 
-function Field({ label, note, error, children }: { label: string; note?: string; error?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  note,
+  error,
+  children,
+}: {
+  label: string;
+  note?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="flex items-center gap-2" style={{ fontFamily: T.sans, fontSize: "0.8125rem", fontWeight: 500, color: T.fg }}>
+      <label
+        className="flex items-center gap-2"
+        style={{
+          fontFamily: T.sans,
+          fontSize: "0.8125rem",
+          fontWeight: 500,
+          color: T.fg,
+        }}
+      >
         {label}
-        {note && <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted }}>({note})</span>}
+        {note && (
+          <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted }}>
+            ({note})
+          </span>
+        )}
       </label>
       {children}
       {error && (
-        <span style={{ fontFamily: T.mono, fontSize: "11px", color: T.danger }}>{error}</span>
+        <span style={{ fontFamily: T.mono, fontSize: "11px", color: T.danger }}>
+          {error}
+        </span>
       )}
     </div>
   );

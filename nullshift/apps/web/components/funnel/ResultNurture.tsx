@@ -3,34 +3,32 @@
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { T } from "@nullshift/ui/tokens";
-import {
-  optionLabel,
-  resourceName,
-  type Answers,
-  type Recommendation,
-} from "@/lib/funnel";
+import type { Blueprint as BlueprintData } from "@nullshift/content/blueprint";
+import { type Answers, type Recommendation } from "@/lib/funnel";
+import { Blueprint } from "@/components/funnel/Blueprint";
+import { SavedPlanLink } from "@/components/funnel/SavedPlanLink";
 
-/** Nurture result — never a dead-end. Offers a free resource + newsletter and
- *  keeps a soft path to talk. Email capture + Resend audience are wired in
- *  Phase 3/4; here the CTA is a placeholder. */
+/** Nurture result — never a dead-end. Still gives the full personalised Build
+ *  Blueprint (visual + itemised build + savings) and a saved link, with a softer
+ *  CTA than the qualified path. */
 export function ResultNurture({
-  recommendation,
-  answers,
   contact,
+  blueprint,
+  planToken,
   onRestart,
 }: {
   recommendation: Recommendation;
   answers: Answers;
-  contact?: { name?: string; email?: string; phone?: string };
+  contact?: { name?: string; business?: string; email?: string; phone?: string };
+  blueprint?: BlueprintData;
+  planToken?: string;
   onRestart: () => void;
 }) {
   const reduce = useReducedMotion();
-  const body = contact?.name
-    ? `${contact.name}, ${recommendation.body.charAt(0).toLowerCase()}${recommendation.body.slice(1)}`
-    : recommendation.body;
+  const first = contact?.name?.split(" ")[0];
   const container: Variants = {
     hidden: {},
-    show: { transition: { staggerChildren: reduce ? 0 : 0.09 } },
+    show: { transition: { staggerChildren: reduce ? 0 : 0.08 } },
   };
   const item: Variants = {
     hidden: reduce ? { opacity: 0 } : { opacity: 0, y: 18, filter: "blur(8px)" },
@@ -41,8 +39,6 @@ export function ResultNurture({
       transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
     },
   };
-
-  const need = optionLabel("need", answers.need) || "your project";
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="w-full">
@@ -67,7 +63,7 @@ export function ResultNurture({
             boxShadow: `0 0 0 4px ${T.primarySoft}`,
           }}
         />
-        Your next step
+        Your build plan
       </motion.span>
 
       <motion.h1
@@ -82,12 +78,12 @@ export function ResultNurture({
           color: T.fg,
         }}
       >
-        {recommendation.headline}
+        {first ? `${first}, here's your plan.` : "Here's your plan."}
       </motion.h1>
 
       <motion.p
         variants={item}
-        className="mt-4 max-w-[52ch]"
+        className="mt-4 max-w-[54ch]"
         style={{
           fontFamily: T.sans,
           fontSize: "1.0625rem",
@@ -95,123 +91,68 @@ export function ResultNurture({
           color: T.muted,
         }}
       >
-        {body}
+        No pressure and no commitment — here&apos;s a preview of your own system, what
+        we&apos;d build, and what you&apos;d save. It&apos;s saved to a link and in your
+        inbox for whenever you&apos;re ready.
       </motion.p>
 
-      {/* Free-resource card */}
+      {blueprint && (
+        <motion.div variants={item} className="mt-8">
+          <Blueprint blueprint={blueprint} />
+        </motion.div>
+      )}
+
+      {planToken && (
+        <motion.div variants={item} className="mt-6">
+          <SavedPlanLink planToken={planToken} />
+        </motion.div>
+      )}
+
       <motion.div
         variants={item}
-        className="mt-8"
-        style={{
-          background: T.surface,
-          border: `1px solid ${T.border}`,
-          borderRadius: T.r.xl,
-          padding: 22,
-        }}
+        className="mt-7 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
       >
-        <div
+        <Link
+          href="/pricing"
+          className="inline-flex items-center justify-center font-medium"
           style={{
-            fontFamily: T.mono,
-            fontSize: "10px",
-            letterSpacing: "0.16em",
-            textTransform: "uppercase",
-            color: T.muted,
-            marginBottom: 10,
-          }}
-        >
-          Free resource
-        </div>
-        <p
-          style={{
-            fontFamily: T.display,
-            fontWeight: 600,
-            fontSize: "1.25rem",
-            lineHeight: 1.3,
-            letterSpacing: "-0.01em",
-            color: T.fg,
-          }}
-        >
-          The {resourceName(answers)}
-        </p>
-        <p
-          className="mt-2"
-          style={{
+            height: 50,
+            paddingInline: 24,
+            background: T.primary,
+            color: T.primaryFg,
+            borderRadius: T.r.md,
             fontFamily: T.sans,
-            fontSize: "0.9rem",
-            lineHeight: 1.6,
-            color: T.muted,
+            fontSize: "0.9375rem",
+            fontWeight: 500,
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
+            textDecoration: "none",
           }}
         >
-          On its way to your inbox
-          {contact?.email ? (
-            <>
-              {" "}
-              at <span style={{ color: T.fg }}>{contact.email}</span>
-            </>
-          ) : null}{" "}
-          now — a practical checklist and templates to move forward today, plus the
-          occasional genuinely useful tip. No spam, unsubscribe anytime.
-        </p>
-
-        <div
-          className="mt-3 inline-flex items-center gap-2"
+          See pricing →
+        </Link>
+        <Link
+          href={{
+            pathname: "/book",
+            query: {
+              segment: "nurture",
+              name: contact?.name ?? "",
+              email: contact?.email ?? "",
+            },
+          }}
+          className="inline-flex items-center justify-center"
           style={{
-            fontFamily: T.mono,
-            fontSize: "11px",
-            letterSpacing: "0.04em",
-            color: T.primary,
+            height: 50,
+            paddingInline: 22,
+            border: `1px solid ${T.border}`,
+            color: T.fg,
+            borderRadius: T.r.md,
+            fontFamily: T.sans,
+            fontSize: "0.9375rem",
+            textDecoration: "none",
           }}
         >
-          <span
-            aria-hidden
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: T.primary,
-              boxShadow: `0 0 0 3px ${T.primary}22`,
-              display: "inline-block",
-            }}
-          />
-          Sent — check your inbox
-        </div>
-
-        <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <Link
-            href="/pricing"
-            className="inline-flex items-center justify-center font-medium"
-            style={{
-              height: 50,
-              paddingInline: 24,
-              background: T.primary,
-              color: T.primaryFg,
-              borderRadius: T.r.md,
-              fontFamily: T.sans,
-              fontSize: "0.9375rem",
-              fontWeight: 500,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
-              textDecoration: "none",
-            }}
-          >
-            See pricing →
-          </Link>
-          <Link
-            href="/systems-lab"
-            className="inline-flex items-center justify-center"
-            style={{
-              height: 50,
-              paddingInline: 22,
-              border: `1px solid ${T.border}`,
-              color: T.fg,
-              borderRadius: T.r.md,
-              fontFamily: T.sans,
-              fontSize: "0.9375rem",
-              textDecoration: "none",
-            }}
-          >
-            Try the live demos
-          </Link>
-        </div>
+          Book a quick call
+        </Link>
       </motion.div>
 
       <motion.button
