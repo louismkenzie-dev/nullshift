@@ -2,9 +2,9 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
 import { recordLead } from "@nullshift/db/leads";
-import { buildBlueprint } from "@nullshift/content/blueprint";
+import { buildScalingPlan } from "@nullshift/content/scalingPlan";
 import { scoreLead, type Answers } from "@/lib/funnel";
-import { blueprintEmail, ownerEmail } from "@/lib/funnelEmails";
+import { scalingPlanEmail, ownerEmail } from "@/lib/funnelEmails";
 
 /* Public endpoint — the /start quiz funnel posts here on contact capture.
  *  Re-scores server-side (never trust the client), saves the lead to the
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   // client). The token is the public key for the permanent /plan page — accept a
   // well-formed client-minted one (so the link is known instantly) or mint our own.
   const { score, segment, recommendation } = scoreLead(answers);
-  const blueprint = buildBlueprint(answers, {
+  const scalingPlan = buildScalingPlan(answers, {
     segment,
     businessName: business ?? undefined,
   });
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     leadScore: score,
     status: segment === "qualified" ? "qualified" : "new",
     planToken,
-    plan: { blueprint, businessName: business, name, segment },
+    plan: { scalingPlan, businessName: business, name, segment },
   });
   if (!lead.ok) console.error("Lead insert error:", lead.error);
 
@@ -120,12 +120,12 @@ export async function POST(request: Request) {
       const { Resend } = await import("resend");
       const resend = new Resend(apiKey);
 
-      // The personalised Build Blueprint, with a link to the permanent plan page.
-      const ce = blueprintEmail({
+      // The personalised Free Scaling Plan, with a link to the permanent plan page.
+      const ce = scalingPlanEmail({
         name,
         businessName: business ?? undefined,
         segment,
-        blueprint,
+        plan: scalingPlan,
         planUrl,
         bookUrl,
       });

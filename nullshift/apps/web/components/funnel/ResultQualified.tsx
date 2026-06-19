@@ -3,25 +3,25 @@
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { T } from "@nullshift/ui/tokens";
-import type { Blueprint as BlueprintData } from "@nullshift/content/blueprint";
+import type { ScalingPlan as ScalingPlanData } from "@nullshift/content/scalingPlan";
 import { type Answers, type Recommendation } from "@/lib/funnel";
-import { Blueprint } from "@/components/funnel/Blueprint";
+import { ScalingPlan } from "@/components/funnel/ScalingPlan";
 import { SavedPlanLink } from "@/components/funnel/SavedPlanLink";
 
-/** Qualified result — leads with the personalised Build Blueprint (visual +
- *  itemised build + savings), then routes to a discovery call. The blueprint is
- *  saved to a permanent /plan/[token] link and emailed. */
+/** Qualified result — leads with the personalised Free Scaling Plan (a
+ *  consultation-style prospectus), then routes to a discovery call. Saved to a
+ *  permanent /plan/[token] link and emailed. */
 export function ResultQualified({
   answers,
   contact,
-  blueprint,
+  plan,
   planToken,
   onRestart,
 }: {
   recommendation: Recommendation;
   answers: Answers;
   contact?: { name?: string; business?: string; email?: string; phone?: string };
-  blueprint?: BlueprintData;
+  plan?: ScalingPlanData;
   planToken?: string;
   onRestart: () => void;
 }) {
@@ -64,7 +64,7 @@ export function ResultQualified({
             boxShadow: `0 0 0 4px ${T.primarySoft}`,
           }}
         />
-        Your build plan
+        Your free scaling plan
       </motion.span>
 
       <motion.h1
@@ -79,7 +79,7 @@ export function ResultQualified({
           color: T.fg,
         }}
       >
-        {first ? `${first}, here's your build plan.` : "Here's your build plan."}
+        {first ? `${first}, here's your scaling plan.` : "Here's your scaling plan."}
       </motion.h1>
 
       <motion.p
@@ -92,13 +92,14 @@ export function ResultQualified({
           color: T.muted,
         }}
       >
-        A preview of your own system, exactly what we&apos;d build you, and what you stop
-        renting the day you own it. We&apos;ve saved it to a link and emailed you a copy.
+        Where you are now, the software you could stop renting, and what we&apos;d build
+        and own in its place — tailored to your business. Saved to a link and in your
+        inbox.
       </motion.p>
 
-      {blueprint && (
+      {plan && (
         <motion.div variants={item} className="mt-8">
-          <Blueprint blueprint={blueprint} />
+          <ScalingPlan plan={plan} />
         </motion.div>
       )}
 
@@ -108,7 +109,7 @@ export function ResultQualified({
         </motion.div>
       )}
 
-      {/* Primary next step — turn the blueprint into a real proposal on a call. */}
+      {/* Primary next step — a tailored, detailed consultation from a professional. */}
       <motion.div
         variants={item}
         className="mt-7 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
@@ -137,7 +138,7 @@ export function ResultQualified({
             textDecoration: "none",
           }}
         >
-          Book a call to make it real →
+          Book your free consultation →
         </Link>
         <button
           type="button"
@@ -159,7 +160,8 @@ export function ResultQualified({
         className="mt-4"
         style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.faint }}
       >
-        Free · 30-minute call · no obligation — we turn this plan into a fixed quote.
+        Free · 30-minute call · no obligation — a professional turns this into a detailed
+        plan and prices the build with you.
       </motion.p>
     </motion.div>
   );

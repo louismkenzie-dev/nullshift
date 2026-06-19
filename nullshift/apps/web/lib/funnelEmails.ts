@@ -13,7 +13,7 @@ import {
   type Recommendation,
   type Segment,
 } from "@/lib/funnel";
-import type { Blueprint } from "@nullshift/content/blueprint";
+import type { ScalingPlan } from "@nullshift/content/scalingPlan";
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 
@@ -150,61 +150,70 @@ export function clientEmail(opts: {
   return { subject, html: wrap(inner, `Your recommendation + free ${kit}`), text };
 }
 
-/* ── Build Blueprint email (the "free plan") ──────────────────────── */
-export function blueprintEmail(opts: {
+/* ── Free Scaling Plan email (the "free plan") ────────────────────── */
+export function scalingPlanEmail(opts: {
   name: string;
   businessName?: string;
   segment: Segment;
-  blueprint: Blueprint;
+  plan: ScalingPlan;
   planUrl: string;
   bookUrl: string;
 }): { subject: string; html: string; text: string } {
-  const { name, businessName, segment, blueprint: b, planUrl, bookUrl } = opts;
+  const { name, businessName, segment, plan: p, planUrl, bookUrl } = opts;
   const first = name.split(" ")[0] || name;
-  const who = businessName || (b.isClinic ? "your clinic" : "your business");
+  const who = businessName || (p.isClinic ? "your clinic" : "your business");
   const qualified = segment === "qualified";
 
-  const subject = `${first}, your build plan for ${who}`;
+  const subject = `${first}, your free scaling plan for ${who}`;
 
-  const rows = b.modules
-    .map(
-      (m) => `<tr>
-        <td style="padding:9px 0;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:14px;color:${C.fg};vertical-align:top">${esc(m.name)}</td>
-        <td style="padding:9px 0;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:14px;color:${C.fg};text-align:right;white-space:nowrap;vertical-align:top">${esc(gbp(m.price))}</td>
-      </tr>`
-    )
+  const li = (label: string) =>
+    `<tr><td style="padding:8px 0;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:14px;color:${C.fg};vertical-align:top">${esc(label)}</td></tr>`;
+  const cut = p.saasToCut
+    .slice(0, 4)
+    .map((x) => li(x.name))
+    .join("");
+  const build = p.build
+    .slice(0, 4)
+    .map((x) => li(x.title))
     .join("");
 
   const inner = `
     <tr><td style="padding:22px 32px 0">
-      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Your build plan</p>
-      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Here&#39;s exactly what we&#39;d build for ${esc(who)}.</h1>
-      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">${esc(first)}, this is an indicative, itemised scope — including a preview of your own system. Open the full plan to see it, with what you&#39;d stop renting.</p>
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Your free scaling plan</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">A scaling plan for ${esc(who)}.</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">${esc(first)}, here&#39;s where you are now, the software you could stop renting, and what we&#39;d build and own in its place — tailored to your business. Open the full plan below.</p>
     </td></tr>
 
     <tr><td style="padding:20px 32px 0">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:14px">
-        <tr><td style="padding:16px 20px 4px">
-          <p style="margin:0 0 6px;font-family:${FONT};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${C.faint}">Your build — itemised</p>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}
-            <tr>
-              <td style="padding:12px 0 4px;font-family:${FONT};font-weight:700;font-size:15px;color:${C.fg}">One-off build</td>
-              <td style="padding:12px 0 4px;font-family:${FONT};font-weight:700;font-size:18px;color:${C.fg};text-align:right">${esc(gbp(b.oneOffTotal))}</td>
-            </tr>
-          </table>
-          <p style="margin:8px 0 16px;font-family:${FONT};font-size:13px;color:${C.muted}">${esc(b.tier.tier)} care plan ${esc(b.tier.monthly)}/mo · estimated ${esc(gbp(b.savings.kept))}/yr saved by owning it.</p>
+        <tr><td style="padding:16px 20px 6px">
+          <p style="margin:0 0 4px;font-family:${FONT};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${C.faint}">Software you could stop renting</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${cut}</table>
+        </td></tr>
+        <tr><td style="padding:14px 20px 16px">
+          <p style="margin:0 0 4px;font-family:${FONT};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${C.faint}">What we&#39;d build &amp; you&#39;d own</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${build}</table>
+          <p style="margin:10px 0 0;font-family:${FONT};font-size:13px;color:${C.muted}">You&#39;re renting ~${esc(gbp(p.savings.annualRent))}/yr in software today. We scope and price the build with you on the call.</p>
         </td></tr>
       </table>
     </td></tr>
 
-    <tr><td style="padding:18px 32px 4px">${button(planUrl, "See your full plan & system preview →")}</td></tr>
-    <tr><td style="padding:8px 32px 0">${button(bookUrl, qualified ? "Book a call to make it real →" : "Book a quick call →", false)}</td></tr>
-    <tr><td style="padding:14px 32px 4px"><p style="margin:0;font-family:${FONT};font-size:12px;color:${C.faint}">Indicative scope &amp; pricing, confirmed on a quick call — never a surprise.</p></td></tr>
+    <tr><td style="padding:18px 32px 4px">${button(planUrl, "See your full scaling plan →")}</td></tr>
+    <tr><td style="padding:8px 32px 0">${button(bookUrl, qualified ? "Book your free consultation →" : "Book a quick call →", false)}</td></tr>
+    <tr><td style="padding:14px 32px 4px"><p style="margin:0;font-family:${FONT};font-size:12px;color:${C.faint}">Indicative prospectus — a Nullshift professional turns it into a detailed plan and prices the build with you.</p></td></tr>
   `;
 
-  const text = `Your build plan for ${who}\n\n${first}, here's exactly what we'd build:\n${b.modules.map((m) => `- ${m.name}: ${gbp(m.price)}`).join("\n")}\nOne-off build: ${gbp(b.oneOffTotal)}\n${b.tier.tier} care plan: ${b.tier.monthly}/mo\nEstimated saved by owning it: ${gbp(b.savings.kept)}/yr\n\nSee your full plan + system preview: ${planUrl}\nBook a call: ${bookUrl}\n\n— Nullshift`;
+  const text = `Your free scaling plan for ${who}\n\n${first}, software you could stop renting:\n${p.saasToCut
+    .slice(0, 4)
+    .map((x) => `- ${x.name}`)
+    .join("\n")}\n\nWhat we'd build & you'd own:\n${p.build
+    .slice(0, 4)
+    .map((x) => `- ${x.title}`)
+    .join(
+      "\n"
+    )}\n\nYou're renting ~${gbp(p.savings.annualRent)}/yr in software today. We scope and price the build with you on the call.\n\nSee your full plan: ${planUrl}\nBook a consultation: ${bookUrl}\n\n— Nullshift`;
 
-  return { subject, html: wrap(inner, `Your build plan for ${who}`), text };
+  return { subject, html: wrap(inner, `Your free scaling plan for ${who}`), text };
 }
 
 /* ── Owner notification ───────────────────────────────────────────── */

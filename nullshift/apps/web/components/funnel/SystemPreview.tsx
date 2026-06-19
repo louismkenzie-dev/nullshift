@@ -1,5 +1,4 @@
 import { T } from "@nullshift/ui/tokens";
-import type { BlueprintModule } from "@nullshift/content/blueprint";
 
 /**
  * SystemPreview — a personalised, literal mock of the prospect's *own* software,
@@ -57,7 +56,7 @@ export function SystemPreview({
   isClinic,
 }: {
   businessLabel: string;
-  modules: BlueprintModule[];
+  modules: { asset: string }[];
   isClinic: boolean;
 }) {
   const assets = new Set(modules.map((m) => m.asset));

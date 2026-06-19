@@ -13,9 +13,9 @@ import {
   type Recommendation,
 } from "@/lib/funnel";
 import {
-  buildBlueprint,
-  type Blueprint as BlueprintData,
-} from "@nullshift/content/blueprint";
+  buildScalingPlan,
+  type ScalingPlan as ScalingPlanData,
+} from "@nullshift/content/scalingPlan";
 import { funnelSound } from "@/lib/funnelAudio";
 import { ProgressBar } from "@/components/funnel/ProgressBar";
 import { QuestionCard } from "@/components/funnel/QuestionCard";
@@ -37,7 +37,7 @@ type State = {
   segment?: Segment;
   recommendation?: Recommendation;
   contact?: Contact;
-  blueprint?: BlueprintData;
+  plan?: ScalingPlanData;
   planToken?: string;
 };
 
@@ -46,7 +46,7 @@ type Action =
   | { type: "SKIP" }
   | { type: "GOTO"; index: number }
   | { type: "HOLD_DONE"; segment: Segment; recommendation: Recommendation }
-  | { type: "CAPTURED"; contact: Contact; blueprint: BlueprintData; planToken: string }
+  | { type: "CAPTURED"; contact: Contact; plan: ScalingPlanData; planToken: string }
   | { type: "RESET" }
   | { type: "HYDRATE"; state: Partial<State> };
 
@@ -86,7 +86,7 @@ function reducer(state: State, action: Action): State {
         ...state,
         status: "result",
         contact: action.contact,
-        blueprint: action.blueprint,
+        plan: action.plan,
         planToken: action.planToken,
       };
     case "RESET":
@@ -254,11 +254,11 @@ export function FunnelClient() {
     } catch {
       /* ignore */
     }
-    // Generate the Build Blueprint up front (pure) so the result reveals instantly,
+    // Generate the Free Scaling Plan up front (pure) so the result reveals instantly,
     // and mint a token so the permanent /plan link is known without awaiting the
     // server. The server re-computes authoritatively and persists under this token.
     const segment: Segment = state.segment ?? "nurture";
-    const blueprint = buildBlueprint(answersRef.current, {
+    const plan = buildScalingPlan(answersRef.current, {
       segment,
       businessName: c.business,
     });
@@ -267,8 +267,15 @@ export function FunnelClient() {
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
-    // Persist the lead in the background — fire-and-forget so the visitor's
-    // result reveals instantly and is never gated on the network.
+    dispatch({
+      type: "CAPTURED",
+      contact: { name: c.name, business: c.business, email: c.email, phone: c.phone },
+      plan,
+      planToken,
+    });
+
+    // Persist the lead + plan in the background — fire-and-forget so the result
+    // reveals instantly and is never gated on the network.
     void fetch("/api/funnel", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -282,12 +289,6 @@ export function FunnelClient() {
       }),
     }).catch(() => {
       /* ignore — the result is the value to the visitor */
-    });
-    dispatch({
-      type: "CAPTURED",
-      contact: { name: c.name, business: c.business, email: c.email, phone: c.phone },
-      blueprint,
-      planToken,
     });
   };
 
@@ -481,7 +482,7 @@ export function FunnelClient() {
                     recommendation={state.recommendation}
                     answers={state.answers}
                     contact={state.contact}
-                    blueprint={state.blueprint}
+                    plan={state.plan}
                     planToken={state.planToken}
                     onRestart={handleReset}
                   />
@@ -490,7 +491,7 @@ export function FunnelClient() {
                     recommendation={state.recommendation}
                     answers={state.answers}
                     contact={state.contact}
-                    blueprint={state.blueprint}
+                    plan={state.plan}
                     planToken={state.planToken}
                     onRestart={handleReset}
                   />
