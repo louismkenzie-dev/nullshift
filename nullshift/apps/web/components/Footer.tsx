@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { T } from "@nullshift/ui/tokens";
+import { ADMIN_URL } from "@/lib/appUrls";
 
 const navLinks = [
   { label: "About", href: "/about" },
@@ -83,7 +84,7 @@ export function Footer() {
           © 2026 Nullshift.
         </span>
         <Link
-          href="/admin/login"
+          href={`${ADMIN_URL}/admin/login`}
           aria-label="Admin login"
           className="inline-flex items-center px-3 h-7"
           style={{

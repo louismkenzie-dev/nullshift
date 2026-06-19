@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
 import { Logo, LogoMark } from "@nullshift/ui/components/Logo";
 import { cn } from "@nullshift/ui/utils";
+import { PORTAL_URL } from "@/lib/appUrls";
 
 const links = [
   { label: "What we build", href: "/#capabilities" },
@@ -94,7 +95,7 @@ export function Nav() {
           <div className="flex items-center gap-2">
             {/* Client login — secondary button */}
             <Link
-              href="/portal"
+              href={`${PORTAL_URL}/portal`}
               className="hidden md:inline-flex items-center font-medium"
               style={{
                 fontFamily: T.sans,
@@ -330,7 +331,7 @@ export function Nav() {
             style={{ borderTop: `1px solid ${T.border}` }}
           >
             <Link
-              href="/portal"
+              href={`${PORTAL_URL}/portal`}
               className="w-full h-11 inline-flex items-center justify-center"
               style={{
                 fontFamily: T.sans,
