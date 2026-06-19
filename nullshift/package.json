@@ -9,8 +9,6 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=@nullshift/web",
-    "dev:admin": "turbo run dev --filter=@nullshift/admin",
-    "dev:portal": "turbo run dev --filter=@nullshift/portal",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

@@ -1,7 +1,0 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-
-/* Shared Nullshift design tokens (colours, type, spacing, effects, base). */
-@import "@nullshift/ui/styles/tokens.css";
-
-@custom-variant dark (&:is(.dark *));

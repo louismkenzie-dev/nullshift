@@ -66,6 +66,9 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Run on the two authenticated areas: gate /admin behind a logged-in user and
+// refresh the Supabase session on both /admin and /portal so Server Components
+// see a fresh user (portal authorisation itself is enforced by RLS + its layout).
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/portal/:path*"],
 };

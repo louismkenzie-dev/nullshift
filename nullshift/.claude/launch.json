@@ -3,9 +3,9 @@
   "configurations": [
     {
       "name": "nullshift",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "-p", "3001"],
-      "port": 3001
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@nullshift/web", "dev"],
+      "port": 3000
     }
   ]
 }

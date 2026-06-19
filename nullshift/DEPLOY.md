@@ -1,70 +1,63 @@
 # Deploying the Nullshift monorepo to Vercel
 
-The repo is a **pnpm + Turborepo monorepo**. The git repo root is the **parent**
-of `nullshift/`, and the three deployable apps live at:
+The repo is a **pnpm + Turborepo monorepo**, but it deploys as **one Vercel
+project / one domain**. The git repo root is the **parent** of `nullshift/`, and
+the single deployable app is the consolidated web app:
 
-| App            | Path (Vercel "Root Directory") | Domain                   |
-| -------------- | ------------------------------ | ------------------------ |
-| Marketing site | `nullshift/apps/web`           | `nullshift.co.uk`        |
-| Staff OPS hub  | `nullshift/apps/admin`         | `admin.nullshift.co.uk`  |
-| Client portal  | `nullshift/apps/portal`        | `portal.nullshift.co.uk` |
+| Surface        | URL path                 | Served by             |
+| -------------- | ------------------------ | --------------------- |
+| Marketing site | `nullshift.co.uk/`       | `nullshift/apps/web`  |
+| Staff OPS hub  | `nullshift.co.uk/admin`  | same app, `/admin/*`  |
+| Client portal  | `nullshift.co.uk/portal` | same app, `/portal/*` |
 
-> **Why the live site was stale:** the existing `nullshift` Vercel project's
-> **Root Directory was the repo root**, so Vercel served a leftover static
-> `index.html` and ignored the whole Next monorepo. Fixing the Root Directory
-> (below) is the actual fix — no code change deploys the app until this is set.
+> **One app, three areas.** `apps/admin` and `apps/portal` were merged into
+> `apps/web` under the `/admin` and `/portal` route prefixes. Public marketing
+> pages live in the `app/(marketing)/` route group (so smooth-scroll + the cookie
+> banner never wrap the internal tools). `apps/clinic` remains a gated Phase-6
+> scaffold and is **not** deployed.
 
-Each app is a separate Vercel **Project** pointing at the **same GitHub repo**
-with a different Root Directory. Vercel auto-detects the pnpm workspace and builds
-only that app.
-
-## 1. Marketing site → `nullshift.co.uk` (fix the existing project)
+## The single Vercel project → `nullshift.co.uk`
 
 Vercel → project **`nullshift`** → **Settings → General**:
 
 - **Root Directory:** `nullshift/apps/web` — and tick **“Include files outside the
-  Root Directory in the Build Step”** (needed so the workspace packages resolve).
+  Root Directory in the Build Step”** (so the workspace `packages/*` resolve).
 - **Framework Preset:** Next.js
 - **Build / Install / Output:** leave as the Next.js defaults (auto).
-- **Settings → Environment Variables:** ensure the vars below are present.
+- **Settings → Environment Variables:** ensure every var below is present.
 - **Deployments →** redeploy the latest `main` (uncheck “use existing build cache”).
 
-## 2. Staff hub → `admin.nullshift.co.uk` (new project)
+That's it — `/admin/login` and `/portal/login` are served by the same deployment,
+so there are **no admin/portal subdomains, no extra projects, and no extra DNS** to
+manage. If the old `nullshift-admin` / `nullshift-portal` projects and the
+`admin.` / `portal.` subdomains still exist, they can be **deleted** (optional
+cleanup — they point at the removed `apps/admin` / `apps/portal`).
 
-Vercel → **Add New… → Project** → import the same `nullshift` GitHub repo:
+## Environment variables (one project now needs the full set)
 
-- **Root Directory:** `nullshift/apps/admin` (+ “Include files outside…”)
-- **Framework:** Next.js
-- Add the env vars below (admin needs the **server** secrets).
-- **Settings → Domains →** add `admin.nullshift.co.uk` → Vercel shows a **CNAME**
-  → add it at your DNS registrar (e.g. `admin` → `cname.vercel-dns.com`).
+Because the one project runs marketing **and** the staff hub **and** the portal,
+it needs the union of all the env that used to be split across three projects.
+Set `NEXT_PUBLIC_SITE_URL=https://nullshift.co.uk`. Secrets are pasted by you
+(never commit them).
 
-## 3. Client portal → `portal.nullshift.co.uk` (new project)
-
-Same as admin, with **Root Directory:** `nullshift/apps/portal` and domain
-`portal.nullshift.co.uk`.
-
-## Environment variables
-
-Set `NEXT_PUBLIC_SITE_URL` per project to that app's own URL. Secrets are pasted
-by you (never commit them).
-
-**Public (all apps):**
+**Public:**
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`,
 `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_CAL_LINK`
 
-**Server / secret (admin, portal, and web for its API routes):**
+**Server / secret:**
 `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_EMAILS`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`,
 `RESEND_AUDIENCE_ID`, `ENQUIRY_NOTIFY_EMAIL`, `ENQUIRY_FROM_EMAIL`,
 `FUNNEL_RESOURCE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 `STRIPE_CONNECT_CLIENT_ID`
 
+> **`ADMIN_EMAILS` gates `/admin`.** It must contain the email you log in with
+> (e.g. `louis@nullshift.co.uk`); without it the ops hub returns "NOT AUTHORISED".
+
 ## Notes
 
 - The repo root holds leftover files (`index.html`, `Hero.txt`, `pricing-ui.txt`,
-  `nullshift-intro.html`, root `package.json`/`package-lock.json`). Once every
-  project's Root Directory points at an app, these are ignored. They can be
-  removed in a follow-up commit (don't remove them while any project still builds
-  from the repo root, or that project will 404).
+  `nullshift-intro.html`, root `package.json`/`package-lock.json`). With the Root
+  Directory set to `nullshift/apps/web`, these are ignored and can be removed in a
+  follow-up commit.
 - Production builds from `main`. CI (`.github/workflows/ci.yml`) runs typecheck ·
   lint · build on every push/PR.
