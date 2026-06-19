@@ -17,6 +17,6 @@
     "stripe": "^22.2.0"
   },
   "devDependencies": {
-    "typescript": "^5"
+    "typescript": "^6"
   }
 }
