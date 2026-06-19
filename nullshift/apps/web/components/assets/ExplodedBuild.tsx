@@ -21,12 +21,14 @@ export function ExplodedBuild({
         justifyContent: "center",
         overflow: "hidden",
         perspective: "1500px",
+        // Establish a query container so the 3D stack can scale to fit the box.
+        containerType: "size",
         ...style,
       }}
       dangerouslySetInnerHTML={{
         __html: `
         <div style="position:absolute; width:560px; height:560px; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb, var(--ac,#10B981) 14%, transparent), transparent 62%); filter:blur(8px); pointer-events:none;"></div>
-        <div style="perspective:1500px; position:relative;">
+        <div style="perspective:1500px; position:relative; transform:scale(min(1, 100cqw / 515px, 100cqh / 415px)); transform-origin:center center;">
           <div style="position:relative; width:280px; height:175px; transform-style:preserve-3d; animation:ns-wobble 16s ease-in-out infinite;">
 
             <!-- back → front -->
