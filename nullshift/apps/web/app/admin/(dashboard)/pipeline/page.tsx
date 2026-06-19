@@ -1,12 +1,17 @@
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 
 /**
  * Lead pipeline (CRM-lite) — a board over leads.status. Lead detail surfaces the
- * qualification signals (current software spend + biggest admin pain). Promoting
- * a won lead creates a client tenant + first project (the start of delivery).
+ * qualification signals (current software spend + biggest admin pain). Clicking a
+ * card opens that lead's full client profile (booking, brief, quote, proposal,
+ * portal account): it finds the matching client by email, or creates one from the
+ * lead — carrying the business name + their own description across — then jumps to
+ * /admin/clients/[id]. The client record (not a "legacy" table) is the core of the
+ * relationship; the pipeline is just the front door to it.
  */
 
 export const dynamic = "force-dynamic";
@@ -19,6 +24,7 @@ type Lead = {
   status: string;
   lead_score: number | null;
   quiz_answers: { answers?: Record<string, string> } | null;
+  plan: { businessName?: string | null } | null;
 };
 
 const COLUMNS = ["new", "qualified", "call_booked", "won", "lost"] as const;
@@ -38,6 +44,14 @@ const PAIN_LABEL: Record<string, string> = {
   admin_overload: "admin overload",
   nothing: "exploring",
 };
+// Map the lead's pipeline stage onto the client record's status on first open.
+const STATUS_TO_CLIENT: Record<string, string> = {
+  new: "lead",
+  qualified: "lead",
+  call_booked: "in_progress",
+  won: "won",
+  lost: "lost",
+};
 
 async function setStatus(formData: FormData) {
   "use server";
@@ -53,34 +67,93 @@ async function setStatus(formData: FormData) {
   revalidatePath("/admin/pipeline");
 }
 
-async function promoteLead(formData: FormData) {
+/**
+ * Open a lead as a client: reuse the existing client if one already shares the
+ * email (so converting an enquiry and clicking the lead never double-creates),
+ * otherwise create the client from the lead. Then redirect to the full profile.
+ */
+async function openLead(formData: FormData) {
   "use server";
   const id = String(formData.get("id") || "");
-  const name = String(formData.get("name") || "Client").trim() || "Client";
-  const vertical = String(formData.get("vertical") || "") || null;
+  if (!id) return;
   const supabase = await createClient();
 
-  const { data: tenant, error } = await supabase
-    .from("tenants")
-    .insert({ name, type: "client", vertical })
-    .select("id")
-    .single();
-  if (error || !tenant) {
-    console.error("promote: tenant create failed", error?.message);
-    return;
+  const { data: lead } = await supabase
+    .from("leads")
+    .select("id, name, email, vertical, status, quiz_answers, plan")
+    .eq("id", id)
+    .maybeSingle();
+  if (!lead) return;
+
+  const email = (lead.email || "").trim();
+  let clientId: string | null = null;
+
+  // 1) Reuse an existing client with the same email, if any.
+  if (email) {
+    const { data: existing } = await supabase
+      .from("clients")
+      .select("id")
+      .ilike("email", email)
+      .limit(1);
+    clientId = existing?.[0]?.id ?? null;
   }
-  await supabase
-    .from("projects")
-    .insert({ tenant_id: tenant.id, name: `${name} — build`, stage: "discovery" });
-  await supabase.from("leads").update({ status: "won" }).eq("id", id);
-  await logAudit({
-    action: "lead.promoted",
-    target: `lead:${id}`,
-    tenantId: tenant.id,
-    metadata: { tenantName: name },
-  });
-  revalidatePath("/admin/pipeline");
-  revalidatePath("/admin/delivery");
+
+  // 2) Otherwise create the client from the lead.
+  if (!clientId) {
+    const answers =
+      (lead.quiz_answers as { answers?: Record<string, string> } | null)?.answers ?? {};
+    const describe = answers.describe?.trim();
+    const businessName =
+      (lead.plan as { businessName?: string | null } | null)?.businessName ?? null;
+    const clientStatus = STATUS_TO_CLIENT[lead.status as string] ?? "lead";
+    const notes =
+      `Converted from ${lead.vertical ? `${lead.vertical} ` : ""}funnel lead.` +
+      (describe ? `\n\nIn their words:\n"${describe}"` : "");
+
+    const { data: created } = await supabase
+      .from("clients")
+      .insert({
+        name: lead.name || "Client",
+        business_name: businessName,
+        email: email || null,
+        status: clientStatus,
+        notes,
+      })
+      .select("id")
+      .single();
+    clientId = created?.id ?? null;
+
+    // Adopt any unattached brief submissions from this email (mirrors the
+    // Enquiries → Convert flow), so the profile shows the brief straight away.
+    if (clientId && email) {
+      const { data: briefs } = await supabase
+        .from("enquiries")
+        .select("id")
+        .eq("source", "brief")
+        .is("client_id", null)
+        .ilike("email", email);
+      if (briefs && briefs.length) {
+        await supabase
+          .from("enquiries")
+          .update({ client_id: clientId })
+          .in(
+            "id",
+            briefs.map((b) => b.id)
+          );
+        await supabase
+          .from("clients")
+          .update({ brief_completed_at: new Date().toISOString() })
+          .eq("id", clientId);
+      }
+    }
+    await logAudit({
+      action: "lead.opened_as_client",
+      target: `lead:${id}`,
+      metadata: { clientId },
+    });
+  }
+
+  if (clientId) redirect(`/admin/clients/${clientId}`);
 }
 
 function Card({ lead }: { lead: Lead }) {
@@ -88,15 +161,39 @@ function Card({ lead }: { lead: Lead }) {
   const spend = a.software_spend ? SPEND_LABEL[a.software_spend] : null;
   const pain = a.admin_pain ? PAIN_LABEL[a.admin_pain] : null;
   const describe = a.describe?.trim();
+  const business = lead.plan?.businessName?.trim();
   return (
     <div
       style={{
+        position: "relative",
         background: T.bg,
         border: `1px solid ${T.border}`,
         borderRadius: 8,
         padding: "11px 12px",
       }}
     >
+      {/* Stretched overlay button — clicking anywhere on the card opens the
+          client profile. Sits behind the "Lost" control (which is z-indexed
+          above) so that stays independently clickable. */}
+      <form action={openLead}>
+        <input type="hidden" name="id" value={lead.id} />
+        <button
+          type="submit"
+          aria-label={`Open ${lead.name || "lead"}'s client profile`}
+          title="Open client profile →"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            zIndex: 1,
+          }}
+        />
+      </form>
+
       <div className="flex items-center justify-between">
         <span
           style={{
@@ -114,6 +211,11 @@ function Card({ lead }: { lead: Lead }) {
           </span>
         )}
       </div>
+      {business && (
+        <div style={{ fontFamily: T.sans, fontSize: "11px", color: T.fg, marginTop: 1 }}>
+          {business}
+        </div>
+      )}
       {lead.email && (
         <div
           style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted, marginTop: 2 }}
@@ -143,17 +245,22 @@ function Card({ lead }: { lead: Lead }) {
           &ldquo;{describe}&rdquo;
         </p>
       )}
-      <div className="flex flex-wrap gap-1" style={{ marginTop: 10 }}>
-        {lead.status !== "won" && (
-          <form action={promoteLead}>
-            <input type="hidden" name="id" value={lead.id} />
-            <input type="hidden" name="name" value={lead.name || "Client"} />
-            <input type="hidden" name="vertical" value={lead.vertical || ""} />
-            <button type="submit" style={miniBtn(T.primary, T.primaryFg)}>
-              Promote → client
-            </button>
-          </form>
-        )}
+      <div
+        className="flex items-center justify-between"
+        style={{ marginTop: 10, position: "relative", zIndex: 2 }}
+      >
+        <span
+          style={{
+            fontFamily: T.mono,
+            fontSize: "9px",
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            color: T.primary,
+            pointerEvents: "none",
+          }}
+        >
+          Open profile →
+        </span>
         {lead.status !== "lost" && (
           <form action={setStatus}>
             <input type="hidden" name="id" value={lead.id} />
@@ -180,6 +287,9 @@ function Tag({ children, tone = T.muted }: { children: React.ReactNode; tone?: s
         border: `1px solid ${tone}33`,
         borderRadius: 999,
         padding: "1px 7px",
+        position: "relative",
+        zIndex: 2,
+        pointerEvents: "none",
       }}
     >
       {children}
@@ -205,7 +315,7 @@ export default async function PipelinePage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("leads")
-    .select("id, name, email, vertical, status, lead_score, quiz_answers")
+    .select("id, name, email, vertical, status, lead_score, quiz_answers, plan")
     .order("lead_score", { ascending: false, nullsFirst: false });
   const leads = (data ?? []) as Lead[];
 
@@ -242,7 +352,8 @@ export default async function PipelinePage() {
           marginBottom: 24,
         }}
       >
-        {leads.length} leads · qualified by cuttable software spend + admin pain.
+        {leads.length} leads · click any card to open their client profile (booking,
+        brief, quote &amp; proposal).
       </p>
 
       <div

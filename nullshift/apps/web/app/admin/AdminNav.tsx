@@ -35,6 +35,7 @@ const groups: NavGroup[] = [
     items: [
       { label: "Dashboard", href: "/admin", Icon: LayoutDashboard },
       { label: "Pipeline", href: "/admin/pipeline", Icon: Inbox },
+      { label: "Clients", href: "/admin/clients", Icon: Building2 },
       { label: "Delivery", href: "/admin/delivery", Icon: FolderKanban },
       { label: "Billing", href: "/admin/billing", Icon: Receipt },
       { label: "Compliance", href: "/admin/compliance", Icon: ShieldCheck },
@@ -54,7 +55,6 @@ const groups: NavGroup[] = [
     section: "Legacy",
     items: [
       { label: "Enquiries", href: "/admin/enquiries", Icon: Mail },
-      { label: "Clients", href: "/admin/clients", Icon: Building2 },
       { label: "Quotes", href: "/admin/quotes", Icon: FileText },
       { label: "Proposals", href: "/admin/proposals", Icon: FileSignature },
     ],
