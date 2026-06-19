@@ -66,6 +66,7 @@ export function ProposalDocument({
   carePlan,
   paymentTerms,
   accepted,
+  dpaRequired,
 }: {
   reference: string;
   clientName: string;
@@ -77,6 +78,9 @@ export function ProposalDocument({
   carePlan: { label: string; mrr: number } | null;
   paymentTerms: string | null;
   accepted: { name: string; at: string } | null;
+  /** true = limited company (full DPA below), false = sole trader (terms only),
+   *  null/undefined = business type not yet declared. */
+  dpaRequired?: boolean | null;
 }) {
   return (
     <div
@@ -234,7 +238,10 @@ export function ProposalDocument({
         </p>
       </Section>
 
-      <Section n={overview ? "05" : "04"} title="Data Processing Agreement">
+      <Section
+        n={overview ? "05" : "04"}
+        title={dpaRequired === false ? "Data processing" : "Data Processing Agreement"}
+      >
         <p
           style={{
             fontFamily: T.sans,
@@ -243,9 +250,11 @@ export function ProposalDocument({
             color: T.muted,
           }}
         >
-          A Data Processing Agreement (UK GDPR) forms part of this proposal and is shown
-          in full below. Signing this proposal also accepts the DPA so we can lawfully
-          process data on your behalf and take your project live.
+          {dpaRequired === true
+            ? "As a limited company, a Data Processing Agreement (UK GDPR) forms part of this proposal and is shown in full below. Signing also accepts the DPA so we can lawfully process data on your behalf and take your project live."
+            : dpaRequired === false
+              ? "Our standard data-processing terms (UK GDPR) apply to this engagement. As a sole trader / non-limited entity, a separate Data Processing Agreement isn't required — signing this proposal accepts these terms."
+              : "Before signing you'll confirm your business type. Limited companies also sign a Data Processing Agreement (UK GDPR); sole traders accept our standard data-processing terms with the proposal."}
         </p>
       </Section>
 

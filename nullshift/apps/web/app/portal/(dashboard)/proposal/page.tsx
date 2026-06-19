@@ -8,6 +8,7 @@ import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
 import { ProposalDocument } from "@/components/portal/ProposalDocument";
 import { SignatureField } from "@/components/portal/SignatureField";
+import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 
 /**
  * Client portal — proposal & invoices. The client reviews the itemised proposal
@@ -35,6 +36,7 @@ type Project = {
   dpa_special_category_detail: string | null;
   accepted_name: string | null;
   accepted_at: string | null;
+  client_entity_type: string | null;
   tenants: { name: string } | null;
 };
 type Item = { id: string; project_id: string; name: string; amount: number };
@@ -48,6 +50,42 @@ type Invoice = {
 type InvItem = { invoice_id: string; name: string; amount: number; quantity: number };
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
+
+/** The client declares whether they're a limited company before signing. Limited
+ *  companies also supply their company number + registered office (which fill the
+ *  DPA); sole traders / others sign the proposal only. */
+async function setEntityType(formData: FormData) {
+  "use server";
+  const projectId = String(formData.get("project_id") || "");
+  const entityType = String(formData.get("entity_type") || "");
+  if (!projectId || (entityType !== "limited" && entityType !== "sole_trader")) return;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, proposal_status")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project || project.proposal_status !== "sent") return;
+
+  const patch: Record<string, unknown> = { client_entity_type: entityType };
+  if (entityType === "limited") {
+    patch.dpa_client_company_number =
+      String(formData.get("company_number") || "").trim() || null;
+    patch.dpa_client_registered_address =
+      String(formData.get("registered_address") || "").trim() || null;
+    patch.dpa_client_country =
+      String(formData.get("country") || "").trim() || "United Kingdom";
+  }
+  // projects are staff-write under RLS — use the service client after the
+  // membership-scoped read above confirmed the caller owns this project.
+  const service = createServiceClient();
+  await service.from("projects").update(patch).eq("id", projectId);
+  revalidatePath("/portal/proposal");
+}
 
 async function acceptProposal(formData: FormData) {
   "use server";
@@ -63,10 +101,12 @@ async function acceptProposal(formData: FormData) {
   // Confirm the caller can see this project (RLS only returns their tenant's).
   const { data: project } = await supabase
     .from("projects")
-    .select("id, tenant_id, proposal_status, proposed_plan")
+    .select("id, tenant_id, proposal_status, proposed_plan, client_entity_type")
     .eq("id", projectId)
     .maybeSingle();
-  if (!project || project.proposal_status !== "sent") return;
+  // Must be sent and the client must have declared their business type first.
+  if (!project || project.proposal_status !== "sent" || !project.client_entity_type)
+    return;
 
   // Trusted writes (projects + compliance are staff-write under RLS). The typed
   // signature is recorded on the project and the DPA compliance record.
@@ -81,10 +121,18 @@ async function acceptProposal(formData: FormData) {
       accepted_at: now,
     })
     .eq("id", projectId);
+  // Record the data-processing acceptance (satisfies the DPA-before-live gate for
+  // both: a full DPA for limited companies, standard terms for sole traders).
   await service.from("compliance_records").insert({
     tenant_id: project.tenant_id,
     kind: "dpa_signed",
-    detail: { signed_by: user.id, signed_name: signature, via: "portal" },
+    detail: {
+      signed_by: user.id,
+      signed_name: signature,
+      via: "portal",
+      entity_type: project.client_entity_type,
+      dpa: project.client_entity_type === "limited",
+    },
   });
 
   await logAudit({
@@ -207,7 +255,7 @@ export default async function PortalProposal() {
       supabase
         .from("projects")
         .select(
-          "id, tenant_id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, accepted_name, accepted_at, tenants(name)"
+          "id, tenant_id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, accepted_name, accepted_at, client_entity_type, tenants(name)"
         )
         .order("created_at"),
       supabase
@@ -262,6 +310,9 @@ export default async function PortalProposal() {
         const pItems = itemList.filter((i) => i.project_id === project.id);
         const total = pItems.reduce((s, i) => s + Number(i.amount), 0);
         const pInvoices = invoiceList.filter((i) => i.project_id === project.id);
+        const limited = project.client_entity_type === "limited";
+        const declared = !!project.client_entity_type;
+        const dpaRequired: boolean | null = declared ? limited : null;
         return (
           <div key={project.id} style={{ marginBottom: 32 }}>
             <div className="flex items-center gap-3" style={{ marginBottom: 14 }}>
@@ -307,59 +358,89 @@ export default async function PortalProposal() {
                       ? { name: project.accepted_name ?? "", at: project.accepted_at }
                       : null
                   }
+                  dpaRequired={dpaRequired}
                 />
 
-                {/* Full DPA (expandable) */}
-                <details
-                  style={{
-                    marginTop: 12,
-                    background: T.surface,
-                    border: `1px solid ${T.border}`,
-                    borderRadius: T.r.lg,
-                    padding: "14px 18px",
-                  }}
-                >
-                  <summary
+                {/* Full DPA (expandable) — only for limited companies */}
+                {limited && (
+                  <details
                     style={{
-                      cursor: "pointer",
-                      fontFamily: T.sans,
-                      fontWeight: 600,
-                      fontSize: "0.95rem",
-                      color: T.fg,
+                      marginTop: 12,
+                      background: T.surface,
+                      border: `1px solid ${T.border}`,
+                      borderRadius: T.r.lg,
+                      padding: "14px 18px",
                     }}
                   >
-                    View the full Data Processing Agreement
-                  </summary>
-                  <div style={{ marginTop: 16 }}>
-                    <DpaTemplate
-                      mode="proposal"
-                      client={{
-                        name: project.tenants?.name ?? "Client",
-                        country: project.dpa_client_country,
+                    <summary
+                      style={{
+                        cursor: "pointer",
+                        fontFamily: T.sans,
+                        fontWeight: 600,
+                        fontSize: "0.95rem",
+                        color: T.fg,
+                      }}
+                    >
+                      View the full Data Processing Agreement
+                    </summary>
+                    <div style={{ marginTop: 16 }}>
+                      <DpaTemplate
+                        mode="proposal"
+                        client={{
+                          name: project.tenants?.name ?? "Client",
+                          country: project.dpa_client_country,
+                          companyNumber: project.dpa_client_company_number,
+                          registeredAddress: project.dpa_client_registered_address,
+                        }}
+                        effectiveDate={
+                          project.accepted_at
+                            ? new Date(project.accepted_at).toLocaleDateString("en-GB")
+                            : null
+                        }
+                        personalDataTypes={project.dpa_personal_data}
+                        specialCategory={{
+                          present: !!project.dpa_special_category,
+                          detail: project.dpa_special_category_detail,
+                        }}
+                        accepted={
+                          project.accepted_at
+                            ? {
+                                name: project.accepted_name ?? "",
+                                at: project.accepted_at,
+                              }
+                            : null
+                        }
+                      />
+                    </div>
+                  </details>
+                )}
+
+                {/* Step 1 — declare business type before signing */}
+                {project.proposal_status === "sent" && !declared && (
+                  <div
+                    style={{
+                      marginTop: 14,
+                      background: T.surface,
+                      border: `1px solid ${T.primary}55`,
+                      borderRadius: T.r.lg,
+                      padding: "20px 22px",
+                    }}
+                  >
+                    <EntityTypeForm
+                      action={setEntityType}
+                      projectId={project.id}
+                      defaults={{
+                        entityType: project.client_entity_type,
                         companyNumber: project.dpa_client_company_number,
                         registeredAddress: project.dpa_client_registered_address,
+                        country: project.dpa_client_country,
                       }}
-                      effectiveDate={
-                        project.accepted_at
-                          ? new Date(project.accepted_at).toLocaleDateString("en-GB")
-                          : null
-                      }
-                      personalDataTypes={project.dpa_personal_data}
-                      specialCategory={{
-                        present: !!project.dpa_special_category,
-                        detail: project.dpa_special_category_detail,
-                      }}
-                      accepted={
-                        project.accepted_at
-                          ? { name: project.accepted_name ?? "", at: project.accepted_at }
-                          : null
-                      }
                     />
                   </div>
-                </details>
+                )}
 
-                {/* Sign / decline */}
-                {project.proposal_status === "sent" && (
+                {/* Step 2 — sign / decline */}
+                {project.proposal_status === "sent" && declared && (
                   <div
                     style={{
                       marginTop: 14,
@@ -378,13 +459,13 @@ export default async function PortalProposal() {
                         marginBottom: 16,
                       }}
                     >
-                      Please review the proposal and DPA above. Signing accepts the scope
-                      and price
+                      Please review the {limited ? "proposal and DPA" : "proposal"} above.
+                      Signing accepts the scope and price
                       {carePlan(project.proposed_plan)
                         ? ` and the ${carePlan(project.proposed_plan)!.label} care plan`
                         : ""}
-                      , and the Data Processing Agreement so we can begin. We&apos;ll
-                      email your invoice straight away.
+                      {limited ? ", and the Data Processing Agreement," : ""} so we can
+                      begin. We&apos;ll email your invoice straight away.
                     </p>
                     <form action={acceptProposal}>
                       <input type="hidden" name="project_id" value={project.id} />

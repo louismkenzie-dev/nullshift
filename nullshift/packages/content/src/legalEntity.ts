@@ -11,10 +11,12 @@
 
 export const LEGAL_ENTITY = {
   name: "Nullshift Development Ltd",
-  /** Companies House number — supply to remove the "to confirm" chips. */
-  companyNumber: null as string | null,
+  /** Companies House number. */
+  companyNumber: "17284213" as string | null,
   /** Registered office address (single line). */
-  registeredOffice: null as string | null,
+  registeredOffice: "66 Paul Street, London, England, United Kingdom, EC2A 4NA" as
+    | string
+    | null,
   /** ICO registration number (data protection register). */
   ico: null as string | null,
   email: "louis@nullshift.co.uk",
@@ -25,9 +27,29 @@ export const LEGAL_ENTITY = {
 export type SubProcessor = { name: string; service: string; location: string };
 
 export const SUB_PROCESSORS: SubProcessor[] = [
-  { name: "Supabase, Inc.", service: "Managed database, authentication, and storage hosting", location: "UK / EU region" },
-  { name: "Amazon Web Services (Supabase's infrastructure provider)", service: "Underlying cloud infrastructure", location: "EU / UK region" },
-  { name: "Stripe Payments UK, Ltd.", service: "Payment processing (where applicable)", location: "UK / EU / US (under appropriate safeguards)" },
-  { name: "Vercel Inc.", service: "Application / front-end hosting", location: "EU / US (under appropriate safeguards)" },
-  { name: "Resend (Plus Five Five, Inc.)", service: "Transactional email", location: "US (under appropriate safeguards)" },
+  {
+    name: "Supabase, Inc.",
+    service: "Managed database, authentication, and storage hosting",
+    location: "UK / EU region",
+  },
+  {
+    name: "Amazon Web Services (Supabase's infrastructure provider)",
+    service: "Underlying cloud infrastructure",
+    location: "EU / UK region",
+  },
+  {
+    name: "Stripe Payments UK, Ltd.",
+    service: "Payment processing (where applicable)",
+    location: "UK / EU / US (under appropriate safeguards)",
+  },
+  {
+    name: "Vercel Inc.",
+    service: "Application / front-end hosting",
+    location: "EU / US (under appropriate safeguards)",
+  },
+  {
+    name: "Resend (Plus Five Five, Inc.)",
+    service: "Transactional email",
+    location: "US (under appropriate safeguards)",
+  },
 ];
