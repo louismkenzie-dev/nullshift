@@ -8,12 +8,12 @@ import { formatCallDate, formatCallTime, LONDON_TZ } from "@nullshift/ui/format"
 
 type Call = {
   id: string;
-  client_id: string;
+  tenant_id: string;
   call_date: string;
   call_time: string;
   duration_min: number;
   status: string;
-  clients: { name: string; business_name: string | null } | null;
+  tenants: { name: string } | null;
 };
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -53,11 +53,11 @@ export default function CalendarPage() {
     setLoading(true);
     const { data } = await supabase
       .from("calls")
-      .select("*, clients(name, business_name)")
+      .select("*, tenants(name)")
       .eq("status", "confirmed")
       .order("call_date")
       .order("call_time");
-    setCalls((data as Call[]) ?? []);
+    setCalls((data as unknown as Call[]) ?? []);
     setLoading(false);
   }, [supabase]);
 
@@ -118,7 +118,7 @@ export default function CalendarPage() {
     setView({ y, m: m - 1 });
   }
 
-  const cellName = (c: Call) => c.clients?.business_name || c.clients?.name || "Client";
+  const cellName = (c: Call) => c.tenants?.name || "Client";
   const navBtn: React.CSSProperties = {
     width: 30,
     height: 30,
@@ -291,7 +291,7 @@ export default function CalendarPage() {
                       {dayCalls.map((call) => (
                         <Link
                           key={call.id}
-                          href={`/admin/clients/${call.client_id}`}
+                          href={`/admin/clients/${call.tenant_id}`}
                           className="block transition-opacity hover:opacity-80 rounded-md px-1.5 py-1"
                           style={{
                             background: `${T.primary}22`,
@@ -353,7 +353,7 @@ export default function CalendarPage() {
                 {upcoming.map((c, i) => (
                   <Link
                     key={c.id}
-                    href={`/admin/clients/${c.client_id}`}
+                    href={`/admin/clients/${c.tenant_id}`}
                     className="block transition-opacity hover:opacity-80 py-3"
                     style={{ borderTop: i ? `1px solid ${T.border}` : "none" }}
                   >

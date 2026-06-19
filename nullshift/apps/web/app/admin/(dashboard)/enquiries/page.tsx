@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { BriefViewer } from "@/components/BriefViewer";
@@ -33,6 +34,7 @@ const statusColor: Record<string, string> = {
 
 export default function EnquiriesPage() {
   const supabase = createClient();
+  const router = useRouter();
   const [rows, setRows] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<string | null>(null);
@@ -59,56 +61,49 @@ export default function EnquiriesPage() {
   }
 
   async function convertToClient(e: Enquiry) {
-    // Carry the enquiry's pipeline status onto the new client so it still shows.
-    const clientStatus = e.status === "new" ? "lead" : e.status;
-    const { data: newClient } = await supabase
-      .from("clients")
-      .insert({
-        name: e.name,
-        business_name: e.business_name,
-        email: e.email,
-        phone: e.phone,
-        status: clientStatus,
-        notes: `Converted from ${e.source} enquiry.`,
-        requested_date: e.preferred_date,
-        requested_time: e.preferred_time,
-      })
-      .select("id")
-      .single();
+    // Convert into the unified multi-tenant model: reuse the client tenant with
+    // the same contact email, or create one (+ its build project), then open the
+    // client hub. (The Pipeline does the same for funnel leads.)
+    const email = (e.email || "").trim();
+    let tenantId: string | null = null;
 
-    if (newClient) {
-      // Link any unattached brief submissions from this email to the new client
-      // (covers the common case: a visitor fills the brief publicly, then admin
-      // converts the resulting enquiry). Match by email — case-insensitive.
-      const emailMatch = (e.email || "").trim();
-      if (emailMatch) {
-        const { data: briefs } = await supabase
-          .from("enquiries")
-          .select("id, brief_data")
-          .eq("source", "brief")
-          .is("client_id", null)
-          .ilike("email", emailMatch);
+    if (email) {
+      const { data: existing } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("type", "client")
+        .ilike("contact_email", email)
+        .limit(1);
+      tenantId = existing?.[0]?.id ?? null;
+    }
 
-        if (briefs && briefs.length > 0) {
-          const ids = briefs.map((b) => b.id);
-          await supabase
-            .from("enquiries")
-            .update({ client_id: newClient.id })
-            .in("id", ids);
-          // Stamp the most recent brief's completion onto the client so the
-          // dashboard card flips to "Brief received ✓" straight away.
-          await supabase
-            .from("clients")
-            .update({ brief_completed_at: new Date().toISOString() })
-            .eq("id", newClient.id);
-        }
+    if (!tenantId) {
+      const name = e.business_name || e.name;
+      const { data: created } = await supabase
+        .from("tenants")
+        .insert({
+          name,
+          type: "client",
+          contact_name: e.name,
+          contact_email: email || null,
+          contact_phone: e.phone,
+          notes: `Converted from ${e.source} enquiry.`,
+        })
+        .select("id")
+        .single();
+      tenantId = created?.id ?? null;
+      if (tenantId) {
+        await supabase
+          .from("projects")
+          .insert({ tenant_id: tenantId, name: `${name} — build`, stage: "discovery" });
       }
     }
 
-    // Mark the enquiry converted and remove it from the inbox immediately.
+    // Mark the enquiry converted and open the client hub.
     await supabase.from("enquiries").update({ status: "converted" }).eq("id", e.id);
     setRows((r) => r.filter((x) => x.id !== e.id));
     setOpen(null);
+    if (tenantId) router.push(`/admin/clients/${tenantId}`);
   }
 
   const newCount = rows.filter((r) => r.status === "new").length;

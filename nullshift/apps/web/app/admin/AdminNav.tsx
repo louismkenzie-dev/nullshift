@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Inbox,
-  FolderKanban,
   Receipt,
   ShieldCheck,
   ListChecks,
@@ -16,8 +15,6 @@ import {
   UsersRound,
   Mail,
   Building2,
-  FileText,
-  FileSignature,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@nullshift/db/client";
@@ -36,7 +33,6 @@ const groups: NavGroup[] = [
       { label: "Dashboard", href: "/admin", Icon: LayoutDashboard },
       { label: "Pipeline", href: "/admin/pipeline", Icon: Inbox },
       { label: "Clients", href: "/admin/clients", Icon: Building2 },
-      { label: "Delivery", href: "/admin/delivery", Icon: FolderKanban },
       { label: "Billing", href: "/admin/billing", Icon: Receipt },
       { label: "Compliance", href: "/admin/compliance", Icon: ShieldCheck },
     ],
@@ -44,19 +40,12 @@ const groups: NavGroup[] = [
   {
     section: "Tools",
     items: [
+      { label: "Enquiries", href: "/admin/enquiries", Icon: Mail },
       { label: "Tasks", href: "/admin/tasks", Icon: ListChecks },
       { label: "Calendar", href: "/admin/calendar", Icon: Calendar },
       { label: "Marketing", href: "/admin/marketing", Icon: Megaphone },
       { label: "Security", href: "/admin/security", Icon: KeyRound },
       { label: "Users", href: "/admin/users", Icon: UsersRound },
-    ],
-  },
-  {
-    section: "Legacy",
-    items: [
-      { label: "Enquiries", href: "/admin/enquiries", Icon: Mail },
-      { label: "Quotes", href: "/admin/quotes", Icon: FileText },
-      { label: "Proposals", href: "/admin/proposals", Icon: FileSignature },
     ],
   },
 ];

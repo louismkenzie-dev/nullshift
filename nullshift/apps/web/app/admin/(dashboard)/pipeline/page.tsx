@@ -44,15 +44,6 @@ const PAIN_LABEL: Record<string, string> = {
   admin_overload: "admin overload",
   nothing: "exploring",
 };
-// Map the lead's pipeline stage onto the client record's status on first open.
-const STATUS_TO_CLIENT: Record<string, string> = {
-  new: "lead",
-  qualified: "lead",
-  call_booked: "in_progress",
-  won: "won",
-  lost: "lost",
-};
-
 async function setStatus(formData: FormData) {
   "use server";
   const id = String(formData.get("id") || "");
@@ -68,9 +59,10 @@ async function setStatus(formData: FormData) {
 }
 
 /**
- * Open a lead as a client: reuse the existing client if one already shares the
- * email (so converting an enquiry and clicking the lead never double-creates),
- * otherwise create the client from the lead. Then redirect to the full profile.
+ * Open a lead as a client: reuse the existing client tenant if one already shares
+ * the contact email, otherwise create a tenant (+ its build project) from the lead —
+ * carrying the business name, contact and their description across. Then redirect to
+ * the unified client hub.
  */
 async function openLead(formData: FormData) {
   "use server";
@@ -80,80 +72,65 @@ async function openLead(formData: FormData) {
 
   const { data: lead } = await supabase
     .from("leads")
-    .select("id, name, email, vertical, status, quiz_answers, plan")
+    .select("id, name, email, vertical, quiz_answers, plan")
     .eq("id", id)
     .maybeSingle();
   if (!lead) return;
 
   const email = (lead.email || "").trim();
-  let clientId: string | null = null;
+  let tenantId: string | null = null;
 
-  // 1) Reuse an existing client with the same email, if any.
+  // 1) Reuse an existing client tenant with the same contact email.
   if (email) {
     const { data: existing } = await supabase
-      .from("clients")
+      .from("tenants")
       .select("id")
-      .ilike("email", email)
+      .eq("type", "client")
+      .ilike("contact_email", email)
       .limit(1);
-    clientId = existing?.[0]?.id ?? null;
+    tenantId = existing?.[0]?.id ?? null;
   }
 
-  // 2) Otherwise create the client from the lead.
-  if (!clientId) {
+  // 2) Otherwise create the tenant + its build project from the lead.
+  if (!tenantId) {
     const answers =
       (lead.quiz_answers as { answers?: Record<string, string> } | null)?.answers ?? {};
     const describe = answers.describe?.trim();
     const businessName =
       (lead.plan as { businessName?: string | null } | null)?.businessName ?? null;
-    const clientStatus = STATUS_TO_CLIENT[lead.status as string] ?? "lead";
+    const name = businessName || lead.name || "Client";
     const notes =
       `Converted from ${lead.vertical ? `${lead.vertical} ` : ""}funnel lead.` +
       (describe ? `\n\nIn their words:\n"${describe}"` : "");
 
     const { data: created } = await supabase
-      .from("clients")
+      .from("tenants")
       .insert({
-        name: lead.name || "Client",
-        business_name: businessName,
-        email: email || null,
-        status: clientStatus,
+        name,
+        type: "client",
+        vertical: lead.vertical,
+        contact_name: lead.name,
+        contact_email: email || null,
         notes,
       })
       .select("id")
       .single();
-    clientId = created?.id ?? null;
+    tenantId = created?.id ?? null;
 
-    // Adopt any unattached brief submissions from this email (mirrors the
-    // Enquiries → Convert flow), so the profile shows the brief straight away.
-    if (clientId && email) {
-      const { data: briefs } = await supabase
-        .from("enquiries")
-        .select("id")
-        .eq("source", "brief")
-        .is("client_id", null)
-        .ilike("email", email);
-      if (briefs && briefs.length) {
-        await supabase
-          .from("enquiries")
-          .update({ client_id: clientId })
-          .in(
-            "id",
-            briefs.map((b) => b.id)
-          );
-        await supabase
-          .from("clients")
-          .update({ brief_completed_at: new Date().toISOString() })
-          .eq("id", clientId);
-      }
+    if (tenantId) {
+      await supabase
+        .from("projects")
+        .insert({ tenant_id: tenantId, name: `${name} — build`, stage: "discovery" });
+      await logAudit({
+        action: "lead.opened_as_client",
+        target: `lead:${id}`,
+        tenantId,
+        metadata: { name },
+      });
     }
-    await logAudit({
-      action: "lead.opened_as_client",
-      target: `lead:${id}`,
-      metadata: { clientId },
-    });
   }
 
-  if (clientId) redirect(`/admin/clients/${clientId}`);
+  if (tenantId) redirect(`/admin/clients/${tenantId}`);
 }
 
 function Card({ lead }: { lead: Lead }) {

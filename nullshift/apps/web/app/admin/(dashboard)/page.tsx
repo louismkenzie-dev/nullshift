@@ -6,14 +6,17 @@ import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { formatCallDate, formatCallTime, money, LONDON_TZ } from "@nullshift/ui/format";
 
+// Dashboard reads the unified multi-tenant model: calls + projects + invoices are
+// all tenant-scoped, and every client link points at the unified hub
+// /admin/clients/[tenantId].
 type Call = {
   id: string;
-  client_id: string;
+  tenant_id: string;
   call_date: string;
   call_time: string;
   duration_min: number;
   status: string;
-  clients: { name: string; business_name: string | null } | null;
+  tenants: { name: string } | null;
 };
 
 type Enquiry = {
@@ -26,24 +29,15 @@ type Enquiry = {
   source: string;
 };
 
-type Client = {
+type AwaitingProject = {
   id: string;
+  tenant_id: string;
   name: string;
-  business_name: string | null;
-  email: string | null;
-  status: string;
-  brief_completed_at: string | null;
+  proposal_status: string;
+  tenants: { name: string } | null;
 };
 
-type Proposal = {
-  id: string;
-  title: string;
-  total: number;
-  currency: string;
-  status: string;
-  accepted_at: string | null;
-  client_id: string | null;
-};
+type InvoiceRow = { amount: number; status: string; created_at: string };
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const londonToday = () => new Date().toLocaleDateString("en-CA", { timeZone: LONDON_TZ });
@@ -67,8 +61,8 @@ export default function DashboardPage() {
   const supabase = createClient();
   const [calls, setCalls] = useState<Call[]>([]);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [awaiting, setAwaiting] = useState<AwaitingProject[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const todayStr = londonToday();
@@ -81,12 +75,14 @@ export default function DashboardPage() {
     const [
       { data: callsData },
       { data: enqData },
-      { data: clientsData },
-      { data: proposalsData },
+      { data: awaitingData },
+      { data: invoiceData },
     ] = await Promise.all([
       supabase
         .from("calls")
-        .select("*, clients(name, business_name)")
+        .select(
+          "id, tenant_id, call_date, call_time, duration_min, status, tenants(name)"
+        )
         .eq("status", "confirmed")
         .gte("call_date", todayStr)
         .order("call_date")
@@ -97,18 +93,16 @@ export default function DashboardPage() {
         .neq("status", "converted")
         .order("created_at", { ascending: false }),
       supabase
-        .from("clients")
-        .select("id, name, business_name, email, status, brief_completed_at")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("proposals")
-        .select("id, title, total, currency, status, accepted_at, client_id")
-        .order("created_at", { ascending: false }),
+        .from("projects")
+        .select("id, tenant_id, name, proposal_status, tenants(name)")
+        .eq("proposal_status", "sent")
+        .order("proposal_sent_at", { ascending: false }),
+      supabase.from("invoices").select("amount, status, created_at"),
     ]);
-    setCalls((callsData as Call[]) ?? []);
+    setCalls((callsData as unknown as Call[]) ?? []);
     setEnquiries((enqData as Enquiry[]) ?? []);
-    setClients((clientsData as Client[]) ?? []);
-    setProposals((proposalsData as Proposal[]) ?? []);
+    setAwaiting((awaitingData as unknown as AwaitingProject[]) ?? []);
+    setInvoices((invoiceData as InvoiceRow[]) ?? []);
     setLoading(false);
   }, [supabase, todayStr]);
 
@@ -118,17 +112,15 @@ export default function DashboardPage() {
 
   const nextCall = calls[0] ?? null;
   const newEnquiries = enquiries.filter((e) => e.status === "new");
-  const missingBriefClients = clients.filter(
-    (c) => !c.brief_completed_at && !["won", "lost"].includes(c.status)
-  );
 
-  const monthlyIncome = proposals
-    .filter((p) => {
-      if (p.status !== "accepted" || !p.accepted_at) return false;
-      const d = new Date(p.accepted_at);
+  // Invoiced this month (the unified income signal — invoices come from the
+  // itemised build modules on each client's hub).
+  const monthlyIncome = invoices
+    .filter((inv) => {
+      const d = new Date(inv.created_at);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     })
-    .reduce((sum, p) => sum + (p.total || 0), 0);
+    .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
 
   // Mini calendar
   const calView = useMemo(() => {
@@ -211,8 +203,8 @@ export default function DashboardPage() {
       {/* Stat row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <StatCard
-          label="Expected income"
-          sublabel={`${MONTHS[currentMonth]} ${currentYear} · signed proposals`}
+          label="Invoiced this month"
+          sublabel={`${MONTHS[currentMonth]} ${currentYear}`}
           value={money(monthlyIncome)}
           accent={T.primary}
         />
@@ -223,10 +215,10 @@ export default function DashboardPage() {
           accent={newEnquiries.length > 0 ? "#facc15" : T.primary}
         />
         <StatCard
-          label="Missing brief link"
-          sublabel="Active clients"
-          value={String(missingBriefClients.length)}
-          accent={missingBriefClients.length > 0 ? T.accent : T.primary}
+          label="Awaiting acceptance"
+          sublabel="Proposals sent to clients"
+          value={String(awaiting.length)}
+          accent={awaiting.length > 0 ? T.accent : T.primary}
         />
       </div>
 
@@ -316,20 +308,20 @@ export default function DashboardPage() {
             )}
           </Section>
 
-          {/* Missing brief */}
+          {/* Awaiting client acceptance */}
           <Section
-            title="Brief link not sent"
-            label="// ACTION NEEDED"
+            title="Awaiting client acceptance"
+            label="// PROPOSALS SENT"
             href="/admin/clients"
           >
-            {missingBriefClients.length === 0 ? (
-              <EmptyState text="All active clients have received their brief link." />
+            {awaiting.length === 0 ? (
+              <EmptyState text="No proposals are waiting on a client signature." />
             ) : (
               <>
-                {missingBriefClients.slice(0, 6).map((c, i) => (
+                {awaiting.slice(0, 6).map((p, i) => (
                   <Link
-                    key={c.id}
-                    href={`/admin/clients/${c.id}`}
+                    key={p.id}
+                    href={`/admin/clients/${p.tenant_id}`}
                     className="flex items-center justify-between py-3 px-3 hover:bg-[#1f1f23] rounded-lg transition-colors"
                     style={{ borderTop: i ? `1px solid ${T.border}` : "none" }}
                   >
@@ -342,19 +334,13 @@ export default function DashboardPage() {
                           color: T.fg,
                         }}
                       >
-                        {c.name}
+                        {p.tenants?.name ?? "Client"}
                       </div>
-                      {c.business_name && (
-                        <div
-                          style={{
-                            fontFamily: T.sans,
-                            fontSize: "0.8rem",
-                            color: T.muted,
-                          }}
-                        >
-                          {c.business_name}
-                        </div>
-                      )}
+                      <div
+                        style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted }}
+                      >
+                        {p.name}
+                      </div>
                     </div>
                     <div className="shrink-0 ml-4">
                       <span
@@ -366,12 +352,12 @@ export default function DashboardPage() {
                           color: T.accent,
                         }}
                       >
-                        Send brief →
+                        Open →
                       </span>
                     </div>
                   </Link>
                 ))}
-                {missingBriefClients.length > 6 && (
+                {awaiting.length > 6 && (
                   <div
                     style={{
                       borderTop: `1px solid ${T.border}`,
@@ -389,7 +375,7 @@ export default function DashboardPage() {
                         color: T.primary,
                       }}
                     >
-                      +{missingBriefClients.length - 6} more →
+                      +{awaiting.length - 6} more →
                     </Link>
                   </div>
                 )}
@@ -423,7 +409,7 @@ export default function DashboardPage() {
             </div>
             {nextCall ? (
               <Link
-                href={`/admin/clients/${nextCall.client_id}`}
+                href={`/admin/clients/${nextCall.tenant_id}`}
                 className="block hover:opacity-90 transition-opacity"
               >
                 <div
@@ -432,23 +418,11 @@ export default function DashboardPage() {
                     fontWeight: 600,
                     fontSize: "1.3rem",
                     color: T.fg,
-                    marginBottom: "2px",
+                    marginBottom: "10px",
                   }}
                 >
-                  {nextCall.clients?.business_name || nextCall.clients?.name || "Client"}
+                  {nextCall.tenants?.name || "Client"}
                 </div>
-                {nextCall.clients?.business_name && (
-                  <div
-                    style={{
-                      fontFamily: T.sans,
-                      fontSize: "0.82rem",
-                      color: T.muted,
-                      marginBottom: "10px",
-                    }}
-                  >
-                    {nextCall.clients.name}
-                  </div>
-                )}
                 <div
                   className="flex items-center gap-3 p-3 rounded-lg"
                   style={{
@@ -580,7 +554,7 @@ export default function DashboardPage() {
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-0.5">
-                {cells.map((c, i) => {
+                {cells.map((c) => {
                   if (!c.inMonth) return <div key={c.key} />;
                   const isToday = c.day === todayDay;
                   const hasCall = callDates.has(c.key);
