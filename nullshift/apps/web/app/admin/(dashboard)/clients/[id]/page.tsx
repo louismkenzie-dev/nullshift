@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
@@ -505,6 +505,75 @@ async function createPortalAccount(formData: FormData) {
   await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text });
 
   revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/**
+ * Permanently delete a client and ALL their data (GDPR right-to-erasure). Gated by
+ * the admin re-typing the client's email. Hard-deletes the tenant (cascades every
+ * project/proposal/invoice/document/update/task/membership) and removes the
+ * client's portal login(s) that no longer belong to any tenant.
+ */
+async function deleteClient(formData: FormData) {
+  "use server";
+  const tenantId = String(formData.get("tenant_id") || "");
+  const typed = String(formData.get("confirm_email") || "")
+    .trim()
+    .toLowerCase();
+  if (!tenantId || !typed) return;
+  const service = createServiceClient();
+
+  // Resolve the client's email(s): the contact email + each member's login.
+  const { data: tenant } = await service
+    .from("tenants")
+    .select("contact_email")
+    .eq("id", tenantId)
+    .maybeSingle();
+  const { data: members } = await service
+    .from("memberships")
+    .select("user_id")
+    .eq("tenant_id", tenantId);
+  const userIds = (members ?? []).map((m) => m.user_id).filter(Boolean) as string[];
+
+  const emails = new Set<string>();
+  if (tenant?.contact_email) emails.add(tenant.contact_email.trim().toLowerCase());
+  for (const uid of userIds) {
+    const { data: u } = await service.auth.admin.getUserById(uid);
+    if (u.user?.email) emails.add(u.user.email.trim().toLowerCase());
+  }
+  // The typed email must match the client's email exactly (case-insensitive).
+  if (!emails.has(typed)) {
+    console.error("deleteClient: email confirmation did not match");
+    return;
+  }
+
+  // Audit BEFORE the rows (and their audit entries) cascade away.
+  await logAudit({
+    action: "client.deleted",
+    target: `tenant:${tenantId}`,
+    tenantId,
+    metadata: { email: typed },
+  });
+
+  // Hard-delete the tenant — cascades to all its data + memberships.
+  await service.from("tenants").delete().eq("id", tenantId);
+
+  // Remove each former member's auth login if it no longer belongs to any tenant
+  // (don't nuke an account still tied to another client or to internal staff).
+  for (const uid of userIds) {
+    const { count } = await service
+      .from("memberships")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", uid);
+    if (!count) {
+      try {
+        await service.auth.admin.deleteUser(uid);
+      } catch (e) {
+        console.error("deleteClient: deleteUser failed:", e);
+      }
+    }
+  }
+
+  redirect("/admin/clients");
 }
 
 // ── UI helpers ─────────────────────────────────────────────────
@@ -1746,6 +1815,45 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
           </p>
         </section>
       )}
+
+      {/* Danger zone — permanent deletion */}
+      <section style={{ ...card, borderColor: `${T.danger}55` }}>
+        <h2 style={{ ...h2, color: T.danger }}>Delete client</h2>
+        <p
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.85rem",
+            color: T.muted,
+            lineHeight: 1.6,
+            marginBottom: 12,
+          }}
+        >
+          Permanently erases this client and <b>all</b> their data — projects, proposals,
+          invoices, documents, updates and portal login. This cannot be undone. To
+          confirm, type the client&apos;s email
+          {t.contact_email ? (
+            <>
+              {" "}
+              (<span style={{ fontFamily: T.mono, color: T.fg }}>{t.contact_email}</span>)
+            </>
+          ) : null}
+          .
+        </p>
+        <form action={deleteClient} className="flex items-center gap-2 flex-wrap">
+          {htid}
+          <input
+            name="confirm_email"
+            type="email"
+            required
+            placeholder="Type the client's email to confirm"
+            autoComplete="off"
+            style={{ ...inp, flex: "1 1 260px" }}
+          />
+          <button type="submit" style={btn(T.danger, "#fff")}>
+            Delete permanently
+          </button>
+        </form>
+      </section>
     </div>
   );
 }
