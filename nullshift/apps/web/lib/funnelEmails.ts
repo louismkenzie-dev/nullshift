@@ -170,7 +170,6 @@ export function blueprintEmail(opts: {
     .map(
       (m) => `<tr>
         <td style="padding:9px 0;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:14px;color:${C.fg};vertical-align:top">${esc(m.name)}</td>
-        <td style="padding:9px 0;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:14px;color:${C.fg};text-align:right;white-space:nowrap;vertical-align:top">${esc(gbp(m.price))}</td>
       </tr>`
     )
     .join("");
@@ -184,25 +183,20 @@ export function blueprintEmail(opts: {
 
     <tr><td style="padding:20px 32px 0">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:14px">
-        <tr><td style="padding:16px 20px 4px">
-          <p style="margin:0 0 6px;font-family:${FONT};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${C.faint}">Your build — itemised</p>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}
-            <tr>
-              <td style="padding:12px 0 4px;font-family:${FONT};font-weight:700;font-size:15px;color:${C.fg}">One-off build</td>
-              <td style="padding:12px 0 4px;font-family:${FONT};font-weight:700;font-size:18px;color:${C.fg};text-align:right">${esc(gbp(b.oneOffTotal))}</td>
-            </tr>
-          </table>
-          <p style="margin:8px 0 16px;font-family:${FONT};font-size:13px;color:${C.muted}">${esc(b.tier.tier)} care plan ${esc(b.tier.monthly)}/mo · estimated ${esc(gbp(b.savings.kept))}/yr saved by owning it.</p>
+        <tr><td style="padding:16px 20px 16px">
+          <p style="margin:0 0 6px;font-family:${FONT};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${C.faint}">What we&#39;d build</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table>
+          <p style="margin:10px 0 0;font-family:${FONT};font-size:13px;color:${C.muted}">${esc(b.tier.tier)} care plan · you&#39;re renting ~${esc(gbp(b.savings.annualRent))}/yr in software today. We tailor the build and price it with you on a call.</p>
         </td></tr>
       </table>
     </td></tr>
 
     <tr><td style="padding:18px 32px 4px">${button(planUrl, "See your full plan & system preview →")}</td></tr>
     <tr><td style="padding:8px 32px 0">${button(bookUrl, qualified ? "Book a call to make it real →" : "Book a quick call →", false)}</td></tr>
-    <tr><td style="padding:14px 32px 4px"><p style="margin:0;font-family:${FONT};font-size:12px;color:${C.faint}">Indicative scope &amp; pricing, confirmed on a quick call — never a surprise.</p></td></tr>
+    <tr><td style="padding:14px 32px 4px"><p style="margin:0;font-family:${FONT};font-size:12px;color:${C.faint}">Indicative scope — we price your build with you on a quick call.</p></td></tr>
   `;
 
-  const text = `Your build plan for ${who}\n\n${first}, here's exactly what we'd build:\n${b.modules.map((m) => `- ${m.name}: ${gbp(m.price)}`).join("\n")}\nOne-off build: ${gbp(b.oneOffTotal)}\n${b.tier.tier} care plan: ${b.tier.monthly}/mo\nEstimated saved by owning it: ${gbp(b.savings.kept)}/yr\n\nSee your full plan + system preview: ${planUrl}\nBook a call: ${bookUrl}\n\n— Nullshift`;
+  const text = `Your build plan for ${who}\n\n${first}, here's what we'd build:\n${b.modules.map((m) => `- ${m.name}`).join("\n")}\n${b.tier.tier} care plan. You're renting ~${gbp(b.savings.annualRent)}/yr in software today. We tailor the build and price it with you on a call.\n\nSee your full plan + system preview: ${planUrl}\nBook a call: ${bookUrl}\n\n— Nullshift`;
 
   return { subject, html: wrap(inner, `Your build plan for ${who}`), text };
 }

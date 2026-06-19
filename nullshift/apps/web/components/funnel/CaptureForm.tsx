@@ -97,8 +97,8 @@ export function CaptureForm({
         className="mt-3 max-w-[46ch]"
         style={{ fontFamily: T.sans, fontSize: "1rem", lineHeight: 1.6, color: T.muted }}
       >
-        See exactly what we&apos;d build you — itemised and priced — plus a preview of
-        your own system. We&apos;ll save it to a link and email you a copy. No spam, ever.
+        See exactly what we&apos;d build you, plus a preview of your own branded site and
+        system. We&apos;ll save it to a link and email you a copy. No spam, ever.
       </p>
 
       <form onSubmit={submit} className="mt-8 flex flex-col gap-4" noValidate>

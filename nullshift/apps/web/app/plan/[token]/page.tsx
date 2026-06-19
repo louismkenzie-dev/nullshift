@@ -7,6 +7,7 @@ import { Logo } from "@nullshift/ui/components/Logo";
 import { Footer } from "@/components/Footer";
 import { Blueprint } from "@/components/funnel/Blueprint";
 import type { Blueprint as BlueprintData } from "@nullshift/content/blueprint";
+import type { BrandSpec } from "@/lib/brandSpec";
 
 /**
  * The permanent, shareable home of a prospect's auto-generated Build Blueprint.
@@ -19,6 +20,7 @@ export const dynamic = "force-dynamic";
 
 type StoredPlan = {
   blueprint?: BlueprintData;
+  brandSpec?: BrandSpec | null;
   businessName?: string;
   name?: string;
 };
@@ -147,7 +149,7 @@ export default async function PlanPage({
           stop renting the day you own it. Saved here for whenever you&apos;re ready.
         </p>
 
-        <Blueprint blueprint={plan.blueprint} />
+        <Blueprint blueprint={plan.blueprint} brandSpec={plan.brandSpec} />
 
         {/* CTA */}
         <div

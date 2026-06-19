@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { T } from "@nullshift/ui/tokens";
 import type { Blueprint as BlueprintData } from "@nullshift/content/blueprint";
+import type { BrandSpec } from "@/lib/brandSpec";
 import { type Answers, type Recommendation } from "@/lib/funnel";
 import { Blueprint } from "@/components/funnel/Blueprint";
 import { SavedPlanLink } from "@/components/funnel/SavedPlanLink";
@@ -15,6 +16,8 @@ export function ResultQualified({
   answers,
   contact,
   blueprint,
+  brandSpec,
+  brandPending,
   planToken,
   onRestart,
 }: {
@@ -22,6 +25,8 @@ export function ResultQualified({
   answers: Answers;
   contact?: { name?: string; business?: string; email?: string; phone?: string };
   blueprint?: BlueprintData;
+  brandSpec?: BrandSpec | null;
+  brandPending?: boolean;
   planToken?: string;
   onRestart: () => void;
 }) {
@@ -98,7 +103,11 @@ export function ResultQualified({
 
       {blueprint && (
         <motion.div variants={item} className="mt-8">
-          <Blueprint blueprint={blueprint} />
+          <Blueprint
+            blueprint={blueprint}
+            brandSpec={brandSpec}
+            brandPending={brandPending}
+          />
         </motion.div>
       )}
 

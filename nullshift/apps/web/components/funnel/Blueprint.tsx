@@ -1,6 +1,8 @@
 import { T } from "@nullshift/ui/tokens";
 import type { Blueprint as BlueprintData } from "@nullshift/content/blueprint";
+import type { BrandSpec } from "@/lib/brandSpec";
 import { SystemPreview } from "./SystemPreview";
+import { BrandedHomePreview } from "./BrandedHomePreview";
 
 /**
  * Blueprint — the body of the auto-generated "free plan". Order leads with the
@@ -29,12 +31,69 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Blueprint({ blueprint }: { blueprint: BlueprintData }) {
+export function Blueprint({
+  blueprint,
+  brandSpec,
+  brandPending,
+}: {
+  blueprint: BlueprintData;
+  brandSpec?: BrandSpec | null;
+  brandPending?: boolean;
+}) {
   const b = blueprint;
   const s = b.savings;
 
   return (
     <div className="flex flex-col" style={{ gap: 28 }}>
+      {/* ── AI-tailored homepage concept (their branding) ── */}
+      {(brandSpec || brandPending) && (
+        <section>
+          <SectionLabel>A homepage concept for you</SectionLabel>
+          {brandSpec ? (
+            <>
+              <BrandedHomePreview spec={brandSpec} />
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: 12.5,
+                  color: T.faint,
+                  marginTop: 8,
+                }}
+              >
+                A concept designed from your description — a starting point, not connected
+                to live data. We build the real, owned version with you.
+              </p>
+            </>
+          ) : (
+            <div
+              style={{
+                border: `1px solid ${T.border}`,
+                borderRadius: T.r.lg,
+                background: T.surface,
+                padding: "44px 20px",
+                textAlign: "center",
+                fontFamily: T.sans,
+                fontSize: "0.9rem",
+                color: T.muted,
+              }}
+            >
+              <span
+                className="ns-sound-pulse"
+                style={{
+                  display: "inline-block",
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  background: T.primary,
+                  marginRight: 8,
+                }}
+              />
+              Designing a homepage concept for your business…
+            </div>
+          )}
+        </section>
+      )}
+
       {/* ── The visual — a preview of their own system ── */}
       <section>
         <SectionLabel>Here&apos;s what your software looks like</SectionLabel>
@@ -64,35 +123,23 @@ export function Blueprint({ blueprint }: { blueprint: BlueprintData }) {
           padding: "22px 22px 18px",
         }}
       >
-        <SectionLabel>Your build — itemised</SectionLabel>
+        <SectionLabel>What we&apos;d build for you</SectionLabel>
         <div style={{ borderTop: `1px solid ${T.border}` }}>
           {b.modules.map((m) => (
             <div
               key={m.name}
               style={{ padding: "13px 0", borderBottom: `1px solid ${T.border}` }}
             >
-              <div className="flex items-baseline justify-between gap-3">
-                <span
-                  style={{
-                    fontFamily: T.display,
-                    fontWeight: 600,
-                    fontSize: "1rem",
-                    letterSpacing: "-0.01em",
-                    color: T.fg,
-                  }}
-                >
-                  {m.name}
-                </span>
-                <span
-                  style={{
-                    fontFamily: T.mono,
-                    fontSize: "0.9rem",
-                    color: T.fg,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {gbp(m.price)}
-                </span>
+              <div
+                style={{
+                  fontFamily: T.display,
+                  fontWeight: 600,
+                  fontSize: "1rem",
+                  letterSpacing: "-0.01em",
+                  color: T.fg,
+                }}
+              >
+                {m.name}
               </div>
               <p
                 style={{
@@ -110,48 +157,25 @@ export function Blueprint({ blueprint }: { blueprint: BlueprintData }) {
           ))}
         </div>
 
-        {/* Total */}
-        <div className="flex items-baseline justify-between" style={{ paddingTop: 14 }}>
-          <span style={{ fontFamily: T.sans, fontWeight: 600, color: T.fg }}>
-            One-off build
-          </span>
-          <span
-            style={{
-              fontFamily: T.display,
-              fontWeight: 700,
-              fontSize: "1.5rem",
-              letterSpacing: "-0.02em",
-              color: T.fg,
-            }}
-          >
-            {gbp(b.oneOffTotal)}
-          </span>
-        </div>
-
-        {/* Care tier */}
+        {/* Care plan — value, no price (build + setup priced on a call) */}
         <div
           style={{
-            marginTop: 14,
+            marginTop: 16,
             padding: "13px 15px",
             borderRadius: T.r.md,
             border: `1px solid ${T.primary}33`,
             background: T.primarySoft,
           }}
         >
-          <div className="flex items-baseline justify-between gap-3">
-            <span
-              style={{
-                fontFamily: T.sans,
-                fontWeight: 600,
-                fontSize: "0.95rem",
-                color: T.fg,
-              }}
-            >
-              {b.tier.tier} care plan
-            </span>
-            <span style={{ fontFamily: T.mono, fontSize: "0.9rem", color: T.primary }}>
-              {b.tier.monthly}/mo
-            </span>
+          <div
+            style={{
+              fontFamily: T.sans,
+              fontWeight: 600,
+              fontSize: "0.95rem",
+              color: T.fg,
+            }}
+          >
+            {b.tier.tier} care plan
           </div>
           <p
             style={{
@@ -167,7 +191,8 @@ export function Blueprint({ blueprint }: { blueprint: BlueprintData }) {
           </p>
         </div>
         <p style={{ fontFamily: T.sans, fontSize: 12, color: T.faint, marginTop: 12 }}>
-          Indicative scope and pricing — confirmed on a quick call, never a surprise.
+          Indicative scope — we tailor the build to exactly what you need and price it
+          with you on a quick call.
         </p>
       </section>
 
@@ -236,12 +261,6 @@ export function Blueprint({ blueprint }: { blueprint: BlueprintData }) {
           className="flex flex-wrap gap-x-6 gap-y-2"
           style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${T.border}` }}
         >
-          {b.paybackMonths != null && (
-            <Fact
-              k="Pays for itself in"
-              v={`~${b.paybackMonths} month${b.paybackMonths === 1 ? "" : "s"}`}
-            />
-          )}
           <Fact k="Live in" v={b.timelineWeeks} />
         </div>
         <p style={{ fontFamily: T.sans, fontSize: 12, color: T.faint, marginTop: 12 }}>

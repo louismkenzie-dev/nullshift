@@ -21,6 +21,7 @@ const clientSchema = z.object({
 const serverSchema = clientSchema.extend({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   ADMIN_EMAILS: z.string().optional(),
+  ANTHROPIC_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().optional(),
   RESEND_AUDIENCE_ID: z.string().optional(),
@@ -43,9 +44,7 @@ export function getServerEnv(): ServerEnv {
   if (cachedServer) return cachedServer;
   const parsed = serverSchema.safeParse(process.env);
   if (!parsed.success) {
-    throw new Error(
-      `Invalid server environment variables:\n${parsed.error.toString()}`
-    );
+    throw new Error(`Invalid server environment variables:\n${parsed.error.toString()}`);
   }
   cachedServer = parsed.data;
   return cachedServer;
@@ -58,13 +57,10 @@ export function getClientEnv(): ClientEnv {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
-      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   });
   if (!parsed.success) {
-    throw new Error(
-      `Invalid client environment variables:\n${parsed.error.toString()}`
-    );
+    throw new Error(`Invalid client environment variables:\n${parsed.error.toString()}`);
   }
   cachedClient = parsed.data;
   return cachedClient;
@@ -73,7 +69,6 @@ export function getClientEnv(): ClientEnv {
 /** True when the public Supabase config is present (browser-safe check). */
 export function hasSupabaseBrowserConfig(): boolean {
   return (
-    !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 }

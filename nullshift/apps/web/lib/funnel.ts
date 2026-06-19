@@ -30,6 +30,10 @@ export type FunnelStep = {
   optional?: boolean;
   /** Conditional questions only appear when this predicate passes. */
   showIf?: (a: Answers) => boolean;
+  /** Input style — "options" (default) or a free-text "text" box. */
+  kind?: "options" | "text";
+  /** Placeholder for free-text (`kind: "text"`) questions. */
+  placeholder?: string;
   options: FunnelOption[];
 };
 
@@ -89,6 +93,19 @@ export const STEPS: FunnelStep[] = [
       { id: "retail", label: "Retail / e-commerce", desc: "A shop or online store" },
       { id: "other", label: "Something else", other: true },
     ],
+  },
+
+  // ── Free-text — powers the AI-tailored homepage concept. Skippable. ──
+  {
+    id: "describe",
+    stage: 2,
+    kind: "text",
+    optional: true,
+    question: "Describe your business in 2 sentences.",
+    help: "We use this to design a homepage concept tailored to you — your words, your vibe.",
+    placeholder:
+      "e.g. We're a friendly physio clinic in Leeds focused on sports injuries and post-op rehab. We pride ourselves on getting people back to full strength fast.",
+    options: [],
   },
 
   // ── Conditional context — only if they already have a site (unscored) ──
@@ -253,6 +270,7 @@ export function answerLabel(answers: Answers, stepId: string): string {
 const STEP_TITLES: Record<string, string> = {
   has_site: "Has a website",
   industry: "Industry",
+  describe: "Business description",
   provider: "Current platform",
   build: "Built by",
   software_spend: "Monthly software spend",

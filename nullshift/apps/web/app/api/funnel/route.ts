@@ -20,6 +20,7 @@ type Body = {
   contact?: { name?: string; business?: string; email?: string; phone?: string };
   utm?: Record<string, string>;
   planToken?: string; // client-minted token for the permanent /plan link
+  brandSpec?: unknown; // AI homepage concept (display data, stored on the plan)
   website?: string; // honeypot
   elapsedMs?: number; // time-trap
 };
@@ -97,7 +98,13 @@ export async function POST(request: Request) {
     leadScore: score,
     status: segment === "qualified" ? "qualified" : "new",
     planToken,
-    plan: { blueprint, businessName: business, name, segment },
+    plan: {
+      blueprint,
+      brandSpec: body.brandSpec ?? null,
+      businessName: business,
+      name,
+      segment,
+    },
   });
   if (!lead.ok) console.error("Lead insert error:", lead.error);
 
