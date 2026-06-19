@@ -30,8 +30,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-          cache-dependency-path: nullshift/pnpm-lock.yaml
+      # NB: no `cache: pnpm` here — the pnpm workspace lives in nullshift/ (not the
+      # repo root), so setup-node's post-job cache-save can't resolve the store
+      # path and fails the job. Installs are fast enough without it.
 
       - name: Install
         run: pnpm install --frozen-lockfile

@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    # Skip major bumps — they're usually breaking (TypeScript 6, zod 4, etc.) and
+    # fail CI by design. Bump majors deliberately, by hand, when we're ready.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       # Keep noise down: batch non-major updates into one PR per week.
       minor-and-patch:
