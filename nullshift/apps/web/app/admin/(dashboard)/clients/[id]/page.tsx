@@ -18,6 +18,7 @@ import {
   passwordResetEmail,
 } from "@/lib/clientEmails";
 import { ProposalDocsForm } from "@/components/admin/ProposalDocsForm";
+import { dpaReadyToSend } from "@/lib/dpa";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
   /\/$/,
@@ -153,27 +154,29 @@ async function saveDocsAndSend(formData: FormData) {
   const str = (k: string) => String(formData.get(k) || "").trim() || null;
   const supabase = await createClient();
 
+  // Save the proposal doc + the client's company identity (admin can correct
+  // these for discrepancies). The DPA processing fields — data types + special
+  // category — are owned by the client (their portal declaration), so we never
+  // touch them here, or we'd clobber what they entered.
   await supabase
     .from("projects")
     .update({
       overview: str("overview"),
       payment_terms: str("payment_terms"),
-      dpa_client_country: str("dpa_client_country") ?? "United Kingdom",
+      dpa_client_company_name: str("dpa_client_company_name"),
       dpa_client_company_number: str("dpa_client_company_number"),
       dpa_client_registered_address: str("dpa_client_registered_address"),
-      dpa_personal_data: str("dpa_personal_data"),
-      dpa_special_category: formData.get("dpa_special_category") === "yes",
-      dpa_special_category_detail: str("dpa_special_category_detail"),
+      dpa_client_country: str("dpa_client_country") ?? "United Kingdom",
     })
     .eq("id", projectId);
 
   // Re-check completeness from the saved row (don't trust the client), then send
-  // only out of a draft.
+  // only out of a draft — and only once the client has submitted their DPA.
   const [{ data: project }, { data: items }] = await Promise.all([
     supabase
       .from("projects")
       .select(
-        "proposal_status, proposed_plan, overview, payment_terms, dpa_personal_data, dpa_special_category, dpa_special_category_detail"
+        "proposal_status, proposed_plan, overview, payment_terms, client_entity_type, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at"
       )
       .eq("id", projectId)
       .maybeSingle(),
@@ -185,8 +188,7 @@ async function saveDocsAndSend(formData: FormData) {
     !!project.proposed_plan &&
     !!project.overview &&
     !!project.payment_terms &&
-    !!project.dpa_personal_data &&
-    (project.dpa_special_category ? !!project.dpa_special_category_detail : true);
+    dpaReadyToSend(project);
 
   if (project?.proposal_status === "draft" && complete) {
     await supabase
@@ -801,7 +803,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
     supabase
       .from("projects")
       .select(
-        "id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, accepted_name, accepted_at, live_url"
+        "id, name, stage, proposal_status, proposed_plan, overview, payment_terms, client_entity_type, dpa_client_country, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at, accepted_name, accepted_at, live_url"
       )
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false }),
@@ -853,12 +855,15 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
         proposed_plan: string | null;
         overview: string | null;
         payment_terms: string | null;
+        client_entity_type: string | null;
         dpa_client_country: string | null;
+        dpa_client_company_name: string | null;
         dpa_client_company_number: string | null;
         dpa_client_registered_address: string | null;
         dpa_personal_data: string | null;
         dpa_special_category: boolean | null;
         dpa_special_category_detail: string | null;
+        dpa_client_submitted_at: string | null;
         accepted_name: string | null;
         accepted_at: string | null;
         live_url: string | null;
@@ -993,6 +998,9 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   const modulesComplete = itemList.length > 0;
   const planSelected = !!project?.proposed_plan;
   const isAccepted = project?.proposal_status === "accepted";
+  // The client provides their DPA details in the portal; the docs can't be sent
+  // until they have (drives the form gate + a header badge).
+  const clientDpaReady = !!project && dpaReadyToSend(project);
 
   const htid = <input type="hidden" name="tenant_id" value={tenantId} />;
   const hpid = projectId ? (
@@ -1064,6 +1072,23 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
         <div className="flex items-center gap-2 flex-wrap">
           {project && <Badge s={project.stage} />}
           {project && <Badge s={project.proposal_status} />}
+          {project && (
+            <span
+              title="Whether the client has submitted their DPA details in the portal"
+              style={{
+                fontFamily: T.mono,
+                fontSize: 10,
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+                color: clientDpaReady ? T.success : T.warning,
+                border: `1px solid ${clientDpaReady ? T.success : T.warning}40`,
+                borderRadius: 999,
+                padding: "2px 8px",
+              }}
+            >
+              {clientDpaReady ? "DPA details ✓" : "DPA details awaited"}
+            </span>
+          )}
           <span
             style={{
               fontFamily: T.mono,
@@ -1454,8 +1479,10 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 marginBottom: 14,
               }}
             >
-              These prefill the proposal + DPA documents the client reads and signs in
-              their portal.
+              Author the proposal here. The DPA details are provided by the client in
+              their portal (status below) — the document ports them on automatically. You
+              can send once the modules, care plan, this doc and the client&apos;s DPA
+              details are all complete.
             </p>
             <ProposalDocsForm
               action={saveDocsAndSend}
@@ -1464,15 +1491,19 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               proposalStatus={project.proposal_status}
               modulesComplete={modulesComplete}
               planSelected={planSelected}
+              clientDpaReady={clientDpaReady}
+              clientSubmittedAt={project.dpa_client_submitted_at}
+              entityType={project.client_entity_type}
+              personalData={project.dpa_personal_data}
+              specialCategory={project.dpa_special_category}
+              specialCategoryDetail={project.dpa_special_category_detail}
               defaults={{
                 overview: project.overview ?? "",
                 paymentTerms: project.payment_terms ?? "",
-                dpaCountry: project.dpa_client_country ?? "United Kingdom",
-                dpaCompanyNumber: project.dpa_client_company_number ?? "",
-                dpaRegisteredAddress: project.dpa_client_registered_address ?? "",
-                dpaPersonalData: project.dpa_personal_data ?? "",
-                dpaSpecialCategory: project.dpa_special_category ?? false,
-                dpaSpecialCategoryDetail: project.dpa_special_category_detail ?? "",
+                companyName: project.dpa_client_company_name ?? "",
+                companyNumber: project.dpa_client_company_number ?? "",
+                registeredAddress: project.dpa_client_registered_address ?? "",
+                country: project.dpa_client_country ?? "United Kingdom",
               }}
             />
           </section>

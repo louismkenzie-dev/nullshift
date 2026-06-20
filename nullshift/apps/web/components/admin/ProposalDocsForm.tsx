@@ -4,24 +4,22 @@ import { useState } from "react";
 import { T } from "@nullshift/ui/tokens";
 
 /**
- * Admin authoring of the proposal document + DPA detail fields, with the single
- * "Save documents & DPA details and send" action. The button stays greyed out
- * until everything required is complete — build modules, a care plan, the
- * overview, payment terms, and the DPA processing details. Once the proposal has
- * been sent it switches to "Save changes" (edits without re-sending), so the
- * admin can still correct details for discrepancies. The client provides their
- * own company number / registered address in the portal; those fields here are
- * editable but not required to send.
+ * Admin authoring of the proposal document (overview + payment terms) plus the
+ * single "Save documents & DPA details and send" action. The DPA details
+ * themselves are provided by the CLIENT in their portal — here the admin sees
+ * the status of that, a read-only summary, and can correct the company details
+ * for discrepancies. The send button stays greyed until everything required is
+ * complete: build modules, a care plan, the overview, payment terms, AND the
+ * client has submitted their DPA details. Once sent it switches to "Save
+ * changes" (edits without re-sending).
  */
 type Defaults = {
   overview: string;
   paymentTerms: string;
-  dpaCountry: string;
-  dpaCompanyNumber: string;
-  dpaRegisteredAddress: string;
-  dpaPersonalData: string;
-  dpaSpecialCategory: boolean;
-  dpaSpecialCategoryDetail: string;
+  companyName: string;
+  companyNumber: string;
+  registeredAddress: string;
+  country: string;
 };
 
 const inp = {
@@ -34,8 +32,7 @@ const inp = {
   borderRadius: 6,
   width: "100%",
 } as const;
-
-const label = {
+const lbl = {
   fontFamily: T.mono,
   fontSize: 10,
   letterSpacing: "0.1em",
@@ -50,6 +47,12 @@ export function ProposalDocsForm({
   proposalStatus,
   modulesComplete,
   planSelected,
+  clientDpaReady,
+  clientSubmittedAt,
+  entityType,
+  personalData,
+  specialCategory,
+  specialCategoryDetail,
   defaults,
 }: {
   action: (formData: FormData) => void | Promise<void>;
@@ -58,30 +61,30 @@ export function ProposalDocsForm({
   proposalStatus: string;
   modulesComplete: boolean;
   planSelected: boolean;
+  clientDpaReady: boolean;
+  clientSubmittedAt: string | null;
+  entityType: string | null;
+  personalData: string | null;
+  specialCategory: boolean | null;
+  specialCategoryDetail: string | null;
   defaults: Defaults;
 }) {
   const [overview, setOverview] = useState(defaults.overview);
   const [paymentTerms, setPaymentTerms] = useState(defaults.paymentTerms);
-  const [country, setCountry] = useState(defaults.dpaCountry || "United Kingdom");
-  const [companyNumber, setCompanyNumber] = useState(defaults.dpaCompanyNumber);
-  const [registeredAddress, setRegisteredAddress] = useState(
-    defaults.dpaRegisteredAddress
-  );
-  const [personalData, setPersonalData] = useState(defaults.dpaPersonalData);
-  const [special, setSpecial] = useState(defaults.dpaSpecialCategory ? "yes" : "no");
-  const [specialDetail, setSpecialDetail] = useState(defaults.dpaSpecialCategoryDetail);
+  const [companyName, setCompanyName] = useState(defaults.companyName);
+  const [companyNumber, setCompanyNumber] = useState(defaults.companyNumber);
+  const [registeredAddress, setRegisteredAddress] = useState(defaults.registeredAddress);
+  const [country, setCountry] = useState(defaults.country || "United Kingdom");
 
   const draft = proposalStatus === "draft";
+  const limited = entityType === "limited";
 
-  // What's still missing (only matters while it's a draft awaiting send).
   const missing: string[] = [];
   if (!modulesComplete) missing.push("at least one build module");
   if (!planSelected) missing.push("a care plan");
   if (!overview.trim()) missing.push("an overview");
   if (!paymentTerms.trim()) missing.push("payment terms");
-  if (!personalData.trim()) missing.push("the personal-data types");
-  if (special === "yes" && !specialDetail.trim())
-    missing.push("the special-category detail");
+  if (!clientDpaReady) missing.push("the client's DPA details (they fill these in)");
   const complete = missing.length === 0;
   const canSubmit = draft ? complete : true;
 
@@ -99,7 +102,7 @@ export function ProposalDocsForm({
       <input type="hidden" name="project_id" value={projectId} />
 
       <label className="flex flex-col gap-1.5">
-        <span style={label}>Overview</span>
+        <span style={lbl}>Overview</span>
         <textarea
           name="overview"
           rows={3}
@@ -111,7 +114,7 @@ export function ProposalDocsForm({
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span style={label}>Payment terms</span>
+        <span style={lbl}>Payment terms</span>
         <textarea
           name="payment_terms"
           rows={2}
@@ -122,103 +125,148 @@ export function ProposalDocsForm({
         />
       </label>
 
+      {/* Client DPA status — they provide these in their portal */}
       <div
         style={{
-          fontFamily: T.mono,
-          fontSize: 10,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          color: T.muted,
-          paddingTop: 8,
+          marginTop: 6,
+          paddingTop: 12,
           borderTop: `1px solid ${T.border}`,
         }}
       >
-        DPA — processing details (required)
-      </div>
-      <label className="flex flex-col gap-1.5">
-        <span style={label}>Types of personal data processed</span>
-        <textarea
-          name="dpa_personal_data"
-          rows={2}
-          value={personalData}
-          onChange={(e) => setPersonalData(e.target.value)}
-          placeholder="e.g. names, emails, phone numbers, booking details, payment references."
-          style={ta(2)}
-        />
-      </label>
-      <div className="flex items-center gap-2 flex-wrap">
-        <span style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.fg }}>
-          Special category data? (e.g. health)
-        </span>
-        <select
-          name="dpa_special_category"
-          value={special}
-          onChange={(e) => setSpecial(e.target.value)}
-          style={{ ...inp, width: 90 }}
-        >
-          <option value="no">No</option>
-          <option value="yes">Yes</option>
-        </select>
-      </div>
-      {special === "yes" && (
-        <label className="flex flex-col gap-1.5">
-          <span style={label}>Special category detail</span>
-          <textarea
-            name="dpa_special_category_detail"
-            rows={2}
-            value={specialDetail}
-            onChange={(e) => setSpecialDetail(e.target.value)}
-            placeholder="Which data + category (e.g. health information for a clinic)."
-            style={ta(2)}
-          />
-        </label>
-      )}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span style={lbl}>DPA details — provided by the client</span>
+          <span
+            style={{
+              fontFamily: T.mono,
+              fontSize: 10,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              color: clientDpaReady ? T.success : T.warning,
+              border: `1px solid ${clientDpaReady ? T.success : T.warning}40`,
+              borderRadius: 999,
+              padding: "2px 8px",
+            }}
+          >
+            {clientDpaReady
+              ? `✓ Provided${
+                  clientSubmittedAt
+                    ? ` ${new Date(clientSubmittedAt).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                      })}`
+                    : ""
+                }`
+              : clientSubmittedAt
+                ? "Started — incomplete"
+                : "Awaiting client"}
+          </span>
+        </div>
+        {clientDpaReady ? (
+          <div
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.82rem",
+              color: T.muted,
+              lineHeight: 1.6,
+              marginTop: 8,
+            }}
+          >
+            <div>
+              <b style={{ color: T.fg }}>Business type:</b>{" "}
+              {limited ? "Limited company" : "Sole trader / other"}
+            </div>
+            {limited && (
+              <div>
+                <b style={{ color: T.fg }}>Company:</b> {companyName || "—"}
+                {companyNumber ? ` · no. ${companyNumber}` : ""}
+              </div>
+            )}
+            {limited && registeredAddress && (
+              <div>
+                <b style={{ color: T.fg }}>Registered office:</b> {registeredAddress}
+              </div>
+            )}
+            <div>
+              <b style={{ color: T.fg }}>Data collected:</b> {personalData || "—"}
+            </div>
+            <div>
+              <b style={{ color: T.fg }}>Special category:</b>{" "}
+              {specialCategory ? `Yes — ${specialCategoryDetail || "(detail)"}` : "No"}
+            </div>
+          </div>
+        ) : (
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.82rem",
+              color: T.faint,
+              lineHeight: 1.6,
+              marginTop: 8,
+            }}
+          >
+            The client is prompted to fill these in the moment they land in their portal.
+            You can&apos;t send the documents until they have.
+          </p>
+        )}
 
-      <div
-        style={{
-          fontFamily: T.mono,
-          fontSize: 10,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          color: T.muted,
-          paddingTop: 8,
-          borderTop: `1px solid ${T.border}`,
-        }}
-      >
-        DPA — client company details (client fills these; edit if needed)
+        {/* Correct the company details for discrepancies (limited companies). */}
+        <details style={{ marginTop: 10 }}>
+          <summary
+            style={{
+              cursor: "pointer",
+              fontFamily: T.mono,
+              fontSize: 11,
+              color: T.primary,
+            }}
+          >
+            Edit company details (for discrepancies)
+          </summary>
+          <div className="flex flex-col gap-2" style={{ marginTop: 12 }}>
+            <label className="flex flex-col gap-1.5">
+              <span style={lbl}>Registered company name</span>
+              <input
+                name="dpa_client_company_name"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="From the client"
+                style={inp}
+              />
+            </label>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <label className="flex flex-col gap-1.5">
+                <span style={lbl}>Company number</span>
+                <input
+                  name="dpa_client_company_number"
+                  value={companyNumber}
+                  onChange={(e) => setCompanyNumber(e.target.value)}
+                  placeholder="From the client"
+                  style={inp}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span style={lbl}>Country</span>
+                <input
+                  name="dpa_client_country"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  style={inp}
+                />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1.5">
+              <span style={lbl}>Registered office address</span>
+              <textarea
+                name="dpa_client_registered_address"
+                rows={2}
+                value={registeredAddress}
+                onChange={(e) => setRegisteredAddress(e.target.value)}
+                placeholder="From the client"
+                style={ta(2)}
+              />
+            </label>
+          </div>
+        </details>
       </div>
-      <div className="grid sm:grid-cols-2 gap-2">
-        <label className="flex flex-col gap-1.5">
-          <span style={label}>Country of registration</span>
-          <input
-            name="dpa_client_country"
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            style={inp}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span style={label}>Company number</span>
-          <input
-            name="dpa_client_company_number"
-            value={companyNumber}
-            onChange={(e) => setCompanyNumber(e.target.value)}
-            placeholder="From the client"
-            style={inp}
-          />
-        </label>
-      </div>
-      <label className="flex flex-col gap-1.5">
-        <span style={label}>Registered address</span>
-        <textarea
-          name="dpa_client_registered_address"
-          rows={2}
-          value={registeredAddress}
-          onChange={(e) => setRegisteredAddress(e.target.value)}
-          placeholder="From the client"
-          style={ta(2)}
-        />
-      </label>
 
       {draft && !complete && (
         <p

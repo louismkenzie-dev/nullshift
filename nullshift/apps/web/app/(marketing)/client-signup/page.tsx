@@ -101,6 +101,9 @@ export default function ClientSignupPage() {
   const [idx, setIdx] = useState(0);
   const [phase, setPhase] = useState<"form" | "verify" | "done">("form");
   const [busy, setBusy] = useState(false);
+  // Whether this person already completed the funnel (set from the onboard
+  // response). If so, the done screen skips the funnel offer → straight to portal.
+  const [funnelDone, setFunnelDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // OTP
@@ -213,6 +216,7 @@ export default function ClientSignupPage() {
       const onboardData = await onboardRes.json();
       if (!onboardRes.ok)
         throw new Error(onboardData.error || "Could not record your booking.");
+      setFunnelDone(!!onboardData.funnelCompleted);
 
       const signupRes = await fetch("/api/auth/client-signup", {
         method: "POST",
@@ -633,43 +637,11 @@ export default function ClientSignupPage() {
                 the exact date &amp; time.
               </p>
 
-              {/* Optional funnel offer — also the 'Get my free plan' path. */}
-              <div
-                className="mt-8"
-                style={{
-                  background: T.surface,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: T.r.lg,
-                  padding: "22px 22px 24px",
-                }}
-              >
-                <h2
-                  style={{
-                    fontFamily: T.display,
-                    fontWeight: 600,
-                    fontSize: "1.15rem",
-                    letterSpacing: "-0.02em",
-                    color: T.fg,
-                  }}
-                >
-                  Want us to come prepared?
-                </h2>
-                <p
-                  className="mt-2"
-                  style={{
-                    fontFamily: T.sans,
-                    fontSize: "0.9rem",
-                    lineHeight: 1.6,
-                    color: T.muted,
-                  }}
-                >
-                  Spend two minutes telling us about your business and we&apos;ll tailor
-                  the call to you — plus you&apos;ll get a free scaling plan. Optional,
-                  but it makes the call far more useful.
-                </p>
+              {funnelDone ? (
+                /* Already completed the funnel → straight to the portal. */
                 <Link
-                  href="/start"
-                  className="mt-5 inline-flex items-center justify-center font-medium"
+                  href="/portal"
+                  className="mt-8 inline-flex items-center justify-center font-medium"
                   style={{
                     height: 48,
                     paddingInline: 24,
@@ -683,24 +655,80 @@ export default function ClientSignupPage() {
                     boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
                   }}
                 >
-                  Get my free plan →
+                  Go to my portal →
                 </Link>
-              </div>
+              ) : (
+                <>
+                  {/* Optional funnel offer — also the 'Get my free plan' path. */}
+                  <div
+                    className="mt-8"
+                    style={{
+                      background: T.surface,
+                      border: `1px solid ${T.border}`,
+                      borderRadius: T.r.lg,
+                      padding: "22px 22px 24px",
+                    }}
+                  >
+                    <h2
+                      style={{
+                        fontFamily: T.display,
+                        fontWeight: 600,
+                        fontSize: "1.15rem",
+                        letterSpacing: "-0.02em",
+                        color: T.fg,
+                      }}
+                    >
+                      Want us to come prepared?
+                    </h2>
+                    <p
+                      className="mt-2"
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.9rem",
+                        lineHeight: 1.6,
+                        color: T.muted,
+                      }}
+                    >
+                      Spend two minutes telling us about your business and we&apos;ll
+                      tailor the call to you — plus you&apos;ll get a free scaling plan.
+                      Optional, but it makes the call far more useful.
+                    </p>
+                    <Link
+                      href="/start"
+                      className="mt-5 inline-flex items-center justify-center font-medium"
+                      style={{
+                        height: 48,
+                        paddingInline: 24,
+                        background: T.primary,
+                        color: T.primaryFg,
+                        borderRadius: T.r.md,
+                        fontFamily: T.sans,
+                        fontSize: "0.9375rem",
+                        fontWeight: 500,
+                        textDecoration: "none",
+                        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
+                      }}
+                    >
+                      Get my free plan →
+                    </Link>
+                  </div>
 
-              <div className="mt-5 text-center">
-                <Link
-                  href="/portal"
-                  style={{
-                    fontFamily: T.sans,
-                    fontSize: "0.8125rem",
-                    color: T.muted,
-                    textDecoration: "underline",
-                    textUnderlineOffset: "3px",
-                  }}
-                >
-                  Skip to my portal →
-                </Link>
-              </div>
+                  <div className="mt-5 text-center">
+                    <Link
+                      href="/portal"
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.8125rem",
+                        color: T.muted,
+                        textDecoration: "underline",
+                        textUnderlineOffset: "3px",
+                      }}
+                    >
+                      Skip to my portal →
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

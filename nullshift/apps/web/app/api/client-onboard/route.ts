@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { recordLead } from "@nullshift/db/leads";
+import { createServiceClient } from "@nullshift/db";
 
 /**
  * POST /api/client-onboard
@@ -116,5 +117,22 @@ export async function POST(request: Request) {
     console.error("Admin notification email failed (non-fatal):", e);
   }
 
-  return NextResponse.json({ ok: true });
+  // Has this person already completed the funnel? (a source='funnel' lead with
+  // the same email). If so, the booking flow sends them straight to the portal
+  // instead of offering the funnel again.
+  let funnelCompleted = false;
+  try {
+    const service = createServiceClient();
+    const { data: prior } = await service
+      .from("leads")
+      .select("id")
+      .ilike("email", email.trim().toLowerCase())
+      .eq("source", "funnel")
+      .limit(1);
+    funnelCompleted = (prior?.length ?? 0) > 0;
+  } catch (e) {
+    console.error("funnel-completion check failed (non-fatal):", e);
+  }
+
+  return NextResponse.json({ ok: true, funnelCompleted });
 }

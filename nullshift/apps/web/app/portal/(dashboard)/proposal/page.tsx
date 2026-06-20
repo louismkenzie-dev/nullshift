@@ -9,6 +9,8 @@ import { DpaTemplate } from "@/components/legal/DpaTemplate";
 import { ProposalDocument } from "@/components/portal/ProposalDocument";
 import { SignatureField } from "@/components/portal/SignatureField";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
+import { setEntityType } from "../dpa-actions";
+import { dpaComplete } from "@/lib/dpa";
 
 /**
  * Client portal — proposal & invoices. The client reviews the itemised proposal
@@ -29,6 +31,7 @@ type Project = {
   overview: string | null;
   payment_terms: string | null;
   dpa_client_country: string | null;
+  dpa_client_company_name: string | null;
   dpa_client_company_number: string | null;
   dpa_client_registered_address: string | null;
   dpa_personal_data: string | null;
@@ -51,49 +54,6 @@ type InvItem = { invoice_id: string; name: string; amount: number; quantity: num
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 
-/** The client declares whether they're a limited company before signing. Limited
- *  companies also supply their company number + registered office (which fill the
- *  DPA); sole traders / others sign the proposal only. */
-async function setEntityType(formData: FormData) {
-  "use server";
-  const projectId = String(formData.get("project_id") || "");
-  const entityType = String(formData.get("entity_type") || "");
-  if (!projectId || (entityType !== "limited" && entityType !== "sole_trader")) return;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, proposal_status")
-    .eq("id", projectId)
-    .maybeSingle();
-  // The client can fill / update their business details any time before the
-  // proposal is signed or declined — not only once it's been sent.
-  if (
-    !project ||
-    project.proposal_status === "accepted" ||
-    project.proposal_status === "declined"
-  )
-    return;
-
-  const patch: Record<string, unknown> = { client_entity_type: entityType };
-  if (entityType === "limited") {
-    patch.dpa_client_company_number =
-      String(formData.get("company_number") || "").trim() || null;
-    patch.dpa_client_registered_address =
-      String(formData.get("registered_address") || "").trim() || null;
-    patch.dpa_client_country =
-      String(formData.get("country") || "").trim() || "United Kingdom";
-  }
-  // projects are staff-write under RLS — use the service client after the
-  // membership-scoped read above confirmed the caller owns this project.
-  const service = createServiceClient();
-  await service.from("projects").update(patch).eq("id", projectId);
-  revalidatePath("/portal/proposal");
-}
-
 async function acceptProposal(formData: FormData) {
   "use server";
   const projectId = String(formData.get("project_id") || "");
@@ -108,12 +68,13 @@ async function acceptProposal(formData: FormData) {
   // Confirm the caller can see this project (RLS only returns their tenant's).
   const { data: project } = await supabase
     .from("projects")
-    .select("id, tenant_id, proposal_status, proposed_plan, client_entity_type")
+    .select(
+      "id, tenant_id, proposal_status, proposed_plan, client_entity_type, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail"
+    )
     .eq("id", projectId)
     .maybeSingle();
-  // Must be sent and the client must have declared their business type first.
-  if (!project || project.proposal_status !== "sent" || !project.client_entity_type)
-    return;
+  // Must be sent and the client must have completed their DPA declaration first.
+  if (!project || project.proposal_status !== "sent" || !dpaComplete(project)) return;
 
   // Trusted writes (projects + compliance are staff-write under RLS). The typed
   // signature is recorded on the project and the DPA compliance record.
@@ -264,7 +225,7 @@ export default async function PortalProposal() {
       supabase
         .from("projects")
         .select(
-          "id, tenant_id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, accepted_name, accepted_at, client_entity_type, tenants(name)"
+          "id, tenant_id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, accepted_name, accepted_at, client_entity_type, tenants(name)"
         )
         .order("created_at"),
       supabase
@@ -411,9 +372,13 @@ export default async function PortalProposal() {
                             submitLabel="Save business details"
                             defaults={{
                               entityType: project.client_entity_type,
+                              companyName: project.dpa_client_company_name,
                               companyNumber: project.dpa_client_company_number,
                               registeredAddress: project.dpa_client_registered_address,
                               country: project.dpa_client_country,
+                              personalData: project.dpa_personal_data,
+                              specialCategory: project.dpa_special_category,
+                              specialCategoryDetail: project.dpa_special_category_detail,
                             }}
                           />
                         </div>
@@ -427,9 +392,13 @@ export default async function PortalProposal() {
                       submitLabel="Save business details"
                       defaults={{
                         entityType: project.client_entity_type,
+                        companyName: project.dpa_client_company_name,
                         companyNumber: project.dpa_client_company_number,
                         registeredAddress: project.dpa_client_registered_address,
                         country: project.dpa_client_country,
+                        personalData: project.dpa_personal_data,
+                        specialCategory: project.dpa_special_category,
+                        specialCategoryDetail: project.dpa_special_category_detail,
                       }}
                     />
                   )}
@@ -495,7 +464,10 @@ export default async function PortalProposal() {
                       <DpaTemplate
                         mode="proposal"
                         client={{
-                          name: project.tenants?.name ?? "Client",
+                          name:
+                            project.dpa_client_company_name ||
+                            project.tenants?.name ||
+                            "Client",
                           country: project.dpa_client_country,
                           companyNumber: project.dpa_client_company_number,
                           registeredAddress: project.dpa_client_registered_address,
