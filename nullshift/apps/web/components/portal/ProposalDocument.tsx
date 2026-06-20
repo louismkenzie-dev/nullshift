@@ -75,7 +75,12 @@ export function ProposalDocument({
   overview: string | null;
   items: { name: string; amount: number }[];
   total: number;
-  carePlan: { label: string; mrr: number } | null;
+  carePlan: {
+    label: string;
+    mrr: number;
+    blurb?: string | null;
+    features?: string[] | null;
+  } | null;
   paymentTerms: string | null;
   accepted: { name: string; at: string } | null;
   /** true = limited company (full DPA below), false = sole trader (terms only),
@@ -294,6 +299,78 @@ export function ProposalDocument({
           </div>
         )}
       </Section>
+
+      {carePlan && (carePlan.blurb || (carePlan.features?.length ?? 0) > 0) && (
+        <Section n={sec()} title="Your care plan">
+          <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+            <span
+              style={{
+                fontFamily: T.sans,
+                fontWeight: 600,
+                fontSize: "0.95rem",
+                color: T.fg,
+              }}
+            >
+              {carePlan.label}
+            </span>
+            <span style={{ fontFamily: T.mono, fontSize: "0.9rem", color: T.primary }}>
+              {gbp(carePlan.mrr)}/mo
+            </span>
+          </div>
+          {carePlan.blurb && (
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.88rem",
+                color: T.muted,
+                lineHeight: 1.6,
+                marginBottom: 10,
+              }}
+            >
+              {carePlan.blurb}
+            </p>
+          )}
+          {carePlan.features && carePlan.features.length > 0 && (
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {carePlan.features.map((f, i) => (
+                <li
+                  key={i}
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "flex-start",
+                    padding: "5px 0",
+                  }}
+                >
+                  <span style={{ color: T.primary, lineHeight: 1.5 }} aria-hidden>
+                    ✓
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.88rem",
+                      color: T.muted,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {f}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p
+            style={{
+              fontFamily: T.mono,
+              fontSize: 10.5,
+              color: T.faint,
+              marginTop: 10,
+            }}
+          >
+            Billed monthly · cancel any time · no lock-in.
+          </p>
+        </Section>
+      )}
 
       <Section n={sec()} title="Payment terms">
         <p

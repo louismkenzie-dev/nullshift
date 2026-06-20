@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
 
 /**
@@ -45,6 +46,23 @@ export function EntityTypeForm({
   const [specialDetail, setSpecialDetail] = useState(
     defaults?.specialCategoryDetail ?? ""
   );
+
+  const router = useRouter();
+  const [saved, setSaved] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      await action(formData);
+      setSaved(true);
+      // Let the confirmation read for a beat, then re-render the parent: the
+      // landing gate lifts, or (in the proposal edit box) the box closes and the
+      // summary updates.
+      setTimeout(() => router.refresh(), 1300);
+    });
+  }
 
   const limited = type === "limited";
 
@@ -102,8 +120,52 @@ export function EntityTypeForm({
     );
   };
 
+  if (saved) {
+    return (
+      <div
+        className="flex items-center gap-3"
+        style={{
+          padding: "16px 18px",
+          background: `${T.primary}14`,
+          border: `1px solid ${T.primary}55`,
+          borderRadius: T.r.md,
+        }}
+      >
+        <span
+          aria-hidden
+          style={{ fontFamily: T.mono, color: T.primary, fontSize: "1.15rem" }}
+        >
+          ✓
+        </span>
+        <div>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontWeight: 600,
+              fontSize: "0.95rem",
+              color: T.fg,
+              margin: 0,
+            }}
+          >
+            Business details saved
+          </p>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.82rem",
+              color: T.muted,
+              margin: "2px 0 0",
+            }}
+          >
+            Thanks — that&apos;s everything we need for now.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <form action={action} className="flex flex-col gap-3">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <input type="hidden" name="project_id" value={projectId} />
       <input type="hidden" name="entity_type" value={type} />
 
@@ -226,7 +288,7 @@ export function EntityTypeForm({
 
       <button
         type="submit"
-        disabled={!complete}
+        disabled={!complete || pending}
         className="self-start"
         style={{
           fontFamily: T.sans,
@@ -238,10 +300,11 @@ export function EntityTypeForm({
           color: complete ? T.primaryFg : T.faint,
           border: complete ? "none" : `1px solid ${T.border}`,
           borderRadius: T.r.md,
-          cursor: complete ? "pointer" : "not-allowed",
+          cursor: complete ? (pending ? "wait" : "pointer") : "not-allowed",
+          opacity: pending ? 0.75 : 1,
         }}
       >
-        {submitLabel}
+        {pending ? "Saving…" : submitLabel}
       </button>
     </form>
   );

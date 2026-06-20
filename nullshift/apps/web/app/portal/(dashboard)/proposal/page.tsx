@@ -7,10 +7,13 @@ import { carePlan, CARE_PLAN_MRR } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
 import { ProposalDocument } from "@/components/portal/ProposalDocument";
-import { SignatureField } from "@/components/portal/SignatureField";
+import { SignProposal } from "@/components/portal/SignProposal";
+import { DownloadDocButton } from "@/components/portal/DownloadDocButton";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 import { setEntityType } from "../dpa-actions";
 import { dpaReadyToSend } from "@/lib/dpa";
+import { sendEmail } from "@/lib/sendEmail";
+import { proposalSignedEmail } from "@/lib/clientEmails";
 
 /**
  * Client portal — proposal & invoices. The client reviews the itemised proposal
@@ -156,7 +159,48 @@ async function acceptProposal(formData: FormData) {
       metadata: { total: inv.total, via: "auto-accept" },
     });
 
-  revalidatePath("/portal/proposal");
+  // Promote the lead to Won — they've signed, so they're committed — and tell the
+  // team. Both best-effort; the signature is already recorded above.
+  const { data: t } = await service
+    .from("tenants")
+    .select("name, contact_email")
+    .eq("id", project.tenant_id)
+    .maybeSingle();
+  if (t?.contact_email) {
+    await service.from("leads").update({ status: "won" }).ilike("email", t.contact_email);
+  }
+  try {
+    const { data: sumItems } = await service
+      .from("project_items")
+      .select("amount")
+      .eq("project_id", projectId);
+    const buildTotal = (sumItems ?? []).reduce(
+      (s, i) => s + Number((i as { amount: number }).amount ?? 0),
+      0
+    );
+    const siteUrl = (
+      process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk"
+    ).replace(/\/$/, "");
+    const notify = process.env.ENQUIRY_NOTIFY_EMAIL || "louis@nullshift.co.uk";
+    const mail = proposalSignedEmail({
+      clientName: t?.name ?? "A client",
+      reference: clientRef(project.tenant_id),
+      total: buildTotal,
+      planLabel: carePlan(project.proposed_plan)?.label ?? null,
+      adminUrl: `${siteUrl}/admin/clients/${project.tenant_id}`,
+    });
+    await sendEmail({
+      to: notify,
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text,
+    });
+  } catch (e) {
+    console.error("proposal-signed admin notify failed (non-fatal):", e);
+  }
+
+  // No revalidatePath here — SignProposal plays the success animation, then
+  // refreshes the route itself so the celebration isn't cut short.
 }
 
 async function declineProposal(formData: FormData) {
@@ -284,6 +328,35 @@ export default async function PortalProposal() {
         const limited = project.client_entity_type === "limited";
         const declared = !!project.client_entity_type;
         const dpaRequired: boolean | null = declared ? limited : null;
+        const accepted = project.proposal_status === "accepted";
+        // The full DPA document — reused in the collapsible (while pending) and
+        // rendered in full once signed (so it reads cleanly + saves to PDF).
+        const dpaDoc = (
+          <DpaTemplate
+            mode="proposal"
+            client={{
+              name: project.dpa_client_company_name || project.tenants?.name || "Client",
+              country: project.dpa_client_country,
+              companyNumber: project.dpa_client_company_number,
+              registeredAddress: project.dpa_client_registered_address,
+            }}
+            effectiveDate={
+              project.accepted_at
+                ? new Date(project.accepted_at).toLocaleDateString("en-GB")
+                : null
+            }
+            personalDataTypes={project.dpa_personal_data}
+            specialCategory={{
+              present: !!project.dpa_special_category,
+              detail: project.dpa_special_category_detail,
+            }}
+            accepted={
+              project.accepted_at
+                ? { name: project.accepted_name ?? "", at: project.accepted_at }
+                : null
+            }
+          />
+        );
         return (
           <div key={project.id} style={{ marginBottom: 32 }}>
             <div className="flex items-center gap-3" style={{ marginBottom: 14 }}>
@@ -407,167 +480,120 @@ export default async function PortalProposal() {
               )}
 
             {/* Proposal + DPA documents — visible once the admin sends them. */}
-            {(project.proposal_status === "sent" ||
-              project.proposal_status === "accepted") && (
+            {(project.proposal_status === "sent" || accepted) && (
               <div style={{ marginBottom: 14 }}>
-                <ProposalDocument
-                  reference={clientRef(project.tenant_id)}
-                  clientName={project.tenants?.name ?? "Client"}
-                  businessName={project.tenants?.name}
-                  date={new Date().toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                  overview={project.overview}
-                  items={pItems.map((i) => ({ name: i.name, amount: i.amount }))}
-                  total={total}
-                  carePlan={
-                    carePlan(project.proposed_plan)
-                      ? {
-                          label: carePlan(project.proposed_plan)!.label,
-                          mrr: carePlan(project.proposed_plan)!.mrr,
-                        }
-                      : null
-                  }
-                  paymentTerms={project.payment_terms}
-                  accepted={
-                    project.accepted_at
-                      ? { name: project.accepted_name ?? "", at: project.accepted_at }
-                      : null
-                  }
-                  dpaRequired={dpaRequired}
-                />
-
-                {/* Full DPA (expandable) — only for limited companies */}
-                {limited && (
-                  <details
-                    style={{
-                      marginTop: 12,
-                      background: T.surface,
-                      border: `1px solid ${T.border}`,
-                      borderRadius: T.r.lg,
-                      padding: "14px 18px",
-                    }}
-                  >
-                    <summary
-                      style={{
-                        cursor: "pointer",
-                        fontFamily: T.sans,
-                        fontWeight: 600,
-                        fontSize: "0.95rem",
-                        color: T.fg,
-                      }}
-                    >
-                      View the full Data Processing Agreement
-                    </summary>
-                    <div style={{ marginTop: 16 }}>
-                      <DpaTemplate
-                        mode="proposal"
-                        client={{
-                          name:
-                            project.dpa_client_company_name ||
-                            project.tenants?.name ||
-                            "Client",
-                          country: project.dpa_client_country,
-                          companyNumber: project.dpa_client_company_number,
-                          registeredAddress: project.dpa_client_registered_address,
-                        }}
-                        effectiveDate={
-                          project.accepted_at
-                            ? new Date(project.accepted_at).toLocaleDateString("en-GB")
-                            : null
-                        }
-                        personalDataTypes={project.dpa_personal_data}
-                        specialCategory={{
-                          present: !!project.dpa_special_category,
-                          detail: project.dpa_special_category_detail,
-                        }}
-                        accepted={
-                          project.accepted_at
-                            ? {
-                                name: project.accepted_name ?? "",
-                                at: project.accepted_at,
-                              }
-                            : null
-                        }
-                      />
-                    </div>
-                  </details>
-                )}
-
-                {/* Sign / decline — business details are captured above. */}
-                {project.proposal_status === "sent" && dpaReadyToSend(project) && (
+                {/* Download bar — anchored at the top once signed (both docs). */}
+                {accepted && (
                   <div
                     style={{
-                      marginTop: 14,
-                      background: T.surface,
-                      border: `1px solid ${T.primary}55`,
-                      borderRadius: T.r.lg,
-                      padding: "20px 22px",
+                      position: "sticky",
+                      top: 72,
+                      zIndex: 5,
+                      display: "flex",
+                      gap: 10,
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      marginBottom: 14,
+                      padding: "10px 12px",
+                      background: `${T.surface}e6`,
+                      border: `1px solid ${T.border}`,
+                      borderRadius: T.r.md,
+                      backdropFilter: "blur(8px)",
+                      WebkitBackdropFilter: "blur(8px)",
                     }}
                   >
-                    <p
+                    <span
                       style={{
-                        fontFamily: T.sans,
-                        fontSize: "0.9rem",
+                        fontFamily: T.mono,
+                        fontSize: 10,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
                         color: T.muted,
-                        lineHeight: 1.6,
-                        marginBottom: 16,
+                        marginRight: "auto",
                       }}
                     >
-                      Please review the {limited ? "proposal and DPA" : "proposal"} above.
-                      Signing accepts the scope and price
-                      {carePlan(project.proposed_plan)
-                        ? ` and the ${carePlan(project.proposed_plan)!.label} care plan`
-                        : ""}
-                      {limited ? ", and the Data Processing Agreement," : ""} so we can
-                      begin. We&apos;ll email your invoice straight away.
-                    </p>
-                    <form action={acceptProposal}>
-                      <input type="hidden" name="project_id" value={project.id} />
-                      <SignatureField />
-                      <button
-                        type="submit"
+                      Signed documents
+                    </span>
+                    <DownloadDocButton
+                      targetId={`proposal-document-${project.id}`}
+                      filename={`nullshift-proposal-${clientRef(project.tenant_id)}.pdf`}
+                      label="Proposal PDF"
+                    />
+                    {limited && (
+                      <DownloadDocButton
+                        targetId={`dpa-document-${project.id}`}
+                        filename={`nullshift-dpa-${clientRef(project.tenant_id)}.pdf`}
+                        label="DPA PDF"
+                      />
+                    )}
+                  </div>
+                )}
+
+                <div id={`proposal-document-${project.id}`}>
+                  <ProposalDocument
+                    reference={clientRef(project.tenant_id)}
+                    clientName={project.tenants?.name ?? "Client"}
+                    businessName={project.tenants?.name}
+                    date={new Date().toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                    overview={project.overview}
+                    items={pItems.map((i) => ({ name: i.name, amount: i.amount }))}
+                    total={total}
+                    carePlan={carePlan(project.proposed_plan)}
+                    paymentTerms={project.payment_terms}
+                    accepted={
+                      project.accepted_at
+                        ? { name: project.accepted_name ?? "", at: project.accepted_at }
+                        : null
+                    }
+                    dpaRequired={dpaRequired}
+                  />
+                </div>
+
+                {/* Full DPA — limited companies only. Collapsible while pending,
+                    rendered in full once signed so it reads + saves to PDF. */}
+                {limited &&
+                  (accepted ? (
+                    <div id={`dpa-document-${project.id}`} style={{ marginTop: 12 }}>
+                      {dpaDoc}
+                    </div>
+                  ) : (
+                    <details
+                      style={{
+                        marginTop: 12,
+                        background: T.surface,
+                        border: `1px solid ${T.border}`,
+                        borderRadius: T.r.lg,
+                        padding: "14px 18px",
+                      }}
+                    >
+                      <summary
                         style={{
-                          marginTop: 16,
+                          cursor: "pointer",
                           fontFamily: T.sans,
                           fontWeight: 600,
                           fontSize: "0.95rem",
-                          height: 46,
-                          paddingInline: 24,
-                          background: T.primary,
-                          color: T.primaryFg,
-                          border: "none",
-                          borderRadius: T.r.md,
-                          cursor: "pointer",
-                          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
+                          color: T.fg,
                         }}
                       >
-                        Accept &amp; sign →
-                      </button>
-                    </form>
-                    <form action={declineProposal} style={{ marginTop: 10 }}>
-                      <input type="hidden" name="project_id" value={project.id} />
-                      <button
-                        type="submit"
-                        style={{
-                          fontFamily: T.sans,
-                          fontWeight: 600,
-                          fontSize: "0.85rem",
-                          height: 40,
-                          paddingInline: 18,
-                          background: "transparent",
-                          color: T.muted,
-                          border: `1px solid ${T.border}`,
-                          borderRadius: T.r.md,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Decline
-                      </button>
-                    </form>
-                  </div>
+                        View the full Data Processing Agreement
+                      </summary>
+                      <div style={{ marginTop: 16 }}>{dpaDoc}</div>
+                    </details>
+                  ))}
+
+                {/* Sign / decline — business details are captured above. */}
+                {project.proposal_status === "sent" && dpaReadyToSend(project) && (
+                  <SignProposal
+                    acceptAction={acceptProposal}
+                    declineAction={declineProposal}
+                    projectId={project.id}
+                    limited={limited}
+                    carePlanLabel={carePlan(project.proposed_plan)?.label ?? null}
+                  />
                 )}
                 {project.proposal_status === "sent" && !dpaReadyToSend(project) && (
                   <p

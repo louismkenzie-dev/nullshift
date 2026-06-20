@@ -1492,7 +1492,27 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
 
           {/* Proposal document + DPA details (authoring) */}
           <section style={card}>
-            <h2 style={h2}>Proposal document &amp; DPA details</h2>
+            <div
+              className="flex items-center justify-between flex-wrap gap-2"
+              style={{ marginBottom: 4 }}
+            >
+              <h2 style={{ ...h2, marginBottom: 0 }}>
+                Proposal document &amp; DPA details
+              </h2>
+              <Link
+                href={`/admin/clients/${tenantId}/documents`}
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 11,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  color: T.primary,
+                  textDecoration: "none",
+                }}
+              >
+                View / download documents →
+              </Link>
+            </div>
             <p
               style={{
                 fontFamily: T.sans,

@@ -6,6 +6,8 @@
  *     client to review + sign their documents in the portal.
  *   • passwordResetEmail — sent when an admin triggers a password reset for a
  *     client who's already signed in; carries a branded Supabase recovery link.
+ *   • proposalSignedEmail — sent to the team when a client signs their proposal;
+ *     confirms the lead is Won and links straight to their client hub.
  */
 import { C, FONT, esc, button, wrap } from "./emailLayout";
 
@@ -162,6 +164,57 @@ You can set a new password for your Nullshift portal using the link below (it ex
 ${resetUrl}
 
 If you didn't expect this, you can ignore this email.
+
+— Nullshift`;
+  return { subject, html, text };
+}
+
+export function proposalSignedEmail(opts: {
+  clientName: string;
+  reference: string;
+  total: number;
+  planLabel: string | null;
+  adminUrl: string;
+}): { subject: string; html: string; text: string } {
+  const { clientName, reference, total, planLabel, adminUrl } = opts;
+  const gbp = "£" + Math.round(total).toLocaleString("en-GB");
+  const subject = `Signed — ${clientName} accepted their proposal`;
+
+  const row = (label: string, value: string) =>
+    `<tr>
+      <td style="padding:11px 0;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${C.faint};white-space:nowrap;vertical-align:middle;width:42%">${esc(label)}</td>
+      <td style="padding:11px 0 11px 16px;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:15px;color:${C.fg};vertical-align:middle">${esc(value)}</td>
+    </tr>`;
+
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Proposal signed</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">${esc(clientName)} is ready to build</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">They've signed the proposal${planLabel ? " and care plan" : ""}${" "}and accepted the agreement. The lead is now <strong style="color:${C.fg}">Won</strong>, and the itemised build invoice has been drafted.</p>
+    </td></tr>
+    <tr><td style="padding:20px 32px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:14px">
+        <tr><td style="padding:6px 20px 6px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            ${row("Reference", reference)}
+            ${row("Build total", gbp)}
+            ${row("Care plan", planLabel ?? "—")}
+          </table>
+        </td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:20px 32px 8px">${button(adminUrl, "Open client →")}</td></tr>`;
+
+  const html = wrap(inner, `${clientName} signed their proposal — lead is now Won.`);
+  const text = `${clientName} has signed their proposal${planLabel ? " and care plan" : ""}.
+
+Reference: ${reference}
+Build total: ${gbp}
+Care plan: ${planLabel ?? "—"}
+
+The lead is now Won and the build invoice has been drafted.
+
+Open the client: ${adminUrl}
 
 — Nullshift`;
   return { subject, html, text };
