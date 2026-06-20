@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { T } from "@nullshift/ui/tokens";
+import { Logo } from "@nullshift/ui/components/Logo";
 
 /**
  * Portal header — deliberately minimal and mobile-safe. Navigation happens inside
@@ -26,32 +27,8 @@ export function PortalHeader({ email }: { email: string }) {
         className="flex items-center justify-between gap-3"
         style={{ maxWidth: 880, margin: "0 auto", height: 56, padding: "0 16px" }}
       >
-        <Link
-          href="/portal"
-          className="flex items-center gap-2.5 min-w-0"
-          style={{
-            fontFamily: T.sans,
-            fontWeight: 600,
-            fontSize: "0.9rem",
-            color: T.fg,
-            textDecoration: "none",
-          }}
-        >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: T.primary,
-              boxShadow: `0 0 0 4px ${T.primarySoft}`,
-              flexShrink: 0,
-            }}
-          />
-          <span
-            style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-          >
-            Your projects
-          </span>
+        <Link href="/portal" aria-label="Nullshift client portal" className="min-w-0">
+          <Logo markSize={20} />
         </Link>
 
         <div className="flex items-center gap-2.5 min-w-0">

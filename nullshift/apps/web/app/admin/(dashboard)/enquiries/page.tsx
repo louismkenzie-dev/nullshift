@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
-import { BriefViewer } from "@/components/BriefViewer";
-import type { BriefData } from "@nullshift/content/brief";
 
 type Enquiry = {
   id: string;
@@ -19,7 +17,6 @@ type Enquiry = {
   preferred_date: string | null;
   preferred_time: string | null;
   referral: string | null;
-  brief_data: BriefData | null;
   status: string;
 };
 
@@ -253,11 +250,6 @@ export default function EnquiriesPage() {
                     >
                       {e.message}
                     </p>
-                  )}
-                  {e.brief_data && (
-                    <div className="mb-4">
-                      <BriefViewer brief={e.brief_data} />
-                    </div>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
                     <span

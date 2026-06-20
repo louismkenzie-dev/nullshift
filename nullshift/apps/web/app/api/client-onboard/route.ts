@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@nullshift/db";
 import { recordLead } from "@nullshift/db/leads";
 
 /**
  * POST /api/client-onboard
  *
- * Called from /client-signup before the auth account is created.
- * Creates (or updates) a clients row with name, email, business_name,
- * requested_date, requested_time and returns the clientId.
- *
- * Also fires a notification email to the admin (louis@nullshift.com)
- * with a direct link to the new client in the admin dashboard.
+ * Called from the book-a-call flow before the auth account is created. Records a
+ * canonical `leads` row (status='call_booked', with the requested slot) so the
+ * booking lands in the admin Pipeline, and notifies the team. No legacy `clients`
+ * row — the admin works off the multi-tenant Pipeline → client hub.
  */
 export async function POST(request: Request) {
   let body: {
@@ -28,70 +25,11 @@ export async function POST(request: Request) {
   }
 
   const { name, email, business_name, requested_date, requested_time } = body;
-
   if (!name?.trim() || !email?.trim()) {
     return NextResponse.json({ error: "Name and email are required." }, { status: 400 });
   }
 
-  const supabase = (() => {
-    try {
-      return createServiceClient();
-    } catch {
-      return null;
-    }
-  })();
-  if (!supabase) {
-    return NextResponse.json({ error: "Backend not configured." }, { status: 500 });
-  }
-
-  // Check for an existing client by email (case-insensitive) to avoid duplicates.
-  const { data: existing } = await supabase
-    .from("clients")
-    .select("id")
-    .ilike("email", email.trim())
-    .maybeSingle();
-
-  let clientId: string;
-
-  if (existing) {
-    clientId = existing.id;
-    // Update the existing record with the latest details.
-    await supabase
-      .from("clients")
-      .update({
-        name: name.trim(),
-        business_name: business_name?.trim() || null,
-        requested_date: requested_date || null,
-        requested_time: requested_time || null,
-      })
-      .eq("id", clientId);
-  } else {
-    const { data: newClient, error } = await supabase
-      .from("clients")
-      .insert({
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        business_name: business_name?.trim() || null,
-        status: "lead",
-        requested_date: requested_date || null,
-        requested_time: requested_time || null,
-      })
-      .select("id")
-      .single();
-
-    if (error || !newClient) {
-      console.error("Client insert error:", error?.message);
-      return NextResponse.json(
-        { error: "Could not create client record." },
-        { status: 500 }
-      );
-    }
-    clientId = newClient.id;
-  }
-
-  // ── Also write a canonical leads row so booked calls appear in the admin
-  //    Pipeline (not just the Clients list). This closes the gap where every
-  //    marketing CTA except the quiz funnel skipped the pipeline. ──────────
+  // Record the booked call as a lead so it appears in the admin Pipeline.
   const lead = await recordLead({
     name: name.trim(),
     email: email.trim().toLowerCase(),
@@ -100,16 +38,23 @@ export async function POST(request: Request) {
     quizAnswers: { business_name: business_name ?? null, requested_date, requested_time },
     status: "call_booked",
   });
-  if (!lead.ok) console.error("Lead insert error (book):", lead.error);
+  if (!lead.ok) {
+    console.error("Lead insert error (book):", lead.error);
+    return NextResponse.json(
+      { error: "Could not record your booking." },
+      { status: 500 }
+    );
+  }
 
   // ── Admin notification email (best-effort, non-blocking) ──────────────
   try {
     const apiKey = process.env.RESEND_API_KEY;
     const from = process.env.ENQUIRY_FROM_EMAIL || "Nullshift <onboarding@resend.dev>";
+    const notify = process.env.ENQUIRY_NOTIFY_EMAIL || "louis@nullshift.co.uk";
     const siteUrl = (
       process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk"
     ).replace(/\/$/, "");
-    const adminLink = `${siteUrl}/admin/clients/${clientId}`;
+    const pipelineLink = `${siteUrl}/admin/pipeline`;
 
     const timeLabels: Record<string, string> = {
       morning: "Morning (9am–12pm)",
@@ -151,23 +96,19 @@ export async function POST(request: Request) {
 
       await resend.emails.send({
         from,
-        to: "louis@nullshift.com",
+        to: notify,
         replyTo: email.trim(),
-        subject: `New enquiry — ${name.trim()}`,
-        text: `A new client has booked a call via nullshift.co.uk:\n\n${textLines}\n\nView in admin:\n${adminLink}`,
+        subject: `New call booked — ${name.trim()}`,
+        text: `A new call has been booked via nullshift.co.uk:\n\n${textLines}\n\nView in the Pipeline:\n${pipelineLink}`,
         html: `
 <div style="background:#0A0B0F;color:#F2F4F8;font-family:system-ui,sans-serif;padding:40px;max-width:580px;margin:0 auto;border-radius:12px;border:1px solid #2A2D38;">
-  <div style="margin-bottom:8px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#10b981;">New booking enquiry</div>
+  <div style="margin-bottom:8px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#10b981;">New call booked</div>
   <h1 style="margin:0 0 24px;font-size:26px;font-weight:600;letter-spacing:-0.02em;">${name.trim()}</h1>
   <table style="width:100%;border-collapse:collapse;margin-bottom:32px;">${tableRows}</table>
-  <a href="${adminLink}"
+  <a href="${pipelineLink}"
      style="display:inline-block;background:#10b981;color:#0A0B0F;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
-    View client in admin →
+    View in the Pipeline →
   </a>
-  <p style="margin-top:24px;font-size:12px;color:#5C6170;">
-    Nullshift admin notification ·
-    <a href="${siteUrl}/admin" style="color:#9AA0AE;text-decoration:none;">Go to dashboard</a>
-  </p>
 </div>`,
       });
     }
@@ -175,5 +116,5 @@ export async function POST(request: Request) {
     console.error("Admin notification email failed (non-fatal):", e);
   }
 
-  return NextResponse.json({ ok: true, clientId });
+  return NextResponse.json({ ok: true });
 }

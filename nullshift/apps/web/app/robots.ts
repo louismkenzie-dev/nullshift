@@ -12,7 +12,6 @@ export default function robots(): MetadataRoute.Robots {
         "/proposal/",
         "/onboard",
         "/client-signup",
-        "/brief",
         "/error",
         "/api/",
       ],

@@ -11,8 +11,11 @@ import { Logo } from "@nullshift/ui/components/Logo";
 import { Atmosphere } from "@/components/funnel/Atmosphere";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-type StepKey = "name" | "business" | "email" | "when" | "password";
-const ALL_STEPS: StepKey[] = ["name", "business", "email", "when", "password"];
+// Book-a-call flow: lead with the slot picker. Name/email are prefilled from the
+// funnel (and dropped as steps), so a funnel visitor only does: pick slot →
+// password → verify. Direct visitors fill the name/email steps too.
+type StepKey = "when" | "name" | "email" | "password";
+const ALL_STEPS: StepKey[] = ["when", "name", "email", "password"];
 
 /* ── OTP digit input ─────────────────────────────────────────────── */
 function OtpInput({
@@ -94,7 +97,6 @@ export default function ClientSignupPage() {
   const [steps, setSteps] = useState<StepKey[]>(ALL_STEPS);
   const [idx, setIdx] = useState(0);
   const [phase, setPhase] = useState<"form" | "verify">("form");
-  const [clientId, setClientId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -189,12 +191,6 @@ export default function ClientSignupPage() {
     setError(null);
     if (idx > 0) setIdx((i) => i - 1);
   }
-  function skip() {
-    if (cur === "business" && idx < lastIdx) {
-      setError(null);
-      setIdx((i) => i + 1);
-    }
-  }
 
   async function submit() {
     setBusy(true);
@@ -213,8 +209,7 @@ export default function ClientSignupPage() {
       });
       const onboardData = await onboardRes.json();
       if (!onboardRes.ok)
-        throw new Error(onboardData.error || "Could not create client record.");
-      setClientId(onboardData.clientId);
+        throw new Error(onboardData.error || "Could not record your booking.");
 
       const signupRes = await fetch("/api/auth/client-signup", {
         method: "POST",
@@ -260,7 +255,7 @@ export default function ClientSignupPage() {
         });
         if (signInError) throw signInError;
       }
-      router.replace(`/brief?client=${clientId}`);
+      router.replace("/portal");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed.");
       setBusy(false);
@@ -353,7 +348,7 @@ export default function ClientSignupPage() {
                     color: T.muted,
                   }}
                 >
-                  Set up · {idx + 1} / {steps.length}
+                  Book your call · {idx + 1} / {steps.length}
                 </span>
               </div>
               <div
@@ -431,21 +426,6 @@ export default function ClientSignupPage() {
                   ← Back
                 </button>
                 <div className="flex items-center gap-4">
-                  {cur === "business" && (
-                    <button
-                      type="button"
-                      onClick={skip}
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "11px",
-                        letterSpacing: "0.06em",
-                        textTransform: "uppercase",
-                        color: T.faint,
-                      }}
-                    >
-                      Skip
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={next}
@@ -463,11 +443,7 @@ export default function ClientSignupPage() {
                       boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
                     }}
                   >
-                    {idx < lastIdx
-                      ? "Continue →"
-                      : busy
-                        ? "Creating account…"
-                        : "Create account →"}
+                    {idx < lastIdx ? "Continue →" : busy ? "Booking…" : "Book my call →"}
                   </button>
                 </div>
               </div>
@@ -552,7 +528,7 @@ export default function ClientSignupPage() {
                     boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
                   }}
                 >
-                  {busy ? "Verifying…" : "Verify & continue to brief →"}
+                  {busy ? "Verifying…" : "Verify & book my call →"}
                 </button>
               </form>
               <div className="mt-5 text-center">
@@ -686,25 +662,6 @@ function StepBody(props: {
           placeholder="Alex Johnson"
           value={props.name}
           onChange={(e) => props.setName(e.target.value)}
-          onKeyDown={enter}
-        />
-      </div>
-    );
-  }
-  if (cur === "business") {
-    return (
-      <div>
-        <Eyebrow>Your business</Eyebrow>
-        <H>What&apos;s it called?</H>
-        <Sub>Optional — helps us prep for your call.</Sub>
-        <input
-          ref={firstRef}
-          className="brief-input mt-7"
-          type="text"
-          autoComplete="organization"
-          placeholder="Acme Ltd"
-          value={props.businessName}
-          onChange={(e) => props.setBusinessName(e.target.value)}
           onKeyDown={enter}
         />
       </div>

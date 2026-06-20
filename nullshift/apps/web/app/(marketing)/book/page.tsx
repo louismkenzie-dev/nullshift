@@ -85,8 +85,8 @@ export default function BookPage() {
                   color: T.muted,
                 }}
               >
-                Create your client account in under two minutes. Pick your preferred date
-                and time, then we&apos;ll take you straight to your project brief.
+                Pick your preferred date and time, set a password to confirm your account,
+                and we&apos;ll lock in your call — all in under two minutes.
               </p>
             </div>
 
@@ -163,9 +163,9 @@ export default function BookPage() {
                 </p>
                 <ol className="flex flex-col gap-3.5">
                   {[
-                    "Create your account — 2 min",
-                    "Complete your project brief",
-                    "We book your call and confirm",
+                    "Pick your preferred slot",
+                    "Set a password & verify your email",
+                    "Your call is booked — we confirm",
                   ].map((step, i) => (
                     <li key={step} className="flex items-center gap-3">
                       <span
