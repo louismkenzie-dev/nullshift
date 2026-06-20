@@ -58,6 +58,18 @@ async function setStatus(formData: FormData) {
   revalidatePath("/admin/pipeline");
 }
 
+/** Permanently delete a lead. Surfaced only for leads with no email (junk /
+ *  incomplete captures) — there's nothing to email-confirm against. */
+async function deleteLead(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+  const supabase = await createClient();
+  await logAudit({ action: "lead.deleted", target: `lead:${id}` });
+  await supabase.from("leads").delete().eq("id", id);
+  revalidatePath("/admin/pipeline");
+}
+
 /**
  * Open a lead as a client: reuse the existing client tenant if one already shares
  * the contact email, otherwise create a tenant (+ its build project) from the lead —
@@ -150,26 +162,29 @@ function Card({ lead }: { lead: Lead }) {
       }}
     >
       {/* Stretched overlay button — clicking anywhere on the card opens the
-          client profile. Sits behind the "Lost" control (which is z-indexed
-          above) so that stays independently clickable. */}
-      <form action={openLead}>
-        <input type="hidden" name="id" value={lead.id} />
-        <button
-          type="submit"
-          aria-label={`Open ${lead.name || "lead"}'s client profile`}
-          title="Open client profile →"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            zIndex: 1,
-          }}
-        />
-      </form>
+          client profile. Sits behind the action controls (which are z-indexed
+          above) so they stay independently clickable. Only leads WITH an email
+          are openable; emailless leads can only be deleted. */}
+      {lead.email && (
+        <form action={openLead}>
+          <input type="hidden" name="id" value={lead.id} />
+          <button
+            type="submit"
+            aria-label={`Open ${lead.name || "lead"}'s client profile`}
+            title="Open client profile →"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              zIndex: 1,
+            }}
+          />
+        </form>
+      )}
 
       <div className="flex items-center justify-between">
         <span
@@ -236,17 +251,27 @@ function Card({ lead }: { lead: Lead }) {
             pointerEvents: "none",
           }}
         >
-          Open profile →
+          {lead.email ? "Open profile →" : "No email"}
         </span>
-        {lead.status !== "lost" && (
-          <form action={setStatus}>
-            <input type="hidden" name="id" value={lead.id} />
-            <input type="hidden" name="status" value="lost" />
-            <button type="submit" style={miniBtn("transparent", T.muted)}>
-              Lost
-            </button>
-          </form>
-        )}
+        <div className="flex items-center gap-1.5">
+          {!lead.email && (
+            <form action={deleteLead}>
+              <input type="hidden" name="id" value={lead.id} />
+              <button type="submit" style={miniBtn("transparent", T.danger)}>
+                Delete
+              </button>
+            </form>
+          )}
+          {lead.status !== "lost" && (
+            <form action={setStatus}>
+              <input type="hidden" name="id" value={lead.id} />
+              <input type="hidden" name="status" value="lost" />
+              <button type="submit" style={miniBtn("transparent", T.muted)}>
+                Lost
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
