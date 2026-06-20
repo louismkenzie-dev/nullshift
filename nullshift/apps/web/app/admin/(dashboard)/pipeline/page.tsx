@@ -173,6 +173,9 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
         month: "short",
       })}${reqTime && TIME_SHORT[reqTime] ? ` · ${TIME_SHORT[reqTime]}` : ""}`
     : null;
+  // A requested slot means they've asked for a call but it's NOT confirmed until
+  // an admin books it on their profile (which flips status to call_booked).
+  const callConfirmed = lead.status === "call_booked";
   return (
     <div
       style={{
@@ -256,7 +259,11 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
       )}
       <div className="flex flex-wrap gap-1" style={{ marginTop: 8 }}>
         {lead.vertical && <Tag>{lead.vertical}</Tag>}
-        {prefSlot && <Tag tone={T.primary}>Prefers {prefSlot}</Tag>}
+        {prefSlot && (
+          <Tag tone={callConfirmed ? T.primary : T.warning}>
+            {callConfirmed ? "Call" : "Call requested"} · {prefSlot}
+          </Tag>
+        )}
         {spend && <Tag tone={T.warning}>{spend}</Tag>}
         {pain && <Tag>{pain}</Tag>}
       </div>

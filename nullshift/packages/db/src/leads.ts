@@ -22,6 +22,35 @@ export type RecordLeadInput = {
   plan?: unknown;
 };
 
+/** Lifecycle order for advancing a lead's status — never downgrade on merge. */
+const STATUS_RANK: Record<string, number> = {
+  new: 0,
+  qualified: 1,
+  call_booked: 2,
+  won: 3,
+  lost: 3,
+};
+
+function mergeQuizAnswers(existing: unknown, incoming: unknown): unknown {
+  if (
+    existing &&
+    typeof existing === "object" &&
+    !Array.isArray(existing) &&
+    incoming &&
+    typeof incoming === "object" &&
+    !Array.isArray(incoming)
+  ) {
+    return { ...(existing as object), ...(incoming as object) };
+  }
+  return incoming ?? existing ?? null;
+}
+
+/**
+ * Record a captured lead — UPSERT by email so there's only ever ONE lead per
+ * person (a funnel completion + a later call booking merge into the same row,
+ * rather than appearing as two cards in two pipeline columns at once). On merge,
+ * status only advances (never downgrades), and quiz answers / plan are merged in.
+ */
 export async function recordLead(
   input: RecordLeadInput
 ): Promise<{ ok: boolean; error?: string }> {
@@ -37,6 +66,43 @@ export async function recordLead(
 
     if (tenantErr || !tenant) {
       return { ok: false, error: tenantErr?.message ?? "no internal tenant" };
+    }
+
+    const email = input.email?.trim().toLowerCase() ?? null;
+
+    if (email) {
+      const { data: existing } = await supabase
+        .from("leads")
+        .select("id, status, quiz_answers")
+        .eq("tenant_id", tenant.id)
+        .ilike("email", email)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        const incomingStatus = input.status ?? "new";
+        const nextStatus =
+          (STATUS_RANK[incomingStatus] ?? 0) > (STATUS_RANK[existing.status] ?? 0)
+            ? incomingStatus
+            : existing.status;
+        const patch: Record<string, unknown> = {
+          quiz_answers: mergeQuizAnswers(existing.quiz_answers, input.quizAnswers),
+          status: nextStatus,
+        };
+        // Only overwrite fields we have new values for (keep the original
+        // source/name where this capture doesn't supply one).
+        if (input.name) patch.name = input.name;
+        if (input.vertical) patch.vertical = input.vertical;
+        if (input.leadScore != null) patch.lead_score = input.leadScore;
+        if (input.plan != null) patch.plan = input.plan;
+        if (input.planToken) patch.plan_token = input.planToken;
+        const { error } = await supabase
+          .from("leads")
+          .update(patch)
+          .eq("id", existing.id);
+        if (error) return { ok: false, error: error.message };
+        return { ok: true };
+      }
     }
 
     const { error } = await supabase.from("leads").insert({

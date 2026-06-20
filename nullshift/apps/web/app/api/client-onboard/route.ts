@@ -30,14 +30,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Name and email are required." }, { status: 400 });
   }
 
-  // Record the booked call as a lead so it appears in the admin Pipeline.
+  // Record the call REQUEST as a lead (merged onto any existing funnel lead).
+  // It stays 'qualified' with the requested slot — it only moves to 'call_booked'
+  // once an admin confirms the call on the client's profile, so a lead is never
+  // in two columns at once.
   const lead = await recordLead({
     name: name.trim(),
     email: email.trim().toLowerCase(),
     source: "book",
     vertical: "clinic",
     quizAnswers: { business_name: business_name ?? null, requested_date, requested_time },
-    status: "call_booked",
+    status: "qualified",
   });
   if (!lead.ok) {
     console.error("Lead insert error (book):", lead.error);

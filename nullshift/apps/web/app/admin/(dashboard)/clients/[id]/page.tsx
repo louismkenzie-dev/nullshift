@@ -412,6 +412,22 @@ async function bookCall(formData: FormData) {
     duration_min: 30,
     status: "confirmed",
   });
+  // Confirming the call advances the originating lead to 'call_booked' — this is
+  // the ONLY thing that moves them into that column (a call request alone keeps
+  // them in 'qualified'). Won/lost leads aren't reopened.
+  const { data: t } = await supabase
+    .from("tenants")
+    .select("contact_email")
+    .eq("id", tenantId)
+    .maybeSingle();
+  if (t?.contact_email) {
+    await supabase
+      .from("leads")
+      .update({ status: "call_booked" })
+      .ilike("email", t.contact_email)
+      .neq("status", "won")
+      .neq("status", "lost");
+  }
   await logAudit({ action: "call.booked", target: `tenant:${tenantId}`, tenantId });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
