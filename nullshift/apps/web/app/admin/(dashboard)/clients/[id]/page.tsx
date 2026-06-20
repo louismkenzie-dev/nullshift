@@ -60,6 +60,13 @@ type Sub = { id: string; plan: string; mrr: number; status: string };
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 const STAGES = ["discovery", "build", "review", "live", "care"];
+/** Time-of-day the client picked when booking → a readable label + a sensible
+ *  default exact time to prefill (still confirmed with them). */
+const TIME_BUCKETS: Record<string, { label: string; time: string }> = {
+  morning: { label: "Morning (9am–12pm)", time: "09:00" },
+  afternoon: { label: "Afternoon (12pm–5pm)", time: "13:00" },
+  evening: { label: "Evening (5pm–8pm)", time: "17:00" },
+};
 const CR_NEXT: Record<string, string> = {
   approved: "in_progress",
   in_progress: "review",
@@ -572,6 +579,15 @@ async function deleteClient(formData: FormData) {
   // Hard-delete the tenant — cascades to all its data + memberships.
   await service.from("tenants").delete().eq("id", tenantId);
 
+  // Also clear the originating funnel lead(s) + enquiry(ies) for this client's
+  // email(s). Converting a lead to a client doesn't consume the lead, so without
+  // this the deleted client keeps showing on the pipeline / in the enquiries
+  // inbox — and leaving them behind would be an incomplete erasure.
+  for (const em of emails) {
+    await service.from("leads").delete().ilike("email", em);
+    await service.from("enquiries").delete().ilike("email", em);
+  }
+
   // Remove each former member's auth login if it no longer belongs to any tenant
   // (don't nuke an account still tied to another client or to internal staff).
   for (const uid of userIds) {
@@ -764,6 +780,28 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   // (e.g. a client converted from an emailless funnel lead), the danger zone
   // shows a plain Delete button instead of the type-the-email gate.
   const hasEmail = Boolean(t.contact_email) || hasPortal;
+
+  // The client's preferred call slot, carried over from the lead they created
+  // when they booked (stored on quiz_answers.requested_date/_time). Used to
+  // prefill + annotate the call booking below — we still confirm the exact time.
+  let preferredDate: string | null = null;
+  let preferredTime: string | null = null;
+  if (t.contact_email) {
+    const { data: leadRows } = await supabase
+      .from("leads")
+      .select("quiz_answers")
+      .ilike("email", t.contact_email)
+      .order("created_at", { ascending: false })
+      .limit(10);
+    for (const lr of leadRows ?? []) {
+      const qa = (lr.quiz_answers ?? {}) as Record<string, unknown>;
+      if (typeof qa.requested_date === "string" && qa.requested_date) {
+        preferredDate = qa.requested_date;
+        preferredTime = typeof qa.requested_time === "string" ? qa.requested_time : null;
+        break;
+      }
+    }
+  }
 
   // Project-scoped data (only when a project exists).
   let itemList: Item[] = [];
@@ -1002,26 +1040,55 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
             </form>
           </div>
         ) : (
-          <form action={bookCall} className="flex items-center gap-2 flex-wrap">
-            {htid}
-            {hpid}
-            <input
-              name="call_date"
-              type="date"
-              required
-              style={{ ...inp, colorScheme: "dark" }}
-            />
-            <input
-              name="call_time"
-              type="time"
-              defaultValue="10:00"
-              required
-              style={{ ...inp, colorScheme: "dark" }}
-            />
-            <button type="submit" style={btn(T.primary, T.primaryFg)}>
-              Book call
-            </button>
-          </form>
+          <>
+            {preferredDate && (
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.85rem",
+                  color: T.muted,
+                  lineHeight: 1.5,
+                  marginBottom: 12,
+                }}
+              >
+                Client&apos;s preferred slot:{" "}
+                <b style={{ color: T.fg }}>
+                  {new Date(preferredDate).toLocaleDateString("en-GB", {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </b>
+                {preferredTime
+                  ? ` · ${TIME_BUCKETS[preferredTime]?.label ?? preferredTime}`
+                  : ""}
+                . Reach out to confirm the exact date &amp; time, then set it below.
+              </p>
+            )}
+            <form action={bookCall} className="flex items-center gap-2 flex-wrap">
+              {htid}
+              {hpid}
+              <input
+                name="call_date"
+                type="date"
+                required
+                defaultValue={preferredDate ?? ""}
+                style={{ ...inp, colorScheme: "dark" }}
+              />
+              <input
+                name="call_time"
+                type="time"
+                required
+                defaultValue={
+                  preferredTime ? (TIME_BUCKETS[preferredTime]?.time ?? "10:00") : "10:00"
+                }
+                style={{ ...inp, colorScheme: "dark" }}
+              />
+              <button type="submit" style={btn(T.primary, T.primaryFg)}>
+                Book call
+              </button>
+            </form>
+          </>
         )}
       </section>
 

@@ -23,8 +23,20 @@ type Lead = {
   vertical: string | null;
   status: string;
   lead_score: number | null;
-  quiz_answers: { answers?: Record<string, string> } | null;
+  // Funnel leads nest answers under `answers`; book-a-call leads store the
+  // requested slot at the top level.
+  quiz_answers: {
+    answers?: Record<string, string>;
+    requested_date?: string | null;
+    requested_time?: string | null;
+  } | null;
   plan: { businessName?: string | null } | null;
+};
+
+const TIME_SHORT: Record<string, string> = {
+  morning: "AM",
+  afternoon: "PM",
+  evening: "Eve",
 };
 
 const COLUMNS = ["new", "qualified", "call_booked", "won", "lost"] as const;
@@ -58,8 +70,9 @@ async function setStatus(formData: FormData) {
   revalidatePath("/admin/pipeline");
 }
 
-/** Permanently delete a lead. Surfaced only for leads with no email (junk /
- *  incomplete captures) — there's nothing to email-confirm against. */
+/** Permanently delete a lead card from the pipeline. Available on every card so
+ *  junk / duplicate / test captures can be cleared directly (converting a lead to
+ *  a client doesn't consume the lead, so it would otherwise linger here). */
 async function deleteLead(formData: FormData) {
   "use server";
   const id = String(formData.get("id") || "");
@@ -151,6 +164,14 @@ function Card({ lead }: { lead: Lead }) {
   const pain = a.admin_pain ? PAIN_LABEL[a.admin_pain] : null;
   const describe = a.describe?.trim();
   const business = lead.plan?.businessName?.trim();
+  const reqDate = lead.quiz_answers?.requested_date;
+  const reqTime = lead.quiz_answers?.requested_time;
+  const prefSlot = reqDate
+    ? `${new Date(reqDate).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+      })}${reqTime && TIME_SHORT[reqTime] ? ` · ${TIME_SHORT[reqTime]}` : ""}`
+    : null;
   return (
     <div
       style={{
@@ -217,6 +238,7 @@ function Card({ lead }: { lead: Lead }) {
       )}
       <div className="flex flex-wrap gap-1" style={{ marginTop: 8 }}>
         {lead.vertical && <Tag>{lead.vertical}</Tag>}
+        {prefSlot && <Tag tone={T.primary}>Prefers {prefSlot}</Tag>}
         {spend && <Tag tone={T.warning}>{spend}</Tag>}
         {pain && <Tag>{pain}</Tag>}
       </div>
@@ -254,14 +276,12 @@ function Card({ lead }: { lead: Lead }) {
           {lead.email ? "Open profile →" : "No email"}
         </span>
         <div className="flex items-center gap-1.5">
-          {!lead.email && (
-            <form action={deleteLead}>
-              <input type="hidden" name="id" value={lead.id} />
-              <button type="submit" style={miniBtn("transparent", T.danger)}>
-                Delete
-              </button>
-            </form>
-          )}
+          <form action={deleteLead}>
+            <input type="hidden" name="id" value={lead.id} />
+            <button type="submit" style={miniBtn("transparent", T.danger)}>
+              Delete
+            </button>
+          </form>
           {lead.status !== "lost" && (
             <form action={setStatus}>
               <input type="hidden" name="id" value={lead.id} />

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
 import { createClient } from "@nullshift/db/client";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
@@ -11,6 +10,11 @@ import { Logo } from "@nullshift/ui/components/Logo";
 import { Atmosphere } from "@/components/funnel/Atmosphere";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const TIME_LABELS: Record<string, string> = {
+  morning: "morning",
+  afternoon: "afternoon",
+  evening: "evening",
+};
 // Book-a-call flow: lead with the slot picker. Name/email are prefilled from the
 // funnel (and dropped as steps), so a funnel visitor only does: pick slot →
 // password → verify. Direct visitors fill the name/email steps too.
@@ -81,7 +85,6 @@ function OtpInput({
 
 /* ── Page ────────────────────────────────────────────────────────── */
 export default function ClientSignupPage() {
-  const router = useRouter();
   const reduce = useReducedMotion();
 
   // Fields
@@ -96,7 +99,7 @@ export default function ClientSignupPage() {
   // Wizard
   const [steps, setSteps] = useState<StepKey[]>(ALL_STEPS);
   const [idx, setIdx] = useState(0);
-  const [phase, setPhase] = useState<"form" | "verify">("form");
+  const [phase, setPhase] = useState<"form" | "verify" | "done">("form");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -255,7 +258,10 @@ export default function ClientSignupPage() {
         });
         if (signInError) throw signInError;
       }
-      router.replace("/portal");
+      // Booked + verified. Show the confirmation + the optional funnel offer
+      // (rather than dropping them straight into the portal).
+      setPhase("done");
+      setBusy(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed.");
       setBusy(false);
@@ -448,7 +454,7 @@ export default function ClientSignupPage() {
                 </div>
               </div>
             </>
-          ) : (
+          ) : phase === "verify" ? (
             /* ── Verify (OTP) ── */
             <div>
               <span
@@ -560,6 +566,140 @@ export default function ClientSignupPage() {
                     {resendMsg}
                   </p>
                 )}
+              </div>
+            </div>
+          ) : (
+            /* ── Done: booked + optional funnel offer ── */
+            <div>
+              <span
+                className="inline-flex items-center gap-2"
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "10px",
+                  letterSpacing: "0.2em",
+                  textTransform: "uppercase",
+                  color: T.primary,
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: T.primary,
+                    display: "inline-block",
+                    boxShadow: `0 0 0 4px ${T.primarySoft}`,
+                  }}
+                />
+                Booked
+              </span>
+              <h1
+                className="mt-4"
+                style={{
+                  fontFamily: T.display,
+                  fontWeight: 600,
+                  fontSize: "clamp(1.9rem,5.2vw,2.6rem)",
+                  lineHeight: 1.06,
+                  letterSpacing: "-0.03em",
+                  color: T.fg,
+                }}
+              >
+                You&apos;re booked in.
+              </h1>
+              <p
+                className="mt-3"
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.95rem",
+                  lineHeight: 1.6,
+                  color: T.muted,
+                }}
+              >
+                {prefDate ? (
+                  <>
+                    We&apos;ve noted your preferred slot —{" "}
+                    <span style={{ color: T.fg }}>
+                      {new Date(prefDate).toLocaleDateString("en-GB", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                      })}
+                      {prefTime ? `, ${TIME_LABELS[prefTime] ?? prefTime}` : ""}
+                    </span>
+                    .{" "}
+                  </>
+                ) : null}
+                We&apos;ll email <span style={{ color: T.fg }}>{email}</span> to confirm
+                the exact date &amp; time.
+              </p>
+
+              {/* Optional funnel offer — also the 'Get my free plan' path. */}
+              <div
+                className="mt-8"
+                style={{
+                  background: T.surface,
+                  border: `1px solid ${T.border}`,
+                  borderRadius: T.r.lg,
+                  padding: "22px 22px 24px",
+                }}
+              >
+                <h2
+                  style={{
+                    fontFamily: T.display,
+                    fontWeight: 600,
+                    fontSize: "1.15rem",
+                    letterSpacing: "-0.02em",
+                    color: T.fg,
+                  }}
+                >
+                  Want us to come prepared?
+                </h2>
+                <p
+                  className="mt-2"
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.9rem",
+                    lineHeight: 1.6,
+                    color: T.muted,
+                  }}
+                >
+                  Spend two minutes telling us about your business and we&apos;ll tailor
+                  the call to you — plus you&apos;ll get a free scaling plan. Optional,
+                  but it makes the call far more useful.
+                </p>
+                <Link
+                  href="/start"
+                  className="mt-5 inline-flex items-center justify-center font-medium"
+                  style={{
+                    height: 48,
+                    paddingInline: 24,
+                    background: T.primary,
+                    color: T.primaryFg,
+                    borderRadius: T.r.md,
+                    fontFamily: T.sans,
+                    fontSize: "0.9375rem",
+                    fontWeight: 500,
+                    textDecoration: "none",
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
+                  }}
+                >
+                  Get my free plan →
+                </Link>
+              </div>
+
+              <div className="mt-5 text-center">
+                <Link
+                  href="/portal"
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.8125rem",
+                    color: T.muted,
+                    textDecoration: "underline",
+                    textUnderlineOffset: "3px",
+                  }}
+                >
+                  Skip to my portal →
+                </Link>
               </div>
             </div>
           )}
@@ -692,7 +832,11 @@ function StepBody(props: {
       <div>
         <Eyebrow>Your call</Eyebrow>
         <H>When suits you?</H>
-        <Sub>Pick a preferred slot — we&apos;ll confirm the exact time.</Sub>
+        <Sub>
+          Choose your <b style={{ color: T.fg }}>preferred</b> date and time of day. This
+          isn&apos;t locked in — we&apos;ll email you to confirm the exact date &amp;
+          time.
+        </Sub>
         <div className="mt-7 flex flex-col gap-3">
           <input
             ref={firstRef}
