@@ -69,7 +69,14 @@ async function setEntityType(formData: FormData) {
     .select("id, proposal_status")
     .eq("id", projectId)
     .maybeSingle();
-  if (!project || project.proposal_status !== "sent") return;
+  // The client can fill / update their business details any time before the
+  // proposal is signed or declined — not only once it's been sent.
+  if (
+    !project ||
+    project.proposal_status === "accepted" ||
+    project.proposal_status === "declined"
+  )
+    return;
 
   const patch: Record<string, unknown> = { client_entity_type: entityType };
   if (entityType === "limited") {
@@ -119,6 +126,8 @@ async function acceptProposal(formData: FormData) {
       accepted_name: signature,
       accepted_signature: signature,
       accepted_at: now,
+      // Signing kicks the project into the build stage and unlocks build edits.
+      stage: "build",
     })
     .eq("id", projectId);
   // Record the data-processing acceptance (satisfies the DPA-before-live gate for
@@ -329,8 +338,107 @@ export default async function PortalProposal() {
               <Badge s={project.stage} />
             </div>
 
-            {/* Proposal + DPA documents */}
-            {(pItems.length > 0 || project.proposal_status !== "draft") && (
+            {/* Your business details — the client fills these as soon as their
+                portal exists (the admin can also edit them for discrepancies).
+                The DPA applies to limited companies; sole traders sign the
+                proposal only. */}
+            {project.proposal_status !== "accepted" &&
+              project.proposal_status !== "declined" && (
+                <div
+                  style={{
+                    marginBottom: 14,
+                    background: T.surface,
+                    border: `1px solid ${declared ? T.border : `${T.primary}55`}`,
+                    borderRadius: T.r.lg,
+                    padding: "20px 22px",
+                  }}
+                >
+                  {declared ? (
+                    <>
+                      <div
+                        className="flex items-center justify-between gap-3 flex-wrap"
+                        style={{ marginBottom: limited ? 8 : 0 }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: T.sans,
+                            fontWeight: 600,
+                            fontSize: "0.95rem",
+                            color: T.fg,
+                          }}
+                        >
+                          Your business details
+                        </span>
+                        <span
+                          style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}
+                        >
+                          {limited ? "Limited company" : "Sole trader / other"}
+                        </span>
+                      </div>
+                      {limited && (
+                        <p
+                          style={{
+                            fontFamily: T.sans,
+                            fontSize: "0.85rem",
+                            color: T.muted,
+                            lineHeight: 1.6,
+                          }}
+                        >
+                          {project.dpa_client_company_number
+                            ? `Company no. ${project.dpa_client_company_number}`
+                            : "Company number — to add"}
+                          {project.dpa_client_registered_address
+                            ? ` · ${project.dpa_client_registered_address}`
+                            : ""}
+                        </p>
+                      )}
+                      <details style={{ marginTop: 10 }}>
+                        <summary
+                          style={{
+                            cursor: "pointer",
+                            fontFamily: T.mono,
+                            fontSize: 11,
+                            color: T.primary,
+                          }}
+                        >
+                          Edit business details
+                        </summary>
+                        <div style={{ marginTop: 14 }}>
+                          <EntityTypeForm
+                            action={setEntityType}
+                            projectId={project.id}
+                            heading="Are you a limited company?"
+                            submitLabel="Save business details"
+                            defaults={{
+                              entityType: project.client_entity_type,
+                              companyNumber: project.dpa_client_company_number,
+                              registeredAddress: project.dpa_client_registered_address,
+                              country: project.dpa_client_country,
+                            }}
+                          />
+                        </div>
+                      </details>
+                    </>
+                  ) : (
+                    <EntityTypeForm
+                      action={setEntityType}
+                      projectId={project.id}
+                      heading="Tell us about your business — for your agreement"
+                      submitLabel="Save business details"
+                      defaults={{
+                        entityType: project.client_entity_type,
+                        companyNumber: project.dpa_client_company_number,
+                        registeredAddress: project.dpa_client_registered_address,
+                        country: project.dpa_client_country,
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+
+            {/* Proposal + DPA documents — visible once the admin sends them. */}
+            {(project.proposal_status === "sent" ||
+              project.proposal_status === "accepted") && (
               <div style={{ marginBottom: 14 }}>
                 <ProposalDocument
                   reference={clientRef(project.tenant_id)}
@@ -415,31 +523,7 @@ export default async function PortalProposal() {
                   </details>
                 )}
 
-                {/* Step 1 — declare business type before signing */}
-                {project.proposal_status === "sent" && !declared && (
-                  <div
-                    style={{
-                      marginTop: 14,
-                      background: T.surface,
-                      border: `1px solid ${T.primary}55`,
-                      borderRadius: T.r.lg,
-                      padding: "20px 22px",
-                    }}
-                  >
-                    <EntityTypeForm
-                      action={setEntityType}
-                      projectId={project.id}
-                      defaults={{
-                        entityType: project.client_entity_type,
-                        companyNumber: project.dpa_client_company_number,
-                        registeredAddress: project.dpa_client_registered_address,
-                        country: project.dpa_client_country,
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Step 2 — sign / decline */}
+                {/* Sign / decline — business details are captured above. */}
                 {project.proposal_status === "sent" && declared && (
                   <div
                     style={{
@@ -512,31 +596,45 @@ export default async function PortalProposal() {
                     </form>
                   </div>
                 )}
-                {project.proposal_status === "declined" && (
+                {project.proposal_status === "sent" && !declared && (
                   <p
                     style={{
                       fontFamily: T.mono,
                       fontSize: 11,
-                      color: T.danger,
+                      color: T.warning,
                       marginTop: 14,
                     }}
                   >
-                    You declined this proposal. Contact us if you&apos;d like changes.
-                  </p>
-                )}
-                {project.proposal_status === "draft" && (
-                  <p
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: 11,
-                      color: T.muted,
-                      marginTop: 14,
-                    }}
-                  >
-                    Your proposal is being prepared.
+                    Confirm your business details above, then you can sign.
                   </p>
                 )}
               </div>
+            )}
+
+            {project.proposal_status === "draft" && (
+              <p
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 11,
+                  color: T.muted,
+                  marginBottom: 14,
+                }}
+              >
+                Your proposal is being prepared — we&apos;ll email you when it&apos;s
+                ready to review and sign.
+              </p>
+            )}
+            {project.proposal_status === "declined" && (
+              <p
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 11,
+                  color: T.danger,
+                  marginBottom: 14,
+                }}
+              >
+                You declined this proposal. Contact us if you&apos;d like changes.
+              </p>
             )}
 
             {/* Invoices */}

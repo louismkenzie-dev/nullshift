@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, createServiceClient } from "@nullshift/db";
+import { requireStaff } from "@nullshift/auth/guards";
 import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
 import { CATALOG } from "@nullshift/content/catalog";
@@ -10,7 +11,13 @@ import { clientRef } from "@nullshift/ui/format";
 import { CARE_PLANS, CARE_PLAN_MRR, carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { sendEmail } from "@/lib/sendEmail";
-import { portalReadyEmail, documentsReadyEmail } from "@/lib/clientEmails";
+import {
+  portalReadyEmail,
+  documentsReadyEmail,
+  portalAccessEmail,
+  passwordResetEmail,
+} from "@/lib/clientEmails";
+import { ProposalDocsForm } from "@/components/admin/ProposalDocsForm";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
   /\/$/,
@@ -116,47 +123,6 @@ async function removeItem(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
-async function sendProposal(formData: FormData) {
-  "use server";
-  const tenantId = String(formData.get("tenant_id") || "");
-  const projectId = String(formData.get("project_id") || "");
-  const supabase = await createClient();
-  await supabase
-    .from("projects")
-    .update({ proposal_status: "sent", proposal_sent_at: new Date().toISOString() })
-    .eq("id", projectId);
-  await logAudit({ action: "proposal.sent", target: `project:${projectId}`, tenantId });
-
-  // Email the client that they have documents to review + sign in their portal.
-  const service = createServiceClient();
-  const { data: tenant } = await service
-    .from("tenants")
-    .select("contact_name, contact_email")
-    .eq("id", tenantId)
-    .maybeSingle();
-  let to = tenant?.contact_email ?? null;
-  const { data: membership } = await service
-    .from("memberships")
-    .select("user_id")
-    .eq("tenant_id", tenantId)
-    .eq("role", "client_admin")
-    .limit(1)
-    .maybeSingle();
-  if (membership?.user_id) {
-    const { data: u } = await service.auth.admin.getUserById(membership.user_id);
-    to = u.user?.email ?? to;
-  }
-  if (to) {
-    const mail = documentsReadyEmail({
-      name: tenant?.contact_name ?? "there",
-      portalUrl: `${SITE_URL}/portal`,
-    });
-    await sendEmail({ to, subject: mail.subject, html: mail.html, text: mail.text });
-  }
-
-  revalidatePath(`/admin/clients/${tenantId}`);
-}
-
 async function setProposedPlan(formData: FormData) {
   "use server";
   const tenantId = String(formData.get("tenant_id") || "");
@@ -171,15 +137,22 @@ async function setProposedPlan(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
-/** Light authoring of the proposal document + the DPA detail fields that
- *  prepopulate the client's Data Processing Agreement. */
-async function setProposalDoc(formData: FormData) {
+/**
+ * Save the proposal document + DPA detail fields. When the proposal is still a
+ * draft AND everything required is complete (modules, care plan, overview,
+ * payment terms, DPA processing details), also mark it sent + email the client
+ * that their documents are ready to review and sign in the portal. Editing the
+ * fields again after sending just saves (it won't re-send).
+ */
+async function saveDocsAndSend(formData: FormData) {
   "use server";
+  if (!(await requireStaff()).ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
   const projectId = String(formData.get("project_id") || "");
   if (!projectId) return;
   const str = (k: string) => String(formData.get(k) || "").trim() || null;
   const supabase = await createClient();
+
   await supabase
     .from("projects")
     .update({
@@ -193,6 +166,62 @@ async function setProposalDoc(formData: FormData) {
       dpa_special_category_detail: str("dpa_special_category_detail"),
     })
     .eq("id", projectId);
+
+  // Re-check completeness from the saved row (don't trust the client), then send
+  // only out of a draft.
+  const [{ data: project }, { data: items }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select(
+        "proposal_status, proposed_plan, overview, payment_terms, dpa_personal_data, dpa_special_category, dpa_special_category_detail"
+      )
+      .eq("id", projectId)
+      .maybeSingle(),
+    supabase.from("project_items").select("id").eq("project_id", projectId).limit(1),
+  ]);
+  const complete =
+    !!project &&
+    (items?.length ?? 0) > 0 &&
+    !!project.proposed_plan &&
+    !!project.overview &&
+    !!project.payment_terms &&
+    !!project.dpa_personal_data &&
+    (project.dpa_special_category ? !!project.dpa_special_category_detail : true);
+
+  if (project?.proposal_status === "draft" && complete) {
+    await supabase
+      .from("projects")
+      .update({ proposal_status: "sent", proposal_sent_at: new Date().toISOString() })
+      .eq("id", projectId);
+    await logAudit({ action: "proposal.sent", target: `project:${projectId}`, tenantId });
+
+    // Email the client their documents are ready to sign (best-effort).
+    const service = createServiceClient();
+    const { data: tenant } = await service
+      .from("tenants")
+      .select("contact_name, contact_email")
+      .eq("id", tenantId)
+      .maybeSingle();
+    let to = tenant?.contact_email ?? null;
+    const { data: membership } = await service
+      .from("memberships")
+      .select("user_id")
+      .eq("tenant_id", tenantId)
+      .eq("role", "client_admin")
+      .limit(1)
+      .maybeSingle();
+    if (membership?.user_id) {
+      const { data: u } = await service.auth.admin.getUserById(membership.user_id);
+      to = u.user?.email ?? to;
+    }
+    if (to) {
+      const mail = documentsReadyEmail({
+        name: tenant?.contact_name ?? "there",
+        portalUrl: `${SITE_URL}/portal`,
+      });
+      await sendEmail({ to, subject: mail.subject, html: mail.html, text: mail.text });
+    }
+  }
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -343,10 +372,20 @@ async function uploadDoc(formData: FormData) {
 
 async function generateInvoice(formData: FormData) {
   "use server";
+  if (!(await requireStaff()).ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
   const projectId = String(formData.get("project_id") || "");
   if (!tenantId || !projectId) return;
-  const res = await generateProjectInvoice(createServiceClient(), {
+  // Only invoice an accepted proposal (the button is disabled until then, but
+  // re-check server-side since a disabled button isn't a real guard).
+  const service = createServiceClient();
+  const { data: proj } = await service
+    .from("projects")
+    .select("proposal_status")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (proj?.proposal_status !== "accepted") return;
+  const res = await generateProjectInvoice(service, {
     tenantId,
     projectId,
   });
@@ -452,57 +491,71 @@ async function cancelSubscription(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
-/** Create the client's portal login: an auth user + a client_admin membership on
- *  this tenant. Idempotent — reuses an existing auth user with the same email. */
+/**
+ * Give the client portal access: an auth user + a client_admin membership.
+ * Credential handling depends on the account's state, so we never clobber a
+ * password the client chose themselves:
+ *   • no account yet → create it with the reference password + email it.
+ *   • account exists but never signed in (admin-issued, unused) → (re)set the
+ *     reference password + email it.
+ *   • account exists AND the client has already signed in → they have their own
+ *     password; we only link membership and email a "sign in with your existing
+ *     password" note — we NEVER reset it or expose a reference.
+ */
 async function createPortalAccount(formData: FormData) {
   "use server";
+  if (!(await requireStaff()).ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
   const email = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") || "");
   const name = String(formData.get("name") || "").trim() || "there";
-  if (!tenantId || !email || password.length < 8) return;
+  if (!tenantId || !email) return;
   const service = createServiceClient();
+  const loginUrl = `${SITE_URL}/portal/login`;
 
-  // Create the auth user, or find the existing one with this email.
-  let userId: string | null = null;
-  const { data: created, error } = await service.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-  if (created?.user) {
-    userId = created.user.id;
-  } else if (error) {
-    // The email already has an account — e.g. the client set their own password
-    // when they booked a call. Find it and RESET the password (+ confirm the
-    // email) to the value we're about to email, so the emailed credentials
-    // actually work. Without this, we'd email a password the account never had.
-    const { data: list } = await service.auth.admin.listUsers();
-    userId = list?.users.find((u) => u.email?.toLowerCase() === email)?.id ?? null;
-    if (userId) {
-      const { error: updateError } = await service.auth.admin.updateUserById(userId, {
-        password,
-        email_confirm: true,
-      });
-      if (updateError)
-        console.error("createPortalAccount: password reset failed:", updateError.message);
-    }
+  // Resolve any existing auth user with this email + whether they've signed in.
+  const { data: list } = await service.auth.admin.listUsers();
+  const existing = list?.users.find((u) => u.email?.toLowerCase() === email) ?? null;
+  const hasLoggedIn = !!existing?.last_sign_in_at;
+
+  let userId: string | null = existing?.id ?? null;
+  let credentials = false; // whether we set + email the reference password
+
+  if (!existing) {
+    if (password.length < 8) return;
+    const { data: created } = await service.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    userId = created?.user?.id ?? null;
+    credentials = true;
+  } else if (!hasLoggedIn) {
+    // Unused admin-issued account — (re)issue the reference password.
+    if (password.length < 8) return;
+    await service.auth.admin.updateUserById(existing.id, {
+      password,
+      email_confirm: true,
+    });
+    credentials = true;
   }
+  // else: client has their own password — link membership only, no reset.
+
   if (!userId) {
     console.error("createPortalAccount: could not resolve user for", email);
     return;
   }
 
   // Link as a client_admin member of this tenant (idempotent).
-  const { data: existing } = await service
+  const { data: member } = await service
     .from("memberships")
     .select("id")
     .eq("tenant_id", tenantId)
     .eq("user_id", userId)
     .limit(1);
-  if (!existing?.length) {
+  if (!member?.length) {
     await service
       .from("memberships")
       .insert({ tenant_id: tenantId, user_id: userId, role: "client_admin" });
@@ -511,18 +564,52 @@ async function createPortalAccount(formData: FormData) {
     action: "portal.account_created",
     target: `tenant:${tenantId}`,
     tenantId,
-    metadata: { email },
+    metadata: { email, credentials },
   });
 
-  // Email the client their portal login (username = email, password = reference).
-  const mail = portalReadyEmail({
-    name,
-    email,
-    password,
-    loginUrl: `${SITE_URL}/portal/login`,
-  });
+  const mail = credentials
+    ? portalReadyEmail({ name, email, password, loginUrl })
+    : portalAccessEmail({ name, loginUrl });
   await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text });
 
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/**
+ * Send the client a Nullshift-branded password-reset link. Used for clients who
+ * have already signed in (so we can't re-issue a login) and forgotten their
+ * password. We mint a Supabase recovery link and email it ourselves so the mail
+ * stays on-brand; the link lands on /portal/reset where they set a new password.
+ */
+async function sendPasswordReset(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const email = String(formData.get("email") || "")
+    .trim()
+    .toLowerCase();
+  const name = String(formData.get("name") || "").trim() || "there";
+  if (!tenantId || !email) return;
+  const service = createServiceClient();
+
+  const { data, error } = await service.auth.admin.generateLink({
+    type: "recovery",
+    email,
+    options: { redirectTo: `${SITE_URL}/portal/reset` },
+  });
+  const link = data?.properties?.action_link;
+  if (error || !link) {
+    console.error("sendPasswordReset: generateLink failed:", error?.message);
+    return;
+  }
+  const mail = passwordResetEmail({ name, resetUrl: link });
+  await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text });
+  await logAudit({
+    action: "portal.password_reset_sent",
+    target: `tenant:${tenantId}`,
+    tenantId,
+    metadata: { email },
+  });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -534,6 +621,7 @@ async function createPortalAccount(formData: FormData) {
  */
 async function deleteClient(formData: FormData) {
   "use server";
+  if (!(await requireStaff()).ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
   const typed = String(formData.get("confirm_email") || "")
     .trim()
@@ -692,13 +780,59 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   const { id: tenantId } = await params;
   const supabase = await createClient();
 
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select(
-      "id, name, type, vertical, status, contact_name, contact_email, contact_phone, notes"
-    )
-    .eq("id", tenantId)
-    .maybeSingle();
+  // Stage 1 — one batch keyed on the tenant id: the tenant, its projects, and
+  // every tenant-scoped section. These only depend on the id, so they run in
+  // parallel rather than as separate sequential round-trips.
+  const [
+    { data: tenant },
+    { data: projects },
+    { data: call },
+    { data: subs },
+    { data: compliance },
+    { data: membership },
+  ] = await Promise.all([
+    supabase
+      .from("tenants")
+      .select(
+        "id, name, type, vertical, status, contact_name, contact_email, contact_phone, notes"
+      )
+      .eq("id", tenantId)
+      .maybeSingle(),
+    supabase
+      .from("projects")
+      .select(
+        "id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, accepted_name, accepted_at, live_url"
+      )
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("calls")
+      .select(
+        "id, call_date, call_time, duration_min, status, meeting_link, meeting_id, meeting_password"
+      )
+      .eq("tenant_id", tenantId)
+      .eq("status", "confirmed")
+      .order("call_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("subscriptions")
+      .select("id, plan, mrr, status")
+      .eq("tenant_id", tenantId)
+      .eq("status", "active"),
+    supabase
+      .from("compliance_records")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("kind", "dpa_signed")
+      .limit(1),
+    supabase
+      .from("memberships")
+      .select("id, user_id")
+      .eq("tenant_id", tenantId)
+      .eq("role", "client_admin")
+      .limit(1),
+  ]);
   if (!tenant) notFound();
   const t = tenant as unknown as {
     id: string;
@@ -709,15 +843,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
     contact_phone: string | null;
     notes: string | null;
   };
-
   // Primary project (most recent). Tenant-scoped sections work without one.
-  const { data: projects } = await supabase
-    .from("projects")
-    .select(
-      "id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, accepted_name, accepted_at, live_url"
-    )
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false });
   const project = (projects ?? [])[0] as
     | {
         id: string;
@@ -739,38 +865,6 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       }
     | undefined;
   const projectId = project?.id ?? null;
-
-  // Tenant-scoped data (always loaded).
-  const [{ data: call }, { data: subs }, { data: compliance }, { data: membership }] =
-    await Promise.all([
-      supabase
-        .from("calls")
-        .select(
-          "id, call_date, call_time, duration_min, status, meeting_link, meeting_id, meeting_password"
-        )
-        .eq("tenant_id", tenantId)
-        .eq("status", "confirmed")
-        .order("call_date", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("subscriptions")
-        .select("id, plan, mrr, status")
-        .eq("tenant_id", tenantId)
-        .eq("status", "active"),
-      supabase
-        .from("compliance_records")
-        .select("id")
-        .eq("tenant_id", tenantId)
-        .eq("kind", "dpa_signed")
-        .limit(1),
-      supabase
-        .from("memberships")
-        .select("id")
-        .eq("tenant_id", tenantId)
-        .eq("role", "client_admin")
-        .limit(1),
-    ]);
   const theCall = (call as Call) ?? null;
   const subList = (subs ?? []) as Sub[];
   const dpaSigned = (compliance ?? []).length > 0;
@@ -781,76 +875,124 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   // shows a plain Delete button instead of the type-the-email gate.
   const hasEmail = Boolean(t.contact_email) || hasPortal;
 
+  // Resolve the client's portal login state: their auth account (via the
+  // membership, or by contact email if no membership yet) + whether they've
+  // signed in. Drives the portal-access UI — the reference password is only ever
+  // shown/issued when the client has NOT set their own (i.e. never signed in).
+  const memberUserId =
+    (membership as { user_id?: string | null }[] | null)?.[0]?.user_id ?? null;
+  let portalUser: { email: string; lastSignInAt: string | null } | null = null;
+  if (memberUserId || t.contact_email) {
+    const portalSvc = createServiceClient();
+    if (memberUserId) {
+      const { data: u } = await portalSvc.auth.admin.getUserById(memberUserId);
+      if (u.user)
+        portalUser = {
+          email: u.user.email ?? t.contact_email ?? "",
+          lastSignInAt: u.user.last_sign_in_at ?? null,
+        };
+    } else if (t.contact_email) {
+      const { data: list } = await portalSvc.auth.admin.listUsers();
+      const found = list?.users.find(
+        (x) => x.email?.toLowerCase() === t.contact_email!.toLowerCase()
+      );
+      if (found)
+        portalUser = {
+          email: found.email ?? t.contact_email,
+          lastSignInAt: found.last_sign_in_at ?? null,
+        };
+    }
+  }
+  const portalLoggedIn = !!portalUser?.lastSignInAt;
+  const portalEmail = portalUser?.email ?? t.contact_email ?? "";
+
+  // Stage 2 — the project-scoped lists plus the preferred-slot lead lookup, all
+  // in parallel (they depend on stage 1's project id / contact email). Slots
+  // that don't apply resolve to an empty set so the batch shape stays stable.
+  const noRows = Promise.resolve({ data: [] as Record<string, unknown>[] });
+  const [
+    { data: leadRows },
+    { data: items },
+    { data: crs },
+    { data: notes },
+    { data: docs },
+    { data: invs },
+  ] = await Promise.all([
+    t.contact_email
+      ? supabase
+          .from("leads")
+          .select("quiz_answers")
+          .ilike("email", t.contact_email)
+          .order("created_at", { ascending: false })
+          .limit(10)
+      : noRows,
+    projectId
+      ? supabase
+          .from("project_items")
+          .select("id, name, amount, status")
+          .eq("project_id", projectId)
+          .order("created_at")
+      : noRows,
+    projectId
+      ? supabase
+          .from("change_requests")
+          .select("id, description, status, estimate_hours, quoted_price")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false })
+      : noRows,
+    projectId
+      ? supabase
+          .from("project_notes")
+          .select("id, body, created_at")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false })
+      : noRows,
+    projectId
+      ? supabase
+          .from("documents")
+          .select("id, kind, storage_path, version")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false })
+      : noRows,
+    projectId
+      ? supabase
+          .from("invoices")
+          .select(
+            "id, amount, status, hosted_invoice_url, project_item_count, created_at"
+          )
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false })
+      : noRows,
+  ]);
+
   // The client's preferred call slot, carried over from the lead they created
   // when they booked (stored on quiz_answers.requested_date/_time). Used to
   // prefill + annotate the call booking below — we still confirm the exact time.
   let preferredDate: string | null = null;
   let preferredTime: string | null = null;
-  if (t.contact_email) {
-    const { data: leadRows } = await supabase
-      .from("leads")
-      .select("quiz_answers")
-      .ilike("email", t.contact_email)
-      .order("created_at", { ascending: false })
-      .limit(10);
-    for (const lr of leadRows ?? []) {
-      const qa = (lr.quiz_answers ?? {}) as Record<string, unknown>;
-      if (typeof qa.requested_date === "string" && qa.requested_date) {
-        preferredDate = qa.requested_date;
-        preferredTime = typeof qa.requested_time === "string" ? qa.requested_time : null;
-        break;
-      }
+  for (const lr of (leadRows ?? []) as { quiz_answers: unknown }[]) {
+    const qa = (lr.quiz_answers ?? {}) as Record<string, unknown>;
+    if (typeof qa.requested_date === "string" && qa.requested_date) {
+      preferredDate = qa.requested_date;
+      preferredTime = typeof qa.requested_time === "string" ? qa.requested_time : null;
+      break;
     }
   }
 
-  // Project-scoped data (only when a project exists).
-  let itemList: Item[] = [];
-  let crList: CR[] = [];
-  let noteList: Note[] = [];
-  let docList: Doc[] = [];
-  let invoiceList: Invoice[] = [];
-  if (projectId) {
-    const [
-      { data: items },
-      { data: crs },
-      { data: notes },
-      { data: docs },
-      { data: invs },
-    ] = await Promise.all([
-      supabase
-        .from("project_items")
-        .select("id, name, amount, status")
-        .eq("project_id", projectId)
-        .order("created_at"),
-      supabase
-        .from("change_requests")
-        .select("id, description, status, estimate_hours, quoted_price")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("project_notes")
-        .select("id, body, created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("documents")
-        .select("id, kind, storage_path, version")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("invoices")
-        .select("id, amount, status, hosted_invoice_url, project_item_count, created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false }),
-    ]);
-    itemList = (items ?? []) as Item[];
-    crList = (crs ?? []) as CR[];
-    noteList = (notes ?? []) as Note[];
-    docList = (docs ?? []) as Doc[];
-    invoiceList = (invs ?? []) as Invoice[];
-  }
+  const itemList = (items ?? []) as Item[];
+  const crList = (crs ?? []) as CR[];
+  const noteList = (notes ?? []) as Note[];
+  const docList = (docs ?? []) as Doc[];
+  const invoiceList = (invs ?? []) as Invoice[];
   const total = itemList.reduce((s, i) => s + Number(i.amount), 0);
   const mrr = subList.reduce((s, x) => s + Number(x.mrr), 0);
+
+  // Gating: the documents can be sent once modules + a care plan + the proposal
+  // doc + DPA processing details are all present; the invoice can be generated
+  // once the client has signed (proposal accepted).
+  const modulesComplete = itemList.length > 0;
+  const planSelected = !!project?.proposed_plan;
+  const isAccepted = project?.proposal_status === "accepted";
 
   const htid = <input type="hidden" name="tenant_id" value={tenantId} />;
   const hpid = projectId ? (
@@ -1261,14 +1403,18 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 </span>
               )}
             </div>
-            {itemList.length > 0 && project.proposal_status === "draft" && (
-              <form action={sendProposal} style={{ marginTop: 14 }}>
-                {htid}
-                {hpid}
-                <button type="submit" style={btn(T.primary, T.primaryFg)}>
-                  Send proposal to client →
-                </button>
-              </form>
+            {project.proposal_status === "draft" && (
+              <p
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 11,
+                  color: T.faint,
+                  marginTop: 12,
+                }}
+              >
+                Add modules + a care plan here, then complete &amp; send the documents
+                below.
+              </p>
             )}
             {project.proposal_status === "sent" && (
               <p
@@ -1311,113 +1457,24 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               These prefill the proposal + DPA documents the client reads and signs in
               their portal.
             </p>
-            <form action={setProposalDoc} className="flex flex-col gap-3">
-              {htid}
-              {hpid}
-              <textarea
-                name="overview"
-                rows={3}
-                defaultValue={project.overview ?? ""}
-                placeholder="Overview (optional) — a short summary of the project and approach."
-                style={{
-                  ...inp,
-                  height: "auto",
-                  padding: "8px 10px",
-                  resize: "vertical",
-                }}
-              />
-              <textarea
-                name="payment_terms"
-                rows={2}
-                defaultValue={project.payment_terms ?? ""}
-                placeholder="Payment terms (default: 50% deposit on acceptance, 50% on completion, due within 14 days)"
-                style={{
-                  ...inp,
-                  height: "auto",
-                  padding: "8px 10px",
-                  resize: "vertical",
-                }}
-              />
-              <div
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: 10,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: T.muted,
-                  paddingTop: 8,
-                  borderTop: `1px solid ${T.border}`,
-                }}
-              >
-                DPA details (prefill the agreement)
-              </div>
-              <div className="grid sm:grid-cols-2 gap-2">
-                <input
-                  name="dpa_client_country"
-                  defaultValue={project.dpa_client_country ?? "United Kingdom"}
-                  placeholder="Country of registration"
-                  style={inp}
-                />
-                <input
-                  name="dpa_client_company_number"
-                  defaultValue={project.dpa_client_company_number ?? ""}
-                  placeholder="Client company number"
-                  style={inp}
-                />
-              </div>
-              <textarea
-                name="dpa_client_registered_address"
-                rows={2}
-                defaultValue={project.dpa_client_registered_address ?? ""}
-                placeholder="Client registered address"
-                style={{
-                  ...inp,
-                  height: "auto",
-                  padding: "8px 10px",
-                  resize: "vertical",
-                }}
-              />
-              <textarea
-                name="dpa_personal_data"
-                rows={2}
-                defaultValue={project.dpa_personal_data ?? ""}
-                placeholder="Types of personal data processed (e.g. names, emails, phone numbers, booking details)"
-                style={{
-                  ...inp,
-                  height: "auto",
-                  padding: "8px 10px",
-                  resize: "vertical",
-                }}
-              />
-              <div className="flex items-center gap-2 flex-wrap">
-                <span style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.fg }}>
-                  Special category data? (e.g. health)
-                </span>
-                <select
-                  name="dpa_special_category"
-                  defaultValue={project.dpa_special_category ? "yes" : "no"}
-                  style={{ ...inp, width: 90 }}
-                >
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
-              </div>
-              <textarea
-                name="dpa_special_category_detail"
-                rows={2}
-                defaultValue={project.dpa_special_category_detail ?? ""}
-                placeholder="If yes: which data + category (e.g. health information for a clinic)"
-                style={{
-                  ...inp,
-                  height: "auto",
-                  padding: "8px 10px",
-                  resize: "vertical",
-                }}
-              />
-              <button type="submit" style={btn(T.surface2, T.fg)}>
-                Save document &amp; DPA details
-              </button>
-            </form>
+            <ProposalDocsForm
+              action={saveDocsAndSend}
+              tenantId={tenantId}
+              projectId={project.id}
+              proposalStatus={project.proposal_status}
+              modulesComplete={modulesComplete}
+              planSelected={planSelected}
+              defaults={{
+                overview: project.overview ?? "",
+                paymentTerms: project.payment_terms ?? "",
+                dpaCountry: project.dpa_client_country ?? "United Kingdom",
+                dpaCompanyNumber: project.dpa_client_company_number ?? "",
+                dpaRegisteredAddress: project.dpa_client_registered_address ?? "",
+                dpaPersonalData: project.dpa_personal_data ?? "",
+                dpaSpecialCategory: project.dpa_special_category ?? false,
+                dpaSpecialCategoryDetail: project.dpa_special_category_detail ?? "",
+              }}
+            />
           </section>
 
           {/* Invoice */}
@@ -1427,7 +1484,19 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               <form action={generateInvoice}>
                 {htid}
                 {hpid}
-                <button type="submit" style={btn(T.primary, T.primaryFg)}>
+                <button
+                  type="submit"
+                  disabled={!isAccepted}
+                  style={{
+                    ...btn(
+                      isAccepted ? T.primary : T.surface2,
+                      isAccepted ? T.primaryFg : T.faint
+                    ),
+                    border: isAccepted ? "none" : `1px solid ${T.border}`,
+                    cursor: isAccepted ? "pointer" : "not-allowed",
+                    opacity: isAccepted ? 1 : 0.7,
+                  }}
+                >
                   Generate &amp; send itemised invoice
                 </button>
               </form>
@@ -1440,8 +1509,9 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 margin: "6px 0 12px",
               }}
             >
-              Compiles the build modules above into an itemised Stripe invoice and emails
-              the client a payment link.
+              {isAccepted
+                ? "Compiles the build modules above into an itemised Stripe invoice and emails the client a payment link."
+                : "Available once the client has signed the proposal. An invoice is drafted automatically on signing."}
             </p>
             {invoiceList.length === 0 ? (
               <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>
@@ -1823,72 +1893,120 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       {/* Portal access */}
       <section style={card}>
         <h2 style={h2}>Client portal access</h2>
-        {hasPortal ? (
-          <p
-            style={{
-              fontFamily: T.mono,
-              fontSize: 12,
-              color: T.success,
-              marginBottom: 12,
-            }}
-          >
-            ✓ Portal login enabled{t.contact_email ? ` for ${t.contact_email}` : ""}. The
-            client can sign in at /portal to see their proposal, requests and
-            deliverables.
-          </p>
+        {portalLoggedIn ? (
+          <>
+            <p
+              style={{
+                fontFamily: T.mono,
+                fontSize: 12,
+                color: T.success,
+                marginBottom: 4,
+              }}
+            >
+              ✓ Portal active — the client has set their own password
+              {portalUser?.lastSignInAt
+                ? ` (last signed in ${new Date(
+                    portalUser.lastSignInAt
+                  ).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })})`
+                : ""}
+              .
+            </p>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.82rem",
+                color: T.muted,
+                lineHeight: 1.6,
+                marginBottom: 12,
+              }}
+            >
+              They sign in with their own password — we never reset or display it.
+              {!hasPortal ? " Grant them access to this client's project below." : ""} If
+              they&apos;ve forgotten it, send a branded reset link.
+            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              {!hasPortal && (
+                <form action={createPortalAccount}>
+                  {htid}
+                  <input type="hidden" name="name" value={t.contact_name ?? t.name} />
+                  <input type="hidden" name="email" value={portalEmail} />
+                  <button type="submit" style={btn(T.primary, T.primaryFg)}>
+                    Grant portal access
+                  </button>
+                </form>
+              )}
+              <form action={sendPasswordReset}>
+                {htid}
+                <input type="hidden" name="name" value={t.contact_name ?? t.name} />
+                <input type="hidden" name="email" value={portalEmail} />
+                <button type="submit" style={btn(T.surface2, T.fg)}>
+                  Send password reset link
+                </button>
+              </form>
+            </div>
+          </>
         ) : (
-          <p
-            style={{
-              fontFamily: T.sans,
-              fontSize: "0.85rem",
-              color: T.muted,
-              lineHeight: 1.6,
-              marginBottom: 12,
-            }}
-          >
-            Create the client&apos;s portal login. They&apos;ll be able to sign in at
-            /portal to accept the proposal, submit change requests and download
-            deliverables.
-          </p>
+          <>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.85rem",
+                color: T.muted,
+                lineHeight: 1.6,
+                marginBottom: 12,
+              }}
+            >
+              {hasPortal
+                ? "A login was issued but the client hasn't signed in yet. You can re-issue and re-email their reference password below."
+                : "Create the client's portal login. They'll be able to sign in at /portal to fill in their company details, review & sign the proposal + DPA, and submit change requests."}
+            </p>
+            <form
+              action={createPortalAccount}
+              className="flex items-center gap-2 flex-wrap"
+            >
+              {htid}
+              <input type="hidden" name="name" value={t.contact_name ?? t.name} />
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="client@email.com"
+                defaultValue={portalEmail || (t.contact_email ?? "")}
+                style={{ ...inp, width: 230 }}
+              />
+              <input
+                name="password"
+                type="text"
+                required
+                minLength={8}
+                placeholder="Password (8+ chars)"
+                defaultValue={clientRef(tenantId)}
+                style={{ ...inp, width: 200 }}
+              />
+              <button type="submit" style={btn(T.primary, T.primaryFg)}>
+                {hasPortal
+                  ? "Re-issue & resend login email"
+                  : "Create portal login & email it"}
+              </button>
+            </form>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.78rem",
+                color: T.faint,
+                marginTop: 8,
+              }}
+            >
+              The password defaults to their reference (shown only because they
+              haven&apos;t set their own yet). On submit we email the client their login
+              (username = email, password as shown).
+            </p>
+          </>
         )}
-        <form action={createPortalAccount} className="flex items-center gap-2 flex-wrap">
-          {htid}
-          <input type="hidden" name="name" value={t.contact_name ?? t.name} />
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="client@email.com"
-            defaultValue={t.contact_email ?? ""}
-            style={{ ...inp, width: 230 }}
-          />
-          <input
-            name="password"
-            type="text"
-            required
-            minLength={8}
-            placeholder="Password (8+ chars)"
-            defaultValue={clientRef(tenantId)}
-            style={{ ...inp, width: 200 }}
-          />
-          <button type="submit" style={btn(T.primary, T.primaryFg)}>
-            {hasPortal
-              ? "Reset password & resend email"
-              : "Create portal login & email it"}
-          </button>
-        </form>
-        <p
-          style={{
-            fontFamily: T.sans,
-            fontSize: "0.78rem",
-            color: T.faint,
-            marginTop: 8,
-          }}
-        >
-          {hasPortal
-            ? "Sets the account's password to the value shown and re-emails the client their login (username = email). Use this if they can't sign in."
-            : "The password defaults to their reference. On create we email the client their login (username = email, password as shown)."}
-        </p>
       </section>
 
       {t.notes && (

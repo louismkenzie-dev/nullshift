@@ -82,6 +82,38 @@ export function ProposalDocument({
    *  null/undefined = business type not yet declared. */
   dpaRequired?: boolean | null;
 }) {
+  // Sequential section numbers — the overview number is skipped when there's no
+  // overview, so adding sections never desyncs the numbering.
+  let _sec = 0;
+  const sec = () => String(++_sec).padStart(2, "0");
+  const phases: { title: string; detail: string }[] = [
+    {
+      title: "Discovery & scope",
+      detail: "We confirm requirements, your data model and what success looks like.",
+    },
+    {
+      title: "Design",
+      detail: "Screens and flows for the modules above, shared with you for sign-off.",
+    },
+    {
+      title: "Build",
+      detail:
+        "We develop the modules in iterative milestones you can follow in your portal.",
+    },
+    {
+      title: "Review & QA",
+      detail: "Testing, accessibility and your review before anything goes live.",
+    },
+    {
+      title: "Launch",
+      detail:
+        "We deploy to your domain — you own the code and the infrastructure outright.",
+    },
+    {
+      title: "Care & iterate",
+      detail: "Ongoing support and improvements under your care plan.",
+    },
+  ];
   return (
     <div
       style={{
@@ -151,7 +183,7 @@ export function ProposalDocument({
       </div>
 
       {overview && (
-        <Section n="01" title="Overview">
+        <Section n={sec()} title="Overview">
           <p
             style={{
               fontFamily: T.sans,
@@ -166,7 +198,7 @@ export function ProposalDocument({
         </Section>
       )}
 
-      <Section n={overview ? "02" : "01"} title="What we'll build & you'll own">
+      <Section n={sec()} title="What we'll build & you'll own">
         <div className="flex flex-col">
           {items.map((it, i) => (
             <div
@@ -190,7 +222,46 @@ export function ProposalDocument({
         </div>
       </Section>
 
-      <Section n={overview ? "03" : "02"} title="Investment">
+      <Section n={sec()} title="How we'll build it">
+        <div className="flex flex-col" style={{ gap: 2 }}>
+          {phases.map((p, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-3"
+              style={{ padding: "9px 0", borderTop: `1px solid ${T.border}` }}
+            >
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 11,
+                  color: T.primary,
+                  paddingTop: 2,
+                  minWidth: 22,
+                }}
+              >
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <div style={{ fontFamily: T.sans, fontSize: "0.92rem", color: T.fg }}>
+                  {p.title}
+                </div>
+                <div
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.84rem",
+                    color: T.muted,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {p.detail}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section n={sec()} title="Investment">
         <div
           className="flex items-center justify-between"
           style={{ padding: "12px 0", borderTop: `1px solid ${T.border}` }}
@@ -224,7 +295,7 @@ export function ProposalDocument({
         )}
       </Section>
 
-      <Section n={overview ? "04" : "03"} title="Payment terms">
+      <Section n={sec()} title="Payment terms">
         <p
           style={{
             fontFamily: T.sans,
@@ -239,7 +310,7 @@ export function ProposalDocument({
       </Section>
 
       <Section
-        n={overview ? "05" : "04"}
+        n={sec()}
         title={dpaRequired === false ? "Data processing" : "Data Processing Agreement"}
       >
         <p

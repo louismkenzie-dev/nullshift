@@ -105,10 +105,11 @@ async function submitRequest(formData: FormData) {
   if (!user) return;
   const { data: project } = await supabase
     .from("projects")
-    .select("tenant_id")
+    .select("tenant_id, proposal_status")
     .eq("id", projectId)
     .single();
-  if (!project) return;
+  // Build edits unlock only after the client has signed the proposal.
+  if (!project || project.proposal_status !== "accepted") return;
   const { data: cr, error } = await supabase
     .from("change_requests")
     .insert({
@@ -470,48 +471,63 @@ export default async function PortalProject({
       {/* Change requests */}
       <section style={card}>
         <h2 style={h2}>Requests & changes</h2>
-        <form
-          action={submitRequest}
-          className="flex flex-col gap-2"
-          style={{ marginBottom: 14 }}
-        >
-          <input type="hidden" name="project_id" value={p.id} />
-          <textarea
-            name="description"
-            required
-            rows={2}
-            placeholder="Request a change or ask for something new…"
+        {p.proposal_status === "accepted" ? (
+          <form
+            action={submitRequest}
+            className="flex flex-col gap-2"
+            style={{ marginBottom: 14 }}
+          >
+            <input type="hidden" name="project_id" value={p.id} />
+            <textarea
+              name="description"
+              required
+              rows={2}
+              placeholder="Request a change or ask for something new…"
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.9rem",
+                padding: "10px 12px",
+                background: T.bg,
+                color: T.fg,
+                border: `1px solid ${T.border}`,
+                borderRadius: T.r.sm,
+                outline: "none",
+                resize: "vertical",
+              }}
+            />
+            <button
+              type="submit"
+              className="self-start"
+              style={{
+                fontFamily: T.sans,
+                fontWeight: 600,
+                fontSize: "0.85rem",
+                height: 40,
+                paddingInline: 18,
+                background: T.primary,
+                color: T.primaryFg,
+                border: "none",
+                borderRadius: T.r.md,
+                cursor: "pointer",
+              }}
+            >
+              Submit request
+            </button>
+          </form>
+        ) : (
+          <p
             style={{
               fontFamily: T.sans,
-              fontSize: "0.9rem",
-              padding: "10px 12px",
-              background: T.bg,
-              color: T.fg,
-              border: `1px solid ${T.border}`,
-              borderRadius: T.r.sm,
-              outline: "none",
-              resize: "vertical",
-            }}
-          />
-          <button
-            type="submit"
-            className="self-start"
-            style={{
-              fontFamily: T.sans,
-              fontWeight: 600,
               fontSize: "0.85rem",
-              height: 40,
-              paddingInline: 18,
-              background: T.primary,
-              color: T.primaryFg,
-              border: "none",
-              borderRadius: T.r.md,
-              cursor: "pointer",
+              color: T.muted,
+              lineHeight: 1.6,
+              marginBottom: 14,
             }}
           >
-            Submit request
-          </button>
-        </form>
+            You&apos;ll be able to request build edits here once you&apos;ve signed your
+            proposal.
+          </p>
+        )}
         {crList.length === 0 ? (
           <p style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.faint }}>
             No requests yet.

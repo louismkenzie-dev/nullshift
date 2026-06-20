@@ -4,6 +4,8 @@
  *     gives them their username (email) + password (their reference) + a login link.
  *   • documentsReadyEmail — sent when an admin sends the proposal; prompts the
  *     client to review + sign their documents in the portal.
+ *   • passwordResetEmail — sent when an admin triggers a password reset for a
+ *     client who's already signed in; carries a branded Supabase recovery link.
  */
 import { C, FONT, esc, button, wrap } from "./emailLayout";
 
@@ -91,6 +93,75 @@ export function documentsReadyEmail(opts: { name: string; portalUrl: string }): 
 We've sent your proposal and Data Processing Agreement to your Nullshift portal. Please review and sign them so we can get started.
 
 Open your portal: ${portalUrl}
+
+— Nullshift`;
+  return { subject, html, text };
+}
+
+export function portalAccessEmail(opts: { name: string; loginUrl: string }): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const { name, loginUrl } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const subject = "Your Nullshift project portal is ready";
+
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Portal access</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Your project portal is ready</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, your project is set up in your Nullshift portal. Sign in with the password you already created to track progress, review &amp; sign documents, and see your invoices.</p>
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(loginUrl, "Sign in to your portal →")}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Forgotten your password? Just ask us and we'll send you a reset link.</p>
+    </td></tr>`;
+
+  const html = wrap(
+    inner,
+    "Your Nullshift project portal is ready — sign in to get started."
+  );
+  const text = `Hi ${first},
+
+Your project is set up in your Nullshift portal. Sign in with the password you already created:
+
+${loginUrl}
+
+Forgotten your password? Just ask us and we'll send you a reset link.
+
+— Nullshift`;
+  return { subject, html, text };
+}
+
+export function passwordResetEmail(opts: { name: string; resetUrl: string }): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const { name, resetUrl } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const subject = "Reset your Nullshift portal password";
+
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Account access</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Reset your password</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, you can set a new password for your Nullshift portal using the link below. For your security it expires in 1 hour.</p>
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(resetUrl, "Set a new password →")}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">If you didn't expect this, you can ignore this email — your password won't change until you set a new one.</p>
+    </td></tr>`;
+
+  const html = wrap(inner, "Set a new password for your Nullshift portal.");
+  const text = `Hi ${first},
+
+You can set a new password for your Nullshift portal using the link below (it expires in 1 hour):
+
+${resetUrl}
+
+If you didn't expect this, you can ignore this email.
 
 — Nullshift`;
   return { subject, html, text };

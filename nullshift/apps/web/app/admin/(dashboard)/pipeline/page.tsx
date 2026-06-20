@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
@@ -158,7 +159,7 @@ async function openLead(formData: FormData) {
   if (tenantId) redirect(`/admin/clients/${tenantId}`);
 }
 
-function Card({ lead }: { lead: Lead }) {
+function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
   const a = lead.quiz_answers?.answers ?? {};
   const spend = a.software_spend ? SPEND_LABEL[a.software_spend] : null;
   const pain = a.admin_pain ? PAIN_LABEL[a.admin_pain] : null;
@@ -182,30 +183,47 @@ function Card({ lead }: { lead: Lead }) {
         padding: "11px 12px",
       }}
     >
-      {/* Stretched overlay button — clicking anywhere on the card opens the
-          client profile. Sits behind the action controls (which are z-indexed
-          above) so they stay independently clickable. Only leads WITH an email
-          are openable; emailless leads can only be deleted. */}
-      {lead.email && (
-        <form action={openLead}>
-          <input type="hidden" name="id" value={lead.id} />
-          <button
-            type="submit"
+      {/* Stretched overlay — clicking anywhere on the card opens the client
+          profile. Sits behind the action controls (which are z-indexed above)
+          so they stay independently clickable. Only leads WITH an email are
+          openable; emailless leads can only be deleted. When the client already
+          exists (a tenant matches the lead's email) we link straight to the hub
+          — an instant client-side nav with the branded loader — otherwise the
+          open server action creates the tenant first. */}
+      {lead.email &&
+        (tenantId ? (
+          <Link
+            href={`/admin/clients/${tenantId}`}
             aria-label={`Open ${lead.name || "lead"}'s client profile`}
             title="Open client profile →"
             style={{
               position: "absolute",
               inset: 0,
-              width: "100%",
-              height: "100%",
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
+              display: "block",
               zIndex: 1,
+              cursor: "pointer",
             }}
           />
-        </form>
-      )}
+        ) : (
+          <form action={openLead}>
+            <input type="hidden" name="id" value={lead.id} />
+            <button
+              type="submit"
+              aria-label={`Open ${lead.name || "lead"}'s client profile`}
+              title="Open client profile →"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                zIndex: 1,
+              }}
+            />
+          </form>
+        ))}
 
       <div className="flex items-center justify-between">
         <span
@@ -335,11 +353,24 @@ const miniBtn = (bg: string, fg: string) => ({
 
 export default async function PipelinePage() {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("leads")
-    .select("id, name, email, vertical, status, lead_score, quiz_answers, plan")
-    .order("lead_score", { ascending: false, nullsFirst: false });
+  const [{ data }, { data: clientTenants }] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("id, name, email, vertical, status, lead_score, quiz_answers, plan")
+      .order("lead_score", { ascending: false, nullsFirst: false }),
+    supabase.from("tenants").select("id, contact_email").eq("type", "client"),
+  ]);
   const leads = (data ?? []) as Lead[];
+  // Map a client's contact email → tenant id, so a lead that's already been
+  // opened (its tenant exists) links straight to the hub instead of re-running
+  // the open server action.
+  const tenantByEmail = new Map<string, string>();
+  for (const ct of (clientTenants ?? []) as {
+    id: string;
+    contact_email: string | null;
+  }[]) {
+    if (ct.contact_email) tenantByEmail.set(ct.contact_email.trim().toLowerCase(), ct.id);
+  }
 
   return (
     <div>
@@ -419,7 +450,15 @@ export default async function PipelinePage() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {items.map((l) => (
-                  <Card key={l.id} lead={l} />
+                  <Card
+                    key={l.id}
+                    lead={l}
+                    tenantId={
+                      l.email
+                        ? (tenantByEmail.get(l.email.trim().toLowerCase()) ?? null)
+                        : null
+                    }
+                  />
                 ))}
               </div>
             </div>

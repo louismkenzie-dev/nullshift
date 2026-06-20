@@ -13,6 +13,8 @@ export function EntityTypeForm({
   action,
   projectId,
   defaults,
+  heading = "Before you sign — are you a limited company?",
+  submitLabel = "Continue to sign →",
 }: {
   action: (fd: FormData) => void | Promise<void>;
   projectId: string;
@@ -22,6 +24,8 @@ export function EntityTypeForm({
     registeredAddress?: string | null;
     country?: string | null;
   };
+  heading?: string;
+  submitLabel?: string;
 }) {
   const [type, setType] = useState(defaults?.entityType ?? "");
   const limited = type === "limited";
@@ -70,7 +74,7 @@ export function EntityTypeForm({
       <p
         style={{ fontFamily: T.sans, fontSize: "0.95rem", color: T.fg, fontWeight: 600 }}
       >
-        Before you sign — are you a limited company?
+        {heading}
       </p>
       <div className="flex gap-2 flex-wrap">
         {opt("limited", "Yes — limited company")}
@@ -130,7 +134,7 @@ export function EntityTypeForm({
           cursor: type ? "pointer" : "not-allowed",
         }}
       >
-        Continue to sign →
+        {submitLabel}
       </button>
     </form>
   );

@@ -25,6 +25,20 @@ export async function generateProjectInvoice(
   if (lines.length === 0) return { ok: false };
   const total = lines.reduce((s, l) => s + Number(l.amount), 0);
 
+  // Don't create a duplicate. The accept flow auto-generates this invoice and
+  // the admin "Generate & send" button calls the same helper, so a double-click
+  // or a click-after-accept must reuse the existing build invoice rather than
+  // mint (and Stripe-send) a second one. A voided invoice can be regenerated.
+  const { data: existing } = await service
+    .from("invoices")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("type", "build_milestone")
+    .neq("status", "void")
+    .limit(1)
+    .maybeSingle();
+  if (existing) return { ok: true, invoiceId: existing.id, total };
+
   const { data: invoice, error } = await service
     .from("invoices")
     .insert({
