@@ -5,7 +5,7 @@ import { T } from "@nullshift/ui/tokens";
 import { PortalHeader } from "./PortalHeader";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 import { setEntityType } from "./dpa-actions";
-import { dpaComplete } from "@/lib/dpa";
+import { dpaReadyToSend } from "@/lib/dpa";
 
 // Auth-gated portal — always render per request, never statically prerender,
 // so `next build` can't try to reach Supabase with placeholder CI/build env.
@@ -55,7 +55,7 @@ export default async function PortalLayout({ children }: { children: React.React
     !!project &&
     project.proposal_status !== "accepted" &&
     project.proposal_status !== "declined" &&
-    !dpaComplete(project);
+    !dpaReadyToSend(project);
 
   return (
     <div

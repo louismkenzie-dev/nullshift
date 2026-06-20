@@ -154,19 +154,14 @@ async function saveDocsAndSend(formData: FormData) {
   const str = (k: string) => String(formData.get(k) || "").trim() || null;
   const supabase = await createClient();
 
-  // Save the proposal doc + the client's company identity (admin can correct
-  // these for discrepancies). The DPA processing fields — data types + special
-  // category — are owned by the client (their portal declaration), so we never
-  // touch them here, or we'd clobber what they entered.
+  // Save only the proposal doc. ALL DPA fields — company identity, data types,
+  // special category — are owned by the client (their portal declaration); we
+  // never write them here, or a stale admin page could clobber what they entered.
   await supabase
     .from("projects")
     .update({
       overview: str("overview"),
       payment_terms: str("payment_terms"),
-      dpa_client_company_name: str("dpa_client_company_name"),
-      dpa_client_company_number: str("dpa_client_company_number"),
-      dpa_client_registered_address: str("dpa_client_registered_address"),
-      dpa_client_country: str("dpa_client_country") ?? "United Kingdom",
     })
     .eq("id", projectId);
 
@@ -1494,16 +1489,15 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               clientDpaReady={clientDpaReady}
               clientSubmittedAt={project.dpa_client_submitted_at}
               entityType={project.client_entity_type}
+              companyName={project.dpa_client_company_name}
+              companyNumber={project.dpa_client_company_number}
+              registeredAddress={project.dpa_client_registered_address}
               personalData={project.dpa_personal_data}
               specialCategory={project.dpa_special_category}
               specialCategoryDetail={project.dpa_special_category_detail}
               defaults={{
                 overview: project.overview ?? "",
                 paymentTerms: project.payment_terms ?? "",
-                companyName: project.dpa_client_company_name ?? "",
-                companyNumber: project.dpa_client_company_number ?? "",
-                registeredAddress: project.dpa_client_registered_address ?? "",
-                country: project.dpa_client_country ?? "United Kingdom",
               }}
             />
           </section>

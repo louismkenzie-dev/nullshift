@@ -7,8 +7,8 @@ import { T } from "@nullshift/ui/tokens";
  * Admin authoring of the proposal document (overview + payment terms) plus the
  * single "Save documents & DPA details and send" action. The DPA details
  * themselves are provided by the CLIENT in their portal — here the admin sees
- * the status of that, a read-only summary, and can correct the company details
- * for discrepancies. The send button stays greyed until everything required is
+ * the status of that and a read-only summary (single source of truth, so a stale
+ * admin page can't clobber it). The send button stays greyed until everything is
  * complete: build modules, a care plan, the overview, payment terms, AND the
  * client has submitted their DPA details. Once sent it switches to "Save
  * changes" (edits without re-sending).
@@ -16,10 +16,6 @@ import { T } from "@nullshift/ui/tokens";
 type Defaults = {
   overview: string;
   paymentTerms: string;
-  companyName: string;
-  companyNumber: string;
-  registeredAddress: string;
-  country: string;
 };
 
 const inp = {
@@ -50,6 +46,9 @@ export function ProposalDocsForm({
   clientDpaReady,
   clientSubmittedAt,
   entityType,
+  companyName,
+  companyNumber,
+  registeredAddress,
   personalData,
   specialCategory,
   specialCategoryDetail,
@@ -64,6 +63,9 @@ export function ProposalDocsForm({
   clientDpaReady: boolean;
   clientSubmittedAt: string | null;
   entityType: string | null;
+  companyName: string | null;
+  companyNumber: string | null;
+  registeredAddress: string | null;
   personalData: string | null;
   specialCategory: boolean | null;
   specialCategoryDetail: string | null;
@@ -71,10 +73,6 @@ export function ProposalDocsForm({
 }) {
   const [overview, setOverview] = useState(defaults.overview);
   const [paymentTerms, setPaymentTerms] = useState(defaults.paymentTerms);
-  const [companyName, setCompanyName] = useState(defaults.companyName);
-  const [companyNumber, setCompanyNumber] = useState(defaults.companyNumber);
-  const [registeredAddress, setRegisteredAddress] = useState(defaults.registeredAddress);
-  const [country, setCountry] = useState(defaults.country || "United Kingdom");
 
   const draft = proposalStatus === "draft";
   const limited = entityType === "limited";
@@ -208,64 +206,6 @@ export function ProposalDocsForm({
             You can&apos;t send the documents until they have.
           </p>
         )}
-
-        {/* Correct the company details for discrepancies (limited companies). */}
-        <details style={{ marginTop: 10 }}>
-          <summary
-            style={{
-              cursor: "pointer",
-              fontFamily: T.mono,
-              fontSize: 11,
-              color: T.primary,
-            }}
-          >
-            Edit company details (for discrepancies)
-          </summary>
-          <div className="flex flex-col gap-2" style={{ marginTop: 12 }}>
-            <label className="flex flex-col gap-1.5">
-              <span style={lbl}>Registered company name</span>
-              <input
-                name="dpa_client_company_name"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="From the client"
-                style={inp}
-              />
-            </label>
-            <div className="grid sm:grid-cols-2 gap-2">
-              <label className="flex flex-col gap-1.5">
-                <span style={lbl}>Company number</span>
-                <input
-                  name="dpa_client_company_number"
-                  value={companyNumber}
-                  onChange={(e) => setCompanyNumber(e.target.value)}
-                  placeholder="From the client"
-                  style={inp}
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span style={lbl}>Country</span>
-                <input
-                  name="dpa_client_country"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  style={inp}
-                />
-              </label>
-            </div>
-            <label className="flex flex-col gap-1.5">
-              <span style={lbl}>Registered office address</span>
-              <textarea
-                name="dpa_client_registered_address"
-                rows={2}
-                value={registeredAddress}
-                onChange={(e) => setRegisteredAddress(e.target.value)}
-                placeholder="From the client"
-                style={ta(2)}
-              />
-            </label>
-          </div>
-        </details>
       </div>
 
       {draft && !complete && (

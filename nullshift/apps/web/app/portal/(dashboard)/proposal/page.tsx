@@ -10,7 +10,7 @@ import { ProposalDocument } from "@/components/portal/ProposalDocument";
 import { SignatureField } from "@/components/portal/SignatureField";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 import { setEntityType } from "../dpa-actions";
-import { dpaComplete } from "@/lib/dpa";
+import { dpaReadyToSend } from "@/lib/dpa";
 
 /**
  * Client portal — proposal & invoices. The client reviews the itemised proposal
@@ -37,6 +37,7 @@ type Project = {
   dpa_personal_data: string | null;
   dpa_special_category: boolean | null;
   dpa_special_category_detail: string | null;
+  dpa_client_submitted_at: string | null;
   accepted_name: string | null;
   accepted_at: string | null;
   client_entity_type: string | null;
@@ -73,8 +74,8 @@ async function acceptProposal(formData: FormData) {
     )
     .eq("id", projectId)
     .maybeSingle();
-  // Must be sent and the client must have completed their DPA declaration first.
-  if (!project || project.proposal_status !== "sent" || !dpaComplete(project)) return;
+  // Must be sent and the client must have submitted a complete DPA declaration.
+  if (!project || project.proposal_status !== "sent" || !dpaReadyToSend(project)) return;
 
   // Trusted writes (projects + compliance are staff-write under RLS). The typed
   // signature is recorded on the project and the DPA compliance record.
@@ -225,7 +226,7 @@ export default async function PortalProposal() {
       supabase
         .from("projects")
         .select(
-          "id, tenant_id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, accepted_name, accepted_at, client_entity_type, tenants(name)"
+          "id, tenant_id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at, accepted_name, accepted_at, client_entity_type, tenants(name)"
         )
         .order("created_at"),
       supabase
@@ -496,7 +497,7 @@ export default async function PortalProposal() {
                 )}
 
                 {/* Sign / decline — business details are captured above. */}
-                {project.proposal_status === "sent" && declared && (
+                {project.proposal_status === "sent" && dpaReadyToSend(project) && (
                   <div
                     style={{
                       marginTop: 14,
@@ -568,7 +569,7 @@ export default async function PortalProposal() {
                     </form>
                   </div>
                 )}
-                {project.proposal_status === "sent" && !declared && (
+                {project.proposal_status === "sent" && !dpaReadyToSend(project) && (
                   <p
                     style={{
                       fontFamily: T.mono,
