@@ -468,8 +468,20 @@ async function createPortalAccount(formData: FormData) {
   if (created?.user) {
     userId = created.user.id;
   } else if (error) {
+    // The email already has an account — e.g. the client set their own password
+    // when they booked a call. Find it and RESET the password (+ confirm the
+    // email) to the value we're about to email, so the emailed credentials
+    // actually work. Without this, we'd email a password the account never had.
     const { data: list } = await service.auth.admin.listUsers();
     userId = list?.users.find((u) => u.email?.toLowerCase() === email)?.id ?? null;
+    if (userId) {
+      const { error: updateError } = await service.auth.admin.updateUserById(userId, {
+        password,
+        email_confirm: true,
+      });
+      if (updateError)
+        console.error("createPortalAccount: password reset failed:", updateError.message);
+    }
   }
   if (!userId) {
     console.error("createPortalAccount: could not resolve user for", email);
@@ -519,7 +531,7 @@ async function deleteClient(formData: FormData) {
   const typed = String(formData.get("confirm_email") || "")
     .trim()
     .toLowerCase();
-  if (!tenantId || !typed) return;
+  if (!tenantId) return;
   const service = createServiceClient();
 
   // Resolve the client's email(s): the contact email + each member's login.
@@ -540,8 +552,11 @@ async function deleteClient(formData: FormData) {
     const { data: u } = await service.auth.admin.getUserById(uid);
     if (u.user?.email) emails.add(u.user.email.trim().toLowerCase());
   }
-  // The typed email must match the client's email exactly (case-insensitive).
-  if (!emails.has(typed)) {
+  // If the client has any email on record, require the typed confirmation to
+  // match it exactly (case-insensitive). A client with NO email — e.g. one
+  // converted from an emailless funnel lead — can't be email-confirmed, so the
+  // plain Delete button in the danger zone is allowed through without it.
+  if (emails.size > 0 && (!typed || !emails.has(typed))) {
     console.error("deleteClient: email confirmation did not match");
     return;
   }
@@ -744,6 +759,11 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   const subList = (subs ?? []) as Sub[];
   const dpaSigned = (compliance ?? []).length > 0;
   const hasPortal = (membership ?? []).length > 0;
+  // Whether this client has any email to confirm a deletion against. A portal
+  // login always carries one; otherwise it's the contact email. With neither
+  // (e.g. a client converted from an emailless funnel lead), the danger zone
+  // shows a plain Delete button instead of the type-the-email gate.
+  const hasEmail = Boolean(t.contact_email) || hasPortal;
 
   // Project-scoped data (only when a project exists).
   let itemList: Item[] = [];
@@ -1737,66 +1757,71 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       <section style={card}>
         <h2 style={h2}>Client portal access</h2>
         {hasPortal ? (
-          <p style={{ fontFamily: T.mono, fontSize: 12, color: T.success }}>
+          <p
+            style={{
+              fontFamily: T.mono,
+              fontSize: 12,
+              color: T.success,
+              marginBottom: 12,
+            }}
+          >
             ✓ Portal login enabled{t.contact_email ? ` for ${t.contact_email}` : ""}. The
             client can sign in at /portal to see their proposal, requests and
             deliverables.
           </p>
         ) : (
-          <>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.85rem",
-                color: T.muted,
-                lineHeight: 1.6,
-                marginBottom: 12,
-              }}
-            >
-              Create the client&apos;s portal login. They&apos;ll be able to sign in at
-              /portal to accept the proposal, submit change requests and download
-              deliverables.
-            </p>
-            <form
-              action={createPortalAccount}
-              className="flex items-center gap-2 flex-wrap"
-            >
-              {htid}
-              <input type="hidden" name="name" value={t.contact_name ?? t.name} />
-              <input
-                name="email"
-                type="email"
-                required
-                placeholder="client@email.com"
-                defaultValue={t.contact_email ?? ""}
-                style={{ ...inp, width: 230 }}
-              />
-              <input
-                name="password"
-                type="text"
-                required
-                minLength={8}
-                placeholder="Password (8+ chars)"
-                defaultValue={clientRef(tenantId)}
-                style={{ ...inp, width: 200 }}
-              />
-              <button type="submit" style={btn(T.primary, T.primaryFg)}>
-                Create portal login &amp; email it
-              </button>
-            </form>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.78rem",
-                color: T.faint,
-                marginTop: 8,
-              }}
-            >
-              The password defaults to their reference. On create we email the client
-              their login (username = email, password as shown).
-            </p>
-          </>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.85rem",
+              color: T.muted,
+              lineHeight: 1.6,
+              marginBottom: 12,
+            }}
+          >
+            Create the client&apos;s portal login. They&apos;ll be able to sign in at
+            /portal to accept the proposal, submit change requests and download
+            deliverables.
+          </p>
         )}
+        <form action={createPortalAccount} className="flex items-center gap-2 flex-wrap">
+          {htid}
+          <input type="hidden" name="name" value={t.contact_name ?? t.name} />
+          <input
+            name="email"
+            type="email"
+            required
+            placeholder="client@email.com"
+            defaultValue={t.contact_email ?? ""}
+            style={{ ...inp, width: 230 }}
+          />
+          <input
+            name="password"
+            type="text"
+            required
+            minLength={8}
+            placeholder="Password (8+ chars)"
+            defaultValue={clientRef(tenantId)}
+            style={{ ...inp, width: 200 }}
+          />
+          <button type="submit" style={btn(T.primary, T.primaryFg)}>
+            {hasPortal
+              ? "Reset password & resend email"
+              : "Create portal login & email it"}
+          </button>
+        </form>
+        <p
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.78rem",
+            color: T.faint,
+            marginTop: 8,
+          }}
+        >
+          {hasPortal
+            ? "Sets the account's password to the value shown and re-emails the client their login (username = email). Use this if they can't sign in."
+            : "The password defaults to their reference. On create we email the client their login (username = email, password as shown)."}
+        </p>
       </section>
 
       {t.notes && (
@@ -1829,30 +1854,50 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
           }}
         >
           Permanently erases this client and <b>all</b> their data — projects, proposals,
-          invoices, documents, updates and portal login. This cannot be undone. To
-          confirm, type the client&apos;s email
-          {t.contact_email ? (
+          invoices, documents, updates and portal login. This cannot be undone.
+          {hasEmail ? (
             <>
               {" "}
-              (<span style={{ fontFamily: T.mono, color: T.fg }}>{t.contact_email}</span>)
+              To confirm, type the client&apos;s email
+              {t.contact_email ? (
+                <>
+                  {" "}
+                  (
+                  <span style={{ fontFamily: T.mono, color: T.fg }}>
+                    {t.contact_email}
+                  </span>
+                  )
+                </>
+              ) : null}
+              .
             </>
-          ) : null}
-          .
+          ) : (
+            <> This client has no email on record, so just press delete.</>
+          )}
         </p>
-        <form action={deleteClient} className="flex items-center gap-2 flex-wrap">
-          {htid}
-          <input
-            name="confirm_email"
-            type="email"
-            required
-            placeholder="Type the client's email to confirm"
-            autoComplete="off"
-            style={{ ...inp, flex: "1 1 260px" }}
-          />
-          <button type="submit" style={btn(T.danger, "#fff")}>
-            Delete permanently
-          </button>
-        </form>
+        {hasEmail ? (
+          <form action={deleteClient} className="flex items-center gap-2 flex-wrap">
+            {htid}
+            <input
+              name="confirm_email"
+              type="email"
+              required
+              placeholder="Type the client's email to confirm"
+              autoComplete="off"
+              style={{ ...inp, flex: "1 1 260px" }}
+            />
+            <button type="submit" style={btn(T.danger, "#fff")}>
+              Delete permanently
+            </button>
+          </form>
+        ) : (
+          <form action={deleteClient}>
+            {htid}
+            <button type="submit" style={btn(T.danger, "#fff")}>
+              Delete permanently
+            </button>
+          </form>
+        )}
       </section>
     </div>
   );
