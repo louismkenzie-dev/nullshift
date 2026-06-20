@@ -1,4 +1,7 @@
-import { createItemisedStripeInvoice } from "@nullshift/billing/stripe";
+import {
+  createItemisedStripeInvoice,
+  findOrCreateCustomer,
+} from "@nullshift/billing/stripe";
 import { createServiceClient } from "@nullshift/db";
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -52,6 +55,18 @@ export async function generateProjectInvoice(
     .select("id")
     .single();
   if (error || !invoice) {
+    // A concurrent generate may have already inserted the build invoice (the
+    // partial unique index invoices_one_build_per_project rejects the second) —
+    // reuse it rather than minting a second Stripe invoice + charge.
+    const { data: raced } = await service
+      .from("invoices")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("type", "build_milestone")
+      .neq("status", "void")
+      .limit(1)
+      .maybeSingle();
+    if (raced) return { ok: true, invoiceId: raced.id, total };
     console.error("generateProjectInvoice:", error?.message);
     return { ok: false };
   }
@@ -66,7 +81,13 @@ export async function generateProjectInvoice(
     }))
   );
 
-  // Resolve the client's email (the client_admin member of this tenant).
+  // Resolve the client's email (the client_admin member of this tenant) + the
+  // tenant's stored Stripe customer (shared with the care subscription).
+  const { data: tenantRow } = await service
+    .from("tenants")
+    .select("name, stripe_customer_id")
+    .eq("id", tenantId)
+    .maybeSingle();
   const { data: membership } = await service
     .from("memberships")
     .select("user_id")
@@ -82,13 +103,28 @@ export async function generateProjectInvoice(
 
   if (email) {
     try {
-      const stripeInv = await createItemisedStripeInvoice({
-        customerEmail: email,
-        items: lines.map((l) => ({
-          name: l.name,
-          amountPence: Math.round(Number(l.amount) * 100),
-        })),
+      const customerId = await findOrCreateCustomer({
+        email,
+        name: tenantRow?.name ?? undefined,
+        existingCustomerId: tenantRow?.stripe_customer_id ?? null,
+        idempotencyKey: `customer:${tenantId}`,
       });
+      if (customerId && customerId !== tenantRow?.stripe_customer_id) {
+        await service
+          .from("tenants")
+          .update({ stripe_customer_id: customerId })
+          .eq("id", tenantId)
+          .is("stripe_customer_id", null);
+      }
+      const stripeInv = customerId
+        ? await createItemisedStripeInvoice({
+            customerId,
+            items: lines.map((l) => ({
+              name: l.name,
+              amountPence: Math.round(Number(l.amount) * 100),
+            })),
+          })
+        : null;
       if (stripeInv) {
         await service
           .from("invoices")

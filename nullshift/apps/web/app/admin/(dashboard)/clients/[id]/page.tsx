@@ -10,6 +10,7 @@ import { T } from "@nullshift/ui/tokens";
 import { clientRef } from "@nullshift/ui/format";
 import { CARE_PLANS, CARE_PLAN_MRR, carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
+import { getStripe } from "@nullshift/billing/stripe";
 import { sendEmail } from "@/lib/sendEmail";
 import {
   portalReadyEmail,
@@ -53,6 +54,7 @@ type Invoice = {
   hosted_invoice_url: string | null;
   project_item_count: number | null;
   created_at: string;
+  paid_at: string | null;
 };
 type Call = {
   id: string;
@@ -396,6 +398,45 @@ async function generateInvoice(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
+/**
+ * Manual fallback: re-pull each unpaid Stripe invoice's status (so a missed
+ * webhook never strands the "invested" total). Stripe invoice statuses map 1:1
+ * onto ours (draft|open|paid|void|uncollectible).
+ */
+async function syncInvoiceStatus(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  if (!tenantId) return;
+  const stripe = getStripe();
+  if (!stripe) return;
+  const service = createServiceClient();
+  const { data: invs } = await service
+    .from("invoices")
+    .select("id, stripe_invoice_id, status")
+    .eq("tenant_id", tenantId)
+    .not("stripe_invoice_id", "is", null)
+    .neq("status", "paid");
+  const valid = ["draft", "open", "paid", "void", "uncollectible"];
+  for (const inv of (invs ?? []) as { id: string; stripe_invoice_id: string }[]) {
+    try {
+      const si = await stripe.invoices.retrieve(inv.stripe_invoice_id);
+      if (!si.status || !valid.includes(si.status)) continue;
+      const patch: Record<string, unknown> = { status: si.status };
+      if (si.status === "paid") {
+        const paidAt = si.status_transitions?.paid_at;
+        patch.paid_at = paidAt
+          ? new Date(paidAt * 1000).toISOString()
+          : new Date().toISOString();
+      }
+      await service.from("invoices").update(patch).eq("id", inv.id);
+    } catch (e) {
+      console.error("syncInvoiceStatus: retrieve failed", inv.stripe_invoice_id, e);
+    }
+  }
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
 async function bookCall(formData: FormData) {
   "use server";
   const tenantId = String(formData.get("tenant_id") || "");
@@ -497,10 +538,34 @@ async function addSubscription(formData: FormData) {
 
 async function cancelSubscription(formData: FormData) {
   "use server";
+  if (!(await requireStaff()).ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
   const id = String(formData.get("id") || "");
-  const supabase = await createClient();
-  await supabase.from("subscriptions").update({ status: "cancelled" }).eq("id", id);
+  if (!id) return;
+  const service = createServiceClient();
+  // Cancel the REAL Stripe subscription first so billing actually stops, then
+  // reflect it locally ('canceled' — the enum is American-spelled; the old
+  // 'cancelled' was rejected and silently left the row active).
+  const { data: sub } = await service
+    .from("subscriptions")
+    .select("stripe_subscription_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (sub?.stripe_subscription_id) {
+    const stripe = getStripe();
+    if (stripe) {
+      try {
+        await stripe.subscriptions.cancel(sub.stripe_subscription_id);
+      } catch (e) {
+        console.error("stripe subscription cancel failed:", e);
+      }
+    }
+  }
+  const { error } = await service
+    .from("subscriptions")
+    .update({ status: "canceled" })
+    .eq("id", id);
+  if (error) console.error("cancelSubscription:", error.message);
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -740,6 +805,10 @@ const tone: Record<string, string> = {
   proposed: T.muted,
   built: T.success,
   active: T.success,
+  trialing: T.info,
+  past_due: T.danger,
+  incomplete: T.warning,
+  canceled: T.muted,
   cancelled: T.muted,
   confirmed: T.primary,
 };
@@ -986,7 +1055,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       ? supabase
           .from("invoices")
           .select(
-            "id, amount, status, hosted_invoice_url, project_item_count, created_at"
+            "id, amount, status, hosted_invoice_url, project_item_count, created_at, paid_at"
           )
           .eq("project_id", projectId)
           .order("created_at", { ascending: false })
@@ -1012,6 +1081,16 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   const noteList = (notes ?? []) as Note[];
   const docList = (docs ?? []) as Doc[];
   const invoiceList = (invs ?? []) as Invoice[];
+  // Account rollup over the build invoice(s): invested = paid, outstanding =
+  // still open. (Recurring care-plan fees are tracked separately via the
+  // subscription status, not folded into the one-off build investment.)
+  const invested = invoiceList
+    .filter((i) => i.status === "paid")
+    .reduce((s, i) => s + Number(i.amount), 0);
+  const outstanding = invoiceList
+    .filter((i) => i.status === "open")
+    .reduce((s, i) => s + Number(i.amount), 0);
+  const hasStripeInvoice = invoiceList.some((i) => i.status !== "draft");
   const total = itemList.reduce((s, i) => s + Number(i.amount), 0);
   const mrr = subList.reduce((s, x) => s + Number(x.mrr), 0);
 
@@ -1586,6 +1665,62 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 ? "Compiles the build modules above into an itemised Stripe invoice and emails the client a payment link."
                 : "Available once the client has signed the proposal. An invoice is drafted automatically on signing."}
             </p>
+            {invoiceList.length > 0 && (
+              <div
+                className="flex items-center justify-between flex-wrap gap-2"
+                style={{
+                  marginBottom: 12,
+                  padding: "10px 12px",
+                  background: T.bg,
+                  border: `1px solid ${T.border}`,
+                  borderRadius: 10,
+                }}
+              >
+                <div className="flex items-center gap-4 flex-wrap">
+                  <span
+                    style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}
+                  >
+                    Invested{" "}
+                    <strong style={{ color: T.primary, fontFamily: T.mono }}>
+                      {gbp(invested)}
+                    </strong>
+                  </span>
+                  {outstanding > 0 && (
+                    <span
+                      style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}
+                    >
+                      Outstanding{" "}
+                      <strong style={{ color: T.warning, fontFamily: T.mono }}>
+                        {gbp(outstanding)}
+                      </strong>
+                    </span>
+                  )}
+                </div>
+                {hasStripeInvoice && (
+                  <form action={syncInvoiceStatus}>
+                    {htid}
+                    <button
+                      type="submit"
+                      title="Re-pull payment status from Stripe (fallback if a webhook was missed)"
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: 10,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        color: T.muted,
+                        background: "transparent",
+                        border: `1px solid ${T.border}`,
+                        borderRadius: 6,
+                        padding: "5px 10px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Sync from Stripe
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
             {invoiceList.length === 0 ? (
               <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>
                 No invoices yet.
@@ -1604,6 +1739,13 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     </span>
                   </span>
                   <div className="flex items-center gap-3">
+                    {inv.status === "paid" && inv.paid_at && (
+                      <span
+                        style={{ fontFamily: T.mono, fontSize: 10, color: T.success }}
+                      >
+                        paid {new Date(inv.paid_at).toLocaleDateString("en-GB")}
+                      </span>
+                    )}
                     <Badge s={inv.status} />
                     {inv.hosted_invoice_url && (
                       <a
