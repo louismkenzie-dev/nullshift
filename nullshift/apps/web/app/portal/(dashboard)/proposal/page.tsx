@@ -58,33 +58,40 @@ type InvItem = { invoice_id: string; name: string; amount: number; quantity: num
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 
-async function acceptProposal(formData: FormData) {
+async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   "use server";
   const projectId = String(formData.get("project_id") || "");
   const signature = String(formData.get("signature") || "").trim();
-  if (!projectId || !signature) return;
+  if (!projectId || !signature) return { ok: false };
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return { ok: false };
 
   // Confirm the caller can see this project (RLS only returns their tenant's).
+  // NB: dpa_client_submitted_at is required by dpaReadyToSend() — without it
+  // dpaSubmitted() is always false and signing silently no-ops.
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "id, tenant_id, proposal_status, proposed_plan, client_entity_type, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail"
+      "id, tenant_id, proposal_status, proposed_plan, client_entity_type, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at"
     )
     .eq("id", projectId)
     .maybeSingle();
   // Must be sent and the client must have submitted a complete DPA declaration.
-  if (!project || project.proposal_status !== "sent" || !dpaReadyToSend(project)) return;
+  // Returning {ok:false} (rather than letting the UI celebrate) when the proposal
+  // was already actioned elsewhere or the row moved on.
+  if (!project || project.proposal_status !== "sent" || !dpaReadyToSend(project))
+    return { ok: false };
 
-  // Trusted writes (projects + compliance are staff-write under RLS). The typed
-  // signature is recorded on the project and the DPA compliance record.
+  // The core write: flip to accepted + record the typed signature. The
+  // `.eq("proposal_status","sent")` + `.select()` make this a guarded compare-
+  // and-set, so a concurrent accept (e.g. a second tab) updates 0 rows and we
+  // report failure instead of celebrating a sign that didn't take.
   const now = new Date().toISOString();
   const service = createServiceClient();
-  await service
+  const { data: updated, error: acceptErr } = await service
     .from("projects")
     .update({
       proposal_status: "accepted",
@@ -94,82 +101,89 @@ async function acceptProposal(formData: FormData) {
       // Signing kicks the project into the build stage and unlocks build edits.
       stage: "build",
     })
-    .eq("id", projectId);
-  // Record the data-processing acceptance (satisfies the DPA-before-live gate for
-  // both: a full DPA for limited companies, standard terms for sole traders).
-  await service.from("compliance_records").insert({
-    tenant_id: project.tenant_id,
-    kind: "dpa_signed",
-    detail: {
-      signed_by: user.id,
-      signed_name: signature,
-      via: "portal",
-      entity_type: project.client_entity_type,
-      dpa: project.client_entity_type === "limited",
-    },
-  });
+    .eq("id", projectId)
+    .eq("proposal_status", "sent")
+    .select("id");
+  if (acceptErr || !updated || updated.length === 0) return { ok: false };
 
-  await logAudit({
-    action: "proposal.accepted",
-    target: `project:${projectId}`,
-    tenantId: project.tenant_id,
-  });
-  await logAudit({
-    action: "dpa.signed",
-    target: `tenant:${project.tenant_id}`,
-    tenantId: project.tenant_id,
-  });
-
-  // Activate the proposed care plan (if any) — only if there's no active
-  // subscription yet, so re-accepting can't double-subscribe.
-  if (project.proposed_plan && project.proposed_plan in CARE_PLAN_MRR) {
-    const { data: activeSub } = await service
-      .from("subscriptions")
-      .select("id")
-      .eq("tenant_id", project.tenant_id)
-      .eq("status", "active")
-      .limit(1);
-    if (!activeSub?.length) {
-      await service.from("subscriptions").insert({
-        tenant_id: project.tenant_id,
-        plan: project.proposed_plan,
-        mrr: CARE_PLAN_MRR[project.proposed_plan],
-        status: "active",
-        started_at: new Date().toISOString(),
-      });
-      await logAudit({
-        action: "subscription.activated",
-        target: `tenant:${project.tenant_id}`,
-        tenantId: project.tenant_id,
-        metadata: { plan: project.proposed_plan },
-      });
-    }
-  }
-
-  // Auto-draft & send the itemised build invoice on acceptance.
-  const inv = await generateProjectInvoice(service, {
-    tenantId: project.tenant_id,
-    projectId,
-  });
-  if (inv.ok)
-    await logAudit({
-      action: "invoice.generated",
-      target: `project:${projectId}`,
-      tenantId: project.tenant_id,
-      metadata: { total: inv.total, via: "auto-accept" },
+  // Everything past here is best-effort — the proposal IS accepted, so a hiccup
+  // in a downstream step must never turn the client's success into an error.
+  try {
+    // Record the data-processing acceptance (satisfies the DPA-before-live gate
+    // for both: a full DPA for limited companies, standard terms for sole traders).
+    await service.from("compliance_records").insert({
+      tenant_id: project.tenant_id,
+      kind: "dpa_signed",
+      detail: {
+        signed_by: user.id,
+        signed_name: signature,
+        via: "portal",
+        entity_type: project.client_entity_type,
+        dpa: project.client_entity_type === "limited",
+      },
     });
 
-  // Promote the lead to Won — they've signed, so they're committed — and tell the
-  // team. Both best-effort; the signature is already recorded above.
-  const { data: t } = await service
-    .from("tenants")
-    .select("name, contact_email")
-    .eq("id", project.tenant_id)
-    .maybeSingle();
-  if (t?.contact_email) {
-    await service.from("leads").update({ status: "won" }).ilike("email", t.contact_email);
-  }
-  try {
+    await logAudit({
+      action: "proposal.accepted",
+      target: `project:${projectId}`,
+      tenantId: project.tenant_id,
+    });
+    await logAudit({
+      action: "dpa.signed",
+      target: `tenant:${project.tenant_id}`,
+      tenantId: project.tenant_id,
+    });
+
+    // Activate the proposed care plan (if any) — only if there's no active
+    // subscription yet, so re-accepting can't double-subscribe.
+    if (project.proposed_plan && project.proposed_plan in CARE_PLAN_MRR) {
+      const { data: activeSub } = await service
+        .from("subscriptions")
+        .select("id")
+        .eq("tenant_id", project.tenant_id)
+        .eq("status", "active")
+        .limit(1);
+      if (!activeSub?.length) {
+        await service.from("subscriptions").insert({
+          tenant_id: project.tenant_id,
+          plan: project.proposed_plan,
+          mrr: CARE_PLAN_MRR[project.proposed_plan],
+          status: "active",
+          started_at: new Date().toISOString(),
+        });
+        await logAudit({
+          action: "subscription.activated",
+          target: `tenant:${project.tenant_id}`,
+          tenantId: project.tenant_id,
+          metadata: { plan: project.proposed_plan },
+        });
+      }
+    }
+
+    // Auto-draft & send the itemised build invoice on acceptance.
+    const inv = await generateProjectInvoice(service, {
+      tenantId: project.tenant_id,
+      projectId,
+    });
+    if (inv.ok)
+      await logAudit({
+        action: "invoice.generated",
+        target: `project:${projectId}`,
+        tenantId: project.tenant_id,
+        metadata: { total: inv.total, via: "auto-accept" },
+      });
+
+    // Promote the lead to Won — they've signed, so they're committed — and tell
+    // the team. Escape LIKE metacharacters so ilike matches the email exactly.
+    const { data: t } = await service
+      .from("tenants")
+      .select("name, contact_email")
+      .eq("id", project.tenant_id)
+      .maybeSingle();
+    if (t?.contact_email) {
+      const emailPattern = t.contact_email.replace(/([\\%_])/g, "\\$1");
+      await service.from("leads").update({ status: "won" }).ilike("email", emailPattern);
+    }
     const { data: sumItems } = await service
       .from("project_items")
       .select("amount")
@@ -196,11 +210,12 @@ async function acceptProposal(formData: FormData) {
       text: mail.text,
     });
   } catch (e) {
-    console.error("proposal-signed admin notify failed (non-fatal):", e);
+    console.error("post-accept steps (non-fatal):", e);
   }
 
   // No revalidatePath here — SignProposal plays the success animation, then
   // refreshes the route itself so the celebration isn't cut short.
+  return { ok: true };
 }
 
 async function declineProposal(formData: FormData) {

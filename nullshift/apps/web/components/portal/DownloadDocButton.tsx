@@ -47,15 +47,16 @@ export function DownloadDocButton({
       const imgW = pageW;
       const imgH = (canvas.height / canvas.width) * pageW;
 
-      let y = 0;
-      let remaining = imgH;
-      while (remaining > 0) {
-        pdf.addImage(imgData, "PNG", 0, y === 0 ? 0 : -(imgH - remaining), imgW, imgH);
-        remaining -= pageH;
-        if (remaining > 0) {
-          pdf.addPage();
-          y -= pageH;
-        }
+      // One tall bitmap tiled across A4 pages (shift the image up one page each
+      // time). Known limitation: a fixed-height slice can bisect a line at a
+      // page break — fine for the short proposal/DPA we generate here.
+      let printed = 0;
+      let first = true;
+      while (printed < imgH - 0.5) {
+        if (!first) pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, -printed, imgW, imgH);
+        printed += pageH;
+        first = false;
       }
       pdf.save(filename);
     } finally {

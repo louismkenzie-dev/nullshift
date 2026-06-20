@@ -19,7 +19,7 @@ export function SignProposal({
   limited,
   carePlanLabel,
 }: {
-  acceptAction: (fd: FormData) => Promise<void> | void;
+  acceptAction: (fd: FormData) => Promise<{ ok: boolean }>;
   declineAction: (fd: FormData) => Promise<void> | void;
   projectId: string;
   limited: boolean;
@@ -43,10 +43,17 @@ export function SignProposal({
     }
     startTransition(async () => {
       try {
-        await acceptAction(formData);
-        setSigned(true);
-        // Let the celebration play, then reveal the signed document underneath.
-        setTimeout(() => router.refresh(), 3200);
+        const res = await acceptAction(formData);
+        if (res && res.ok) {
+          setSigned(true);
+          // Let the celebration play, then reveal the signed document underneath.
+          setTimeout(() => router.refresh(), 3200);
+        } else {
+          // The write didn't take (e.g. already signed in another tab, or the
+          // proposal moved on) — don't fake a celebration; show the real state.
+          setError("This proposal can't be signed right now — refreshing…");
+          setTimeout(() => router.refresh(), 1500);
+        }
       } catch {
         setError("Something went wrong — please try again.");
       }

@@ -49,18 +49,36 @@ export function EntityTypeForm({
 
   const router = useRouter();
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    setError(null);
+    const formEl = e.currentTarget;
+    const formData = new FormData(formEl);
+    // If we're inside the proposal's "Edit business details" <details> box,
+    // capture it now (before the success card replaces the form) so we can
+    // collapse it on save.
+    const detailsEl = formEl.closest("details");
     startTransition(async () => {
-      await action(formData);
-      setSaved(true);
-      // Let the confirmation read for a beat, then re-render the parent: the
-      // landing gate lifts, or (in the proposal edit box) the box closes and the
-      // summary updates.
-      setTimeout(() => router.refresh(), 1300);
+      try {
+        await action(formData);
+        setSaved(true);
+        setTimeout(() => {
+          if (detailsEl) {
+            // Edit box: close it + return the (now-hidden) form; the summary
+            // above updates from the refresh.
+            detailsEl.open = false;
+            setSaved(false);
+          }
+          // Landing gate: keep the confirmation until the refresh lifts the gate
+          // (which unmounts this form), so there's no flash of the empty form.
+          router.refresh();
+        }, 1300);
+      } catch {
+        setError("We couldn't save your details — please try again.");
+      }
     });
   }
 
@@ -286,6 +304,9 @@ export function EntityTypeForm({
         </>
       )}
 
+      {error && (
+        <p style={{ fontFamily: T.mono, fontSize: 11, color: T.danger }}>{error}</p>
+      )}
       <button
         type="submit"
         disabled={!complete || pending}

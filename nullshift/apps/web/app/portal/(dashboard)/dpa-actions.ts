@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
 
 /**
@@ -14,12 +13,15 @@ import { createClient, createServiceClient } from "@nullshift/db";
 export async function setEntityType(formData: FormData) {
   const projectId = String(formData.get("project_id") || "");
   const entityType = String(formData.get("entity_type") || "");
-  if (!projectId || (entityType !== "limited" && entityType !== "sole_trader")) return;
+  // Throw on failure paths (rather than silently returning) so the client form
+  // surfaces an error instead of falsely confirming "saved".
+  if (!projectId || (entityType !== "limited" && entityType !== "sole_trader"))
+    throw new Error("Invalid submission");
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) throw new Error("Not signed in");
   const { data: project } = await supabase
     .from("projects")
     .select("id, proposal_status")
@@ -32,7 +34,7 @@ export async function setEntityType(formData: FormData) {
     project.proposal_status === "accepted" ||
     project.proposal_status === "declined"
   )
-    return;
+    throw new Error("These details can no longer be changed");
 
   const str = (k: string) => String(formData.get(k) || "").trim() || null;
   const patch: Record<string, unknown> = {
@@ -56,7 +58,8 @@ export async function setEntityType(formData: FormData) {
   // projects are staff-write under RLS — use the service client after the
   // membership-scoped read above confirmed the caller owns this project.
   const service = createServiceClient();
-  await service.from("projects").update(patch).eq("id", projectId);
-  revalidatePath("/portal/proposal");
-  revalidatePath("/portal", "layout");
+  const { error } = await service.from("projects").update(patch).eq("id", projectId);
+  if (error) throw new Error("Could not save your details");
+  // The EntityTypeForm refreshes the route itself (after its "saved" confirmation),
+  // so no revalidatePath here — it would trigger a second, racing refresh.
 }
