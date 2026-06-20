@@ -673,9 +673,21 @@ async function deleteClient(formData: FormData) {
     await service.from("enquiries").delete().ilike("email", em);
   }
 
-  // Remove each former member's auth login if it no longer belongs to any tenant
-  // (don't nuke an account still tied to another client or to internal staff).
-  for (const uid of userIds) {
+  // Remove the client's auth login(s). Resolve them BOTH ways: by membership
+  // (userIds) AND by matching the client's email(s) to any auth account that was
+  // never linked as a member — e.g. one created when they booked a call, before
+  // an admin issued a portal login. Without the email pass, such an account is
+  // orphaned on delete and blocks re-registering with that email.
+  const authIds = new Set<string>(userIds);
+  if (emails.size > 0) {
+    const { data: list } = await service.auth.admin.listUsers({ perPage: 1000 });
+    for (const u of list?.users ?? []) {
+      if (u.email && emails.has(u.email.trim().toLowerCase())) authIds.add(u.id);
+    }
+  }
+  // Delete each only if it no longer belongs to any tenant (don't nuke internal
+  // staff or another client who still has a membership).
+  for (const uid of authIds) {
     const { count } = await service
       .from("memberships")
       .select("id", { count: "exact", head: true })
