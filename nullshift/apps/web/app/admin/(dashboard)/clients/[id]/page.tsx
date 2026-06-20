@@ -1100,6 +1100,11 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   const modulesComplete = itemList.length > 0;
   const planSelected = !!project?.proposed_plan;
   const isAccepted = project?.proposal_status === "accepted";
+  // The active build invoice (ignore voided) + its lifecycle state, so the
+  // button/card reads: generate → sent, awaiting payment → paid.
+  const primaryInvoice = invoiceList.find((i) => i.status !== "void") ?? null;
+  const invoicePaid = primaryInvoice?.status === "paid";
+  const invoiceSent = !!primaryInvoice && !invoicePaid;
   // The client provides their DPA details in the portal; the docs can't be sent
   // until they have (drives the form gate + a header badge).
   const clientDpaReady = !!project && dpaReadyToSend(project);
@@ -1633,25 +1638,59 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
           <section style={card}>
             <div className="flex items-center justify-between">
               <h2 style={{ ...h2, marginBottom: 0 }}>Invoice</h2>
-              <form action={generateInvoice}>
-                {htid}
-                {hpid}
-                <button
-                  type="submit"
-                  disabled={!isAccepted}
+              {invoicePaid ? (
+                <span
                   style={{
-                    ...btn(
-                      isAccepted ? T.primary : T.surface2,
-                      isAccepted ? T.primaryFg : T.faint
-                    ),
-                    border: isAccepted ? "none" : `1px solid ${T.border}`,
-                    cursor: isAccepted ? "pointer" : "not-allowed",
-                    opacity: isAccepted ? 1 : 0.7,
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                    color: T.success,
+                    background: `${T.success}14`,
+                    border: `1px solid ${T.success}55`,
+                    borderRadius: 999,
+                    padding: "7px 14px",
                   }}
                 >
-                  Generate &amp; send itemised invoice
-                </button>
-              </form>
+                  Paid ✓
+                </span>
+              ) : invoiceSent ? (
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                    color: T.warning,
+                    background: `${T.warning}14`,
+                    border: `1px solid ${T.warning}55`,
+                    borderRadius: 999,
+                    padding: "7px 14px",
+                  }}
+                >
+                  Invoice sent — awaiting payment
+                </span>
+              ) : (
+                <form action={generateInvoice}>
+                  {htid}
+                  {hpid}
+                  <button
+                    type="submit"
+                    disabled={!isAccepted}
+                    style={{
+                      ...btn(
+                        isAccepted ? T.primary : T.surface2,
+                        isAccepted ? T.primaryFg : T.faint
+                      ),
+                      border: isAccepted ? "none" : `1px solid ${T.border}`,
+                      cursor: isAccepted ? "pointer" : "not-allowed",
+                      opacity: isAccepted ? 1 : 0.7,
+                    }}
+                  >
+                    Generate &amp; send itemised invoice
+                  </button>
+                </form>
+              )}
             </div>
             <p
               style={{
@@ -1661,9 +1700,13 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 margin: "6px 0 12px",
               }}
             >
-              {isAccepted
-                ? "Compiles the build modules above into an itemised Stripe invoice and emails the client a payment link."
-                : "Available once the client has signed the proposal. An invoice is drafted automatically on signing."}
+              {invoicePaid
+                ? "The client has paid this invoice — it's recorded against their account below."
+                : invoiceSent
+                  ? "Sent to the client — they've been emailed a Stripe payment link. This flips to Paid automatically once the payment goes through."
+                  : isAccepted
+                    ? "Compiles the build modules above into an itemised Stripe invoice and emails the client a payment link."
+                    : "Available once the client has signed the proposal. An invoice is drafted automatically on signing."}
             </p>
             {invoiceList.length > 0 && (
               <div
