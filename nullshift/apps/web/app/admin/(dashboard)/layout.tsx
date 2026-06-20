@@ -3,6 +3,7 @@ import { createClient } from "@nullshift/db";
 import { isAdminEmail } from "@nullshift/auth/admin";
 import { AdminNav } from "../AdminNav";
 import { T } from "@nullshift/ui/tokens";
+import { Atmosphere } from "@/components/funnel/Atmosphere";
 import { hasSupabaseServerConfig, getMissingSupabaseEnv } from "@nullshift/db/env";
 
 // Auth-gated dashboard — always render per request, never statically prerender,
@@ -111,9 +112,15 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen" style={{ background: T.bg }}>
-      <AdminNav email={user.email ?? ""} />
-      <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
+    <div className="min-h-screen relative" style={{ background: T.bg }}>
+      {/* Shared funnel atmosphere — the same ambient world as /start. */}
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+        <Atmosphere />
+      </div>
+      <div className="relative" style={{ zIndex: 1 }}>
+        <AdminNav email={user.email ?? ""} />
+        <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
+      </div>
     </div>
   );
 }

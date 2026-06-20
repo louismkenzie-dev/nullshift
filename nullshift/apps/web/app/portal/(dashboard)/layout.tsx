@@ -7,6 +7,7 @@ import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 import { setEntityType } from "./dpa-actions";
 import { dpaReadyToSend } from "@/lib/dpa";
 import { ensureClientWorkspace } from "@/lib/ensureClientWorkspace";
+import { Atmosphere } from "@/components/funnel/Atmosphere";
 
 // Auth-gated portal — always render per request, never statically prerender,
 // so `next build` can't try to reach Supabase with placeholder CI/build env.
@@ -65,13 +66,21 @@ export default async function PortalLayout({ children }: { children: React.React
 
   return (
     <div
+      className="relative"
       style={{
         minHeight: "100vh",
         background: T.bg,
         display: "flex",
         flexDirection: "column",
+        zIndex: 1,
       }}
     >
+      {/* Shared funnel atmosphere — the same ambient world as /start. The outer
+          div's zIndex:1 makes this a contained stacking context, so the -1
+          backdrop sits behind the content without escaping behind the page. */}
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: -1 }}>
+        <Atmosphere />
+      </div>
       <PortalHeader email={user.email!} />
       {needsDpa && project ? (
         <main
