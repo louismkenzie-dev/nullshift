@@ -42,6 +42,72 @@ export default async function PortalHome() {
   const sub = (subs ?? [])[0] as { plan: string; mrr: number } | undefined;
   const plan = sub ? carePlan(sub.plan) : null;
 
+  // A freshly-onboarded client (no proposal sent yet) sees a "check back after
+  // your call" screen rather than an empty project — there's nothing to review
+  // until we've had the call and prepared their proposal.
+  const hasActiveProposal = projectList.some((p) => p.proposal_status !== "draft");
+  if (!hasActiveProposal) {
+    return (
+      <div style={{ maxWidth: 560, margin: "0 auto", padding: "64px 20px" }}>
+        <div
+          style={{
+            background: T.surface,
+            border: `1px solid ${T.border}`,
+            borderRadius: T.r.lg,
+            padding: "34px 28px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: T.mono,
+              fontSize: 10,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: T.primary,
+              marginBottom: 12,
+            }}
+          >
+            {"// You're all set"}
+          </div>
+          <h1
+            style={{
+              fontFamily: T.display,
+              fontWeight: 600,
+              fontSize: "1.5rem",
+              color: T.fg,
+              marginBottom: 10,
+            }}
+          >
+            Thanks — we&apos;ve got your details
+          </h1>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.95rem",
+              lineHeight: 1.65,
+              color: T.muted,
+              marginBottom: 16,
+            }}
+          >
+            We&apos;ll talk through your project on your call with one of our team, then
+            prepare your proposal right here for you to review and sign.
+          </p>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.95rem",
+              fontWeight: 600,
+              color: T.primary,
+            }}
+          >
+            Check back here after your call.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 880, margin: "0 auto", padding: "28px 16px 56px" }}>
       <h1

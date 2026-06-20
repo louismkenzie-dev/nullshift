@@ -6,6 +6,7 @@ import { PortalHeader } from "./PortalHeader";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 import { setEntityType } from "./dpa-actions";
 import { dpaReadyToSend } from "@/lib/dpa";
+import { ensureClientWorkspace } from "@/lib/ensureClientWorkspace";
 
 // Auth-gated portal — always render per request, never statically prerender,
 // so `next build` can't try to reach Supabase with placeholder CI/build env.
@@ -24,6 +25,11 @@ export default async function PortalLayout({ children }: { children: React.React
   if (!user) {
     redirect("/portal/login");
   }
+
+  // A client who books a call only has a `leads` row — provision their workspace
+  // (tenant + project + membership) on first landing so the DPA gate has a
+  // project to attach to. Idempotent + a no-op for internal staff.
+  await ensureClientWorkspace({ userId: user.id, email: user.email ?? null });
 
   // The client's primary project (RLS scopes to their own tenant). Before they
   // can use the portal they MUST declare their Data Processing Agreement details
