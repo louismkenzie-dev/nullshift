@@ -157,7 +157,7 @@ export function MfaPanel() {
               width: 180,
               height: 180,
               background: "#fff",
-              borderRadius: 8,
+              borderRadius: 0,
               padding: 8,
               margin: "8px 0",
             }}
@@ -254,6 +254,6 @@ const ghostBtn = {
   background: "transparent",
   color: T.danger,
   border: `1px solid ${T.danger}40`,
-  borderRadius: 5,
+  borderRadius: 0,
   cursor: "pointer",
 } as const;

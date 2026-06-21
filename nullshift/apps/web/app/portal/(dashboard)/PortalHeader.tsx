@@ -56,7 +56,7 @@ export function PortalHeader({ email }: { email: string }) {
                 color: T.muted,
                 background: "transparent",
                 border: `1px solid ${T.border}`,
-                borderRadius: T.r.full,
+                borderRadius: 0,
                 padding: "5px 14px",
                 cursor: "pointer",
                 whiteSpace: "nowrap",

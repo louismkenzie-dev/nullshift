@@ -290,7 +290,7 @@ export default function MarketingCommandCentre() {
               fontSize: "0.86rem",
               fontWeight: 500,
               padding: "9px 14px",
-              borderRadius: "9px 9px 0 0",
+              borderRadius: 0,
               border: "none",
               cursor: "pointer",
               color: tab === t ? T.primary : T.muted,
@@ -312,7 +312,7 @@ export default function MarketingCommandCentre() {
             style={{
               borderLeft: `3px solid ${T.primary}`,
               background: `${T.primary}0d`,
-              borderRadius: "0 12px 12px 0",
+              borderRadius: 0,
               padding: "16px 20px",
               marginBottom: 24,
             }}
@@ -477,7 +477,7 @@ export default function MarketingCommandCentre() {
                 <div
                   style={{
                     height: 26,
-                    borderRadius: 7,
+                    borderRadius: 0,
                     display: "flex",
                     alignItems: "center",
                     paddingInline: 10,
@@ -683,7 +683,7 @@ export default function MarketingCommandCentre() {
             style={{
               borderLeft: `3px solid ${T.primary}`,
               background: `${T.primary}0d`,
-              borderRadius: "0 12px 12px 0",
+              borderRadius: 0,
               padding: "14px 18px",
             }}
           >
@@ -878,7 +878,7 @@ function Roadmap() {
                 fontSize: "0.72rem",
                 color: T.primary,
                 border: `1px solid ${T.primary}44`,
-                borderRadius: 6,
+                borderRadius: 0,
                 padding: "3px 8px",
               }}
             >
@@ -899,7 +899,7 @@ function Roadmap() {
                 style={{
                   background: T.surface,
                   border: `1px solid ${T.border}`,
-                  borderRadius: 12,
+                  borderRadius: 0,
                   padding: "12px 14px",
                   marginBottom: 8,
                   cursor: "pointer",
@@ -910,7 +910,7 @@ function Roadmap() {
                   style={{
                     flex: "0 0 20px",
                     height: 20,
-                    borderRadius: 6,
+                    borderRadius: 0,
                     border: `1.5px solid ${isDone ? T.primary : T.borderStr}`,
                     background: isDone ? T.primary : "transparent",
                     color: T.bg,
@@ -1002,7 +1002,7 @@ function AdvisorPlaybook() {
         style={{
           borderLeft: `3px solid ${T.primary}`,
           background: `${T.primary}0d`,
-          borderRadius: "0 12px 12px 0",
+          borderRadius: 0,
           padding: "18px 22px",
           marginBottom: 24,
         }}
@@ -1034,7 +1034,7 @@ function AdvisorPlaybook() {
               fontSize: "0.85em",
               background: T.elevated,
               padding: "2px 7px",
-              borderRadius: 5,
+              borderRadius: 0,
               color: T.primary,
             }}
           >

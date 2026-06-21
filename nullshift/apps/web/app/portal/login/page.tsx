@@ -125,7 +125,7 @@ function LoginForm() {
         {/* Card */}
         <form
           onSubmit={onSubmit}
-          className="flex flex-col gap-4 p-8 rounded-2xl"
+          className="flex flex-col gap-4 p-8 rounded-none"
           style={{
             background: T.surface,
             border: `1px solid ${T.border}`,

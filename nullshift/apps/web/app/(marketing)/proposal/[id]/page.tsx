@@ -56,7 +56,7 @@ export default async function ProposalPage({
   const card: React.CSSProperties = {
     background: T.surface,
     border: `1px solid ${T.border}`,
-    borderRadius: 12,
+    borderRadius: 0,
     padding: 28,
   };
   const mono: React.CSSProperties = { fontFamily: T.mono };
@@ -68,7 +68,7 @@ export default async function ProposalPage({
           width: 32,
           height: 32,
           background: T.surface2,
-          borderRadius: 6,
+          borderRadius: 0,
           display: "grid",
           placeItems: "center",
           color: T.primary,
@@ -190,7 +190,7 @@ export default async function ProposalPage({
                   key={k}
                   style={{
                     border: `1px solid ${T.border}`,
-                    borderRadius: 8,
+                    borderRadius: 0,
                     padding: 16,
                   }}
                 >
@@ -488,7 +488,7 @@ export default async function ProposalPage({
                     key={k}
                     style={{
                       border: `1px solid ${T.border}`,
-                      borderRadius: 8,
+                      borderRadius: 0,
                       padding: 16,
                     }}
                   >
@@ -568,7 +568,7 @@ export default async function ProposalPage({
             style={{
               background: `linear-gradient(135deg, ${T.surface}, ${T.surface2})`,
               border: `2px solid ${T.primary}`,
-              borderRadius: 12,
+              borderRadius: 0,
               padding: 36,
             }}
           >

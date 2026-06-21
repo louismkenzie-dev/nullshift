@@ -128,7 +128,7 @@ export default function CalendarPage() {
     fontSize: 13,
     color: T.fg,
     background: T.surface2,
-    borderRadius: 8,
+    borderRadius: 0,
   };
 
   return (
@@ -169,7 +169,7 @@ export default function CalendarPage() {
         <div className="grid lg:grid-cols-[1fr_300px] gap-6">
           {/* Month grid */}
           <div
-            className="rounded-2xl overflow-hidden"
+            className="overflow-hidden"
             style={{ background: T.surface, border: `1px solid ${T.border}` }}
           >
             {/* Header */}
@@ -263,7 +263,7 @@ export default function CalendarPage() {
                 return (
                   <div
                     key={c.key + i}
-                    className="min-h-[92px] p-2 rounded-lg"
+                    className="min-h-[92px] p-2"
                     style={{
                       background: c.inMonth ? T.bg : "transparent",
                       opacity: c.inMonth ? 1 : 0.35,
@@ -292,7 +292,7 @@ export default function CalendarPage() {
                         <Link
                           key={call.id}
                           href={`/admin/clients/${call.tenant_id}`}
-                          className="block transition-opacity hover:opacity-80 rounded-md px-1.5 py-1"
+                          className="block transition-opacity hover:opacity-80 px-1.5 py-1"
                           style={{
                             background: `${T.primary}22`,
                             borderLeft: `2px solid ${T.primary}`,
@@ -325,7 +325,7 @@ export default function CalendarPage() {
 
           {/* Upcoming list */}
           <div
-            className="rounded-2xl p-5"
+            className="p-5"
             style={{
               background: T.surface,
               border: `1px solid ${T.border}`,

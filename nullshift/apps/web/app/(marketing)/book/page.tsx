@@ -3,23 +3,26 @@ import { Footer } from "@/components/Footer";
 import { T } from "@nullshift/ui/tokens";
 import { BookCta } from "./BookCta";
 import { CalEmbed } from "@/components/CalEmbed";
+import { Eyebrow, Display, Lead } from "@/components/kyma";
 
 export default function BookPage() {
   return (
     <>
       <Nav />
       <main
+        className="k-dark"
         style={{
           minHeight: "calc(100dvh - 64px)",
           paddingTop: 64,
           display: "flex",
           flexDirection: "column",
-          backgroundImage: `radial-gradient(ellipse 70% 60% at 10% 50%, ${T.primarySoft} 0%, transparent 60%)`,
+          background: "var(--k-bg)",
+          color: "var(--k-fg)",
         }}
       >
         <style>{`
           @media (min-width: 1024px) {
-            .book-left  { border-bottom: none !important; border-right: 1px solid #2A2D38 !important; }
+            .book-left  { border-bottom: none !important; border-right: 1px solid var(--k-border) !important; }
           }
         `}</style>
 
@@ -28,72 +31,26 @@ export default function BookPage() {
           {/* ── Left: headline ───────────────────────────────── */}
           <div
             className="book-left flex flex-col justify-center gap-8 px-6 py-12 sm:px-12 sm:py-16 lg:px-20 lg:py-20 lg:flex-1"
-            style={{ borderBottom: `1px solid ${T.border}` }}
+            style={{ borderBottom: "1px solid var(--k-border)" }}
           >
             {/* Eyebrow */}
-            <div className="flex items-center gap-2">
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: T.primary,
-                  boxShadow: `0 0 0 3px ${T.primarySoft}`,
-                  display: "inline-block",
-                  flexShrink: 0,
-                }}
-              />
-              <span
-                style={{
-                  fontFamily: T.sans,
-                  fontSize: "0.75rem",
-                  fontWeight: 500,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: T.muted,
-                }}
-              >
-                Book a call
-              </span>
-            </div>
+            <Eyebrow index="00" label="Book a call" />
 
             {/* Heading + body */}
             <div>
-              <h1
-                style={{
-                  fontFamily: T.display,
-                  fontWeight: 600,
-                  fontSize: "clamp(2.75rem, 7vw, 5rem)",
-                  lineHeight: 1.04,
-                  letterSpacing: "-0.03em",
-                  color: T.fg,
-                }}
-              >
-                Ready to
-                <br />
-                <span className="hero-glow" style={{ color: T.primary }}>
-                  start?
-                </span>
-              </h1>
-              <p
-                className="mt-5 max-w-[38ch]"
-                style={{
-                  fontFamily: T.sans,
-                  fontSize: "1rem",
-                  lineHeight: 1.65,
-                  letterSpacing: "-0.005em",
-                  color: T.muted,
-                }}
-              >
+              <Display as="h1" size="hero" style={{ maxWidth: "14ch" }}>
+                Ready to <span style={{ color: "var(--k-accent)" }}>start?</span>
+              </Display>
+              <Lead className="mt-6" style={{ maxWidth: "42ch" }}>
                 Pick your preferred date and time, set a password to confirm your account,
                 and we&apos;ll lock in your call — all in under two minutes.
-              </p>
+              </Lead>
             </div>
 
             {/* Trust signals — hidden on mobile to keep it tight */}
             <div
               className="hidden sm:flex flex-col gap-2.5 pt-6"
-              style={{ borderTop: `1px solid ${T.border}` }}
+              style={{ borderTop: "1px solid var(--k-border)" }}
             >
               {[
                 { text: "Same-day response", dot: true },
@@ -104,12 +61,12 @@ export default function BookPage() {
                   key={text}
                   className="flex items-center gap-2.5"
                   style={{
-                    fontFamily: T.sans,
+                    fontFamily: T.mono,
                     fontSize: "0.8125rem",
                     fontWeight: dot ? 500 : 400,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
-                    color: dot ? T.muted : T.faint,
+                    color: dot ? "var(--k-muted)" : "var(--k-faint)",
                   }}
                 >
                   {dot ? (
@@ -118,7 +75,7 @@ export default function BookPage() {
                         width: 6,
                         height: 6,
                         borderRadius: "50%",
-                        background: T.primary,
+                        background: "var(--k-accent)",
                         display: "inline-block",
                         flexShrink: 0,
                       }}
@@ -140,8 +97,8 @@ export default function BookPage() {
             <div
               className="w-full flex flex-col gap-5 sm:gap-6 p-6 sm:p-8"
               style={{
-                background: T.surface,
-                border: `1px solid ${T.border}`,
+                background: "var(--k-surface)",
+                border: "1px solid var(--k-border)",
                 borderRadius: T.r.xl,
                 boxShadow: T.shadow.md,
                 width: "100%",
@@ -150,12 +107,12 @@ export default function BookPage() {
               <div>
                 <p
                   style={{
-                    fontFamily: T.sans,
+                    fontFamily: T.mono,
                     fontSize: "0.75rem",
                     fontWeight: 500,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
-                    color: T.muted,
+                    color: "var(--k-muted)",
                     marginBottom: 14,
                   }}
                 >
@@ -173,8 +130,8 @@ export default function BookPage() {
                           width: 24,
                           height: 24,
                           borderRadius: "50%",
-                          background: T.primarySoft,
-                          border: `1px solid ${T.primary}44`,
+                          background: "var(--k-bg)",
+                          border: "1px solid var(--k-border-strong)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -182,7 +139,7 @@ export default function BookPage() {
                           fontFamily: T.mono,
                           fontSize: "11px",
                           fontWeight: 600,
-                          color: T.primary,
+                          color: "var(--k-accent)",
                         }}
                       >
                         {i + 1}
@@ -191,7 +148,7 @@ export default function BookPage() {
                         style={{
                           fontFamily: T.sans,
                           fontSize: "0.9375rem",
-                          color: T.muted,
+                          color: "var(--k-muted)",
                         }}
                       >
                         {step}
@@ -201,11 +158,15 @@ export default function BookPage() {
                 </ol>
               </div>
 
-              <div style={{ height: 1, background: T.border }} />
+              <div style={{ height: 1, background: "var(--k-border)" }} />
               <BookCta />
               <p
                 className="text-center"
-                style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.faint }}
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.8125rem",
+                  color: "var(--k-faint)",
+                }}
               >
                 Free · No obligation · 15-minute call
               </p>

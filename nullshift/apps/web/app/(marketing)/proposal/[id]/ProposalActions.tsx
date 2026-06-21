@@ -103,9 +103,7 @@ export function ProposalActions({
           alignItems: "center",
           gap: 8,
           transition: "all 0.15s",
-          boxShadow: accepted
-            ? `0 0 0 1px ${T.primary}40, 0 4px 16px rgba(0,0,0,0.4)`
-            : "0 4px 16px rgba(0,0,0,0.4)",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
         }}
@@ -151,7 +149,7 @@ export function ProposalActions({
                   fontSize: "0.62rem",
                   background: T.border,
                   color: T.muted,
-                  borderRadius: 4,
+                  borderRadius: 0,
                   padding: "1px 6px",
                   marginLeft: 2,
                 }}

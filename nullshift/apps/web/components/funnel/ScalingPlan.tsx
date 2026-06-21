@@ -339,7 +339,7 @@ export function ScalingPlan({ plan }: { plan: ScalingPlanData }) {
           style={{
             borderLeft: `3px solid ${T.primary}`,
             background: T.primarySoft,
-            borderRadius: "0 12px 12px 0",
+            borderRadius: 0,
             padding: "16px 18px",
           }}
         >

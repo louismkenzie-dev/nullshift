@@ -131,10 +131,7 @@ export default async function ClientsPage() {
           No clients yet. Promote a lead from the Pipeline to create one.
         </p>
       ) : (
-        <div
-          className="rounded-lg overflow-hidden"
-          style={{ border: `1px solid ${T.border}` }}
-        >
+        <div className="overflow-hidden" style={{ border: `1px solid ${T.border}` }}>
           {tenants.map((t, i) => {
             const stage = stageByTenant.get(t.id);
             const mrr = mrrByTenant.get(t.id) ?? 0;

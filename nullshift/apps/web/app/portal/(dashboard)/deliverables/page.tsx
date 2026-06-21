@@ -125,7 +125,7 @@ export default async function DeliverablesPage() {
                   paddingInline: 12,
                   background: T.primary,
                   color: T.primaryFg,
-                  borderRadius: 5,
+                  borderRadius: 0,
                   textDecoration: "none",
                   flexShrink: 0,
                 }}

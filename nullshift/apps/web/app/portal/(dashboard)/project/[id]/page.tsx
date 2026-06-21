@@ -540,7 +540,7 @@ export default async function PortalProject({
                 style={{
                   background: T.bg,
                   border: `1px solid ${T.border}`,
-                  borderRadius: 8,
+                  borderRadius: 0,
                   padding: "10px 12px",
                 }}
               >
@@ -579,7 +579,7 @@ export default async function PortalProject({
                             background: T.primary,
                             color: T.primaryFg,
                             border: "none",
-                            borderRadius: 6,
+                            borderRadius: 0,
                             cursor: "pointer",
                           }}
                         >
@@ -601,7 +601,7 @@ export default async function PortalProject({
                             background: "transparent",
                             color: T.muted,
                             border: `1px solid ${T.border}`,
-                            borderRadius: 6,
+                            borderRadius: 0,
                             cursor: "pointer",
                           }}
                         >

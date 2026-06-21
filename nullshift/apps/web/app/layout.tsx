@@ -11,11 +11,11 @@ const SITE_URL = "https://nullshift.co.uk";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Nullshift — Web Design & Development",
+    default: "Nullshift — Websites, Systems & Automations",
     template: "%s — Nullshift",
   },
   description:
-    "Nullshift helps small and medium-sized businesses make the move online — with websites and branding built to last.",
+    "Nullshift designs, builds and runs bespoke websites, custom systems and the automations behind them — owned outright by your business.",
 };
 
 export default function RootLayout({

@@ -120,7 +120,7 @@ export function AdminNav({ email }: { email: string }) {
         {/* Hamburger — all screen sizes */}
         <button
           onClick={() => setOpen((v) => !v)}
-          className="flex flex-col justify-center items-center gap-[5px] w-9 h-9 rounded-md transition-colors"
+          className="flex flex-col justify-center items-center gap-[5px] w-9 h-9 transition-colors"
           style={{ background: open ? T.surface2 : "transparent" }}
           aria-label="Open menu"
         >
@@ -130,7 +130,7 @@ export function AdminNav({ email }: { email: string }) {
               width: 20,
               height: 1.5,
               background: T.fg,
-              borderRadius: 2,
+              borderRadius: 0,
               transition: "transform .2s, opacity .2s",
               transform: open ? "translateY(6.5px) rotate(45deg)" : "none",
             }}
@@ -141,7 +141,7 @@ export function AdminNav({ email }: { email: string }) {
               width: 20,
               height: 1.5,
               background: T.fg,
-              borderRadius: 2,
+              borderRadius: 0,
               transition: "opacity .2s",
               opacity: open ? 0 : 1,
             }}
@@ -152,7 +152,7 @@ export function AdminNav({ email }: { email: string }) {
               width: 20,
               height: 1.5,
               background: T.fg,
-              borderRadius: 2,
+              borderRadius: 0,
               transition: "transform .2s, opacity .2s",
               transform: open ? "translateY(-6.5px) rotate(-45deg)" : "none",
             }}
@@ -246,7 +246,7 @@ export function AdminNav({ email }: { email: string }) {
                     key={l.href}
                     href={l.href}
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
+                    className="flex items-center gap-3 px-3 py-2.5 transition-colors"
                     style={{
                       background: active ? `${T.primary}18` : "transparent",
                       borderLeft: `2px solid ${active ? T.primary : "transparent"}`,
@@ -313,7 +313,7 @@ export function AdminNav({ email }: { email: string }) {
               textTransform: "uppercase",
               color: T.fg,
               border: `1px solid ${T.border}`,
-              borderRadius: "6px",
+              borderRadius: 0,
             }}
           >
             ← View website
@@ -328,7 +328,7 @@ export function AdminNav({ email }: { email: string }) {
               textTransform: "uppercase",
               color: T.danger,
               border: `1px solid ${T.danger}40`,
-              borderRadius: "6px",
+              borderRadius: 0,
             }}
           >
             Sign out

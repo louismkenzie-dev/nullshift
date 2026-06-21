@@ -56,7 +56,7 @@ export function AcceptForm({ proposalId }: { proposalId: string }) {
   const input: React.CSSProperties = {
     background: T.bg,
     border: `1px solid ${T.border}`,
-    borderRadius: 6,
+    borderRadius: 0,
     padding: "12px 16px",
     color: T.fg,
     fontFamily: T.sans,
@@ -100,7 +100,7 @@ export function AcceptForm({ proposalId }: { proposalId: string }) {
           style={{
             background: T.bg,
             border: `1px solid ${T.borderStr}`,
-            borderRadius: 6,
+            borderRadius: 0,
             height: 96,
             display: "flex",
             alignItems: "center",
@@ -142,7 +142,7 @@ export function AcceptForm({ proposalId }: { proposalId: string }) {
           background: T.primary,
           color: T.primaryFg,
           padding: "16px",
-          borderRadius: 8,
+          borderRadius: 0,
           fontFamily: T.display,
           fontWeight: 800,
           fontSize: "1.1rem",

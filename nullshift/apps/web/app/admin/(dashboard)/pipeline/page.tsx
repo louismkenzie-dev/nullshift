@@ -182,7 +182,7 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
         position: "relative",
         background: T.bg,
         border: `1px solid ${T.border}`,
-        borderRadius: 8,
+        borderRadius: 0,
         padding: "11px 12px",
       }}
     >
@@ -354,7 +354,7 @@ const miniBtn = (bg: string, fg: string) => ({
   background: bg,
   color: fg,
   border: bg === "transparent" ? `1px solid ${T.border}` : "none",
-  borderRadius: 5,
+  borderRadius: 0,
   cursor: "pointer",
 });
 

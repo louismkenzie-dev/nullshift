@@ -296,7 +296,7 @@ export default async function UsersPage() {
 
       {rows.length === 0 ? (
         <div
-          className="rounded-2xl p-8"
+          className="p-8"
           style={{
             background: T.surface,
             border: `1px solid ${T.border}`,
@@ -307,7 +307,7 @@ export default async function UsersPage() {
         </div>
       ) : (
         <div
-          className="rounded-3xl overflow-hidden"
+          className="overflow-hidden"
           style={{
             border: `1px solid ${T.border}`,
             background: T.surface,
@@ -417,7 +417,7 @@ export default async function UsersPage() {
                     id={`tier-${user.id}`}
                     name="tier"
                     defaultValue={membership.tier}
-                    className="h-10 px-3 rounded-lg"
+                    className="h-10 px-3"
                     style={selectStyle}
                   >
                     {TIER_OPTIONS.map((option) => (
@@ -434,7 +434,7 @@ export default async function UsersPage() {
                     id={`status-${user.id}`}
                     name="status"
                     defaultValue={membership.status}
-                    className="h-10 px-3 rounded-lg"
+                    className="h-10 px-3"
                     style={selectStyle}
                   >
                     {STATUS_OPTIONS.map((option) => (
@@ -446,7 +446,7 @@ export default async function UsersPage() {
 
                   <div className="flex gap-2 sm:col-span-2 lg:col-span-1 lg:justify-end">
                     <SubmitButton
-                      className="h-10 px-4 rounded-lg transition-opacity hover:opacity-90"
+                      className="h-10 px-4 transition-opacity hover:opacity-90"
                       style={{
                         fontFamily: T.mono,
                         fontSize: "10px",
@@ -454,7 +454,6 @@ export default async function UsersPage() {
                         textTransform: "uppercase",
                         background: T.primary,
                         color: T.primaryFg,
-                        boxShadow: `0 0 18px color-mix(in oklab, ${T.primary} 18%, transparent)`,
                       }}
                     >
                       Save
@@ -462,7 +461,7 @@ export default async function UsersPage() {
 
                     <SubmitButton
                       formAction={deleteUser}
-                      className="h-10 px-4 rounded-lg transition-opacity hover:opacity-90"
+                      className="h-10 px-4 transition-opacity hover:opacity-90"
                       style={{
                         fontFamily: T.mono,
                         fontSize: "10px",

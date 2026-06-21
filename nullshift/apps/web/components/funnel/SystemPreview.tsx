@@ -150,7 +150,7 @@ export function SystemPreview({
                 style={{
                   width: 30,
                   height: 30,
-                  borderRadius: 8,
+                  borderRadius: 0,
                   background: T.primary,
                   color: T.primaryFg,
                   fontFamily: T.display,
@@ -185,7 +185,7 @@ export function SystemPreview({
                   className="flex items-center gap-2.5"
                   style={{
                     padding: "7px 10px",
-                    borderRadius: 7,
+                    borderRadius: 0,
                     background: i === 0 ? `${T.primary}1a` : "transparent",
                     fontFamily: T.sans,
                     fontSize: 12.5,
@@ -300,7 +300,7 @@ export function SystemPreview({
                           style={{
                             background: `${T.primary}14`,
                             border: `1px solid ${T.primary}3a`,
-                            borderRadius: 6,
+                            borderRadius: 0,
                             padding: "5px 6px",
                           }}
                         >

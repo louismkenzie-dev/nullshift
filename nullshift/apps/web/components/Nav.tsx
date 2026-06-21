@@ -4,29 +4,51 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
-import { Logo, LogoMark } from "@nullshift/ui/components/Logo";
-import { cn } from "@nullshift/ui/utils";
+import { Logo } from "@nullshift/ui/components/Logo";
 
-const links = [
-  { label: "What we build", href: "/#capabilities" },
-  { label: "Systems Lab", href: "/systems-lab" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "About", href: "/about" },
+const LINKS = [
+  { n: "01", label: "What we build", href: "/#capabilities" },
+  { n: "02", label: "Systems Lab", href: "/systems-lab" },
+  { n: "03", label: "Pricing", href: "/pricing" },
+  { n: "04", label: "About", href: "/about" },
+  { n: "05", label: "FAQ", href: "/faq" },
 ];
+
+const mono: React.CSSProperties = {
+  fontFamily: T.mono,
+  fontSize: "0.68rem",
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+};
 
 export function Nav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [time, setTime] = useState<string | null>(null);
+
+  useEffect(() => setOpen(false), [pathname]);
 
   useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60);
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const tick = () =>
+      setTime(
+        new Intl.DateTimeFormat("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Europe/London",
+        }).format(new Date())
+      );
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -38,335 +60,211 @@ export function Nav() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 px-3 pt-2">
+      <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3">
         <nav
-          className={cn(
-            "mx-auto flex items-center justify-between transition-all duration-500",
-            scrolled
-              ? "max-w-4xl rounded-2xl border px-5 backdrop-blur-xl"
-              : "max-w-7xl px-4"
-          )}
+          className="mx-auto flex items-center justify-between transition-all duration-300"
           style={{
-            height: 64,
-            background: scrolled ? `${T.bg}d8` : "transparent",
-            borderColor: scrolled ? T.border : "transparent",
+            maxWidth: 1400,
+            height: 56,
+            paddingInline: 18,
+            borderRadius: 0,
+            background: scrolled ? "rgba(10,10,10,0.72)" : "transparent",
+            border: `1px solid ${scrolled ? "rgba(244,244,232,0.12)" : "transparent"}`,
+            backdropFilter: scrolled ? "blur(14px)" : "none",
           }}
         >
           {/* Brand */}
-          <Link href="/" className="relative z-10">
-            <Logo markSize={24} />
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 shrink-0"
+            style={{ textDecoration: "none" }}
+          >
+            <Logo markSize={22} />
+            <span style={{ color: "#9a9a90", fontFamily: T.mono, fontSize: "0.7rem" }}>
+              ®
+            </span>
           </Link>
 
-          {/* Desktop links */}
-          <ul className="hidden md:flex items-center gap-8 list-none">
-            {links.map(({ label, href }) => {
-              const active = pathname === href;
-              return (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    style={{
-                      fontFamily: T.sans,
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                      letterSpacing: "-0.005em",
-                      color: active ? T.fg : T.muted,
-                      textDecoration: "none",
-                      transition: `color ${T.duration.base} ${T.ease}`,
-                    }}
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLElement).style.color = T.fg)
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLElement).style.color = active
-                        ? T.fg
-                        : T.muted)
-                    }
-                  >
-                    {label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-
-          {/* Right cluster */}
-          <div className="flex items-center gap-2">
-            {/* Client login — secondary button */}
-            <Link
-              href="/portal"
-              className="hidden md:inline-flex items-center font-medium"
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                letterSpacing: "-0.005em",
-                height: 36,
-                paddingInline: 16,
-                background: "transparent",
-                color: T.muted,
-                borderRadius: T.r.md,
-                border: `1px solid ${T.borderStr}`,
-                textDecoration: "none",
-                transition: `background ${T.duration.base} ${T.ease}, color ${T.duration.base} ${T.ease}, border-color ${T.duration.base} ${T.ease}`,
-              }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.background = T.surface2;
-                el.style.color = T.fg;
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.background = "transparent";
-                el.style.color = T.muted;
-              }}
-            >
-              Client login
-            </Link>
-
-            {/* Get started — primary button (the /start qualification funnel) */}
-            <Link
-              href="/start"
-              className="hidden md:inline-flex items-center font-medium"
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                letterSpacing: "-0.005em",
-                height: 36,
-                paddingInline: 16,
-                background: T.primary,
-                color: T.primaryFg,
-                borderRadius: T.r.md,
-                textDecoration: "none",
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
-                transition: `background ${T.duration.base} ${T.ease}`,
-              }}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.background = T.primaryHover)
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.background = T.primary)
-              }
-            >
-              Get my free plan
-            </Link>
-
-            {/* Hamburger — mobile only */}
-            <button
-              onClick={() => setOpen((v) => !v)}
-              className="md:hidden flex flex-col justify-center items-center gap-[5px] w-9 h-9"
-              style={{
-                background: open ? T.surface2 : "transparent",
-                borderRadius: T.r.md,
-                border: `1px solid ${open ? T.borderStr : "transparent"}`,
-              }}
-              aria-label="Toggle menu"
-            >
-              <span
-                style={{
-                  display: "block",
-                  width: 18,
-                  height: 1.5,
-                  background: T.fg,
-                  borderRadius: 2,
-                  transition: "transform .2s, opacity .2s",
-                  transform: open ? "translateY(6.5px) rotate(45deg)" : "none",
-                }}
-              />
-              <span
-                style={{
-                  display: "block",
-                  width: 18,
-                  height: 1.5,
-                  background: T.fg,
-                  borderRadius: 2,
-                  transition: "opacity .2s",
-                  opacity: open ? 0 : 1,
-                }}
-              />
-              <span
-                style={{
-                  display: "block",
-                  width: 18,
-                  height: 1.5,
-                  background: T.fg,
-                  borderRadius: 2,
-                  transition: "transform .2s, opacity .2s",
-                  transform: open ? "translateY(-6.5px) rotate(-45deg)" : "none",
-                }}
-              />
-            </button>
-          </div>
-        </nav>
-
-        {/* ── Mobile backdrop ──────────────────────────────────── */}
-        <div
-          onClick={() => setOpen(false)}
-          className="md:hidden fixed inset-0 z-40 transition-opacity duration-300"
-          style={{
-            background: "rgba(0,0,0,0.6)",
-            backdropFilter: "blur(4px)",
-            opacity: open ? 1 : 0,
-            pointerEvents: open ? "auto" : "none",
-          }}
-        />
-
-        {/* ── Mobile drawer ────────────────────────────────────── */}
-        <aside
-          className="md:hidden fixed top-0 right-0 bottom-0 z-50 flex flex-col"
-          style={{
-            width: "min(300px, 82vw)",
-            background: T.surface,
-            borderLeft: `1px solid ${T.border}`,
-            boxShadow: T.shadow.lg,
-            transform: open ? "translateX(0)" : "translateX(100%)",
-            transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
-          }}
-        >
-          {/* Drawer header */}
+          {/* Center status */}
           <div
-            className="flex items-center justify-between px-6 h-16 shrink-0"
-            style={{ borderBottom: `1px solid ${T.border}` }}
+            className="hidden md:flex items-center gap-6"
+            style={{ color: "#9a9a90", ...mono }}
           >
-            <div className="flex items-center gap-2.5">
-              <LogoMark size={18} />
+            <span className="inline-flex items-center gap-2">
               <span
                 style={{
-                  fontFamily: T.sans,
-                  fontWeight: 600,
-                  fontSize: "0.9375rem",
-                  letterSpacing: "-0.01em",
-                  color: T.fg,
+                  width: 6,
+                  height: 6,
+                  borderRadius: 999,
+                  background: T.primary,
+                  boxShadow: `0 0 0 3px ${T.primary}22`,
                 }}
-              >
-                Nullshift
+              />
+              Websites · Systems · Automations
+            </span>
+            <span style={{ color: "#5c5c54" }}>UK · Global reach</span>
+            {time && (
+              <span style={{ color: "#f4f4e8" }} suppressHydrationWarning>
+                {time}
               </span>
-            </div>
-            <button
-              onClick={() => setOpen(false)}
-              style={{
-                color: T.muted,
-                fontFamily: T.mono,
-                fontSize: 20,
-                lineHeight: 1,
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              ×
-            </button>
+            )}
           </div>
 
-          {/* Drawer nav */}
-          <nav className="flex flex-col gap-1 px-4 py-6 flex-1">
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.6875rem",
-                fontWeight: 500,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: T.faint,
-                paddingLeft: 12,
-                marginBottom: 8,
-              }}
+          {/* MENU button */}
+          <button
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-2.5"
+            style={{
+              ...mono,
+              color: "#0a0a0a",
+              background: "#f4f4e8",
+              height: 38,
+              paddingInline: 16,
+              borderRadius: 0,
+              border: "none",
+              cursor: "pointer",
+            }}
+            aria-label="Open menu"
+          >
+            Menu
+            <span
+              aria-hidden
+              style={{ display: "inline-flex", flexDirection: "column", gap: 3 }}
             >
-              Navigation
-            </p>
-            {links.map((l) => {
-              const active = pathname === l.href;
+              <span style={{ width: 14, height: 1.5, background: "#0a0a0a" }} />
+              <span style={{ width: 14, height: 1.5, background: "#0a0a0a" }} />
+            </span>
+          </button>
+        </nav>
+      </header>
+
+      {/* Fullscreen overlay menu */}
+      <div
+        className="fixed inset-0 z-[60] flex flex-col"
+        style={{
+          background: "#0a0a0a",
+          color: "#f4f4e8",
+          transform: open ? "translateY(0)" : "translateY(-100%)",
+          transition: "transform 0.5s cubic-bezier(0.16,1,0.3,1)",
+          pointerEvents: open ? "auto" : "none",
+        }}
+        aria-hidden={!open}
+      >
+        {/* Overlay top bar */}
+        <div
+          className="flex items-center justify-between px-5 sm:px-8"
+          style={{ height: 72, borderBottom: "1px solid rgba(244,244,232,0.12)" }}
+        >
+          <Link
+            href="/"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-1.5"
+            style={{ textDecoration: "none" }}
+          >
+            <Logo markSize={22} />
+          </Link>
+          <button
+            onClick={() => setOpen(false)}
+            className="inline-flex items-center gap-2.5"
+            style={{
+              ...mono,
+              color: "#0a0a0a",
+              background: "#f4f4e8",
+              height: 38,
+              paddingInline: 16,
+              borderRadius: 0,
+              border: "none",
+              cursor: "pointer",
+            }}
+            aria-label="Close menu"
+          >
+            Close
+            <span aria-hidden style={{ fontSize: 15, lineHeight: 1 }}>
+              ✕
+            </span>
+          </button>
+        </div>
+
+        {/* Links */}
+        <nav className="flex-1 overflow-y-auto px-5 sm:px-8 py-8">
+          <div className="mx-auto" style={{ maxWidth: 1400 }}>
+            {LINKS.map((l) => {
+              const active =
+                pathname === l.href ||
+                (l.href !== "/" &&
+                  pathname.startsWith(l.href.split("#")[0]) &&
+                  l.href.includes(pathname));
               return (
                 <Link
                   key={l.href}
                   href={l.href}
-                  className="flex items-center gap-3 px-3 py-3"
+                  onClick={() => setOpen(false)}
+                  className="group flex items-center gap-5 border-b"
                   style={{
-                    background: active ? `${T.primary}14` : "transparent",
-                    borderLeft: `2px solid ${active ? T.primary : "transparent"}`,
-                    borderRadius: T.r.md,
-                    transition: `background ${T.duration.base} ${T.ease}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active)
-                      (e.currentTarget as HTMLElement).style.background = T.elevated;
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active)
-                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                    borderColor: "rgba(244,244,232,0.12)",
+                    paddingBlock: "clamp(14px,2.4vw,26px)",
+                    textDecoration: "none",
                   }}
                 >
+                  <span style={{ ...mono, color: T.primary, fontSize: "0.74rem" }}>
+                    [{l.n}]
+                  </span>
                   <span
+                    className="transition-colors"
                     style={{
                       fontFamily: T.sans,
-                      fontWeight: 600,
-                      fontSize: "0.9375rem",
-                      letterSpacing: "-0.01em",
-                      color: active ? T.primary : T.fg,
+                      fontWeight: 700,
+                      fontSize: "clamp(2rem,6vw,4rem)",
+                      letterSpacing: "-0.03em",
+                      lineHeight: 1,
+                      textTransform: "uppercase",
+                      color: active ? T.primary : "#f4f4e8",
                     }}
                   >
                     {l.label}
                   </span>
-                  {active && (
-                    <span
-                      style={{
-                        marginLeft: "auto",
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        background: T.primary,
-                      }}
-                    />
-                  )}
+                  <span
+                    aria-hidden
+                    className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ color: T.primary, fontSize: "1.4rem" }}
+                  >
+                    →
+                  </span>
                 </Link>
               );
             })}
-          </nav>
+          </div>
+        </nav>
 
-          {/* Drawer footer */}
-          <div
-            className="px-6 py-5 shrink-0 flex flex-col gap-2"
-            style={{ borderTop: `1px solid ${T.border}` }}
-          >
+        {/* Overlay footer — CTAs */}
+        <div
+          className="px-5 sm:px-8 py-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:justify-between"
+          style={{ borderTop: "1px solid rgba(244,244,232,0.12)" }}
+        >
+          <span style={{ ...mono, color: "#9a9a90" }}>
+            UK-based · Global reach · Response within 24h
+          </span>
+          <div className="flex flex-col sm:flex-row gap-3">
             <Link
               href="/portal"
-              className="w-full h-11 inline-flex items-center justify-center"
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                letterSpacing: "-0.005em",
-                background: "transparent",
-                color: T.muted,
-                borderRadius: T.r.md,
-                border: `1px solid ${T.borderStr}`,
-                textDecoration: "none",
-                transition: `background ${T.duration.base} ${T.ease}`,
-              }}
+              onClick={() => setOpen(false)}
+              className="kb kb-outline k-dark"
             >
               Client login
             </Link>
             <Link
               href="/start"
-              className="w-full h-11 inline-flex items-center justify-center"
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                letterSpacing: "-0.005em",
-                background: T.primary,
-                color: T.primaryFg,
-                borderRadius: T.r.md,
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
-                textDecoration: "none",
-              }}
+              onClick={() => setOpen(false)}
+              className="kb kb-primary k-dark"
             >
-              Get my free plan →
+              Get my free plan
+              <span className="k-arrow" aria-hidden>
+                →
+              </span>
             </Link>
           </div>
-        </aside>
-      </header>
+        </div>
+      </div>
     </>
   );
 }

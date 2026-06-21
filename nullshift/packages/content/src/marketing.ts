@@ -400,12 +400,12 @@ export const CLINIC: VerticalConfig = {
   calc: {
     variant: "saas-bill",
     eyebrow: "The rented-software bill",
-    title: "What is your practice software costing you?",
-    sub: "Most clinic tools charge per practitioner. Drag the sliders to see the bill you're renting — and what stops when you own it.",
+    title: "What is your software stack costing you?",
+    sub: "Most business software charges per seat. Drag the sliders to see the bill you're renting — and what stops the day you own your systems outright.",
     sliders: [
       {
         id: "perSeat",
-        label: "Software cost per practitioner / month",
+        label: "Software cost per seat / month",
         min: 20,
         max: 200,
         step: 5,
@@ -414,11 +414,11 @@ export const CLINIC: VerticalConfig = {
       },
       {
         id: "seats",
-        label: "Practitioners",
+        label: "Seats / users",
         min: 1,
-        max: 20,
+        max: 50,
         step: 1,
-        value: 4,
+        value: 6,
         unit: "num",
       },
       {
@@ -432,28 +432,28 @@ export const CLINIC: VerticalConfig = {
       },
     ],
     pitch:
-      "Own the system once — booking, records, reminders, payments — and the recurring per-practitioner bill stops growing every time you hire. The build pays for itself, then it's yours.",
+      "Own your systems once — the website, the automations, the tools your business runs on — and the recurring per-seat bill stops growing every time you add a person. The build pays for itself, then it's yours.",
   },
   faqs: [
     {
-      q: "Is patient data safe and GDPR-compliant?",
+      q: "Is my data safe and GDPR-compliant?",
       a: "Yes. We act as your data processor under a signed DPA, host in the UK/EU, encrypt in transit and at rest, and keep an audit trail. Your data is yours — exportable any time, and we never sell it or lock it in.",
     },
     {
-      q: "What about my existing booking system and records?",
+      q: "What about my existing tools and data?",
       a: "We migrate them. You keep running your current tools until the new system is live and tested, then we move your data across and you cancel the subscriptions you no longer need.",
     },
     {
       q: "Why a monthly care plan if I own it?",
-      a: "You own the code, the data and every account, and can cancel anytime and keep it all. The care plan is hosting, backups, security updates and us running it — typically £49–£149/mo, a fraction of the per-seat stack it replaces. No rebilled-tool markups.",
+      a: "You own the code, the data and every account, and can cancel anytime and keep it all. The care plan isn't rent — it's us covering your running costs (hosting, storage, email and server — Vercel, Resend and the like) plus our liability cover and keeping everything updated and online.",
     },
     {
-      q: "We're a small clinic — is this overkill?",
-      a: "It scales down. A solo or two-practitioner clinic owns a clean booking-and-payments system for less than it rents three or four SaaS tools. The savings only get bigger as you add practitioners.",
+      q: "We're a small business — is this overkill?",
+      a: "It scales down. A solo operator or small team owns a clean system for less than it rents three or four separate SaaS tools — and the savings only get bigger as you add people.",
     },
   ],
   reportLine: "savings and revenue",
-  ctaQuestion: "own your practice software?",
+  ctaQuestion: "own the systems your business runs on?",
 };
 
 export const VERTICALS = [TRADES, WELLNESS, CLINIC];

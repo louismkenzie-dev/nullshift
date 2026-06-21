@@ -394,7 +394,7 @@ export function FunnelClient() {
                     className="mt-7 inline-flex items-center gap-2.5"
                     style={{
                       padding: "9px 14px",
-                      borderRadius: 999,
+                      borderRadius: 0,
                       border: `1px solid ${T.border}`,
                       background: T.surface,
                     }}

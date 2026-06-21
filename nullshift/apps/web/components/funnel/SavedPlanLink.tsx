@@ -82,7 +82,7 @@ export function SavedPlanLink({ planToken }: { planToken: string }) {
             textTransform: "uppercase",
             color: copied ? T.primary : T.muted,
             border: `1px solid ${T.border}`,
-            borderRadius: 6,
+            borderRadius: 0,
             padding: "5px 10px",
             background: "transparent",
             whiteSpace: "nowrap",

@@ -18,9 +18,7 @@ export function PlanLadder() {
             style={{
               background: T.surface,
               border: `1px solid ${p.highlighted ? T.primary : T.border}`,
-              boxShadow: p.highlighted
-                ? `inset 0 0 0 1px ${T.primary}40, 0 0 40px ${T.primary}18`
-                : "none",
+              boxShadow: p.highlighted ? `inset 0 0 0 1px ${T.primary}40` : "none",
               borderRadius: T.r.xl,
               padding: "26px 24px",
               height: "100%",
@@ -49,7 +47,7 @@ export function PlanLadder() {
                     color: T.primary,
                     background: `${T.primary}14`,
                     border: `1px solid ${T.primary}44`,
-                    borderRadius: 999,
+                    borderRadius: 0,
                     padding: "3px 9px",
                   }}
                 >

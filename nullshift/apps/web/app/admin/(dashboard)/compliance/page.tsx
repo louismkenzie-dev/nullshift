@@ -174,7 +174,7 @@ export default async function CompliancePage() {
                               background: T.surface2,
                               color: T.fg,
                               border: `1px solid ${T.border}`,
-                              borderRadius: 5,
+                              borderRadius: 0,
                               cursor: "pointer",
                             }}
                           >
@@ -211,7 +211,7 @@ export default async function CompliancePage() {
                     background: T.surface2,
                     color: T.fg,
                     border: `1px solid ${T.border}`,
-                    borderRadius: 5,
+                    borderRadius: 0,
                     textDecoration: "none",
                   }}
                 >
@@ -232,7 +232,7 @@ export default async function CompliancePage() {
                       background: T.bg,
                       color: T.fg,
                       border: `1px solid ${T.danger}40`,
-                      borderRadius: 5,
+                      borderRadius: 0,
                     }}
                   />
                   <SubmitButton
@@ -246,7 +246,7 @@ export default async function CompliancePage() {
                       background: "transparent",
                       color: T.danger,
                       border: `1px solid ${T.danger}40`,
-                      borderRadius: 5,
+                      borderRadius: 0,
                       cursor: "pointer",
                     }}
                   >

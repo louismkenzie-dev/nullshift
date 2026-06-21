@@ -236,7 +236,7 @@ export default function DashboardPage() {
                   <Link
                     key={e.id}
                     href="/admin/enquiries"
-                    className="flex items-center justify-between py-3 px-3 hover:bg-[#1f1f23] rounded-lg transition-colors"
+                    className="flex items-center justify-between py-3 px-3 hover:bg-[#1f1f23] transition-colors"
                     style={{ borderTop: i ? `1px solid ${T.border}` : "none" }}
                   >
                     <div className="min-w-0">
@@ -322,7 +322,7 @@ export default function DashboardPage() {
                   <Link
                     key={p.id}
                     href={`/admin/clients/${p.tenant_id}`}
-                    className="flex items-center justify-between py-3 px-3 hover:bg-[#1f1f23] rounded-lg transition-colors"
+                    className="flex items-center justify-between py-3 px-3 hover:bg-[#1f1f23] transition-colors"
                     style={{ borderTop: i ? `1px solid ${T.border}` : "none" }}
                   >
                     <div className="min-w-0">
@@ -388,7 +388,7 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-6">
           {/* Next call */}
           <div
-            className="rounded-2xl p-5"
+            className="p-5"
             style={{
               background: T.surface,
               border: `1px solid ${nextCall ? T.primary : T.border}`,
@@ -424,7 +424,7 @@ export default function DashboardPage() {
                   {nextCall.tenants?.name || "Client"}
                 </div>
                 <div
-                  className="flex items-center gap-3 p-3 rounded-lg"
+                  className="flex items-center gap-3 p-3"
                   style={{
                     background: `${T.primary}14`,
                     border: `1px solid ${T.primary}30`,
@@ -505,7 +505,7 @@ export default function DashboardPage() {
 
           {/* Mini calendar */}
           <div
-            className="rounded-2xl overflow-hidden"
+            className="overflow-hidden"
             style={{ background: T.surface, border: `1px solid ${T.border}` }}
           >
             <div
@@ -561,7 +561,7 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={c.key}
-                      className="aspect-square flex flex-col items-center justify-center rounded-md relative"
+                      className="aspect-square flex flex-col items-center justify-center relative"
                       style={{
                         background: isToday
                           ? T.primary
@@ -617,7 +617,7 @@ function StatCard({
 }) {
   return (
     <div
-      className="rounded-2xl p-5"
+      className="p-5"
       style={{ background: T.surface, border: `1px solid ${T.border}` }}
     >
       <div
@@ -664,7 +664,7 @@ function Section({
 }) {
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="overflow-hidden"
       style={{ background: T.surface, border: `1px solid ${T.border}` }}
     >
       <div

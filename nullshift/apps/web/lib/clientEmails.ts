@@ -34,7 +34,7 @@ export function portalReadyEmail(opts: {
       <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, your Nullshift portal is set up. Sign in to track your project, review &amp; sign documents, see your invoices, and submit requests.</p>
     </td></tr>
     <tr><td style="padding:20px 32px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:14px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:0">
         <tr><td style="padding:6px 20px 6px">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             ${cred("Sign-in link", loginUrl)}
@@ -193,7 +193,7 @@ export function proposalSignedEmail(opts: {
       <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">They've signed the proposal${planLabel ? " and care plan" : ""}${" "}and accepted the agreement. The lead is now <strong style="color:${C.fg}">Won</strong>, and the itemised build invoice has been drafted.</p>
     </td></tr>
     <tr><td style="padding:20px 32px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:14px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:0">
         <tr><td style="padding:6px 20px 6px">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             ${row("Reference", reference)}

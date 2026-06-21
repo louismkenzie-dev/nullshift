@@ -145,10 +145,7 @@ export default function EnquiriesPage() {
           No enquiries yet.
         </p>
       ) : (
-        <div
-          className="rounded-lg overflow-hidden"
-          style={{ border: `1px solid ${T.border}` }}
-        >
+        <div className="overflow-hidden" style={{ border: `1px solid ${T.border}` }}>
           {rows.map((e, i) => (
             <div
               key={e.id}

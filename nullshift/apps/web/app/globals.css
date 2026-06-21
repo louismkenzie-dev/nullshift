@@ -15,10 +15,13 @@
   --font-mono: var(--font-mono);
   --color-border: var(--border);
   --color-ring: var(--ring);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
 }
 
 /* Design tokens (colours, type, spacing, effects, fonts) now live in
@@ -637,6 +640,168 @@ html.lenis body {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   KYMA KIT — flat, motion-design section system (replaces the
+   WebGL/3D homepage). Pure CSS so primitives stay server-safe.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Buttons ─────────────────────────────────────────────────────── */
+.k-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-sans), Inter, sans-serif;
+  font-weight: 500;
+  font-size: 0.9375rem;
+  letter-spacing: -0.005em;
+  height: 48px;
+  padding-inline: 24px;
+  border-radius: 10px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.08s ease,
+    filter 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.k-btn-sm {
+  height: 40px;
+  padding-inline: 18px;
+  font-size: 0.875rem;
+}
+.k-btn-lg {
+  height: 52px;
+  padding-inline: 28px;
+  font-size: 1rem;
+}
+.k-btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 30px rgba(16, 185, 129, 0.26);
+}
+.k-btn-primary:hover {
+  background: var(--primary-hover);
+}
+.k-btn-ghost {
+  background: transparent;
+  color: var(--foreground);
+  border-color: var(--border-strong);
+}
+.k-btn-ghost:hover {
+  background: var(--elevated);
+  border-color: #4a4d5a;
+}
+.k-btn-line {
+  background: transparent;
+  color: var(--muted-foreground);
+  padding-inline: 0;
+  height: auto;
+}
+.k-btn-line:hover {
+  color: var(--foreground);
+}
+.k-arrow {
+  transition: transform 0.2s ease;
+}
+.k-btn:hover .k-arrow {
+  transform: translateX(3px);
+}
+.k-btn:active {
+  transform: scale(0.985);
+  filter: brightness(0.92);
+}
+
+/* Marquee ─────────────────────────────────────────────────────── */
+.k-marquee {
+  display: flex;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 10%,
+    #000 90%,
+    transparent
+  );
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.k-marquee-track {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0;
+  animation: k-marquee 42s linear infinite;
+  will-change: transform;
+}
+@keyframes k-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.k-marquee:hover .k-marquee-track {
+  animation-play-state: paused;
+}
+
+/* Ambient textures ────────────────────────────────────────────── */
+.k-dotgrid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.k-linegrid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* Card hover ───────────────────────────────────────────────────── */
+.k-card {
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+.k-card-hover:hover {
+  border-color: var(--border-strong);
+  background: var(--elevated);
+}
+
+/* Footer / quiet links ─────────────────────────────────────────── */
+.k-flink {
+  color: var(--muted-foreground);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.k-flink:hover {
+  color: var(--foreground);
+}
+
+/* Accordion answer reveal (height via grid-rows trick) ──────────── */
+.k-acc-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.k-acc-body[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+.k-acc-body > div {
+  overflow: hidden;
+}
+.k-acc-icon {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.k-acc-icon[data-open="true"] {
+  transform: rotate(45deg);
+}
+
 /* ── Reduced motion ──────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -644,6 +809,9 @@ html.lenis body {
   *::after {
     transition-duration: 0.001ms !important;
     animation-duration: 0.001ms !important;
+  }
+  .k-marquee-track {
+    animation: none;
   }
 }
 
@@ -718,5 +886,271 @@ button[data-pending="true"] {
   }
   .ns-btn-spinner {
     animation-duration: 1.4s;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   KYMA CLONE — cream/dark section theming + treatments
+   Faithful to kyma.framer.ai: alternating cream (#f4f4e8) and
+   near-black (#0a0a0a) sections, emerald accent (replacing Kyma's
+   lime), TASA Orbiter uppercase display, Roboto Mono labels,
+   pill buttons, hairline vertical grid, giant numbers.
+   Per-section theming via CSS vars (server-safe, no context).
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  /* default = dark theme */
+  --k-bg: #0a0a0a;
+  --k-fg: #f4f4e8;
+  --k-muted: #9a9a90;
+  --k-faint: #6a6a62;
+  --k-surface: #141414;
+  --k-border: rgba(244, 244, 232, 0.14);
+  --k-border-strong: rgba(244, 244, 232, 0.28);
+  --k-accent: #10b981;
+  --k-accent-2: #34d399;
+  --k-on-accent: #04140d;
+}
+.k-dark {
+  --k-bg: #0a0a0a;
+  --k-fg: #f4f4e8;
+  --k-muted: #9a9a90;
+  --k-faint: #6a6a62;
+  --k-surface: #141414;
+  --k-border: rgba(244, 244, 232, 0.14);
+  --k-border-strong: rgba(244, 244, 232, 0.28);
+}
+.k-cream {
+  --k-bg: #f4f4e8;
+  --k-fg: #0a0a0a;
+  --k-muted: #55554c;
+  --k-faint: #8a8a7e;
+  --k-surface: #ecece0;
+  --k-border: rgba(10, 10, 10, 0.16);
+  --k-border-strong: rgba(10, 10, 10, 0.32);
+}
+
+/* Hairline vertical grid (hero / band backdrops) */
+.k-vgrid {
+  background-image: linear-gradient(90deg, var(--k-border) 0 1px, transparent 1px);
+  background-size: 12.5% 100%;
+}
+.k-hgrid {
+  background-image: linear-gradient(180deg, var(--k-border) 0 1px, transparent 1px);
+  background-size: 100% 56px;
+}
+
+/* Pill buttons (Kyma uses fully-rounded 200px pills) */
+.kb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-weight: 500;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  height: 48px;
+  padding-inline: 26px;
+  border-radius: 0;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.08s ease,
+    filter 0.18s ease;
+}
+.kb-sm {
+  height: 38px;
+  padding-inline: 18px;
+  font-size: 0.66rem;
+}
+.kb-lg {
+  height: 54px;
+  padding-inline: 32px;
+}
+.kb-primary {
+  background: var(--k-accent);
+  color: var(--k-on-accent);
+}
+.kb-primary:hover {
+  background: var(--k-accent-2);
+}
+.kb-solid {
+  background: var(--k-fg);
+  color: var(--k-bg);
+}
+.kb-solid:hover {
+  filter: brightness(0.86);
+}
+.kb-outline {
+  background: transparent;
+  color: var(--k-fg);
+  border-color: var(--k-border-strong);
+}
+.kb-outline:hover {
+  border-color: var(--k-fg);
+}
+.kb:active {
+  transform: scale(0.97);
+}
+.kb .k-arrow {
+  transition: transform 0.2s ease;
+}
+.kb:hover .k-arrow {
+  transform: translateX(4px);
+}
+
+/* Full-width "bar" CTA (the hero OUR SERVICES bar with progress underline) */
+.k-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 64px;
+  padding-inline: 26px;
+  border-radius: 0;
+  border: 1px solid var(--k-border-strong);
+  background: color-mix(in oklab, var(--k-fg) 5%, transparent);
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-weight: 500;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--k-fg);
+  text-decoration: none;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+.k-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 38%;
+  background: var(--k-accent);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.k-bar:hover {
+  border-color: var(--k-fg);
+}
+.k-bar:hover::after {
+  width: 100%;
+}
+
+/* Small pill tag (e.g. "+6", "LIVE") */
+.k-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding-inline: 10px;
+  border-radius: 0;
+  background: var(--k-fg);
+  color: var(--k-bg);
+  font-family: var(--font-mono), "Roboto Mono", monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Card (Kyma cards are near-sharp — 6px) */
+.k-kard {
+  border: 1px solid var(--k-border);
+  border-radius: 0;
+  background: var(--k-surface);
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+.k-kard-h:hover {
+  border-color: var(--k-border-strong);
+}
+
+/* selection on cream */
+.k-cream ::selection {
+  background: rgba(16, 185, 129, 0.22);
+  color: #0a0a0a;
+}
+
+/* Spline / 3D scene loader spinner */
+.loader {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklab, var(--k-fg) 18%, transparent);
+  border-top-color: var(--k-accent);
+  animation: k-spin 0.8s linear infinite;
+}
+@keyframes k-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loader {
+    animation-duration: 1.6s;
+  }
+}
+
+/* ── Intro splash ──────────────────────────────────────────────── */
+@keyframes ns-intro-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ns-intro-cell {
+  0%,
+  100% {
+    opacity: 0.06;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+@keyframes ns-intro-bar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes ns-intro-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+@keyframes ns-intro-line {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ns-intro-cell,
+  .ns-intro-bar,
+  .ns-intro-blink {
+    animation: none !important;
   }
 }

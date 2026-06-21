@@ -46,7 +46,7 @@ export default function PortalError({
           color: T.danger,
           background: `${T.danger}12`,
           border: `1px solid ${T.danger}30`,
-          borderRadius: 8,
+          borderRadius: 0,
           padding: "10px 14px",
           marginBottom: 20,
           wordBreak: "break-all",
@@ -72,7 +72,7 @@ export default function PortalError({
           background: T.primary,
           color: T.primaryFg,
           border: "none",
-          borderRadius: 8,
+          borderRadius: 0,
           padding: "10px 20px",
           cursor: "pointer",
         }}

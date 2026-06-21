@@ -536,7 +536,7 @@ const inp = {
   background: T.bg,
   color: T.fg,
   border: `1px solid ${T.border}`,
-  borderRadius: 6,
+  borderRadius: 0,
 } as const;
 const btn = (bg: string, fg: string) => ({
   fontFamily: T.mono,
@@ -548,6 +548,6 @@ const btn = (bg: string, fg: string) => ({
   background: bg,
   color: fg,
   border: bg === "transparent" ? `1px solid ${T.border}` : "none",
-  borderRadius: 6,
+  borderRadius: 0,
   cursor: "pointer",
 });

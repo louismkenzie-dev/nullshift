@@ -101,10 +101,11 @@ export function RevenueCalculator({
       <h3
         style={{
           fontFamily: T.display,
-          fontWeight: 600,
-          fontSize: "clamp(1.3rem, 2.6vw, 1.9rem)",
-          letterSpacing: "-0.025em",
-          lineHeight: 1.1,
+          fontWeight: 700,
+          fontSize: "clamp(1.4rem, 2.8vw, 2.1rem)",
+          letterSpacing: "-0.03em",
+          lineHeight: 1.04,
+          textTransform: "uppercase",
           color: T.fg,
         }}
       >
@@ -172,21 +173,23 @@ export function RevenueCalculator({
             <div
               style={{
                 fontFamily: T.display,
-                fontWeight: 700,
-                fontSize: "clamp(2rem, 5vw, 3rem)",
+                fontWeight: 800,
+                fontSize: "clamp(2.4rem, 5.5vw, 3.4rem)",
                 letterSpacing: "-0.03em",
                 color: T.warning,
-                lineHeight: 1,
+                lineHeight: 0.95,
               }}
             >
               {result.primary.value}
             </div>
             <div
               style={{
-                fontFamily: T.sans,
-                fontSize: "0.85rem",
+                fontFamily: T.mono,
+                fontSize: "0.72rem",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
                 color: T.muted,
-                marginTop: 6,
+                marginTop: 10,
               }}
             >
               {result.primary.label}
@@ -203,21 +206,23 @@ export function RevenueCalculator({
             <div
               style={{
                 fontFamily: T.display,
-                fontWeight: 700,
-                fontSize: "1.5rem",
-                letterSpacing: "-0.02em",
+                fontWeight: 800,
+                fontSize: "1.8rem",
+                letterSpacing: "-0.03em",
                 color: result.secondary.tone === "emerald" ? T.primary : T.warning,
-                lineHeight: 1,
+                lineHeight: 0.95,
               }}
             >
               {result.secondary.value}
             </div>
             <div
               style={{
-                fontFamily: T.sans,
-                fontSize: "0.82rem",
+                fontFamily: T.mono,
+                fontSize: "0.7rem",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
                 color: T.muted,
-                marginTop: 5,
+                marginTop: 8,
               }}
             >
               {result.secondary.label}
@@ -228,9 +233,8 @@ export function RevenueCalculator({
 
       <div
         style={{
-          borderLeft: `3px solid ${T.primary}`,
+          borderLeft: `2px solid ${T.primary}`,
           background: `${T.primary}10`,
-          borderRadius: "0 12px 12px 0",
           padding: "14px 18px",
           marginTop: 22,
         }}
@@ -250,34 +254,35 @@ export function RevenueCalculator({
       <div className="flex flex-col sm:flex-row gap-3" style={{ marginTop: 20 }}>
         <Link
           href={ctaHref}
-          className="inline-flex items-center justify-center gap-2 font-medium transition-opacity hover:opacity-90"
+          className="inline-flex items-center justify-center gap-2.5"
           style={{
-            fontFamily: T.sans,
-            fontSize: "0.9375rem",
-            fontWeight: 600,
-            height: 46,
-            paddingInline: 22,
+            fontFamily: T.mono,
+            fontSize: "0.72rem",
+            fontWeight: 500,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            height: 48,
+            paddingInline: 26,
             background: T.primary,
             color: T.primaryFg,
-            borderRadius: T.r.md,
-            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 24px ${T.primary}30`,
             textDecoration: "none",
           }}
         >
-          Book a free 15-min call →
+          Book a free 15-min call <span aria-hidden>→</span>
         </Link>
         <Link
           href="/systems-lab"
-          className="inline-flex items-center justify-center gap-2 font-medium"
+          className="inline-flex items-center justify-center gap-2.5"
           style={{
-            fontFamily: T.sans,
-            fontSize: "0.9375rem",
+            fontFamily: T.mono,
+            fontSize: "0.72rem",
             fontWeight: 500,
-            height: 46,
-            paddingInline: 22,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            height: 48,
+            paddingInline: 26,
             background: "transparent",
-            color: T.muted,
-            borderRadius: T.r.md,
+            color: T.fg,
             border: `1px solid ${T.borderStr}`,
             textDecoration: "none",
           }}

@@ -864,7 +864,7 @@ const inp = {
   background: T.bg,
   color: T.fg,
   border: `1px solid ${T.border}`,
-  borderRadius: 6,
+  borderRadius: 0,
 } as const;
 const btn = (bg: string, fg: string) => ({
   fontFamily: T.mono,
@@ -876,7 +876,7 @@ const btn = (bg: string, fg: string) => ({
   background: bg,
   color: fg,
   border: bg === "transparent" ? `1px solid ${T.border}` : "none",
-  borderRadius: 6,
+  borderRadius: 0,
   cursor: "pointer",
 });
 
@@ -1495,7 +1495,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                       background: "transparent",
                       color: T.muted,
                       border: `1px solid ${T.border}`,
-                      borderRadius: 5,
+                      borderRadius: 0,
                       cursor: "pointer",
                     }}
                   >
@@ -1719,7 +1719,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                   padding: "10px 12px",
                   background: T.bg,
                   border: `1px solid ${T.border}`,
-                  borderRadius: 10,
+                  borderRadius: 0,
                 }}
               >
                 <div className="flex items-center gap-4 flex-wrap">
@@ -1755,7 +1755,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                         color: T.muted,
                         background: "transparent",
                         border: `1px solid ${T.border}`,
-                        borderRadius: 6,
+                        borderRadius: 0,
                         padding: "5px 10px",
                         cursor: "pointer",
                       }}
@@ -1828,7 +1828,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                   style={{
                     background: T.bg,
                     border: `1px solid ${T.border}`,
-                    borderRadius: 8,
+                    borderRadius: 0,
                     padding: "10px 12px",
                   }}
                 >

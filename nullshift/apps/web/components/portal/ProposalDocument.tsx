@@ -32,7 +32,7 @@ function Section({
             fontWeight: 600,
             color: T.primary,
             border: `1px solid ${T.primary}55`,
-            borderRadius: 6,
+            borderRadius: 0,
             padding: "2px 7px",
           }}
         >

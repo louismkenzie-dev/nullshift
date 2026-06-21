@@ -26,7 +26,7 @@ const inp = {
   background: T.bg,
   color: T.fg,
   border: `1px solid ${T.border}`,
-  borderRadius: 6,
+  borderRadius: 0,
   width: "100%",
 } as const;
 const lbl = {
@@ -236,7 +236,7 @@ export function ProposalDocsForm({
           background: canSubmit ? T.primary : T.surface2,
           color: canSubmit ? T.primaryFg : T.faint,
           border: canSubmit ? "none" : `1px solid ${T.border}`,
-          borderRadius: 6,
+          borderRadius: 0,
           cursor: canSubmit ? "pointer" : "not-allowed",
           opacity: canSubmit ? 1 : 0.7,
         }}

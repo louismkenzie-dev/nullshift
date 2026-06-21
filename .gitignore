@@ -3,3 +3,8 @@ node_modules/
 .DS_Store
 *.DS_Store
 diagram-whiz-hub/
+
+# Kyma design reference (saved template export — not part of the app)
+nullshift/KYMA - AI Automation Agency Template for Framer.html
+nullshift/KYMA - AI Automation Agency Template for Framer_files/
+nullshift/Reference HTML/

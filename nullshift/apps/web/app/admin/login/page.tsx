@@ -91,7 +91,7 @@ function AdminLogin() {
         </div>
         {setupMode ? (
           <div
-            className="flex flex-col gap-4 p-8 rounded-xl"
+            className="flex flex-col gap-4 p-8"
             style={{ background: T.surface, border: `1px solid ${T.border}` }}
           >
             <div
@@ -149,7 +149,7 @@ function AdminLogin() {
         ) : (
           <form
             onSubmit={onSubmit}
-            className="flex flex-col gap-3 p-8 rounded-xl"
+            className="flex flex-col gap-3 p-8"
             style={{ background: T.surface, border: `1px solid ${T.border}` }}
           >
             <label

@@ -1,14 +1,14 @@
 "use client";
 
-import { motion } from "framer-motion"
-import { Check, X } from "lucide-react"
-import { cn } from "@nullshift/ui/utils"
-import { Button } from "@/components/ui/button"
-import { T } from "@nullshift/ui/tokens"
+import { motion } from "framer-motion";
+import { Check, X } from "lucide-react";
+import { cn } from "@nullshift/ui/utils";
+import { Button } from "@/components/ui/button";
+import { T } from "@nullshift/ui/tokens";
 
 interface BenefitProps {
-  text: string
-  checked: boolean
+  text: string;
+  checked: boolean;
 }
 
 const Benefit = ({ text, checked }: BenefitProps) => {
@@ -40,18 +40,18 @@ const Benefit = ({ text, checked }: BenefitProps) => {
         {text}
       </span>
     </div>
-  )
-}
+  );
+};
 
 interface PricingCardProps {
-  tier: string
-  price: string
-  bestFor: string
-  CTA: string
-  href?: string
-  benefits: Array<{ text: string; checked: boolean }>
-  highlighted?: boolean
-  className?: string
+  tier: string;
+  price: string;
+  bestFor: string;
+  CTA: string;
+  href?: string;
+  benefits: Array<{ text: string; checked: boolean }>;
+  highlighted?: boolean;
+  className?: string;
 }
 
 export const PricingCard = ({
@@ -81,7 +81,7 @@ export const PricingCard = ({
             ? `linear-gradient(145deg, color-mix(in oklab, ${T.primary} 7%, ${T.surface}), ${T.surface})`
             : `linear-gradient(145deg, ${T.surface}, ${T.bg})`,
           boxShadow: highlighted
-            ? `0 0 0 1px ${T.primary}20, 0 8px 32px rgba(0,0,0,0.5), 0 0 48px color-mix(in oklab, ${T.primary} 8%, transparent)`
+            ? `0 0 0 1px ${T.primary}20, 0 8px 32px rgba(0,0,0,0.5)`
             : T.shadow.md,
           padding: "1.75rem",
         }}
@@ -90,18 +90,25 @@ export const PricingCard = ({
         {highlighted && (
           <div
             className="absolute top-0 left-0 right-0"
-            style={{ height: "2px", background: T.primary, boxShadow: `0 0 12px ${T.primary}`, borderRadius: `${T.r.lg} ${T.r.lg} 0 0` }}
+            style={{
+              height: "2px",
+              background: T.primary,
+              boxShadow: `0 0 12px ${T.primary}`,
+              borderRadius: `${T.r.lg} ${T.r.lg} 0 0`,
+            }}
           />
         )}
 
         {/* Header */}
         <div
           className="flex flex-col items-center pb-6 mb-6"
-          style={{ borderBottom: `1px solid ${highlighted ? T.primary + "25" : T.border}` }}
+          style={{
+            borderBottom: `1px solid ${highlighted ? T.primary + "25" : T.border}`,
+          }}
         >
           {highlighted && (
             <span
-              className="mb-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full"
+              className="mb-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-none"
               style={{
                 fontFamily: T.mono,
                 fontSize: "10px",
@@ -181,8 +188,8 @@ export const PricingCard = ({
             borderRadius: T.r.md,
             background: highlighted ? T.primary : "transparent",
             color: highlighted ? T.primaryFg : T.fg,
-            border: highlighted ? "none" : `1px solid ${T.border}`,
-            boxShadow: highlighted ? `0 0 20px color-mix(in oklab, ${T.primary} 30%, transparent)` : "none",
+            border: highlighted ? "none" : `1px solid ${T.borderStr}`,
+            boxShadow: "none",
             textDecoration: "none",
           }}
         >
@@ -191,5 +198,5 @@ export const PricingCard = ({
         </a>
       </div>
     </motion.div>
-  )
-}
+  );
+};

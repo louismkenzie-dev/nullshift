@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import { ConsentBanner } from "@/components/ConsentBanner";
+import { IntroSplash } from "@/components/IntroSplash";
+import { ScrollProgress } from "@/components/ScrollProgress";
 
 const SITE_URL = "https://nullshift.co.uk";
-const TITLE = "Nullshift — Web Design & Development";
+const TITLE = "Nullshift — Websites, Systems & Automations";
 const DESCRIPTION =
-  "Nullshift helps small and medium-sized businesses make the move online — with websites and branding built to last.";
+  "Nullshift designs, builds and runs bespoke websites, custom systems and the automations behind them — owned outright by your business. No per-seat SaaS fees.";
 
 // Marketing-only layout: the public site's SEO metadata, smooth scrolling and
 // privacy consent banner live here, NOT in the root layout, so the internal
@@ -64,6 +66,8 @@ export default function MarketingLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <IntroSplash />
+      <ScrollProgress />
       <SmoothScroll>{children}</SmoothScroll>
       <ConsentBanner />
     </>
