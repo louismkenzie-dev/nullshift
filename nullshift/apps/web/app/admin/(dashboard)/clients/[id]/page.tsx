@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, createServiceClient } from "@nullshift/db";
@@ -1242,9 +1243,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                   </option>
                 ))}
               </select>
-              <button type="submit" style={btn(T.surface2, T.fg)}>
-                Set stage
-              </button>
+              <SubmitButton style={btn(T.surface2, T.fg)}>Set stage</SubmitButton>
             </form>
           )}
         </div>
@@ -1273,9 +1272,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 <form action={cancelCall}>
                   {htid}
                   <input type="hidden" name="id" value={theCall.id} />
-                  <button type="submit" style={btn("transparent", T.danger)}>
-                    Cancel
-                  </button>
+                  <SubmitButton style={btn("transparent", T.danger)}>Cancel</SubmitButton>
                 </form>
               </div>
             </div>
@@ -1325,9 +1322,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 defaultValue={theCall.meeting_password ?? ""}
                 style={{ ...inp, width: 110 }}
               />
-              <button type="submit" style={btn(T.surface2, T.fg)}>
-                Save meeting
-              </button>
+              <SubmitButton style={btn(T.surface2, T.fg)}>Save meeting</SubmitButton>
             </form>
           </div>
         ) : (
@@ -1375,9 +1370,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 }
                 style={{ ...inp, colorScheme: "dark" }}
               />
-              <button type="submit" style={btn(T.primary, T.primaryFg)}>
-                Book call
-              </button>
+              <SubmitButton style={btn(T.primary, T.primaryFg)}>Book call</SubmitButton>
             </form>
           </>
         )}
@@ -1401,9 +1394,9 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
           <form action={ensureProject}>
             {htid}
             <input type="hidden" name="name" value={`${t.name} — build`} />
-            <button type="submit" style={btn(T.primary, T.primaryFg)}>
+            <SubmitButton style={btn(T.primary, T.primaryFg)}>
               Start build project →
-            </button>
+            </SubmitButton>
           </form>
         </section>
       )}
@@ -1449,8 +1442,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     <form action={removeItem}>
                       {htid}
                       <input type="hidden" name="id" value={it.id} />
-                      <button
-                        type="submit"
+                      <SubmitButton
                         style={{
                           ...btn("transparent", T.faint),
                           height: 24,
@@ -1458,7 +1450,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                         }}
                       >
                         ✕
-                      </button>
+                      </SubmitButton>
                     </form>
                   </div>
                 </div>
@@ -1485,9 +1477,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 required
                 style={{ ...inp, width: 90 }}
               />
-              <button type="submit" style={btn(T.surface2, T.fg)}>
-                + Add
-              </button>
+              <SubmitButton style={btn(T.surface2, T.fg)}>+ Add</SubmitButton>
             </form>
             <div className="flex flex-wrap gap-1.5" style={{ marginTop: 10 }}>
               {CATALOG.map((m) => (
@@ -1496,8 +1486,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                   {hpid}
                   <input type="hidden" name="name" value={m.name} />
                   <input type="hidden" name="amount" value={m.price} />
-                  <button
-                    type="submit"
+                  <SubmitButton
                     style={{
                       fontFamily: T.mono,
                       fontSize: 10,
@@ -1511,7 +1500,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     }}
                   >
                     + {m.name} {gbp(m.price)}
-                  </button>
+                  </SubmitButton>
                 </form>
               ))}
             </div>
@@ -1542,9 +1531,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     </option>
                   ))}
                 </select>
-                <button type="submit" style={btn(T.surface2, T.fg)}>
-                  Save plan
-                </button>
+                <SubmitButton style={btn(T.surface2, T.fg)}>Save plan</SubmitButton>
               </form>
               {project.proposed_plan && (
                 <span style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}>
@@ -1691,8 +1678,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 <form action={generateInvoice}>
                   {htid}
                   {hpid}
-                  <button
-                    type="submit"
+                  <SubmitButton
                     disabled={!isAccepted}
                     style={{
                       ...btn(
@@ -1705,7 +1691,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     }}
                   >
                     Generate &amp; send itemised invoice
-                  </button>
+                  </SubmitButton>
                 </form>
               )}
             </div>
@@ -1759,8 +1745,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 {hasStripeInvoice && (
                   <form action={syncInvoiceStatus}>
                     {htid}
-                    <button
-                      type="submit"
+                    <SubmitButton
                       title="Re-pull payment status from Stripe (fallback if a webhook was missed)"
                       style={{
                         fontFamily: T.mono,
@@ -1776,7 +1761,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                       }}
                     >
                       Sync from Stripe
-                    </button>
+                    </SubmitButton>
                   </form>
                 )}
               </div>
@@ -1963,9 +1948,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 required
                 style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}
               />
-              <button type="submit" style={btn(T.surface2, T.fg)}>
-                Upload
-              </button>
+              <SubmitButton style={btn(T.surface2, T.fg)}>Upload</SubmitButton>
             </form>
           </section>
 
@@ -1985,9 +1968,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 required
                 style={{ ...inp, flex: 1, height: 36 }}
               />
-              <button type="submit" style={btn(T.surface2, T.fg)}>
-                Add note
-              </button>
+              <SubmitButton style={btn(T.surface2, T.fg)}>Add note</SubmitButton>
             </form>
             <div className="flex flex-col gap-2">
               {noteList.map((n) => (
@@ -2042,9 +2023,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 defaultValue={project.live_url ?? ""}
                 style={{ ...inp, flex: "1 1 260px" }}
               />
-              <button type="submit" style={btn(T.surface2, T.fg)}>
-                Save live link
-              </button>
+              <SubmitButton style={btn(T.surface2, T.fg)}>Save live link</SubmitButton>
             </form>
             <p
               style={{
@@ -2076,9 +2055,9 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                   resize: "vertical",
                 }}
               />
-              <button type="submit" className="self-start" style={btn(T.surface2, T.fg)}>
+              <SubmitButton className="self-start" style={btn(T.surface2, T.fg)}>
                 Post update
-              </button>
+              </SubmitButton>
             </form>
           </section>
         </>
@@ -2107,9 +2086,9 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
         ) : (
           <form action={recordDpa}>
             {htid}
-            <button type="submit" style={btn(T.surface2, T.fg)}>
+            <SubmitButton style={btn(T.surface2, T.fg)}>
               Record DPA as signed
-            </button>
+            </SubmitButton>
           </form>
         )}
       </section>
@@ -2158,9 +2137,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               <form action={cancelSubscription}>
                 {htid}
                 <input type="hidden" name="id" value={activeSub.id} />
-                <button type="submit" style={btn("transparent", T.danger)}>
-                  Cancel
-                </button>
+                <SubmitButton style={btn("transparent", T.danger)}>Cancel</SubmitButton>
               </form>
             </div>
           </div>
@@ -2203,9 +2180,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
             <form action={sendSubscriptionSignup}>
               {htid}
               <input type="hidden" name="plan" value={pendingSub.plan} />
-              <button type="submit" style={btn(T.surface2, T.fg)}>
-                Resend sign-up
-              </button>
+              <SubmitButton style={btn(T.surface2, T.fg)}>Resend sign-up</SubmitButton>
             </form>
           </div>
         ) : (
@@ -2240,8 +2215,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                   </option>
                 ))}
               </select>
-              <button
-                type="submit"
+              <SubmitButton
                 disabled={!isAccepted}
                 style={{
                   ...btn(
@@ -2253,7 +2227,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 }}
               >
                 Send care-plan sign-up
-              </button>
+              </SubmitButton>
             </form>
             {!isAccepted && (
               <p
@@ -2315,18 +2289,18 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                   {htid}
                   <input type="hidden" name="name" value={t.contact_name ?? t.name} />
                   <input type="hidden" name="email" value={portalEmail} />
-                  <button type="submit" style={btn(T.primary, T.primaryFg)}>
+                  <SubmitButton style={btn(T.primary, T.primaryFg)}>
                     Grant portal access
-                  </button>
+                  </SubmitButton>
                 </form>
               )}
               <form action={sendPasswordReset}>
                 {htid}
                 <input type="hidden" name="name" value={t.contact_name ?? t.name} />
                 <input type="hidden" name="email" value={portalEmail} />
-                <button type="submit" style={btn(T.surface2, T.fg)}>
+                <SubmitButton style={btn(T.surface2, T.fg)}>
                   Send password reset link
-                </button>
+                </SubmitButton>
               </form>
             </div>
           </>
@@ -2368,11 +2342,11 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 defaultValue={clientRef(tenantId)}
                 style={{ ...inp, width: 200 }}
               />
-              <button type="submit" style={btn(T.primary, T.primaryFg)}>
+              <SubmitButton style={btn(T.primary, T.primaryFg)}>
                 {hasPortal
                   ? "Re-issue & resend login email"
                   : "Create portal login & email it"}
-              </button>
+              </SubmitButton>
             </form>
             <p
               style={{
@@ -2452,16 +2426,12 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               autoComplete="off"
               style={{ ...inp, flex: "1 1 260px" }}
             />
-            <button type="submit" style={btn(T.danger, "#fff")}>
-              Delete permanently
-            </button>
+            <SubmitButton style={btn(T.danger, "#fff")}>Delete permanently</SubmitButton>
           </form>
         ) : (
           <form action={deleteClient}>
             {htid}
-            <button type="submit" style={btn(T.danger, "#fff")}>
-              Delete permanently
-            </button>
+            <SubmitButton style={btn(T.danger, "#fff")}>Delete permanently</SubmitButton>
           </form>
         )}
       </section>

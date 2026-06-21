@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
@@ -444,8 +445,7 @@ export default async function UsersPage() {
                   </select>
 
                   <div className="flex gap-2 sm:col-span-2 lg:col-span-1 lg:justify-end">
-                    <button
-                      type="submit"
+                    <SubmitButton
                       className="h-10 px-4 rounded-lg transition-opacity hover:opacity-90"
                       style={{
                         fontFamily: T.mono,
@@ -458,11 +458,10 @@ export default async function UsersPage() {
                       }}
                     >
                       Save
-                    </button>
+                    </SubmitButton>
 
-                    <button
+                    <SubmitButton
                       formAction={deleteUser}
-                      type="submit"
                       className="h-10 px-4 rounded-lg transition-opacity hover:opacity-90"
                       style={{
                         fontFamily: T.mono,
@@ -475,7 +474,7 @@ export default async function UsersPage() {
                       }}
                     >
                       Delete
-                    </button>
+                    </SubmitButton>
                   </div>
                 </form>
               </div>

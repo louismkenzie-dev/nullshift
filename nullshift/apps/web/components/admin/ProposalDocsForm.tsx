@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { T } from "@nullshift/ui/tokens";
+import { SubmitButton } from "./SubmitButton";
 
 /**
  * Admin authoring of the proposal document (overview + payment terms) plus the
@@ -221,9 +222,9 @@ export function ProposalDocsForm({
         </p>
       )}
 
-      <button
-        type="submit"
+      <SubmitButton
         disabled={!canSubmit}
+        pendingLabel={draft ? "Sending…" : "Saving…"}
         style={{
           fontFamily: T.mono,
           fontSize: "11px",
@@ -241,7 +242,7 @@ export function ProposalDocsForm({
         }}
       >
         {draft ? "Save documents & DPA details and send →" : "Save changes"}
-      </button>
+      </SubmitButton>
     </form>
   );
 }

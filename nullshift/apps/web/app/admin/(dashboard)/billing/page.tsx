@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { getMrrSummary } from "@nullshift/billing/mrr";
@@ -266,9 +267,7 @@ export default async function BillingPage() {
             <option value="care_pro">Care Pro · £149</option>
             <option value="transaction">Transaction · £39 floor</option>
           </select>
-          <button type="submit" style={btn(T.surface2, T.fg)}>
-            + Subscription
-          </button>
+          <SubmitButton style={btn(T.surface2, T.fg)}>+ Subscription</SubmitButton>
         </form>
         <Table
           rows={subList.map((s) => ({
@@ -284,9 +283,7 @@ export default async function BillingPage() {
                 <form action={cancelSubscription}>
                   <input type="hidden" name="id" value={s.id} />
                   <input type="hidden" name="tenant_id" value={s.tenant_id} />
-                  <button type="submit" style={btn("transparent", T.muted)}>
-                    Cancel
-                  </button>
+                  <SubmitButton style={btn("transparent", T.muted)}>Cancel</SubmitButton>
                 </form>
               ) : null,
           }))}
@@ -324,9 +321,7 @@ export default async function BillingPage() {
             style={{ ...inp, width: 110 }}
             required
           />
-          <button type="submit" style={btn(T.surface2, T.fg)}>
-            Issue invoice
-          </button>
+          <SubmitButton style={btn(T.surface2, T.fg)}>Issue invoice</SubmitButton>
         </form>
         <Table
           rows={invoiceList.map((i) => ({
@@ -342,9 +337,9 @@ export default async function BillingPage() {
                 <form action={markInvoicePaid}>
                   <input type="hidden" name="id" value={i.id} />
                   <input type="hidden" name="tenant_id" value={i.tenant_id} />
-                  <button type="submit" style={btn(T.primary, T.primaryFg)}>
+                  <SubmitButton style={btn(T.primary, T.primaryFg)}>
                     Mark paid
-                  </button>
+                  </SubmitButton>
                 </form>
               ) : (
                 <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.success }}>

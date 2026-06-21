@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
@@ -162,8 +163,7 @@ export default async function CompliancePage() {
                         <form action={recordCompliance}>
                           <input type="hidden" name="tenant_id" value={tenant.id} />
                           <input type="hidden" name="kind" value={check.kind} />
-                          <button
-                            type="submit"
+                          <SubmitButton
                             style={{
                               fontFamily: T.mono,
                               fontSize: "10px",
@@ -179,7 +179,7 @@ export default async function CompliancePage() {
                             }}
                           >
                             Mark done
-                          </button>
+                          </SubmitButton>
                         </form>
                       )}
                     </div>
@@ -235,8 +235,7 @@ export default async function CompliancePage() {
                       borderRadius: 5,
                     }}
                   />
-                  <button
-                    type="submit"
+                  <SubmitButton
                     style={{
                       fontFamily: T.mono,
                       fontSize: "10px",
@@ -252,7 +251,7 @@ export default async function CompliancePage() {
                     }}
                   >
                     Erase tenant
-                  </button>
+                  </SubmitButton>
                 </form>
               </div>
             </section>

@@ -668,3 +668,51 @@ html.lenis body {
     break-inside: avoid;
   }
 }
+
+/* ── Button interaction feedback ──────────────────────────────
+   Every button gets a tactile press effect, and a "working" state
+   (spinner via .ns-btn-spinner) so a click never feels like nothing
+   happened while a server action runs. */
+button,
+[role="button"],
+a[href] {
+  transition:
+    transform 0.08s ease,
+    opacity 0.15s ease,
+    filter 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.97);
+}
+button[aria-busy="true"],
+button[data-pending="true"] {
+  cursor: progress;
+}
+
+@keyframes ns-btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.ns-btn-spinner {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.5em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: ns-btn-spin 0.6s linear infinite;
+  vertical-align: -0.12em;
+}
+@media (prefers-reduced-motion: reduce) {
+  button:active {
+    transform: none;
+  }
+  .ns-btn-spinner {
+    animation-duration: 1.4s;
+  }
+}

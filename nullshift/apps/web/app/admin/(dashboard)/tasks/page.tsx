@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
@@ -158,9 +159,7 @@ export default async function TasksPage() {
           placeholder="hrs"
           style={{ ...inp, width: 70 }}
         />
-        <button type="submit" style={btn(T.surface2, T.fg)}>
-          + Task
-        </button>
+        <SubmitButton style={btn(T.surface2, T.fg)}>+ Task</SubmitButton>
       </form>
 
       {projectList.length === 0 && (
@@ -246,8 +245,7 @@ export default async function TasksPage() {
                         <input type="hidden" name="id" value={t.id} />
                         <input type="hidden" name="tenant_id" value={t.tenant_id} />
                         <input type="hidden" name="from" value={t.status} />
-                        <button
-                          type="submit"
+                        <SubmitButton
                           style={{
                             fontFamily: T.mono,
                             fontSize: "10px",
@@ -263,7 +261,7 @@ export default async function TasksPage() {
                           }}
                         >
                           → {NEXT[t.status].replace(/_/g, " ")}
-                        </button>
+                        </SubmitButton>
                       </form>
                     )}
                   </div>

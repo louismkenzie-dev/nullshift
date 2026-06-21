@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
@@ -202,8 +203,7 @@ function AdminLogin() {
                 {error}
               </p>
             )}
-            <button
-              type="submit"
+            <SubmitButton
               disabled={busy}
               className="mt-4 h-11 font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
               style={{
@@ -217,7 +217,7 @@ function AdminLogin() {
               }}
             >
               {busy ? "Signing in…" : "Sign in →"}
-            </button>
+            </SubmitButton>
           </form>
         )}
         <a
