@@ -27,84 +27,93 @@ import {
 export const metadata: Metadata = {
   title: "About — Nullshift",
   description:
-    "We build businesses bespoke websites, systems and automations they own outright. No per-seat SaaS fees, no payment skim, no data held hostage.",
+    "We're an agentic AI automation partner. Bring any idea — or just a pain point — and we build the systems that automate the work draining your staff cost, time and revenue. Any industry. Owned by you.",
   alternates: { canonical: "/about" },
 };
 
 const RENT = [
-  { label: "Per-seat SaaS fees", value: "Billed per team member, every month" },
-  { label: "Bill grows with every hire", value: "More seats, bigger bill" },
-  { label: "Payment skim on transactions", value: "2–3% of every payment" },
-  { label: "Your customer data is held hostage", value: "Leave? Lose the records." },
-  { label: "Generic templates", value: "Looks like every other business" },
+  { label: "Staff doing it by hand", value: "Salary spent on work a system should do" },
+  { label: "Cost grows with every hire", value: "You hire to keep up, not to grow" },
+  {
+    label: "Human error and dropped balls",
+    value: "Missed follow-ups, revenue leaking out",
+  },
+  { label: "Everything refers back to you", value: "Founders are the bottleneck" },
+  {
+    label: "Wired together yourself with AI tools",
+    value: "A prototype you're left to defend",
+  },
 ];
 const OWN = [
-  { label: "One-off build you own outright", value: "Fixed quote, no surprises" },
-  { label: "Add team members for free", value: "No per-seat fees, ever" },
-  { label: "Keep 100% of every payment", value: "No skim on transactions" },
-  { label: "You own the code + the data", value: "Cancel anytime, keep everything" },
-  { label: "100% bespoke to your business", value: "Built around how you work" },
+  { label: "Agentic systems do the work", value: "Around the clock, no salary attached" },
+  { label: "Scales without the headcount", value: "Add volume, not per-seat fees" },
+  { label: "Built to run, not to break", value: "On time, every time, no one watching" },
+  { label: "Bottlenecks automated away", value: "Set up for exponential growth" },
+  {
+    label: "Built by senior developers, owned by you",
+    value: "Watertight, and yours outright",
+  },
 ];
 
 const SYSTEM: ServiceItem[] = [
   {
     n: "01",
-    label: "Connected",
-    title: "Connected as one.",
-    desc: "Website, booking, CRM, payments, portals — wired into a single system that fits how your business actually works.",
+    label: "Agentic AI",
+    title: "Agents that do the work.",
+    desc: "Autonomous agents that take on multi-step operational work end to end — deciding, acting and reporting back, not just answering questions.",
   },
   {
     n: "02",
-    label: "Automated",
+    label: "Automation",
     title: "Work that runs itself.",
-    desc: "Reminders, follow-ups, integrations — triggered on time, every time, with no one watching.",
+    desc: "The repetitive ops, admin and hand-offs your team does by hand — mapped, built and run for you, on time, every time, with no one watching.",
   },
   {
     n: "03",
-    label: "Owned",
-    title: "A place to log in.",
-    desc: "Dashboards and portals your customers actually want to open — their records, their bookings, one login.",
+    label: "Integrations",
+    title: "Everything connected.",
+    desc: "Your tools, data and AI wired into one system you own — nothing left in a silo, nothing re-keyed by hand, all of it yours to log into.",
   },
 ];
 
 const PROCESS = [
   {
     num: "001",
-    title: "Discovery",
-    desc: "We learn your business — what you offer, your team, and the subscriptions you pay for and hate.",
+    title: "Deep dive",
+    desc: "Our automation specialists map your operations and find exactly what should become a system — even if you only brought a pain point.",
   },
   {
     num: "002",
-    title: "Build & migrate",
-    desc: "We build your bespoke system, then move your data across — no downtime, no lost leads.",
+    title: "Design the agents",
+    desc: "We design the systems and agentic workflows, scope it tightly, and show you what you'll get before a line is built.",
   },
   {
     num: "003",
-    title: "Go live",
-    desc: "DPA signed, we switch it on. Customers book, payments land, automations fire.",
+    title: "Build & integrate",
+    desc: "Our senior developers build it fast with cutting-edge AI, wire it into your tools and migrate your data — no downtime.",
   },
   {
     num: "004",
-    title: "Own & run",
-    desc: "It's yours — code, data, accounts. We host and run it on a care plan you can cancel and keep.",
+    title: "Run & scale",
+    desc: "It's yours — code, data, accounts. We run it, carry the liability, and keep optimising so it scales as you do.",
   },
 ];
 
 const COMMITMENT: Stat[] = [
   {
-    value: "100%",
-    label: "Custom code",
-    sub: "Every build written from scratch, no templates used.",
+    value: "Liability",
+    label: "Carried by us",
+    sub: "We take responsibility for data breaches, security and compliance — a watertight system, not a prototype you defend.",
   },
   {
     value: "Yours",
     label: "You own everything",
-    sub: "Code and every account are yours from day one — cancel anytime and keep the lot.",
+    sub: "Code, data and every account are yours from day one — no per-seat fees, no lock-in, cancel anytime and keep the lot.",
   },
   {
-    value: "1 plan",
-    label: "We host, you own",
-    sub: "Your care plan is us hosting, running and covering the software — not a licence to use your own system.",
+    value: "Scale",
+    label: "Built past the ceiling",
+    sub: "We automate the bottlenecks that funnel back to you and set your business up for exponential, not linear, growth.",
   },
 ];
 
@@ -189,7 +198,7 @@ export default function AboutPage() {
               <div>
                 <Reveal delay={0.05}>
                   <Display as="h1" size="xl" style={{ maxWidth: "16ch" }}>
-                    We build the software your business{" "}
+                    We build the agentic AI your business{" "}
                     <span style={{ color: "var(--k-accent)" }}>[owns].</span>
                   </Display>
                 </Reveal>
@@ -198,8 +207,9 @@ export default function AboutPage() {
                     className="mt-7"
                     style={{ maxWidth: "48ch", fontSize: "1.125rem" }}
                   >
-                    No per-seat SaaS fees. No payment skim. No data held hostage. Just
-                    bespoke websites, systems and automations your business keeps forever.
+                    Bring any idea — or just a pain point. We build agentic AI systems
+                    that automate the operational work draining your staff cost, time and
+                    revenue. Any industry. Owned outright by you.
                   </Lead>
                 </Reveal>
               </div>
@@ -216,7 +226,7 @@ export default function AboutPage() {
                       padding: "4px 6px 14px",
                     }}
                   >
-                    The website, systems and payments your business runs on — in one
+                    The agents, automations and systems your operation runs on — in one
                     system you own.
                   </p>
                   <BookingPreview />
@@ -264,7 +274,7 @@ export default function AboutPage() {
         {/* ═══════════════ 01 — RENT VS OWN (cream comparison) ═══════════════ */}
         <Section theme="cream" pad="lg" topBorder className="overflow-hidden">
           <Reveal>
-            <Eyebrow index="01" label="Rent vs own" />
+            <Eyebrow index="01" label="By hand vs automated" />
           </Reveal>
           <div
             className="mt-10 grid md:grid-cols-2"
@@ -281,11 +291,11 @@ export default function AboutPage() {
               }}
             >
               <Reveal>
-                <Eyebrow label="The rental trap" tone="danger" />
+                <Eyebrow label="Doing it by hand" tone="danger" />
                 <Display size="md" className="mt-6 mb-8">
-                  You&apos;re renting,
+                  Your team,
                   <br />
-                  <span style={{ color: T.danger }}>not owning.</span>
+                  <span style={{ color: T.danger }}>doing the work.</span>
                 </Display>
                 <CompareList items={RENT} tone="danger" />
               </Reveal>
@@ -300,9 +310,9 @@ export default function AboutPage() {
               <Reveal delay={0.08}>
                 <Eyebrow label="The Nullshift way" tone="accent" />
                 <Display size="md" className="mt-6 mb-8">
-                  Your site.
+                  Our agents.
                   <br />
-                  <span style={{ color: "var(--k-accent)" }}>Your code.</span>
+                  <span style={{ color: "var(--k-accent)" }}>Your system.</span>
                 </Display>
                 <CompareList items={OWN} tone="primary" />
               </Reveal>
@@ -317,9 +327,9 @@ export default function AboutPage() {
               <div>
                 <Eyebrow index="02" label="How we build" />
                 <Display size="lg" className="mt-6">
-                  Precision code.
+                  Pioneering systems.
                   <br />
-                  <span style={{ color: "var(--k-muted)" }}>Fast delivery.</span>
+                  <span style={{ color: "var(--k-muted)" }}>Built fast.</span>
                 </Display>
                 <div className="mt-8">
                   <DashboardPreview />
@@ -329,24 +339,24 @@ export default function AboutPage() {
             <Reveal delay={0.1}>
               <div className="flex flex-col gap-5">
                 <Lead>
-                  Every line of code in your business&apos;s software is written with
-                  purpose. We don&apos;t use drag-and-drop builders, generic theme
-                  frameworks, or off-the-shelf templates — because your business
-                  isn&apos;t generic.
+                  We&apos;re a team of senior developers using cutting-edge AI and agentic
+                  techniques to build complex, pioneering systems — fast, and at a
+                  fraction of agency cost. Whatever you can imagine, however complicated,
+                  we know how to build it.
                 </Lead>
                 <Lead>
-                  Our development process combines modern engineering practices with
-                  precision tooling — allowing us to build at a pace that traditional
-                  agencies simply can&apos;t match, without compromising on quality or
-                  code integrity.
+                  This is far more than you&apos;d get wiring it together yourself with AI
+                  tools. We come from a real R&amp;D background applying the latest AI to
+                  automate businesses — so we build the systems others can&apos;t, and we
+                  carry the liability so they&apos;re watertight.
                 </Lead>
                 <Lead>
-                  The result: websites, systems and portals that are faster, cheaper to
-                  run, and built exactly to your business&apos;s specification — with zero
-                  platform dependency and no lock-in whatsoever.
+                  The result: agentic systems that are faster, cheaper to run, and built
+                  exactly to how your operation works — hosted in the UK/EU, encrypted,
+                  with a full audit trail, and no lock-in whatsoever. You own all of it.
                 </Lead>
                 <div className="pt-2">
-                  <MonoTag>Bespoke code · No builders · Your ownership</MonoTag>
+                  <MonoTag>Cutting-edge AI · Senior developers · Your ownership</MonoTag>
                 </div>
               </div>
             </Reveal>
@@ -361,7 +371,7 @@ export default function AboutPage() {
               label="What we build"
               title={
                 <>
-                  More than a site.{" "}
+                  More than a tool.{" "}
                   <span style={{ color: "var(--k-accent)" }}>A system.</span>
                 </>
               }
@@ -382,10 +392,10 @@ export default function AboutPage() {
               label="How it works"
               title={
                 <>
-                  Discover to <span style={{ color: "var(--k-accent)" }}>launch.</span>
+                  Pain point to <span style={{ color: "var(--k-accent)" }}>system.</span>
                 </>
               }
-              lead="A clear path from first conversation to a system you own outright. Fixed pricing, no surprises."
+              lead="A clear path from first conversation to autonomous systems you own outright. We do the finding, the building and the running."
             />
           </Reveal>
           <Reveal delay={0.08}>
@@ -436,7 +446,7 @@ export default function AboutPage() {
             </div>
           </Reveal>
           <div className="mt-7">
-            <MonoTag>Most projects · 2–4 weeks · fixed pricing</MonoTag>
+            <MonoTag>You bring the problem · we bring the system</MonoTag>
           </div>
         </Section>
 
@@ -578,11 +588,11 @@ export default function AboutPage() {
             label="Get started"
             title={
               <>
-                Ready to own your{" "}
-                <span style={{ color: "var(--k-accent)" }}>online presence?</span>
+                Ready to move into the{" "}
+                <span style={{ color: "var(--k-accent)" }}>AI era?</span>
               </>
             }
-            lead="Answer a few quick questions and we'll show you exactly what we'd build and what you'd save. No commitment."
+            lead="Tell us an idea or just a pain point and we'll show you exactly what we'd automate and what it'd save. No commitment."
             primary={{ label: "Get my free plan", href: "/start" }}
             secondary={{ label: "Book a call", href: "/book" }}
             note="Response within 24 hours · UK-based, global reach"

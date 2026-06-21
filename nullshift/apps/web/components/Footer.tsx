@@ -87,8 +87,8 @@ export function Footer() {
                 maxWidth: "34ch",
               }}
             >
-              Bespoke websites, systems and automations your business owns outright — not
-              a stack of subscriptions you rent.
+              Agentic AI systems that automate the operational work draining your business
+              — built fast, run by us, owned by you.
             </p>
             <Link
               href="/start"

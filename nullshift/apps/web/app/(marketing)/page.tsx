@@ -18,7 +18,6 @@ import {
   BtnGhost,
   BarButton,
   TextLink,
-  Tag,
   MonoTag,
   StatBig,
   ServiceGrid,
@@ -34,138 +33,138 @@ import {
 import { T } from "@nullshift/ui/tokens";
 
 export const metadata: Metadata = {
-  title: "Nullshift — Websites, systems & automations your business owns",
+  title: "Nullshift — Agentic AI that automates your business operations",
   description:
-    "We design, build and run bespoke websites, custom systems and the automations behind them — owned outright by you. No per-seat SaaS fees, live in weeks.",
+    "Bring any idea — or just a pain point. We build agentic AI systems that automate the operational work draining your staff cost, time and revenue. Any industry. Owned by you.",
   alternates: { canonical: "/" },
 };
 
 /* ── Data ───────────────────────────────────────────────────────── */
 const MARQUEE = [
-  "Custom websites",
-  "Bespoke systems",
-  "Workflow automation",
-  "Booking & payments",
-  "CRM & client portals",
-  "Integrations & APIs",
-  "AI workflows",
-  "Hosting & care",
+  "Agentic AI",
+  "Process automation",
+  "Custom systems",
+  "Tool & data integrations",
+  "Customer-facing AI",
+  "Document processing",
+  "Workflow orchestration",
+  "Websites & portals",
 ];
 
 const COMMITMENT = [
-  { value: "100%", label: "Custom code, no templates" },
-  { value: "2–4 wks", label: "From kickoff to live" },
-  { value: "£0", label: "Per-seat software fees" },
+  { value: "100%", label: "Custom-built for you" },
+  { value: "Weeks", label: "Not months to live" },
+  { value: "Liability", label: "Carried by us" },
   { value: "Yours", label: "Code, data & accounts" },
 ];
 
 const PAIN: ServiceItem[] = [
   {
     n: "01",
-    label: "Per-seat fees",
-    title: "You pay to grow",
-    desc: "Most business software bills per seat, every month. Every hire makes the bill bigger — you're charged more for getting busier.",
+    label: "Staff cost",
+    title: "Salary on busywork",
+    desc: "Every manual process is wages spent on work a system should do. You end up hiring to keep up, not to grow.",
   },
   {
     n: "02",
-    label: "Payment skim",
-    title: "A cut of every sale",
-    desc: "Booking and checkout tools skim 2–3% on top of card fees. On a busy month that's real money leaving your account for nothing.",
+    label: "Wasted time",
+    title: "Hours no one sees",
+    desc: "Admin, data entry, chasing, copying between tools — hours a week per person, gone, on work no customer ever notices.",
   },
   {
     n: "03",
-    label: "Data hostage",
-    title: "Leave, lose everything",
-    desc: "Your customers, content and history live in someone else's database. Cancel and it's gone — so you never feel free to leave.",
+    label: "Leakage",
+    title: "Revenue slipping out",
+    desc: "Manual means missed follow-ups, dropped balls and human error — money and trust leaking where no one's watching.",
   },
   {
     n: "04",
-    label: "Generic templates",
-    title: "Looks like everyone else",
-    desc: "Drag-and-drop themes mean your business looks like every competitor, and bends to the tool instead of how you actually work.",
+    label: "The ceiling",
+    title: "It all funnels back to you",
+    desc: "As you grow, everything refers back to the founders. Too many people, too many moving parts — and growth stalls under its own weight.",
   },
 ];
 
 const SERVICES: ServiceItem[] = [
   {
     n: "01",
-    label: "Websites",
-    title: "Custom-built websites",
-    desc: "Fast, bespoke, mobile-first sites that win you work — designed around your brand and built from scratch, never templated.",
+    label: "Agentic AI",
+    title: "Agents that do the work",
+    desc: "Autonomous agents that take on multi-step work end to end — deciding, acting and reporting back, not just answering questions.",
   },
   {
     n: "02",
-    label: "Systems",
-    title: "Bespoke business systems",
-    desc: "The software your operation runs on — booking, records, dashboards, portals — built to fit exactly how your team works.",
+    label: "Automation",
+    title: "Process automation",
+    desc: "The repetitive ops, admin and hand-offs your team does by hand — mapped, built and run for you, around the clock.",
   },
   {
     n: "03",
-    label: "Automation",
-    title: "Workflow automation",
-    desc: "Reminders, follow-ups, hand-offs and reports — the repetitive work, triggered on time, every time, with no one watching.",
+    label: "Systems",
+    title: "Custom systems",
+    desc: "Bespoke software your operation runs on — built to fit exactly how you work, not bent around someone else's tool.",
   },
   {
     n: "04",
-    label: "Payments",
-    title: "Bookings & payments",
-    desc: "Take bookings, deposits and payments through your own account — keep the relationship and a far bigger slice of every sale.",
+    label: "Integrations",
+    title: "Everything connected",
+    desc: "We wire your tools, data and AI into one system, so nothing lives in a silo or gets re-keyed by hand.",
   },
   {
     n: "05",
-    label: "Portals",
-    title: "CRM & client portals",
-    desc: "A place your customers log in, and a CRM that keeps the pipeline moving — records, jobs and accounts in one owned system.",
+    label: "Customer AI",
+    title: "Customer-facing AI",
+    desc: "Support, qualification, onboarding and drafting — on-brand, instant and 24/7, handled by agents that know your business.",
   },
   {
     n: "06",
-    label: "Integrations",
-    title: "Integrations & AI",
-    desc: "We wire your tools together and add AI where it earns its keep — chat, qualification, drafting — connected to the rest.",
+    label: "Front end",
+    title: "Websites & portals",
+    desc: "The fast website and the logins your customers actually use — owned, and wired into everything running behind them.",
   },
 ];
 
 const PROCESS = [
   {
     num: "001",
-    title: "Discovery",
-    desc: "We learn your business — how you work, what you sell, and the subscriptions you pay for and hate.",
+    title: "Deep dive",
+    desc: "Our automation specialists map your operations and find exactly what should become a system — even if you only brought a pain point.",
   },
   {
     num: "002",
-    title: "Build & migrate",
-    desc: "We build your bespoke website and systems, then move your data across — no downtime, nothing lost.",
+    title: "Design the agents",
+    desc: "We design the systems and agentic workflows, scope it tightly, and show you what you'll get before a line is built.",
   },
   {
     num: "003",
-    title: "Go live",
-    desc: "We switch it on. Customers book, payments land, automations fire — and you cancel the old tools.",
+    title: "Build & integrate",
+    desc: "Our developers build it fast with cutting-edge AI, wire it into your tools and migrate your data — no downtime.",
   },
   {
     num: "004",
-    title: "Own & run",
-    desc: "It's yours — code, data, accounts. We host and run it on a care plan you can cancel and keep.",
+    title: "Run & scale",
+    desc: "We run it, carry the liability, and keep optimising — so the system scales as you do, and you own all of it.",
   },
 ];
 
 const GUARANTEES: ServiceItem[] = [
   {
     n: "01",
-    label: "No lock-in",
-    title: "No per-seat fees",
-    desc: "Own your systems once. The bill doesn't grow every time you add a person — unlike the SaaS you rent today.",
+    label: "Watertight",
+    title: "We carry the liability",
+    desc: "We take responsibility for data breaches, security and compliance — a watertight system, not a prototype you're left to defend.",
   },
   {
     n: "02",
-    label: "GDPR-safe",
-    title: "Your data, protected",
-    desc: "Everything is UK-hosted, encrypted, audit-logged and exportable any time. We sign a DPA before go-live — your data is never a vendor's hostage.",
+    label: "Proven AI",
+    title: "Real AI R&D, not a prompt",
+    desc: "A genuine R&D background applying the latest AI and agentic techniques — complex, pioneering systems, built fast and at low cost.",
   },
   {
     n: "03",
-    label: "Fair payments",
-    title: "Payments at a fraction",
-    desc: "Customers pay through your own Stripe account. You keep the relationship and pay a small flat fee — not the 2–3% an incumbent skims.",
+    label: "Owned",
+    title: "You own all of it",
+    desc: "Code, data and every account are yours outright. No per-seat fees, no lock-in, no holding your business hostage.",
   },
 ];
 
@@ -174,77 +173,74 @@ const PRICING = [
     name: "One-off build",
     price: "You own it",
     unit: "outright",
-    desc: "We design, build and migrate your website and systems. When it's done, the code, the data and every account are yours — for good.",
-    points: ["Bespoke, never templated", "Data migrated for you", "Live in 2–4 weeks"],
+    desc: "We design, build and integrate the systems and agents that run your operations. When it's done, the code, data and accounts are yours — for good.",
+    points: [
+      "Scoped to your business",
+      "Built fast with cutting-edge AI",
+      "Live in weeks, not months",
+    ],
     featured: true,
   },
   {
     name: "Care plan",
     price: "Monthly",
     unit: "we run it",
-    desc: "Not rent — us covering your running costs (hosting, storage, email and servers) plus our liability cover, keeping everything online and updated.",
+    desc: "We host and run it, keep the agents optimised, and carry your liability cover and running costs (hosting, storage, email, servers).",
     points: [
-      "Hosting, storage & email",
-      "Security & updates",
+      "Hosting, storage & servers",
+      "Liability & compliance cover",
       "Cancel anytime, keep everything",
     ],
     featured: false,
   },
   {
-    name: "Payments",
-    price: "Your Stripe",
-    unit: "+ flat fee",
-    desc: "Take bookings, deposits and payments through your own account. Keep the customer relationship — no 2–3% skim.",
-    points: ["Money lands with you", "Deposits cut no-shows", "No per-sale commission"],
+    name: "Consulting",
+    price: "Free plan",
+    unit: "to start",
+    desc: "No idea where to begin? Our specialists deep-dive your operations and map exactly what to automate — start with a free tailored plan.",
+    points: ["Operations deep-dive", "What to automate, ranked", "No commitment"],
     featured: false,
   },
 ];
 
-const SWITCH_RENT = [
-  "Website builder — £29/mo",
-  "Booking SaaS — £39/mo / seat",
-  "CRM add-on — £25/mo",
-  "Email & automation — £29/mo",
-  "Payment skim — 2.4%",
-];
-const SWITCH_OWN = [
-  "Custom website you own",
-  "Booking, payments & deposits",
-  "CRM & client portal",
-  "Automations built in",
-  "Everything in one system",
+const HUNT = [
+  "Bottlenecks that funnel back to you",
+  "Manual hand-offs between tools",
+  "Repetitive admin & data entry",
+  "Work that scales with headcount",
+  "Anything a person does the same way twice",
 ];
 
 const FAQS: FAQItem[] = [
   {
+    cat: "No idea?",
+    q: "I just have problems, not a spec — can you still help?",
+    a: "That's the ideal starting point. Our automation consultants deep-dive your operations, work out what can and should become a system, and rank it by impact. You bring the pain points; we bring the ideas, the build and the agents that run it. Start with a free tailored plan and we'll show you exactly what we'd automate.",
+  },
+  {
+    cat: "Why us",
+    q: "Why not just build it myself with AI tools?",
+    a: "AI tools can draft code — they can't take responsibility for it. We're a team of senior developers with a real R&D background in agentic AI, building complex, pioneering systems fast and at low cost — and we carry the liability for data breaches, security and compliance. You get a watertight, production-grade system that scales, not a prototype you're left to defend.",
+  },
+  {
+    cat: "Liability",
+    q: "Who's responsible if something goes wrong?",
+    a: "We are. We take on a portion of your liability — responsible for data breaches, security and compliance on the systems we build and run for you. We host in the UK/EU, encrypt in transit and at rest, keep an audit trail, and sign a DPA before go-live. Your business gets the watertight system it requires.",
+  },
+  {
     cat: "Ownership",
-    q: "Do I actually own it?",
-    a: "Yes — completely. You own the code, the data and every account it runs on (your domain, your Stripe, your database). You can cancel the care plan at any time and keep everything, with a full export and the running system handed over. There's no hostage situation and no lock-in.",
+    q: "Do I actually own what you build?",
+    a: "Yes — completely. You own the code, the data and every account it runs on. You can cancel the care plan at any time and keep everything, with a full export and the running system handed over. No per-seat fees, no lock-in, no hostage situation.",
   },
   {
-    cat: "Care plan",
-    q: "Why pay a monthly care plan if I own it?",
-    a: "The care plan isn't rent on something you own — it's us covering your running costs (hosting, storage, email and server costs like Vercel and Resend) plus our liability cover, and keeping everything online, secure and updated. Cancel whenever you like and you keep the code and data; you'd just take over the running costs yourself.",
+    cat: "Scale",
+    q: "We've hit a ceiling — too much refers back to us. Can you fix that?",
+    a: "That's exactly what we're for. We automate the bottlenecks and hand-offs that funnel back to the founders, turn the manual work into systems and agents, and optimise your operations for scale — so growth stops stalling under its own weight and your business is set up for exponential, not linear, growth.",
   },
   {
-    cat: "Data",
-    q: "Is my data safe and GDPR-compliant?",
-    a: "Yes. We act as your data processor under a signed DPA, host your system in the UK/EU, and encrypt data in transit and at rest with a full audit trail. Your customers, content and records live in a system you own — GDPR-compliant, exportable any time, and never sold or locked in.",
-  },
-  {
-    cat: "Migrating",
-    q: "What about my existing site and tools?",
-    a: "We migrate them for you. You keep running your current tools as normal until the new system is live and fully tested — there's no gap. Then we move your data across, you confirm everything looks right, and only then do you cancel the old subscriptions you no longer need.",
-  },
-  {
-    cat: "Payments",
-    q: "How do payments work?",
-    a: "Customers pay through your own Stripe account, so you keep the merchant relationship and the money lands directly with you. Instead of the 2–3% an incumbent tool skims on top, you pay a small flat platform fee. Deposits and prepayment are built into the flow.",
-  },
-  {
-    cat: "Fit",
-    q: "We're a small business — is this overkill?",
-    a: "No — it scales down cleanly. A solo operator or small team owns a tidy website-and-systems setup for less than it would rent three or four separate SaaS tools each month. Because the rented tools charge per seat, the savings only get bigger as you grow.",
+    cat: "Industry",
+    q: "Does this work for my industry?",
+    a: "Yes. The work that drains time and money — admin, ops, data, follow-ups, customer handling — looks similar across every industry. We've automated it for businesses in very different sectors; the agentic approach adapts to whatever your operation actually does.",
   },
 ];
 
@@ -285,26 +281,27 @@ export default function Page() {
             }}
           >
             <Reveal>
-              <Eyebrow index="01" label="Build it · Run it · You own it" />
+              <Eyebrow index="01" label="Bring the idea — or just the pain point" />
             </Reveal>
 
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1.25fr_0.75fr] gap-10 lg:gap-12 items-start">
               <div>
                 <Reveal delay={0.05}>
                   <Display as="h1" size="hero" style={{ maxWidth: "16ch" }}>
-                    Websites, systems &amp; automations —{" "}
-                    <span style={{ color: "var(--k-accent)" }}>[built]</span> and{" "}
-                    <span style={{ color: "var(--k-accent)" }}>[owned]</span>.
+                    Any idea. Any pain point.{" "}
+                    <span style={{ color: "var(--k-accent)" }}>[automated]</span> by AI
+                    you <span style={{ color: "var(--k-accent)" }}>[own]</span>.
                   </Display>
                 </Reveal>
                 <Reveal delay={0.1}>
                   <Lead
                     className="mt-7"
-                    style={{ maxWidth: "54ch", fontSize: "1.125rem" }}
+                    style={{ maxWidth: "56ch", fontSize: "1.125rem" }}
                   >
-                    We design, build and run bespoke websites, custom systems and the
-                    automations behind them — owned outright by you. No per-seat SaaS
-                    fees, no lock-in, live in weeks.
+                    Bring us anything that eats your team&apos;s time — the admin, the
+                    ops, the work that keeps funnelling back to you — and we build agentic
+                    AI systems that run it end to end. Cut staff cost, time and leakage.
+                    Any industry. Owned outright by you.
                   </Lead>
                 </Reveal>
                 <Reveal delay={0.16}>
@@ -327,7 +324,6 @@ export default function Page() {
                 className="hidden lg:block relative self-stretch"
                 style={{ minHeight: "clamp(440px,40vw,560px)" }}
               >
-                {/* emerald spotlight behind the scene */}
                 <div
                   aria-hidden
                   className="pointer-events-none absolute inset-0"
@@ -335,8 +331,6 @@ export default function Page() {
                     background: `radial-gradient(52% 52% at 60% 44%, ${T.primary}33 0%, transparent 62%)`,
                   }}
                 />
-                {/* masked canvas — bleeds past the edges and fades out so there is
-                    no hard rectangular cutoff; blends into the dark hero. */}
                 <div
                   className="absolute"
                   style={{
@@ -368,7 +362,7 @@ export default function Page() {
                     color: "var(--k-muted)",
                   }}
                 >
-                  For clinics · trades · agencies · e-commerce · any ambitious business
+                  Agentic automation for businesses across every industry
                 </span>
               </div>
             </div>
@@ -385,16 +379,16 @@ export default function Page() {
           </div>
         </Section>
 
-        {/* ═══════════════ WHO WE ARE / COMMITMENT (cream) ═══════════════ */}
+        {/* ═══════════════ 02 — WHY US / TEAM (cream) ═══════════════ */}
         <Section theme="cream" pad="lg" topBorder className="overflow-hidden">
           <Reveal>
-            <Eyebrow index="02" label="Who we are" />
+            <Eyebrow index="02" label="Why us, not DIY" />
           </Reveal>
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
             <Reveal delay={0.05}>
-              <Display size="xl" style={{ maxWidth: "16ch" }}>
-                We build it. We run it.{" "}
-                <span style={{ color: "var(--k-muted)" }}>You own it.</span>
+              <Display size="xl" style={{ maxWidth: "14ch" }}>
+                We build the systems others{" "}
+                <span style={{ color: "var(--k-accent)" }}>can&apos;t.</span>
               </Display>
             </Reveal>
             <Reveal delay={0.1}>
@@ -409,12 +403,13 @@ export default function Page() {
                     color: "var(--k-muted)",
                   }}
                 >
-                  <span style={{ color: "var(--k-fg)" }}>
-                    A website that wins you work
-                  </span>
-                  , the systems your operation runs on, and the automations that handle
-                  the <span style={{ color: "var(--k-fg)" }}>repetitive work</span> — one
-                  stack you own, not a pile of subscriptions you rent.
+                  A team of{" "}
+                  <span style={{ color: "var(--k-fg)" }}>senior developers</span> using
+                  cutting-edge AI and agentic techniques to build complex, pioneering
+                  systems — fast, and at a fraction of agency cost. Whatever you can
+                  imagine, however complicated,{" "}
+                  <span style={{ color: "var(--k-fg)" }}>we know how to build it</span> —
+                  and we carry the liability so it&apos;s watertight.
                 </p>
                 <div className="mt-6">
                   <TextLink href="/about">More about Nullshift</TextLink>
@@ -433,20 +428,20 @@ export default function Page() {
           </Reveal>
         </Section>
 
-        {/* ═══════════════ 03 — RENTAL TRAP (dark) ═══════════════ */}
+        {/* ═══════════════ 03 — THE COST OF DOING IT BY HAND (dark) ═══════════════ */}
         <Section theme="dark" id="problem" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
               index="03"
-              label="The rental trap"
+              label="The cost of doing it by hand"
               tone="danger"
               title={
                 <>
-                  You&apos;re renting,{" "}
-                  <span style={{ color: "var(--k-muted)" }}>not owning.</span>
+                  Manual work is{" "}
+                  <span style={{ color: "var(--k-muted)" }}>leaking money.</span>
                 </>
               }
-              lead="Most businesses run on a stack of subscriptions they rent — and the meter runs against you. Here's what it actually costs."
+              lead="The repetitive operational work your staff do by hand is quietly costing you — in salary, in hours, and in the deals that slip through the cracks."
             />
           </Reveal>
           <Reveal delay={0.08}>
@@ -462,8 +457,8 @@ export default function Page() {
             <SectionHeader
               index="04"
               label="The cuttable bill"
-              title="Stop renting. Start owning."
-              lead="Most business software charges per seat — a bill that grows every time you hire. See what you're renting, and what stops the day you own your systems outright."
+              title="Own the system. Cut the bill."
+              lead="Every seat of rented software is a bill that grows as you hire. Own the system that does the work instead — and watch what stops the day it's yours."
             />
           </Reveal>
           <Reveal delay={0.08}>
@@ -479,8 +474,8 @@ export default function Page() {
             <SectionHeader
               index="05"
               label="What we build"
-              title="Everything your business runs on"
-              lead="Website, systems and automations — built into one stack you own, not bolted together from a dozen subscriptions billed per seat."
+              title="Automate anything you run by hand"
+              lead="From a single agent to a whole connected system — we build, integrate and run the automation your operation needs, whatever it is."
             />
           </Reveal>
           <Reveal delay={0.08}>
@@ -499,8 +494,8 @@ export default function Page() {
             <SectionHeader
               index="06"
               label="How it works"
-              title="From rented tools to a system you own"
-              lead="A clear path from first conversation to a system you own outright. Fixed scope, no surprises."
+              title="From a pain point to a system that runs itself"
+              lead="A clear path from first conversation to autonomous systems you own. We do the finding, the building and the running."
             />
           </Reveal>
           <Reveal delay={0.08}>
@@ -551,136 +546,86 @@ export default function Page() {
             </div>
           </Reveal>
           <div className="mt-7">
-            <MonoTag>Most projects · 2–4 weeks · fixed scope</MonoTag>
+            <MonoTag>You bring the problem · we bring the system</MonoTag>
           </div>
         </Section>
 
-        {/* ═══════════════ 07 — THE SWITCH (cream comparison) ═══════════════ */}
-        <Section theme="cream" id="switch" pad="lg" topBorder>
+        {/* ═══════════════ 07 — NO IDEA? / SCALE (cream) ═══════════════ */}
+        <Section theme="cream" id="scale" pad="lg" topBorder>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <Reveal>
               <div>
-                <Eyebrow index="07" label="The switch" />
-                <Display size="xl" className="mt-6" style={{ maxWidth: "12ch" }}>
-                  Cancel the stack.{" "}
-                  <span style={{ color: "var(--k-accent)" }}>Own one system.</span>
+                <Eyebrow index="07" label="No idea? Just pain points?" />
+                <Display size="xl" className="mt-6" style={{ maxWidth: "13ch" }}>
+                  You don&apos;t need the idea.{" "}
+                  <span style={{ color: "var(--k-accent)" }}>We find it.</span>
                 </Display>
                 <Lead className="mt-6">
-                  The day you go live, the rented tools switch off — and the bill that
-                  grew with every hire stops with them. One system, every layer yours.
+                  Just point at what&apos;s painful. Our automation consultants deep-dive
+                  your operations, work out what can and should become a system, and
+                  automate everything that can be. We optimise your business for scale —
+                  past the ceiling where everything refers back to you — and set it up for
+                  exponential growth. You know you need to move into the AI era; we do the
+                  how.
                 </Lead>
                 <div className="mt-9 flex flex-wrap gap-3">
-                  <BtnPrimary href="/start">See what you&apos;d save</BtnPrimary>
-                  <BtnGhost href="/about">Why Nullshift</BtnGhost>
+                  <BtnPrimary href="/start">Get my free plan</BtnPrimary>
+                  <BtnGhost href="/book">Book a discovery call</BtnGhost>
                 </div>
               </div>
             </Reveal>
             <Reveal delay={0.1} direction="left">
-              <div
-                className="grid grid-cols-1 sm:grid-cols-2"
-                style={{ border: "1px solid var(--k-border)" }}
-              >
-                <div className="p-6" style={{ borderRight: "1px solid var(--k-border)" }}>
-                  <div className="flex items-center justify-between mb-5">
-                    <span
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "0.66rem",
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                        color: T.danger,
-                      }}
-                    >
-                      What you rent
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "0.66rem",
-                        color: "var(--k-faint)",
-                      }}
-                    >
-                      per seat
-                    </span>
-                  </div>
-                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                    {SWITCH_RENT.map((r) => (
-                      <li
-                        key={r}
-                        className="flex items-center gap-3 py-2.5"
-                        style={{
-                          fontFamily: T.sans,
-                          fontSize: "0.82rem",
-                          color: "var(--k-muted)",
-                          borderBottom: "1px solid var(--k-border)",
-                        }}
-                      >
-                        <span aria-hidden style={{ color: T.danger }}>
-                          ✕
-                        </span>
-                        <span style={{ textDecoration: "line-through" }}>{r}</span>
-                      </li>
-                    ))}
-                  </ul>
+              <div style={{ border: "1px solid var(--k-border)" }}>
+                <div
+                  className="p-6"
+                  style={{ borderBottom: "1px solid var(--k-border)" }}
+                >
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.7rem",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "var(--k-accent)",
+                    }}
+                  >
+                    What we hunt for
+                  </span>
                 </div>
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-5">
-                    <span
+                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                  {HUNT.map((h) => (
+                    <li
+                      key={h}
+                      className="flex items-center gap-3 px-6 py-4"
                       style={{
-                        fontFamily: T.mono,
-                        fontSize: "0.66rem",
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                        color: "var(--k-accent)",
+                        fontFamily: T.sans,
+                        fontSize: "0.95rem",
+                        color: "var(--k-fg)",
+                        borderBottom: "1px solid var(--k-border)",
                       }}
                     >
-                      What you own
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "0.66rem",
-                        color: "var(--k-accent)",
-                      }}
-                    >
-                      £0 / seat
-                    </span>
-                  </div>
-                  <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                    {SWITCH_OWN.map((o) => (
-                      <li
-                        key={o}
-                        className="flex items-center gap-3 py-2.5"
-                        style={{
-                          fontFamily: T.sans,
-                          fontSize: "0.82rem",
-                          color: "var(--k-fg)",
-                          borderBottom: "1px solid var(--k-border)",
-                        }}
-                      >
-                        <span aria-hidden style={{ color: "var(--k-accent)" }}>
-                          ✓
-                        </span>
-                        {o}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                      <span aria-hidden style={{ color: "var(--k-accent)" }}>
+                        ▸
+                      </span>
+                      {h}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </Reveal>
           </div>
         </Section>
 
-        {/* ═══════════════ 08 — GUARANTEES (dark) ═══════════════ */}
+        {/* ═══════════════ 08 — WHY US / GUARANTEES (dark) ═══════════════ */}
         <Section theme="dark" id="why" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
               index="08"
-              label="Why us"
+              label="Why Nullshift"
               title={
                 <>
-                  No per-seat fees. No lock-in.{" "}
-                  <span style={{ color: "var(--k-accent)" }}>No nonsense.</span>
+                  Built fast. Built watertight.{" "}
+                  <span style={{ color: "var(--k-accent)" }}>Built yours.</span>
                 </>
               }
               lead="Not testimonials — commitments. This is what you get in writing, every time."
@@ -700,7 +645,7 @@ export default function Page() {
               index="09"
               label="Pricing"
               title="Build it. Own it. We run it."
-              lead="One build to own your website and systems outright, then a simple care plan that covers the running costs and keeps it all online. No per-seat fees, cancel anytime."
+              lead="One build to own the systems and agents outright, then a simple care plan that runs them, carries your liability and covers the running costs. Every project scoped to you."
             />
           </Reveal>
           <Reveal delay={0.08}>
@@ -721,11 +666,6 @@ export default function Page() {
                     background: p.featured ? "var(--k-surface)" : "transparent",
                   }}
                 >
-                  {p.featured && (
-                    <span className="absolute right-7 top-7">
-                      <Tag>You own it</Tag>
-                    </span>
-                  )}
                   <span
                     style={{
                       fontFamily: T.mono,
@@ -823,7 +763,7 @@ export default function Page() {
                   index="10"
                   label="FAQ"
                   title="Everything you need to know"
-                  lead="Can't find your answer? Book a free 15-minute call and we'll answer everything about your project directly."
+                  lead="Can't find your answer? Book a free 15-minute call and we'll answer everything about your business directly."
                 />
                 <div className="mt-8">
                   <BtnGhost href="/faq" arrow>
@@ -843,14 +783,14 @@ export default function Page() {
           <CTABand
             theme="dark"
             index="11"
-            label="Free tailored plan"
+            label="Join the curve"
             title={
               <>
-                Get a free, tailored plan{" "}
-                <span style={{ color: "var(--k-accent)" }}>for your business.</span>
+                Move your business into the{" "}
+                <span style={{ color: "var(--k-accent)" }}>AI era.</span>
               </>
             }
-            lead="Answer a few quick questions — under a minute — and we'll show you exactly what we'd build and what you'd save. No commitment."
+            lead="Tell us an idea or just a pain point — under a minute — and we'll show you exactly what we'd automate and what it'd save. No commitment."
             primary={{ label: "Get my free plan", href: "/start" }}
             secondary={{ label: "Book a call", href: "/book" }}
             note="Response within 24 hours · UK-based, global reach"
@@ -864,12 +804,12 @@ export default function Page() {
               <div>
                 <Eyebrow label="New — Systems Lab" />
                 <Display size="lg" className="mt-5">
-                  See your system{" "}
+                  See it run{" "}
                   <span style={{ color: "var(--k-muted)" }}>before you build.</span>
                 </Display>
                 <Lead className="mt-4" style={{ maxWidth: "52ch" }}>
-                  Live, interactive demos — booking, the client portal, CRM and
-                  automations. Click around and see exactly what you&apos;d own.
+                  Live, interactive demos — agents, automations, the client portal and
+                  CRM. Click around and see exactly what you&apos;d own.
                 </Lead>
               </div>
               <BtnPrimary href="/systems-lab">Enter Systems Lab</BtnPrimary>

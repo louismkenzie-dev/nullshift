@@ -100,7 +100,7 @@ export function Nav() {
                   boxShadow: `0 0 0 3px ${T.primary}22`,
                 }}
               />
-              Websites · Systems · Automations
+              Agentic AI · Automation · Systems
             </span>
             <span style={{ color: "#5c5c54" }}>UK · Global reach</span>
             {time && (

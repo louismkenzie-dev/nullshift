@@ -20,55 +20,55 @@ import { T } from "@nullshift/ui/tokens";
 export const metadata: Metadata = {
   title: "FAQ — Nullshift",
   description:
-    "Everything you need to know about owning your website, systems and automations — ownership, the care plan, data, migration and payments.",
+    "Everything you need to know about agentic AI automation — bringing just a pain point, why not DIY, who carries the liability, ownership, scaling past your ceiling, data and the care plan.",
   alternates: { canonical: "/faq" },
 };
 
 const FAQS: FAQItem[] = [
   {
-    cat: "Data & Compliance",
-    q: "Is my customer data safe and GDPR-compliant?",
-    a: "Yes. We act as your data processor under a signed DPA, host your system in the UK/EU, and encrypt data in transit and at rest with a full audit trail. Your customer records, CRM and forms live in a system you own — GDPR-compliant, exportable any time, and never sold or locked in. You stay the data controller; we just run the infrastructure on your behalf.",
+    cat: "No idea?",
+    q: "I just have problems, not a spec — can you still help?",
+    a: "That's the ideal starting point. You don't need an idea, a brief or a tech background — just point at what's painful. Our automation consultants deep-dive your operations, work out what can and should become a system, and rank it by impact. You bring the pain points; we bring the ideas, the build and the agents that run it. Start with a free tailored plan and we'll show you exactly what we'd automate and what it would save.",
   },
   {
-    cat: "Data & Compliance",
-    q: "What does the DPA actually cover?",
-    a: "The Data Processing Agreement sets out, in writing, that your business is the data controller and Nullshift is the processor — we only process your customer data on your documented instructions, keep it in the UK/EU, apply the security measures above, and return or delete it if you ever leave. It's signed before any customer data touches the system, so your compliance paperwork is covered from day one.",
+    cat: "Why us",
+    q: "Why not just build it myself with AI tools?",
+    a: "AI tools can draft code — they can't take responsibility for it. This is more than you'd get wiring it together yourself: we're a team of senior developers with a real R&D background applying cutting-edge AI and agentic techniques to automate businesses. We build complex, pioneering systems — the ones others can't — fast and at low cost, then carry the liability for security and compliance. You end up with a watertight, production-grade system that scales, not a fragile prototype you have to babysit.",
   },
   {
-    cat: "Migrating Over",
-    q: "What about my existing website, systems and records?",
-    a: "We migrate them for you. You keep running your current tools as normal until the new system is live and fully tested — there's no gap where you can't take bookings or serve customers. Then we move your data, customer records and history across, you confirm everything looks right, and only then do you cancel the old subscriptions you no longer need.",
+    cat: "Liability",
+    q: "Who's responsible if something goes wrong?",
+    a: "We are. We take responsibility for data breaches, security and compliance on the systems we build and run for you — a watertight system, not a prototype you're left to defend. We host in the UK/EU, encrypt data in transit and at rest, keep a full audit trail, and sign a DPA before anything goes live. The liability sits with us, not on your shoulders.",
   },
   {
-    cat: "Migrating Over",
-    q: "How long does it take to go live?",
-    a: "Most businesses are live in a matter of weeks, not months, once we've had the 15-minute call and you've signed off the design direction. We build, you test it against your real workflow, your data is migrated, and we switch over. You'll get a clear timeline in your proposal before anything starts.",
+    cat: "Ownership",
+    q: "Do I actually own what you build?",
+    a: "Yes — completely. You own the code, the data and every account the system runs on. No per-seat fees, no lock-in, no holding your business hostage. You can cancel the care plan at any time and keep everything, with a full export of your data and the running system handed over — you'd just take over hosting and maintenance yourself.",
   },
   {
-    cat: "Ownership & Care Plan",
-    q: "Do I actually own the system?",
-    a: "Yes — completely. You own the code, the customer data and every account it runs on (your domain, your Stripe, your database). You can cancel the care plan at any time and keep everything, with a full export of your records and the running system handed over. There's no hostage situation and no lock-in.",
+    cat: "Scale",
+    q: "We've hit a ceiling — everything refers back to us. Can you fix that?",
+    a: "That's exactly what we're for. Many businesses stall because they're too bureaucratic and every decision funnels back to the founders. We automate those bottlenecks and hand-offs, turn the manual work into agents and systems, and optimise your operations for scale — so growth stops stalling under its own weight and your business is set up for exponential, not linear, growth. You know you need to move into the AI era; we do the how.",
   },
   {
-    cat: "Ownership & Care Plan",
-    q: "Why pay a monthly care plan if I own it?",
-    a: "Because owning the asset and running it are two different things. The one-off build buys you the website, system and automations outright — the code and data are yours. The care plan covers what it actually takes to keep it running: hosting, storage, email and server costs (we cover Vercel, Resend and the rest) plus our liability cover and ongoing maintenance. Cancel whenever you like and you keep the code and data; you'd just take over hosting and maintenance yourself.",
+    cat: "Any industry",
+    q: "Does this work for my industry?",
+    a: "Yes. The work that drains staff cost, time and revenue — admin, ops, data entry, follow-ups, document processing, customer handling — looks similar across every sector. We've automated it for businesses as different as professional services, e-commerce and clinics; the agentic approach adapts to whatever your operation actually does, not the other way around.",
   },
   {
-    cat: "Ownership & Care Plan",
-    q: "We're a small or solo business — is this overkill?",
-    a: "No — it scales down cleanly. A solo operator or small team owns a tidy website, booking and payments system instead of renting three or four separate SaaS tools each month. Because the rented tools charge per seat, the savings only get bigger as you add team members — but the model already works in your favour from day one.",
+    cat: "Data & GDPR",
+    q: "Is my data safe and GDPR-compliant?",
+    a: "Yes. We act as your data processor under a signed DPA, host your system in the UK/EU, and encrypt data in transit and at rest with a full audit trail. Your data lives in a system you own — GDPR-compliant, exportable any time, never sold and never locked in. You stay the data controller; we run the infrastructure on your behalf and carry the security and compliance responsibility for it.",
   },
   {
-    cat: "Payments",
-    q: "How do customer payments work?",
-    a: "Customers pay through your own Stripe account, so you keep the merchant relationship and the money lands directly with you. Instead of the 2–3% an incumbent tool skims on top, you pay a small flat platform fee. Deposits and prepayment are built into the booking flow, not bolted on as another monthly add-on.",
+    cat: "Pricing",
+    q: "How does pricing work — and why a care plan if I own it?",
+    a: "Two simple parts. A one-off build to design, build and integrate the systems and agents — when it's done, the code, data and accounts are yours outright (no per-seat fees, no from-price; every project is scoped to you). Then a monthly care plan, because owning the system and running it are different things: it covers the running costs — hosting, storage, email and servers — plus our liability and compliance cover and ongoing optimisation. Cancel whenever you like and you keep everything.",
   },
   {
-    cat: "What We Build",
-    q: "What's actually included in the build?",
-    a: "Whatever your business runs on — a custom website, bespoke systems and software, automations and integrations, online booking with deposits, automatic SMS + email reminders to cut missed bookings, a CRM and customer records, follow-ups, and customer payments through your own Stripe. It's built around how you work, in one system you own outright, and it replaces the stack of per-seat subscriptions you're currently renting.",
+    cat: "How it works",
+    q: "What does working with you actually look like?",
+    a: "A clear path from a first conversation to a system that runs itself. Our specialists deep-dive your operations and find what should become a system, we design the agents and scope it tightly so you see what you'll get before a line is built, our developers build it fast and wire it into your existing tools and data with no downtime, and then we run it, carry the liability and keep optimising as you scale. You bring the problem; we bring the system.",
   },
 ];
 
