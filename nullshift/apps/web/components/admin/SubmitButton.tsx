@@ -31,10 +31,10 @@ export function SubmitButton({
       disabled={isDisabled}
       aria-busy={pending || undefined}
       data-pending={pending ? "true" : undefined}
-      style={{ ...style, ...(pending ? { opacity: 0.75 } : null) }}
+      style={style}
     >
-      {pending && <span className="ns-btn-spinner" aria-hidden />}
       {pending && pendingLabel ? pendingLabel : children}
+      {pending && <span className="ns-btn-spinner" aria-hidden />}
     </button>
   );
 }

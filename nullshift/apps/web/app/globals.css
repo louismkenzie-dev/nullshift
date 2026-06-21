@@ -683,13 +683,17 @@ a[href] {
     background-color 0.15s ease,
     border-color 0.15s ease;
 }
+/* Darken on press (immediate click feedback) and stay darkened while the action
+   is loading. */
 button:not(:disabled):active,
 [role="button"]:not([aria-disabled="true"]):active {
-  transform: scale(0.97);
+  transform: scale(0.98);
+  filter: brightness(0.82);
 }
 button[aria-busy="true"],
 button[data-pending="true"] {
   cursor: progress;
+  filter: brightness(0.82);
 }
 
 @keyframes ns-btn-spin {
@@ -701,7 +705,7 @@ button[data-pending="true"] {
   display: inline-block;
   width: 0.85em;
   height: 0.85em;
-  margin-right: 0.5em;
+  margin-left: 0.5em;
   border: 2px solid currentColor;
   border-top-color: transparent;
   border-radius: 50%;
