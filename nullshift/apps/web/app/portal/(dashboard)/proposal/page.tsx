@@ -3,9 +3,8 @@ import { createClient, createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 import { clientRef } from "@nullshift/ui/format";
-import { carePlan, CARE_PLAN_MRR } from "@/lib/carePlans";
+import { carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
-import { ensureCareSubscription } from "@/lib/careSubscription";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
 import { ProposalDocument } from "@/components/portal/ProposalDocument";
 import { SignProposal } from "@/components/portal/SignProposal";
@@ -135,21 +134,9 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       tenantId: project.tenant_id,
     });
 
-    // Activate the proposed care plan (if any) as a real recurring Stripe
-    // subscription (billed by emailed invoice monthly). Idempotent + best-effort.
-    if (project.proposed_plan && project.proposed_plan in CARE_PLAN_MRR) {
-      const sub = await ensureCareSubscription(service, {
-        tenantId: project.tenant_id,
-        planId: project.proposed_plan,
-      });
-      if (sub.ok)
-        await logAudit({
-          action: "subscription.activated",
-          target: `tenant:${project.tenant_id}`,
-          tenantId: project.tenant_id,
-          metadata: { plan: project.proposed_plan, stripe: sub.stripe },
-        });
-    }
+    // The care plan is NOT auto-activated here — the admin sends the client a
+    // Stripe Checkout sign-up from the client hub (they add a card to start the
+    // recurring plan), mirroring the build-invoice flow.
 
     // Auto-draft & send the itemised build invoice on acceptance.
     const inv = await generateProjectInvoice(service, {

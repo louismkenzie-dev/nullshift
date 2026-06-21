@@ -10,6 +10,7 @@ import { T } from "@nullshift/ui/tokens";
 import { clientRef } from "@nullshift/ui/format";
 import { CARE_PLANS, CARE_PLAN_MRR, carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
+import { sendCareSubscriptionSignup } from "@/lib/careSubscription";
 import { getStripe } from "@nullshift/billing/stripe";
 import { sendEmail } from "@/lib/sendEmail";
 import {
@@ -514,25 +515,33 @@ async function recordDpa(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
-async function addSubscription(formData: FormData) {
+/**
+ * Email the client a Stripe Checkout sign-up for their care plan (they add a card
+ * to start the recurring plan). Mirrors the build-invoice send — the webhook
+ * flips the local row to active once they complete it.
+ */
+async function sendSubscriptionSignup(formData: FormData) {
   "use server";
+  if (!(await requireStaff()).ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
   const plan = String(formData.get("plan") || "");
   if (!tenantId || !(plan in CARE_PLAN_MRR)) return;
-  const supabase = await createClient();
-  await supabase.from("subscriptions").insert({
-    tenant_id: tenantId,
-    plan,
-    mrr: CARE_PLAN_MRR[plan],
-    status: "active",
-    started_at: new Date().toISOString(),
-  });
-  await logAudit({
-    action: "subscription.added",
-    target: `tenant:${tenantId}`,
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
+    /\/$/,
+    ""
+  );
+  const res = await sendCareSubscriptionSignup(createServiceClient(), {
     tenantId,
-    metadata: { plan, mrr: CARE_PLAN_MRR[plan] },
+    planId: plan,
+    siteUrl,
   });
+  if (res.ok)
+    await logAudit({
+      action: "subscription.signup_sent",
+      target: `tenant:${tenantId}`,
+      tenantId,
+      metadata: { plan, emailed: res.emailed, alreadyActive: res.alreadyActive ?? false },
+    });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -913,7 +922,8 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       .from("subscriptions")
       .select("id, plan, mrr, status")
       .eq("tenant_id", tenantId)
-      .eq("status", "active"),
+      .neq("status", "canceled")
+      .order("created_at", { ascending: false }),
     supabase
       .from("compliance_records")
       .select("id")
@@ -1092,7 +1102,14 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
     .reduce((s, i) => s + Number(i.amount), 0);
   const hasStripeInvoice = invoiceList.some((i) => i.status !== "draft");
   const total = itemList.reduce((s, i) => s + Number(i.amount), 0);
-  const mrr = subList.reduce((s, x) => s + Number(x.mrr), 0);
+  // A care subscription is only billable MRR once it's actually active; an
+  // 'incomplete' row means the sign-up was emailed but not yet completed.
+  const activeSub =
+    subList.find((s) => ["active", "trialing", "past_due"].includes(s.status)) ?? null;
+  const pendingSub = subList.find((s) => s.status === "incomplete") ?? null;
+  const mrr = subList
+    .filter((s) => s.status === "active")
+    .reduce((s, x) => s + Number(x.mrr), 0);
 
   // Gating: the documents can be sent once modules + a care plan + the proposal
   // doc + DPA processing details are all present; the invoice can be generated
@@ -2097,55 +2114,161 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
         )}
       </section>
 
-      {/* Care subscriptions */}
+      {/* Care plan — recurring subscription via a Stripe Checkout sign-up the
+          client completes (mirrors the build invoice: send → awaiting → active). */}
       <section style={card}>
         <div className="flex items-center justify-between">
-          <h2 style={{ ...h2, marginBottom: 0 }}>Care subscription</h2>
-          <span style={{ fontFamily: T.mono, fontSize: 12, color: T.primary }}>
-            {gbp(mrr)}/mo MRR
-          </span>
+          <h2 style={{ ...h2, marginBottom: 0 }}>Care plan</h2>
+          {mrr > 0 && (
+            <span style={{ fontFamily: T.mono, fontSize: 12, color: T.primary }}>
+              {gbp(mrr)}/mo MRR
+            </span>
+          )}
         </div>
-        <div className="flex flex-col gap-1.5" style={{ margin: "12px 0" }}>
-          {subList.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center justify-between"
-              style={{ padding: "7px 0", borderTop: `1px solid ${T.border}` }}
-            >
-              <span style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.fg }}>
-                {carePlan(s.plan)?.label ?? s.plan}{" "}
-                <span style={{ color: T.muted, fontFamily: T.mono, fontSize: 11 }}>
-                  {gbp(Number(s.mrr))}/mo
-                </span>
+
+        {activeSub ? (
+          <div
+            className="flex items-center justify-between flex-wrap gap-2"
+            style={{ marginTop: 14 }}
+          >
+            <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>
+              {carePlan(activeSub.plan)?.label ?? activeSub.plan}{" "}
+              <span style={{ color: T.muted, fontFamily: T.mono, fontSize: 11 }}>
+                {gbp(Number(activeSub.mrr))}/mo
+              </span>
+            </span>
+            <div className="flex items-center gap-3">
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 11,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: activeSub.status === "active" ? T.success : T.warning,
+                  background: `${activeSub.status === "active" ? T.success : T.warning}14`,
+                  border: `1px solid ${activeSub.status === "active" ? T.success : T.warning}55`,
+                  borderRadius: 999,
+                  padding: "6px 12px",
+                }}
+              >
+                {activeSub.status === "active"
+                  ? "Active ✓"
+                  : activeSub.status.replace("_", " ")}
               </span>
               <form action={cancelSubscription}>
                 {htid}
-                <input type="hidden" name="id" value={s.id} />
+                <input type="hidden" name="id" value={activeSub.id} />
                 <button type="submit" style={btn("transparent", T.danger)}>
                   Cancel
                 </button>
               </form>
             </div>
-          ))}
-          {subList.length === 0 && (
-            <p style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.faint }}>
-              No active subscription.
+          </div>
+        ) : pendingSub ? (
+          <div style={{ marginTop: 14 }}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>
+                {carePlan(pendingSub.plan)?.label ?? pendingSub.plan}{" "}
+                <span style={{ color: T.muted, fontFamily: T.mono, fontSize: 11 }}>
+                  {gbp(Number(pendingSub.mrr))}/mo
+                </span>
+              </span>
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 11,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: T.warning,
+                  background: `${T.warning}14`,
+                  border: `1px solid ${T.warning}55`,
+                  borderRadius: 999,
+                  padding: "6px 12px",
+                }}
+              >
+                Sign-up sent — awaiting completion
+              </span>
+            </div>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.8rem",
+                color: T.faint,
+                margin: "8px 0 12px",
+              }}
+            >
+              The client&apos;s been emailed a secure card sign-up. This flips to Active
+              automatically once they complete it.
             </p>
-          )}
-        </div>
-        <form action={addSubscription} className="flex items-center gap-2">
-          {htid}
-          <select name="plan" defaultValue="care_basic" style={{ ...inp, width: 160 }}>
-            {CARE_PLANS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label} — £{p.mrr}/mo
-              </option>
-            ))}
-          </select>
-          <button type="submit" style={btn(T.surface2, T.fg)}>
-            Add subscription
-          </button>
-        </form>
+            <form action={sendSubscriptionSignup}>
+              {htid}
+              <input type="hidden" name="plan" value={pendingSub.plan} />
+              <button type="submit" style={btn(T.surface2, T.fg)}>
+                Resend sign-up
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div style={{ marginTop: 14 }}>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.82rem",
+                color: T.faint,
+                marginBottom: 10,
+              }}
+            >
+              {project?.proposed_plan
+                ? `${carePlan(project.proposed_plan)?.label} · ${gbp(
+                    carePlan(project.proposed_plan)?.mrr ?? 0
+                  )}/mo — not set up yet. Email the client a sign-up to start it.`
+                : "No care plan yet. Pick one and email the client a sign-up to start it."}
+            </p>
+            <form
+              action={sendSubscriptionSignup}
+              className="flex items-center gap-2 flex-wrap"
+            >
+              {htid}
+              <select
+                name="plan"
+                defaultValue={project?.proposed_plan ?? "care_basic"}
+                style={{ ...inp, width: 170 }}
+              >
+                {CARE_PLANS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label} — £{p.mrr}/mo
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                disabled={!isAccepted}
+                style={{
+                  ...btn(
+                    isAccepted ? T.primary : T.surface2,
+                    isAccepted ? T.primaryFg : T.faint
+                  ),
+                  cursor: isAccepted ? "pointer" : "not-allowed",
+                  opacity: isAccepted ? 1 : 0.7,
+                }}
+              >
+                Send care-plan sign-up
+              </button>
+            </form>
+            {!isAccepted && (
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.78rem",
+                  color: T.faint,
+                  marginTop: 8,
+                }}
+              >
+                Available once the client has signed the proposal.
+              </p>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Portal access */}

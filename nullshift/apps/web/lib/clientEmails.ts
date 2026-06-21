@@ -219,3 +219,38 @@ Open the client: ${adminUrl}
 — Nullshift`;
   return { subject, html, text };
 }
+
+export function subscriptionSignupEmail(opts: {
+  name: string;
+  planLabel: string;
+  mrr: number;
+  url: string;
+}): { subject: string; html: string; text: string } {
+  const { name, planLabel, mrr, url } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const gbp = "£" + Math.round(mrr).toLocaleString("en-GB");
+  const subject = `Set up your ${planLabel} care plan`;
+
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Your care plan</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Set up your ${esc(planLabel)} care plan</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, your <strong style="color:${C.fg}">${esc(planLabel)}</strong> care plan keeps your system hosted, secure and improving. Add your card below to start it — it's <strong style="color:${C.fg}">${gbp}/month</strong>, billed automatically, and you can cancel any time.</p>
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(url, "Set up my care plan →")}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">You'll be taken to our secure Stripe checkout — nothing is charged until you confirm. This link is personal to you.</p>
+    </td></tr>`;
+
+  const html = wrap(inner, `Set up your ${planLabel} care plan (${gbp}/month).`);
+  const text = `Hi ${first},
+
+Set up your ${planLabel} care plan (${gbp}/month, billed automatically, cancel any time). Add your card on our secure Stripe checkout:
+
+${url}
+
+Nothing is charged until you confirm.
+
+— Nullshift`;
+  return { subject, html, text };
+}

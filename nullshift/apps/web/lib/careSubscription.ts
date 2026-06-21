@@ -1,9 +1,11 @@
 import {
   findOrCreateCustomer,
-  createCareSubscriptionInvoiced,
+  createSubscriptionCheckoutUrl,
 } from "@nullshift/billing/stripe";
 import { createServiceClient } from "@nullshift/db";
 import { carePlan } from "./carePlans";
+import { sendEmail } from "./sendEmail";
+import { subscriptionSignupEmail } from "./clientEmails";
 
 type Service = ReturnType<typeof createServiceClient>;
 
@@ -28,37 +30,34 @@ export function mapStripeSubStatus(s: string): SubStatus {
 }
 
 /**
- * Activate the client's care plan as a REAL recurring Stripe subscription, billed
- * by an emailed invoice each month (no saved card needed — Stripe emails the
- * client). Records it locally with the Stripe id + status. Idempotent: a no-op if
- * the tenant already has a real (non-terminal) Stripe subscription. Best-effort —
- * if Stripe isn't configured or the call fails it writes a local 'incomplete'
- * record (not counted as MRR) that a later run can complete. Service-role only.
+ * Email the client a Stripe Checkout sign-up for their care plan — they open it,
+ * enter their card and authorise the recurring monthly plan. Mirrors the build-
+ * invoice flow: the admin sends it, the client completes it, and the webhook
+ * flips it to active. Records a local 'incomplete' subscription row so the admin
+ * sees "awaiting completion" until they sign up. Idempotent: a no-op if already
+ * actively subscribed. Best-effort. Service-role only.
  */
-export async function ensureCareSubscription(
+export async function sendCareSubscriptionSignup(
   service: Service,
-  opts: { tenantId: string; planId: string }
-): Promise<{ ok: boolean; stripe: boolean }> {
+  opts: { tenantId: string; planId: string; siteUrl: string }
+): Promise<{ ok: boolean; emailed: boolean; alreadyActive?: boolean }> {
   const plan = carePlan(opts.planId);
-  if (!plan) return { ok: false, stripe: false };
+  if (!plan) return { ok: false, emailed: false };
 
-  // Don't double-subscribe: skip only if there's already a REAL Stripe
-  // subscription in a non-terminal state. A local-only "incomplete" row (Stripe
-  // failed earlier) must NOT suppress a retry. (createCareSubscriptionInvoiced
-  // also reuses an existing Stripe sub, as a second line of defence.)
-  const { data: existing } = await service
+  // Already actively subscribed? no-op (don't double-bill).
+  const { data: active } = await service
     .from("subscriptions")
     .select("id")
     .eq("tenant_id", opts.tenantId)
     .in("status", ["active", "trialing", "past_due"])
     .not("stripe_subscription_id", "is", null)
     .limit(1);
-  if (existing?.length) return { ok: true, stripe: false };
+  if (active?.length) return { ok: true, emailed: false, alreadyActive: true };
 
   // Resolve the client's email + the tenant's shared Stripe customer.
   const { data: tenantRow } = await service
     .from("tenants")
-    .select("name, stripe_customer_id")
+    .select("name, contact_name, stripe_customer_id")
     .eq("id", opts.tenantId)
     .maybeSingle();
   const { data: membership } = await service
@@ -73,55 +72,73 @@ export async function ensureCareSubscription(
     const { data: u } = await service.auth.admin.getUserById(membership.user_id);
     email = u.user?.email ?? null;
   }
+  if (!email) return { ok: false, emailed: false };
 
-  let stripeSubId: string | null = null;
-  // Default to 'incomplete' — only a real Stripe subscription flips this to a
-  // billable status. This keeps unbilled rows out of MRR and lets a later run
-  // retry the Stripe creation (the dedupe above ignores incomplete rows).
-  let status: SubStatus = "incomplete";
-  if (email) {
-    try {
-      const customerId = await findOrCreateCustomer({
-        email,
-        name: tenantRow?.name ?? undefined,
-        existingCustomerId: tenantRow?.stripe_customer_id ?? null,
-        idempotencyKey: `customer:${opts.tenantId}`,
-      });
-      if (customerId) {
-        if (customerId !== tenantRow?.stripe_customer_id) {
-          await service
-            .from("tenants")
-            .update({ stripe_customer_id: customerId })
-            .eq("id", opts.tenantId)
-            .is("stripe_customer_id", null);
-        }
-        const sub = await createCareSubscriptionInvoiced({
-          customerId,
-          planId: plan.id,
-          planLabel: plan.label,
-          amountPence: Math.round(plan.mrr * 100),
-        });
-        if (sub) {
-          stripeSubId = sub.id;
-          status = mapStripeSubStatus(sub.status);
-        }
-      }
-    } catch (e) {
-      console.error("care subscription (Stripe) failed — recording local-only:", e);
-    }
-  }
-
-  const { error } = await service.from("subscriptions").insert({
-    tenant_id: opts.tenantId,
-    plan: plan.id,
-    mrr: plan.mrr,
-    status,
-    stripe_subscription_id: stripeSubId,
-    started_at: new Date().toISOString(),
+  const customerId = await findOrCreateCustomer({
+    email,
+    name: tenantRow?.name ?? undefined,
+    existingCustomerId: tenantRow?.stripe_customer_id ?? null,
+    idempotencyKey: `customer:${opts.tenantId}`,
   });
-  if (error) {
-    console.error("care subscription local insert failed:", error.message);
-    return { ok: false, stripe: !!stripeSubId };
+  if (!customerId) return { ok: false, emailed: false };
+  if (customerId !== tenantRow?.stripe_customer_id) {
+    await service
+      .from("tenants")
+      .update({ stripe_customer_id: customerId })
+      .eq("id", opts.tenantId)
+      .is("stripe_customer_id", null);
   }
-  return { ok: true, stripe: !!stripeSubId };
+
+  const checkout = await createSubscriptionCheckoutUrl({
+    customerId,
+    tenantId: opts.tenantId,
+    planId: plan.id,
+    planLabel: plan.label,
+    amountPence: Math.round(plan.mrr * 100),
+    successUrl: `${opts.siteUrl}/portal?care=active`,
+    cancelUrl: `${opts.siteUrl}/portal`,
+  });
+  if (!checkout) return { ok: false, emailed: false };
+  if (checkout.alreadyActive) return { ok: true, emailed: false, alreadyActive: true };
+  if (!checkout.url) return { ok: false, emailed: false };
+
+  // Record/keep a pending 'incomplete' row so the admin sees "awaiting completion"
+  // until the client finishes the Checkout (the webhook flips it to active).
+  const { data: pending } = await service
+    .from("subscriptions")
+    .select("id")
+    .eq("tenant_id", opts.tenantId)
+    .is("stripe_subscription_id", null)
+    .neq("status", "canceled")
+    .limit(1)
+    .maybeSingle();
+  if (pending) {
+    await service
+      .from("subscriptions")
+      .update({ plan: plan.id, mrr: plan.mrr, status: "incomplete" })
+      .eq("id", pending.id);
+  } else {
+    await service.from("subscriptions").insert({
+      tenant_id: opts.tenantId,
+      plan: plan.id,
+      mrr: plan.mrr,
+      status: "incomplete",
+      stripe_subscription_id: null,
+      started_at: new Date().toISOString(),
+    });
+  }
+
+  const mail = subscriptionSignupEmail({
+    name: tenantRow?.contact_name ?? tenantRow?.name ?? "there",
+    planLabel: plan.label,
+    mrr: plan.mrr,
+    url: checkout.url,
+  });
+  const sent = await sendEmail({
+    to: email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+  });
+  return { ok: true, emailed: sent };
 }

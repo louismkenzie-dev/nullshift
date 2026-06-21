@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { stripeConfig } from "@nullshift/billing/config";
 import { createServiceClient } from "@nullshift/db";
 import { mapStripeSubStatus } from "@/lib/careSubscription";
+import { carePlan } from "@/lib/carePlans";
 
 /**
  * Stripe webhook — the single authoritative consumer (point the Stripe dashboard
@@ -84,6 +85,48 @@ export async function POST(req: Request) {
           "stripe invoice.payment_failed",
           (event.data.object as Stripe.Invoice).id
         );
+        break;
+      }
+      case "checkout.session.completed": {
+        // A client completed the care-plan sign-up — flip their pending row to
+        // active and link the Stripe subscription id.
+        const session = event.data.object as Stripe.Checkout.Session;
+        const tenantId = session.client_reference_id;
+        const subId =
+          typeof session.subscription === "string"
+            ? session.subscription
+            : (session.subscription?.id ?? null);
+        if (session.mode === "subscription" && subId && tenantId) {
+          const { data: pending } = await supabase
+            .from("subscriptions")
+            .select("id")
+            .eq("tenant_id", tenantId)
+            .is("stripe_subscription_id", null)
+            .neq("status", "canceled")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (pending) {
+            await supabase
+              .from("subscriptions")
+              .update({ status: "active", stripe_subscription_id: subId })
+              .eq("id", pending.id);
+          } else {
+            // No pending row — insert from the subscription's plan metadata.
+            const sub = await stripe.subscriptions.retrieve(subId);
+            const planId = (sub.metadata?.plan as string | undefined) ?? null;
+            const plan = planId ? carePlan(planId) : null;
+            if (plan)
+              await supabase.from("subscriptions").insert({
+                tenant_id: tenantId,
+                plan: plan.id,
+                mrr: plan.mrr,
+                status: "active",
+                stripe_subscription_id: subId,
+                started_at: new Date().toISOString(),
+              });
+          }
+        }
         break;
       }
       case "customer.subscription.created":

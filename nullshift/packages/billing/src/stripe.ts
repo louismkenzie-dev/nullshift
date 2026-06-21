@@ -131,72 +131,64 @@ export async function createCareSubscription(params: {
 }
 
 /**
- * Create a recurring monthly care-plan subscription billed by emailed invoice
- * (no saved card needed) — Stripe generates + emails an invoice each month. Uses
- * inline price_data so we don't need a pre-created Stripe Price per plan. The
- * plan id is stamped in metadata so the webhook can map it back. Amount in PENCE.
+ * Create a hosted Checkout sign-up link for a care plan (Stripe Checkout, mode
+ * 'subscription') — the client opens it, enters their card and authorises the
+ * recurring monthly plan; Stripe then auto-bills them each month. We email this
+ * link. Returns the hosted URL. If the customer already has a non-terminal
+ * subscription we skip (returns { alreadyActive: true }) so they can't be billed
+ * twice. tenantId is carried on client_reference_id so the webhook can map the
+ * completed sign-up back to the account. Amount in PENCE.
  */
-export async function createCareSubscriptionInvoiced(params: {
+export async function createSubscriptionCheckoutUrl(params: {
   customerId: string;
+  tenantId: string;
   planId: string;
   planLabel: string;
   amountPence: number;
   currency?: string;
-}): Promise<{ id: string; status: string } | null> {
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ url: string | null; alreadyActive?: boolean } | null> {
   const stripe = getStripe();
   if (!stripe) return null;
   const currency = params.currency ?? "gbp";
 
-  // Never double-bill: if this customer already has a non-terminal subscription,
-  // reuse it instead of creating a second one.
+  // Never double-bill: if the customer already has a live subscription, don't
+  // start a new sign-up.
   const existingSubs = await stripe.subscriptions.list({
     customer: params.customerId,
     status: "all",
     limit: 20,
   });
-  const live = existingSubs.data.find((s) =>
-    ["active", "trialing", "past_due", "unpaid"].includes(s.status)
-  );
-  if (live) return { id: live.id, status: live.status };
+  if (
+    existingSubs.data.some((s) =>
+      ["active", "trialing", "past_due", "unpaid"].includes(s.status)
+    )
+  )
+    return { url: null, alreadyActive: true };
 
-  // Subscription price_data needs a Product *id* (inline product_data isn't
-  // allowed here, unlike invoice items). Reuse one Product per plan, keyed by
-  // metadata, creating it once if absent.
-  let productId: string | null = null;
-  try {
-    const found = await stripe.products.search({
-      query: `active:'true' AND metadata['nullshift_plan']:'${params.planId}'`,
-      limit: 1,
-    });
-    productId = found.data[0]?.id ?? null;
-  } catch {
-    // Product search unavailable — fall through to create.
-  }
-  if (!productId) {
-    const product = await stripe.products.create({
-      name: `Nullshift ${params.planLabel} care plan`,
-      metadata: { nullshift_plan: params.planId },
-    });
-    productId = product.id;
-  }
-
-  const sub = await stripe.subscriptions.create({
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
     customer: params.customerId,
-    collection_method: "send_invoice",
-    days_until_due: 14,
-    items: [
+    client_reference_id: params.tenantId,
+    line_items: [
       {
+        quantity: 1,
         price_data: {
           currency,
-          product: productId,
+          product_data: { name: `Nullshift ${params.planLabel} care plan` },
           recurring: { interval: "month" },
           unit_amount: Math.round(params.amountPence),
         },
       },
     ],
-    metadata: { plan: params.planId },
+    subscription_data: {
+      metadata: { plan: params.planId, tenant_id: params.tenantId },
+    },
+    success_url: params.successUrl,
+    cancel_url: params.cancelUrl,
   });
-  return { id: sub.id, status: sub.status };
+  return { url: session.url };
 }
 
 /**
