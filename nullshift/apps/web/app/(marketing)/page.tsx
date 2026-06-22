@@ -482,7 +482,8 @@ export default function Page() {
           scene="/spline/ai-brain.splinecode"
           objectName="Particles"
           side="right"
-          rotate={0.6}
+          axis="y"
+          spin={0.28}
           label="Agentic AI"
           heading={
             <>
@@ -657,7 +658,7 @@ export default function Page() {
           scene="/spline/cubic-scroll.splinecode"
           objectName="Cubes"
           side="left"
-          rotate={1.4}
+          rotate={2.0}
           label="Design & build"
           heading={
             <>

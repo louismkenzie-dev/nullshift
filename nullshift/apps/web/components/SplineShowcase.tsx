@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 import { SplineLazy } from "./SplineLazy";
 import { useScrollProgress } from "./useScrollProgress";
@@ -12,17 +12,16 @@ type Rotatable = { rotation: { x: number; y: number; z: number } };
 export type ShowcaseItem = { n: string; title: string; desc: string };
 
 const clamp = (n: number, a = 0, b = 1) => (n < a ? a : n > b ? b : n);
+const EASE = "cubic-bezier(.16,1,.3,1)";
 
 /* ════════════════════════════════════════════════════════════════
    SplineShowcase — a full-bleed Spline scene as the flagship of a
-   pinned section. Choreography across the scroll:
-     • 0–14%  : the scene fades + scales in (the moment you arrive)
-     • all    : the object rotates (3D) and the canvas drifts (CSS)
-     • 8%+    : the heading rises in
-     • 34%+   : the cards fade + slide up one by one, layered on top
-   The canvas is edge-masked into --k-bg (no box), with a legibility
-   scrim that fades in under the copy. Reduced-motion → static.
-   `side` = which side the copy sits (scene drifts the other way).
+   pinned section, biased to the side OPPOSITE the copy. The named
+   object either spins continuously (`spin` rad/s — a slow turntable
+   for new perspectives) or rotates with scroll (`rotate` rad). Copy
+   blurs + fades + slides up, layered over the scene. Edge-masked into
+   --k-bg; legibility scrim fades in under the copy. Reduced-motion →
+   static. `side` = which side the copy sits.
    ════════════════════════════════════════════════════════════════ */
 export function SplineShowcase({
   scene,
@@ -33,7 +32,9 @@ export function SplineShowcase({
   lead,
   items,
   side = "left",
+  axis = "y",
   rotate = 1.0,
+  spin = 0,
 }: {
   scene: string;
   objectName: string;
@@ -43,74 +44,119 @@ export function SplineShowcase({
   lead?: React.ReactNode;
   items: ShowcaseItem[];
   side?: "left" | "right";
-  rotate?: number; // radians of Y rotation across the scroll
+  axis?: "x" | "y" | "z";
+  rotate?: number; // signed radians swept across the scroll (when spin === 0)
+  spin?: number; // radians/sec continuous spin (a slow turntable)
 }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const sceneWrapRef = useRef<HTMLDivElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
   const objRef = useRef<Rotatable | null>(null);
-  const baseY = useRef(0);
-  const baseX = useRef(0);
+  const baseRot = useRef({ x: 0, y: 0, z: 0 });
   const reduce = useReducedMotion();
   const [headingOn, setHeadingOn] = useState(false);
   const [revealed, setRevealed] = useState(0);
+
+  const sceneOnLeft = side === "right";
+  const baseTx = sceneOnLeft ? -20 : 20; // vw
+  const sceneCx = sceneOnLeft ? "30%" : "70%";
 
   const progress = useScrollProgress(
     sectionRef,
     reduce ? ["start end", "end start"] : ["start start", "end end"]
   );
 
+  // Resolve (and cache) the rotatable object lazily — findObjectByName in
+  // onLoad can fire before the object tree is ready, so we retry until it
+  // resolves. (getAllObjects throws on these scenes, so we probe by name.)
+  const ensureObj = useCallback((): Rotatable | null => {
+    if (objRef.current) return objRef.current;
+    const a = appRef.current;
+    if (!a) return null;
+    for (const name of [objectName, "Particles", "Cubes", "Scene 1", "Group"]) {
+      try {
+        const o = a.findObjectByName(name) as unknown as Rotatable | undefined;
+        if (o) {
+          objRef.current = o;
+          baseRot.current = { x: o.rotation.x, y: o.rotation.y, z: o.rotation.z };
+          return o;
+        }
+      } catch {
+        /* try the next candidate */
+      }
+    }
+    return null;
+  }, [objectName]);
+
+  // Continuous slow spin (time-based) — guarantees movement / new perspectives.
+  useEffect(() => {
+    if (reduce || spin === 0) return;
+    let raf = 0;
+    let last = 0;
+    const loop = (t: number) => {
+      raf = requestAnimationFrame(loop);
+      const o = ensureObj();
+      const sec = sectionRef.current;
+      if (!o || !sec) {
+        last = t;
+        return;
+      }
+      // only spin while the section is near the viewport
+      const r = sec.getBoundingClientRect();
+      if (r.bottom < -200 || r.top > window.innerHeight + 200) {
+        last = t;
+        return;
+      }
+      if (!last) last = t;
+      const dt = Math.min(0.05, (t - last) / 1000);
+      last = t;
+      try {
+        o.rotation[axis] += dt * spin;
+        appRef.current?.requestRender?.();
+      } catch {
+        /* runtime hiccup — ignore */
+      }
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [reduce, spin, axis, ensureObj]);
+
+  // Scroll-driven: scene fade/scale, optional scroll-rotation, copy reveal.
   useEffect(() => {
     if (reduce) {
       setHeadingOn(true);
       setRevealed(items.length);
       return;
     }
-    const dir = side === "left" ? 1 : -1;
     const unsub = progress.on("change", (v) => {
-      // scene — real 3D rotation + a slight tilt
-      const o = objRef.current;
-      if (o) {
+      const o = spin === 0 ? ensureObj() : null;
+      if (o && spin === 0) {
         try {
-          o.rotation.y = baseY.current + v * rotate * 1.5;
-          o.rotation.x = baseX.current + Math.sin(v * Math.PI) * 0.1;
+          o.rotation[axis] = baseRot.current[axis] + v * rotate;
           appRef.current?.requestRender?.();
         } catch {
-          /* runtime hiccup — ignore */
+          /* ignore */
         }
       }
-      // scene — enter (fade + scale), then drift aside to make room for copy
       const enter = clamp(v / 0.14);
-      const drift = clamp((v - 0.3) / 0.5);
       const w = sceneWrapRef.current;
       if (w) {
         w.style.opacity = String(enter);
-        w.style.transform = `translateX(${dir * drift * 7}vw) scale(${1.07 - enter * 0.07 - drift * 0.05})`;
+        w.style.transform = `translateX(${baseTx}vw) scale(${1.07 - enter * 0.07})`;
       }
-      // scrim fades in under the copy
       if (scrimRef.current)
         scrimRef.current.style.opacity = String(clamp((v - 0.24) / 0.22));
-      // copy — heading early, cards after the scene's intro
       setHeadingOn(v > 0.08);
       const r = (v - 0.34) / 0.56;
       setRevealed(r <= 0 ? 0 : Math.min(items.length, Math.floor(r * items.length) + 1));
     });
     return () => unsub();
-  }, [progress, reduce, rotate, items.length, side]);
+  }, [progress, reduce, rotate, spin, axis, baseTx, items.length, ensureObj]);
 
   const onReady = (app: Application) => {
     appRef.current = app;
-    try {
-      const o = app.findObjectByName(objectName) as unknown as Rotatable | undefined;
-      if (o) {
-        objRef.current = o;
-        baseY.current = o.rotation.y;
-        baseX.current = o.rotation.x;
-      }
-    } catch {
-      /* findObjectByName can throw on some scenes — degrade to no rotation */
-    }
+    ensureObj();
   };
 
   const dirScrim =
@@ -120,29 +166,26 @@ export function SplineShowcase({
 
   const Backdrop = (
     <>
-      {/* scene — positioned by THIS wrapper (SplineLazy fills it) so it never collapses */}
       <div
         ref={sceneWrapRef}
         className="absolute"
         style={{
           inset: "-7%",
           opacity: reduce ? 1 : 0,
+          transform: `translateX(${baseTx}vw)`,
           willChange: "transform, opacity",
         }}
       >
         <SplineLazy scene={scene} onReady={onReady} className="w-full h-full" />
       </div>
-      {/* radial edge-fade — melts the canvas into the section */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none"
         style={{
           zIndex: 1,
-          background:
-            "radial-gradient(ellipse 82% 86% at 50% 47%, transparent 34%, var(--k-bg) 88%)",
+          background: `radial-gradient(ellipse 80% 86% at ${sceneCx} 47%, transparent 34%, var(--k-bg) 88%)`,
         }}
       />
-      {/* top + bottom blend into neighbouring sections */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none"
@@ -152,7 +195,6 @@ export function SplineShowcase({
             "linear-gradient(180deg, var(--k-bg) 0%, transparent 15%, transparent 85%, var(--k-bg) 100%)",
         }}
       />
-      {/* directional legibility scrim — fades in with the copy */}
       <div
         ref={scrimRef}
         aria-hidden
@@ -162,62 +204,8 @@ export function SplineShowcase({
     </>
   );
 
-  const Item = ({ it, on }: { it: ShowcaseItem; on: boolean }) => (
-    <div
-      className="flex items-start gap-4 p-4 md:p-5"
-      style={{
-        borderLeft: `2px solid ${on ? "var(--k-accent)" : "transparent"}`,
-        background: on ? "rgba(10,10,10,0.45)" : "transparent",
-        backdropFilter: on ? "blur(6px)" : undefined,
-        WebkitBackdropFilter: on ? "blur(6px)" : undefined,
-        opacity: on ? 1 : 0,
-        transform: `translate(${on ? 0 : side === "left" ? -26 : 26}px, ${on ? 0 : 20}px)`,
-        transition:
-          "opacity 0.55s cubic-bezier(.16,1,.3,1), transform 0.55s cubic-bezier(.16,1,.3,1), background 0.55s ease, border-color 0.55s ease",
-      }}
-    >
-      <span
-        style={{
-          fontFamily: T.sans,
-          fontWeight: 800,
-          fontSize: "clamp(1.3rem,2vw,1.9rem)",
-          lineHeight: 0.9,
-          letterSpacing: "-0.03em",
-          color: "var(--k-accent)",
-          flexShrink: 0,
-        }}
-      >
-        {it.n}
-      </span>
-      <div>
-        <h3
-          style={{
-            fontFamily: T.sans,
-            fontWeight: 700,
-            fontSize: "clamp(1rem,1.4vw,1.25rem)",
-            letterSpacing: "-0.02em",
-            textTransform: "uppercase",
-            color: "var(--k-fg)",
-          }}
-        >
-          {it.title}
-        </h3>
-        <p
-          className="mt-1.5"
-          style={{
-            fontFamily: T.sans,
-            fontSize: "0.9rem",
-            lineHeight: 1.5,
-            color: "var(--k-muted)",
-            maxWidth: "42ch",
-          }}
-        >
-          {it.desc}
-        </p>
-      </div>
-    </div>
-  );
-
+  // Cards — rendered inline (NOT a nested component) so the same DOM nodes
+  // update and the blur/fade/slide transition actually plays.
   const Copy = (
     <div
       className="w-full flex"
@@ -228,8 +216,7 @@ export function SplineShowcase({
           style={{
             opacity: headingOn ? 1 : 0,
             transform: `translateY(${headingOn ? 0 : 18}px)`,
-            transition:
-              "opacity 0.7s cubic-bezier(.16,1,.3,1), transform 0.7s cubic-bezier(.16,1,.3,1)",
+            transition: `opacity 0.7s ${EASE}, transform 0.7s ${EASE}`,
           }}
         >
           <div style={{ marginBottom: 16 }}>
@@ -243,15 +230,71 @@ export function SplineShowcase({
           )}
         </div>
         <div className="mt-7 flex flex-col gap-2.5">
-          {items.map((it, i) => (
-            <Item key={it.n} it={it} on={i < revealed} />
-          ))}
+          {items.map((it, i) => {
+            const on = i < revealed;
+            return (
+              <div
+                key={it.n}
+                className="flex items-start gap-4 p-4 md:p-5"
+                style={{
+                  borderLeft: `2px solid ${on ? "var(--k-accent)" : "transparent"}`,
+                  background: on ? "rgba(10,10,10,0.45)" : "transparent",
+                  backdropFilter: on ? "blur(6px)" : "none",
+                  WebkitBackdropFilter: on ? "blur(6px)" : "none",
+                  opacity: on ? 1 : 0,
+                  filter: on ? "blur(0px)" : "blur(12px)",
+                  transform: `translate(${on ? 0 : side === "left" ? -16 : 16}px, ${on ? 0 : 16}px)`,
+                  willChange: "opacity, transform, filter",
+                  transition: `opacity 0.8s ${EASE}, transform 0.8s ${EASE}, filter 0.8s ${EASE}, background 0.6s ease, border-color 0.6s ease`,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: T.sans,
+                    fontWeight: 800,
+                    fontSize: "clamp(1.3rem,2vw,1.9rem)",
+                    lineHeight: 0.9,
+                    letterSpacing: "-0.03em",
+                    color: "var(--k-accent)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {it.n}
+                </span>
+                <div>
+                  <h3
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: 700,
+                      fontSize: "clamp(1rem,1.4vw,1.25rem)",
+                      letterSpacing: "-0.02em",
+                      textTransform: "uppercase",
+                      color: "var(--k-fg)",
+                    }}
+                  >
+                    {it.title}
+                  </h3>
+                  <p
+                    className="mt-1.5"
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.9rem",
+                      lineHeight: 1.5,
+                      color: "var(--k-muted)",
+                      maxWidth: "42ch",
+                    }}
+                  >
+                    {it.desc}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 
-  /* Static full-bleed — reduced-motion */
   if (reduce) {
     return (
       <section
@@ -280,7 +323,6 @@ export function SplineShowcase({
     );
   }
 
-  /* Pinned full-bleed flagship — desktop + mobile */
   return (
     <section
       ref={sectionRef}
