@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SmoothScroll } from "@/components/SmoothScroll";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { IntroSplash } from "@/components/IntroSplash";
+import { PageTransition } from "@/components/PageTransition";
 import { ScrollProgress } from "@/components/ScrollProgress";
 
 const SITE_URL = "https://nullshift.co.uk";
@@ -67,6 +68,7 @@ export default function MarketingLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <IntroSplash />
+      <PageTransition />
       <ScrollProgress />
       <SmoothScroll>{children}</SmoothScroll>
       <ConsentBanner />

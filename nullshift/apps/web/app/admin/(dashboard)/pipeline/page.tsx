@@ -4,6 +4,8 @@ import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
+import { PageHeader } from "@/components/app/AppKit";
+import { Reveal } from "@/components/kyma";
 
 /**
  * Lead pipeline (CRM-lite) — a board over leads.status. Lead detail surfaces the
@@ -178,10 +180,11 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
   const callConfirmed = lead.status === "call_booked";
   return (
     <div
+      className="k-kard-h"
       style={{
         position: "relative",
-        background: T.bg,
-        border: `1px solid ${T.border}`,
+        background: "var(--k-bg)",
+        border: "1px solid var(--k-border)",
         borderRadius: 0,
         padding: "11px 12px",
       }}
@@ -228,31 +231,53 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
           </form>
         ))}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <span
           style={{
             fontFamily: T.sans,
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: "0.85rem",
-            color: T.fg,
+            letterSpacing: "-0.01em",
+            textTransform: "uppercase",
+            color: "var(--k-fg)",
           }}
         >
           {lead.name || "—"}
         </span>
         {lead.lead_score != null && (
-          <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.primary }}>
+          <span
+            style={{
+              fontFamily: T.mono,
+              fontSize: "10px",
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+              color: "var(--k-accent)",
+            }}
+          >
             {lead.lead_score}
           </span>
         )}
       </div>
       {business && (
-        <div style={{ fontFamily: T.sans, fontSize: "11px", color: T.fg, marginTop: 1 }}>
+        <div
+          style={{
+            fontFamily: T.sans,
+            fontSize: "11px",
+            color: "var(--k-fg)",
+            marginTop: 1,
+          }}
+        >
           {business}
         </div>
       )}
       {lead.email && (
         <div
-          style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted, marginTop: 2 }}
+          style={{
+            fontFamily: T.mono,
+            fontSize: "10px",
+            color: "var(--k-muted)",
+            marginTop: 2,
+          }}
         >
           {lead.email}
         </div>
@@ -260,11 +285,11 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
       <div className="flex flex-wrap gap-1" style={{ marginTop: 8 }}>
         {lead.vertical && <Tag>{lead.vertical}</Tag>}
         {prefSlot && (
-          <Tag tone={callConfirmed ? T.primary : T.warning}>
+          <Tag tone={callConfirmed ? "accent" : "warning"}>
             {callConfirmed ? "Call" : "Call requested"} · {prefSlot}
           </Tag>
         )}
-        {spend && <Tag tone={T.warning}>{spend}</Tag>}
+        {spend && <Tag tone="warning">{spend}</Tag>}
         {pain && <Tag>{pain}</Tag>}
       </div>
       {describe && (
@@ -274,10 +299,10 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
             fontFamily: T.sans,
             fontSize: "11px",
             lineHeight: 1.45,
-            color: T.muted,
+            color: "var(--k-muted)",
             fontStyle: "italic",
             marginTop: 8,
-            borderLeft: `2px solid ${T.border}`,
+            borderLeft: "2px solid var(--k-accent)",
             paddingLeft: 8,
           }}
         >
@@ -294,7 +319,7 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
             fontSize: "9px",
             letterSpacing: "0.04em",
             textTransform: "uppercase",
-            color: T.primary,
+            color: lead.email ? "var(--k-accent)" : "var(--k-faint)",
             pointerEvents: "none",
           }}
         >
@@ -303,7 +328,7 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
         <div className="flex items-center gap-1.5">
           <form action={deleteLead}>
             <input type="hidden" name="id" value={lead.id} />
-            <button type="submit" style={miniBtn("transparent", T.danger)}>
+            <button type="submit" style={miniBtn(T.danger)}>
               Delete
             </button>
           </form>
@@ -311,7 +336,7 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
             <form action={setStatus}>
               <input type="hidden" name="id" value={lead.id} />
               <input type="hidden" name="status" value="lost" />
-              <button type="submit" style={miniBtn("transparent", T.muted)}>
+              <button type="submit" style={miniBtn("var(--k-muted)")}>
                 Lost
               </button>
             </form>
@@ -322,18 +347,32 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
   );
 }
 
-function Tag({ children, tone = T.muted }: { children: React.ReactNode; tone?: string }) {
+/** Square mono chip (tone-based) for lead signals — emerald/amber/muted only. */
+function Tag({
+  children,
+  tone = "muted",
+}: {
+  children: React.ReactNode;
+  tone?: "accent" | "warning" | "muted";
+}) {
+  const map: Record<string, { fg: string; bg: string }> = {
+    accent: { fg: "var(--k-accent)", bg: "rgba(16,185,129,0.12)" },
+    warning: { fg: T.warning, bg: "rgba(245,213,71,0.14)" },
+    muted: { fg: "var(--k-muted)", bg: "rgba(255,255,255,0.05)" },
+  };
+  const c = map[tone] ?? map.muted;
   return (
     <span
       style={{
         fontFamily: T.mono,
         fontSize: "9px",
-        letterSpacing: "0.04em",
-        color: tone,
-        background: `${tone}14`,
-        border: `1px solid ${tone}33`,
-        borderRadius: 999,
-        padding: "1px 7px",
+        fontWeight: 500,
+        letterSpacing: "0.06em",
+        textTransform: "uppercase",
+        color: c.fg,
+        background: c.bg,
+        borderRadius: 0,
+        padding: "2px 7px",
         position: "relative",
         zIndex: 2,
         pointerEvents: "none",
@@ -344,16 +383,17 @@ function Tag({ children, tone = T.muted }: { children: React.ReactNode; tone?: s
   );
 }
 
-const miniBtn = (bg: string, fg: string) => ({
+const miniBtn = (fg: string) => ({
   fontFamily: T.mono,
   fontSize: "10px",
-  letterSpacing: "0.04em",
+  fontWeight: 500,
+  letterSpacing: "0.08em",
   textTransform: "uppercase" as const,
   height: 26,
   paddingInline: 9,
-  background: bg,
+  background: "transparent",
   color: fg,
-  border: bg === "transparent" ? `1px solid ${T.border}` : "none",
+  border: "1px solid var(--k-border)",
   borderRadius: 0,
   cursor: "pointer",
 });
@@ -381,40 +421,18 @@ export default async function PipelinePage() {
 
   return (
     <div>
-      <div
-        style={{
-          fontFamily: T.mono,
-          fontSize: "10px",
-          letterSpacing: "0.2em",
-          textTransform: "uppercase",
-          color: T.primary,
-          marginBottom: 8,
-        }}
-      >
-        // Pipeline
-      </div>
-      <h1
-        style={{
-          fontFamily: T.display,
-          fontWeight: 600,
-          fontSize: "1.9rem",
-          color: T.fg,
-          marginBottom: 4,
-        }}
-      >
-        Lead pipeline
-      </h1>
-      <p
-        style={{
-          fontFamily: T.sans,
-          fontSize: "0.9rem",
-          color: T.muted,
-          marginBottom: 24,
-        }}
-      >
-        {leads.length} leads · click any card to open their client profile (booking,
-        brief, quote &amp; proposal).
-      </p>
+      <PageHeader
+        index="01"
+        label="Pipeline"
+        title="Lead pipeline"
+        lead={
+          <>
+            {leads.length} leads · click any card to open their client profile (booking,
+            brief, quote &amp; proposal).
+          </>
+        }
+        className="mb-8"
+      />
 
       <div
         style={{
@@ -424,51 +442,79 @@ export default async function PipelinePage() {
           alignItems: "start",
         }}
       >
-        {COLUMNS.map((col) => {
+        {COLUMNS.map((col, ci) => {
           const items = leads.filter((l) => l.status === col);
+          const live = col === "new" && items.length > 0;
           return (
-            <div
-              key={col}
-              style={{
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: T.r.lg,
-                padding: 12,
-              }}
-            >
+            <Reveal key={col} delay={ci * 0.05}>
               <div
-                className="flex items-center justify-between"
-                style={{ marginBottom: 10 }}
+                className="k-kard"
+                style={{
+                  background: "var(--k-surface)",
+                  border: "1px solid var(--k-border)",
+                  borderRadius: 0,
+                  padding: 12,
+                }}
               >
-                <span
+                <div
+                  className="flex items-center justify-between"
                   style={{
-                    fontFamily: T.mono,
-                    fontSize: "11px",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: T.muted,
+                    marginBottom: 12,
+                    paddingBottom: 10,
+                    borderBottom: "1px solid var(--k-border)",
                   }}
                 >
-                  {col.replace(/_/g, " ")}
-                </span>
-                <span style={{ fontFamily: T.mono, fontSize: "11px", color: T.faint }}>
-                  {items.length}
-                </span>
+                  <span
+                    className="inline-flex items-center gap-2"
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "11px",
+                      fontWeight: 500,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "var(--k-muted)",
+                    }}
+                  >
+                    {live && (
+                      <span
+                        className="k-livedot"
+                        aria-hidden
+                        style={{
+                          color: "var(--k-accent)",
+                          fontSize: "8px",
+                          lineHeight: 1,
+                        }}
+                      >
+                        ●
+                      </span>
+                    )}
+                    {col.replace(/_/g, " ")}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "11px",
+                      color: "var(--k-faint)",
+                    }}
+                  >
+                    {items.length}
+                  </span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {items.map((l) => (
+                    <Card
+                      key={l.id}
+                      lead={l}
+                      tenantId={
+                        l.email
+                          ? (tenantByEmail.get(l.email.trim().toLowerCase()) ?? null)
+                          : null
+                      }
+                    />
+                  ))}
+                </div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {items.map((l) => (
-                  <Card
-                    key={l.id}
-                    lead={l}
-                    tenantId={
-                      l.email
-                        ? (tenantByEmail.get(l.email.trim().toLowerCase()) ?? null)
-                        : null
-                    }
-                  />
-                ))}
-              </div>
-            </div>
+            </Reveal>
           );
         })}
       </div>

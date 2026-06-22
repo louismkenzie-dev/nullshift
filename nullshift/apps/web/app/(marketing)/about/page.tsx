@@ -5,6 +5,7 @@ import { Footer } from "@/components/Footer";
 import { Parallax } from "@/components/Parallax";
 import { NeuralField } from "@/components/NeuralField";
 import { T } from "@nullshift/ui/tokens";
+import { ClipReveal } from "@/components/anim/ClipReveal";
 import {
   Reveal,
   Section,
@@ -16,8 +17,6 @@ import {
   MonoTag,
   StatGrid,
   ServiceGrid,
-  CellGrid,
-  Cell,
   Watermark,
   CTABand,
   BookingPreview,
@@ -25,6 +24,8 @@ import {
   type ServiceItem,
   type Stat,
 } from "@/components/kyma";
+import { ProcessTimeline } from "@/components/ProcessTimeline";
+import { ScrollDrivenText } from "@/components/ScrollDrivenText";
 
 export const metadata: Metadata = {
   title: "About — Nullshift",
@@ -221,12 +222,12 @@ export default function AboutPage() {
 
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-16 items-center">
               <div>
-                <Reveal delay={0.05}>
+                <ClipReveal delay={0.05}>
                   <Display as="h1" size="xl" style={{ maxWidth: "16ch" }}>
                     We build the agentic AI your business{" "}
                     <span style={{ color: "var(--k-accent)" }}>[owns].</span>
                   </Display>
-                </Reveal>
+                </ClipReveal>
                 <Reveal delay={0.1}>
                   <Lead
                     className="mt-7"
@@ -388,6 +389,11 @@ export default function AboutPage() {
           </div>
         </Section>
 
+        {/* ═══════════════ STATEMENT (scroll-driven horizontal, ANIM 11) ═══════════════ */}
+        <Section theme="cream" pad="md" topBorder bare>
+          <ScrollDrivenText text="Humans on the work that matters — agents on everything else." />
+        </Section>
+
         {/* ═══════════════ 03 — WHAT WE BUILD (cream services) ═══════════════ */}
         <Section theme="cream" pad="lg" topBorder>
           <Reveal>
@@ -423,53 +429,9 @@ export default function AboutPage() {
               lead="A clear path from first conversation to autonomous systems you own outright. We do the finding, the building and the running."
             />
           </Reveal>
-          <Reveal delay={0.08}>
-            <div className="mt-12">
-              <CellGrid cols={4}>
-                {PROCESS.map((step) => (
-                  <Cell key={step.num} className="gap-4">
-                    <span
-                      style={{
-                        fontFamily: T.mono,
-                        fontWeight: 500,
-                        fontSize: "1.6rem",
-                        lineHeight: 1,
-                        color: "var(--k-accent)",
-                      }}
-                    >
-                      {step.num}
-                    </span>
-                    <h3
-                      style={{
-                        fontFamily: T.sans,
-                        fontWeight: 700,
-                        fontSize: "clamp(1.1rem,1.6vw,1.4rem)",
-                        letterSpacing: "-0.02em",
-                        textTransform: "uppercase",
-                        color: "var(--k-fg)",
-                      }}
-                    >
-                      {step.title}
-                    </h3>
-                    <div
-                      className="h-px w-5"
-                      style={{ background: "var(--k-border-strong)" }}
-                    />
-                    <p
-                      style={{
-                        fontFamily: T.sans,
-                        fontSize: "0.88rem",
-                        lineHeight: 1.5,
-                        color: "var(--k-muted)",
-                      }}
-                    >
-                      {step.desc}
-                    </p>
-                  </Cell>
-                ))}
-              </CellGrid>
-            </div>
-          </Reveal>
+          <div className="mt-12">
+            <ProcessTimeline steps={PROCESS} />
+          </div>
           <div className="mt-7">
             <MonoTag>You bring the problem · we bring the system</MonoTag>
           </div>

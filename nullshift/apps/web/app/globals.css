@@ -57,81 +57,6 @@
   --ac: var(--primary); /* asset accent → brand emerald  */
 }
 
-@keyframes ns-wobble {
-  0%,
-  100% {
-    transform: rotateX(20deg) rotateY(-29deg);
-  }
-  50% {
-    transform: rotateX(15deg) rotateY(-20deg);
-  }
-}
-@keyframes ns-zbob {
-  0%,
-  100% {
-    transform: translateZ(-7px);
-  }
-  50% {
-    transform: translateZ(9px);
-  }
-}
-@keyframes ns-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@keyframes ns-spin-rev {
-  to {
-    transform: rotate(-360deg);
-  }
-}
-@keyframes ns-flip {
-  to {
-    transform: rotateX(360deg);
-  }
-}
-@keyframes ns-corepulse {
-  0%,
-  100% {
-    transform: scale(1);
-    filter: brightness(1);
-  }
-  50% {
-    transform: scale(1.14);
-    filter: brightness(1.35);
-  }
-}
-@keyframes ns-draw {
-  0% {
-    stroke-dashoffset: 100;
-  }
-  100% {
-    stroke-dashoffset: 0;
-  }
-}
-@keyframes ns-travel {
-  to {
-    offset-distance: 100%;
-  }
-}
-@keyframes ns-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-9px);
-  }
-}
-@keyframes ns-nodepulse {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 1;
-  }
-}
 @keyframes ns-devwob {
   0%,
   100% {
@@ -139,20 +64,6 @@
   }
   50% {
     transform: rotateY(-25deg) rotateX(9deg) translateY(-8px);
-  }
-}
-@keyframes ns-grid {
-  to {
-    background-position: 0 36px;
-  }
-}
-@keyframes ns-breath {
-  0%,
-  100% {
-    opacity: 0.45;
-  }
-  50% {
-    opacity: 0.9;
   }
 }
 
@@ -198,36 +109,6 @@ html.lenis body {
   border-color: var(--danger);
 }
 
-/* ── Sticky-stacking uniform cards (home page) ───────────────── */
-:root {
-  --card-h: 80vh;
-}
-
-.sticky-stick {
-  position: sticky;
-  top: calc((100vh - var(--card-h)) / 2);
-  margin-bottom: 12vh;
-}
-.sticky-stick:last-of-type {
-  margin-bottom: 0;
-}
-
-.glass-card > section {
-  background-color: transparent !important;
-  width: 100%;
-  height: 100%;
-}
-
-@media (max-width: 767px) {
-  :root {
-    --card-h: auto;
-  }
-  .sticky-stick {
-    position: static;
-    margin-bottom: 16px;
-  }
-}
-
 /* ── Hero glow animation ─────────────────────────────────────── */
 @keyframes hero-glow-pulse {
   0%,
@@ -244,31 +125,6 @@ html.lenis body {
     0 0 12px color-mix(in oklab, #10b981 72%, transparent),
     0 0 34px color-mix(in oklab, #10b981 52%, transparent),
     0 0 74px color-mix(in oklab, #10b981 32%, transparent);
-}
-
-/* ── Noise layer ─────────────────────────────────────────────── */
-.noise-layer {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 200;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px;
-}
-
-/* ── Pulse dot ───────────────────────────────────────────────── */
-@keyframes pulse-dot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
-  }
-}
-.pulse-dot {
-  animation: pulse-dot 2.5s ease-in-out infinite;
 }
 
 /* ── Halo eyebrow (reusable class) ──────────────────────────── */
@@ -291,13 +147,6 @@ html.lenis body {
   background-color: var(--primary);
   box-shadow: 0 0 0 4px var(--primary-soft);
   flex-shrink: 0;
-}
-
-/* ── ScrollVideoSection — text panel glass backdrop ─── */
-.scroll-panel-glass {
-  padding: 22px 26px;
-  border-radius: 12px;
-  /* no background on desktop — text sits cleanly over the dark bg */
 }
 
 /* ── Lead-magnet calculator range sliders (emerald) ─────────── */
@@ -329,185 +178,6 @@ html.lenis body {
   background: var(--primary);
   cursor: pointer;
   box-shadow: 0 0 0 4px var(--primary-soft);
-}
-
-/* ── ScrollVideoSection — graphic shell size (responsive) ─── */
-.relight-shell {
-  width: clamp(320px, 60vw, 680px);
-  height: clamp(320px, 60vw, 680px);
-}
-
-/* ── Cinematic "systems constellation" — scroll-scrubbed via --p (0→1).
-   No JS per frame; CSS calc()/clamp() off the inherited --p does the work. */
-.cs-stage {
-  position: relative;
-}
-.cs-embers {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-}
-.cs-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-  overflow: visible;
-}
-
-/* core glow — blooms as the section resolves */
-.cs-glow {
-  filter: blur(46px);
-  opacity: clamp(0.05, calc(0.06 + var(--p, 0) * 0.42), 0.5);
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scale(clamp(0.6, calc(0.6 + var(--p, 0) * 0.6), 1.15));
-}
-
-/* orbital rings — draw in, then rotate gently with scroll */
-.cs-rings {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: rotate(calc(var(--p, 0) * 24deg));
-}
-.cs-rings ellipse {
-  fill: none;
-  stroke: #10b981;
-  stroke-width: 1;
-  opacity: clamp(0, calc((var(--p, 0) - 0.04) * 4), 0.4);
-  vector-effect: non-scaling-stroke;
-}
-.cs-rings ellipse:nth-child(2) {
-  stroke: rgba(255, 255, 255, 0.1);
-  opacity: clamp(0, calc((var(--p, 0) - 0.08) * 3.5), 0.5);
-}
-
-/* wires core → node, drawn with dash offset as each node reveals */
-.cs-line {
-  stroke: color-mix(in oklab, #10b981 60%, transparent);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-  stroke-dasharray: var(--len);
-  stroke-dashoffset: calc(
-    var(--len) * clamp(0, calc(1 - (var(--p, 0) - var(--t)) * 6), 1)
-  );
-  opacity: clamp(0, calc((var(--p, 0) - var(--t)) * 6), 0.55);
-}
-
-/* nodes — fade + grow from their own centre as the constellation populates */
-.cs-node {
-  opacity: clamp(0, calc((var(--p, 0) - var(--t)) * 8), 1);
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scale(clamp(0.4, calc(0.4 + (var(--p, 0) - var(--t)) * 8 * 0.6), 1));
-}
-.cs-node-ring {
-  fill: rgba(16, 185, 129, 0.1);
-  stroke: color-mix(in oklab, #10b981 45%, transparent);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-.cs-dot {
-  fill: #34d399;
-  filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.8));
-  animation: cs-dot-pulse 3.2s ease-in-out infinite;
-}
-@keyframes cs-dot-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
-}
-.cs-label {
-  font-family: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  fill: #9aa0ae;
-}
-
-/* core pill — resolves "from nothing" first */
-.cs-pill {
-  transform-box: fill-box;
-  transform-origin: center;
-  opacity: clamp(0, calc(var(--p, 0) * 7), 1);
-  transform: scale(clamp(0.66, calc(0.66 + var(--p, 0) * 2.4), 1));
-  filter: drop-shadow(0 0 14px rgba(16, 185, 129, 0.4));
-}
-
-@media (max-width: 899px) {
-  .cs-label {
-    font-size: 16px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .cs-glow,
-  .cs-rings,
-  .cs-line,
-  .cs-node,
-  .cs-pill {
-    transition: none;
-  }
-  .cs-dot {
-    animation: none;
-  }
-}
-
-/* ── ScrollVideoSection — desktop vs mobile text layout ─────────
-   Desktop: text floats over the graphic (left / right).
-   Mobile: graphic shrinks and centres; text stacks ABOVE (head)
-   and BELOW (body) it so nothing overlaps the 3D piece. */
-.svs-mobile {
-  display: none;
-}
-
-.svs-mobile-top,
-.svs-mobile-bottom {
-  position: absolute;
-  left: 0;
-  right: 0;
-  display: grid; /* single cell — panels stack & crossfade */
-  place-items: center;
-  padding: 0 24px;
-  z-index: 10;
-  pointer-events: none;
-}
-.svs-mobile-top {
-  top: clamp(72px, 12vh, 130px);
-}
-.svs-mobile-bottom {
-  bottom: clamp(60px, 10vh, 120px);
-}
-.svs-mobile-head,
-.svs-mobile-body {
-  grid-area: 1 / 1;
-  text-align: center;
-  width: 100%;
-}
-.svs-mobile-body {
-  max-width: 40ch;
-  margin: 0 auto;
-}
-
-@media (max-width: 899px) {
-  .svs-desktop-panels {
-    display: none;
-  }
-  .svs-mobile {
-    display: block;
-  }
-  .svs-scroll-hint {
-    display: none !important;
-  } /* override inline display:flex */
-  .relight-shell {
-    width: min(80vw, 320px);
-    height: min(80vw, 320px);
-  }
 }
 
 /* ── Lead-qualification funnel (/start) ──────────────────────── */
@@ -737,7 +407,7 @@ html.lenis body {
   flex-shrink: 0;
   align-items: center;
   gap: 0;
-  animation: k-marquee 42s linear infinite;
+  animation: k-marquee var(--mq-speed, 42s) linear infinite;
   will-change: transform;
 }
 @keyframes k-marquee {
@@ -745,32 +415,29 @@ html.lenis body {
     transform: translateX(-50%);
   }
 }
-.k-marquee:hover .k-marquee-track {
+/* alternating-row reverse direction */
+@keyframes k-marquee-rev {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.k-marquee[data-dir="right"] .k-marquee-track {
+  animation-name: k-marquee-rev;
+}
+/* only strips that opt in (large dividers) pause on hover */
+.k-marquee[data-pause="true"]:hover .k-marquee-track {
   animation-play-state: paused;
 }
-
-/* Ambient textures ────────────────────────────────────────────── */
-.k-dotgrid {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
-  background-size: 22px 22px;
-}
-.k-linegrid {
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 64px 64px;
-}
-
-/* Card hover ───────────────────────────────────────────────────── */
-.k-card {
-  transition:
-    border-color 0.18s ease,
-    background-color 0.18s ease,
-    transform 0.18s ease;
-}
-.k-card-hover:hover {
-  border-color: var(--border-strong);
-  background: var(--elevated);
+/* brand strip — full-bleed accent band, dark text, no edge fade (ANIM 16) */
+.k-marquee[data-variant="brand"] {
+  background: var(--k-accent);
+  color: var(--k-on-accent);
+  -webkit-mask-image: none;
+  mask-image: none;
+  padding-block: 12px;
 }
 
 /* Footer / quiet links ─────────────────────────────────────────── */
@@ -802,6 +469,78 @@ html.lenis body {
   transform: rotate(45deg);
 }
 
+/* Blinking eyebrow cursor ──────────────────────────────────────── */
+.k-eyebrow-cursor {
+  animation: k-blink 1.15s steps(1, end) infinite;
+}
+@keyframes k-blink {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  56%,
+  100% {
+    opacity: 0.18;
+  }
+}
+
+/* Pulsing nav "live" dot ────────────────────────────────────────── */
+.k-livedot {
+  animation: k-livedot 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes k-livedot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Blinking clock colon (nav live clock, ANIM 14) ───────────────── */
+.k-clock-colon {
+  animation: k-clock-colon 1s steps(1, end) infinite;
+}
+@keyframes k-clock-colon {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0.3;
+  }
+}
+
+/* Diagonal hatch texture — theme-aware, for inactive cells (ANIM 17) */
+.k-hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--k-fg) 0,
+    var(--k-fg) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+  opacity: 0.06;
+}
+
+/* Full-screen menu links — lean right on hover, dim siblings (ANIM 7/8) */
+.k-menu-links a {
+  transition:
+    opacity 0.2s ease,
+    transform 0.15s ease;
+}
+.k-menu-links:hover a {
+  opacity: 0.4;
+}
+.k-menu-links a:hover {
+  opacity: 1;
+  transform: translateX(12px);
+}
+
 /* ── Reduced motion ──────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -812,6 +551,11 @@ html.lenis body {
   }
   .k-marquee-track {
     animation: none;
+  }
+  .k-eyebrow-cursor,
+  .k-livedot,
+  .k-clock-colon {
+    animation: none !important;
   }
 }
 
@@ -934,10 +678,6 @@ button[data-pending="true"] {
   background-image: linear-gradient(90deg, var(--k-border) 0 1px, transparent 1px);
   background-size: 12.5% 100%;
 }
-.k-hgrid {
-  background-image: linear-gradient(180deg, var(--k-border) 0 1px, transparent 1px);
-  background-size: 100% 56px;
-}
 
 /* Pill buttons (Kyma uses fully-rounded 200px pills) */
 .kb {
@@ -1025,23 +765,51 @@ button[data-pending="true"] {
   color: var(--k-fg);
   text-decoration: none;
   overflow: hidden;
-  transition: border-color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
+/* accent fill sweeps in from the left on hover */
+.k-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--k-accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.35s var(--ease-out-expo);
+  z-index: 0;
+}
+/* persistent 2px accent underline */
 .k-bar::after {
   content: "";
   position: absolute;
   left: 0;
   bottom: 0;
   height: 2px;
-  width: 38%;
-  background: var(--k-accent);
-  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.k-bar:hover {
-  border-color: var(--k-fg);
-}
-.k-bar:hover::after {
   width: 100%;
+  background: var(--k-accent);
+  z-index: 1;
+}
+.k-bar > * {
+  position: relative;
+  z-index: 1;
+}
+.k-bar .k-bar-metatext {
+  color: var(--k-muted);
+  transition: color 0.2s ease;
+}
+.k-bar .k-arrow {
+  color: var(--k-accent);
+  transition: color 0.2s ease;
+}
+.k-bar:hover::before {
+  transform: scaleX(1);
+}
+.k-bar:hover,
+.k-bar:hover .k-bar-metatext,
+.k-bar:hover .k-arrow {
+  color: var(--k-on-accent);
 }
 
 /* Small pill tag (e.g. "+6", "LIVE") */
@@ -1097,60 +865,5 @@ button[data-pending="true"] {
 @media (prefers-reduced-motion: reduce) {
   .loader {
     animation-duration: 1.6s;
-  }
-}
-
-/* ── Intro splash ──────────────────────────────────────────────── */
-@keyframes ns-intro-pop {
-  0% {
-    opacity: 0;
-    transform: translateY(10px) scale(0.96);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-  }
-}
-@keyframes ns-intro-cell {
-  0%,
-  100% {
-    opacity: 0.06;
-  }
-  50% {
-    opacity: 0.85;
-  }
-}
-@keyframes ns-intro-bar {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-@keyframes ns-intro-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.25;
-  }
-}
-@keyframes ns-intro-line {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ns-intro-cell,
-  .ns-intro-bar,
-  .ns-intro-blink {
-    animation: none !important;
   }
 }

@@ -23,8 +23,8 @@ export function StageStepper({ stage }: { stage: string }) {
                 width: 7,
                 height: 7,
                 borderRadius: "50%",
-                background: done ? T.primary : T.border,
-                boxShadow: current ? `0 0 0 3px ${T.primarySoft}` : "none",
+                background: done ? "var(--k-accent)" : "var(--k-border-strong)",
+                boxShadow: current ? `0 0 0 3px rgba(16,185,129,0.18)` : "none",
                 flexShrink: 0,
               }}
             />
@@ -32,9 +32,13 @@ export function StageStepper({ stage }: { stage: string }) {
               style={{
                 fontFamily: T.mono,
                 fontSize: 10,
-                letterSpacing: "0.06em",
+                letterSpacing: "0.1em",
                 textTransform: "uppercase",
-                color: current ? T.primary : done ? T.fg : T.faint,
+                color: current
+                  ? "var(--k-accent)"
+                  : done
+                    ? "var(--k-fg)"
+                    : "var(--k-faint)",
               }}
             >
               {s.label}

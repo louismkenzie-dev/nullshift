@@ -50,10 +50,20 @@ const groups: NavGroup[] = [
   },
 ];
 
+// Mono uppercase label — the KYMA chrome voice.
+const monoLabel: React.CSSProperties = {
+  fontFamily: T.mono,
+  fontSize: "0.7rem",
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+};
+
 export function AdminNav({ email }: { email: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [time, setTime] = useState<{ h: string; m: string } | null>(null);
 
   // Lock body scroll while drawer is open
   useEffect(() => {
@@ -62,6 +72,24 @@ export function AdminNav({ email }: { email: string }) {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  // Live clock — ticks every second; colon blinks via CSS (.k-clock-colon).
+  useEffect(() => {
+    const tick = () => {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "Europe/London",
+      }).formatToParts(new Date());
+      const h = parts.find((p) => p.type === "hour")?.value ?? "00";
+      const m = parts.find((p) => p.type === "minute")?.value ?? "00";
+      setTime({ h, m });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   async function signOut() {
     const supabase = createClient();
@@ -79,10 +107,10 @@ export function AdminNav({ email }: { email: string }) {
     <>
       {/* ── Top bar ────────────────────────────────────────── */}
       <nav
-        className="sticky top-0 z-50 flex items-center justify-between px-5 h-14 border-b"
+        className="sticky top-0 z-50 flex items-center justify-between px-5 h-14"
         style={{
-          background: `${T.bg}f0`,
-          borderColor: T.border,
+          background: "rgba(10,10,10,0.72)",
+          borderBottom: "1px solid var(--k-border)",
           backdropFilter: "blur(14px)",
         }}
       >
@@ -95,33 +123,59 @@ export function AdminNav({ email }: { email: string }) {
           <LogoMark size={20} />
           <span
             style={{
-              fontFamily: T.display,
-              fontWeight: 600,
+              fontFamily: T.sans,
+              fontWeight: 700,
               fontSize: "1rem",
-              letterSpacing: "0.02em",
-              color: T.fg,
+              letterSpacing: "-0.01em",
+              textTransform: "uppercase",
+              color: "var(--k-fg)",
             }}
           >
             Nullshift
           </span>
           <span
             style={{
-              fontFamily: T.mono,
+              ...monoLabel,
               fontSize: "10px",
-              letterSpacing: "0.1em",
-              color: T.primary,
-              textTransform: "uppercase",
+              color: "var(--k-accent)",
             }}
           >
             / admin
           </span>
         </Link>
 
+        {/* Center status + live clock (desktop) */}
+        <div
+          className="hidden md:flex items-center gap-5"
+          style={{ ...monoLabel, fontSize: "0.66rem", color: "var(--k-muted)" }}
+        >
+          <span className="inline-flex items-center gap-2">
+            <span
+              className="k-livedot"
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 999,
+                background: "var(--k-accent)",
+                boxShadow: "0 0 0 3px rgba(16,185,129,0.13)",
+              }}
+            />
+            Ops hub · Live
+          </span>
+          {time && (
+            <span style={{ color: "var(--k-fg)" }} suppressHydrationWarning>
+              {time.h}
+              <span className="k-clock-colon">:</span>
+              {time.m}
+            </span>
+          )}
+        </div>
+
         {/* Hamburger — all screen sizes */}
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex flex-col justify-center items-center gap-[5px] w-9 h-9 transition-colors"
-          style={{ background: open ? T.surface2 : "transparent" }}
+          style={{ background: open ? "var(--k-surface)" : "transparent" }}
           aria-label="Open menu"
         >
           <span
@@ -129,7 +183,7 @@ export function AdminNav({ email }: { email: string }) {
               display: "block",
               width: 20,
               height: 1.5,
-              background: T.fg,
+              background: "var(--k-fg)",
               borderRadius: 0,
               transition: "transform .2s, opacity .2s",
               transform: open ? "translateY(6.5px) rotate(45deg)" : "none",
@@ -140,7 +194,7 @@ export function AdminNav({ email }: { email: string }) {
               display: "block",
               width: 20,
               height: 1.5,
-              background: T.fg,
+              background: "var(--k-fg)",
               borderRadius: 0,
               transition: "opacity .2s",
               opacity: open ? 0 : 1,
@@ -151,7 +205,7 @@ export function AdminNav({ email }: { email: string }) {
               display: "block",
               width: 20,
               height: 1.5,
-              background: T.fg,
+              background: "var(--k-fg)",
               borderRadius: 0,
               transition: "transform .2s, opacity .2s",
               transform: open ? "translateY(-6.5px) rotate(-45deg)" : "none",
@@ -178,8 +232,8 @@ export function AdminNav({ email }: { email: string }) {
         className="fixed top-0 right-0 bottom-0 z-50 flex flex-col"
         style={{
           width: "min(320px, 85vw)",
-          background: T.surface,
-          borderLeft: `1px solid ${T.border}`,
+          background: "var(--k-surface)",
+          borderLeft: "1px solid var(--k-border)",
           transform: open ? "translateX(0)" : "translateX(100%)",
           transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
         }}
@@ -187,27 +241,27 @@ export function AdminNav({ email }: { email: string }) {
         {/* Drawer header */}
         <div
           className="flex items-center justify-between px-6 h-14 shrink-0"
-          style={{ borderBottom: `1px solid ${T.border}` }}
+          style={{ borderBottom: "1px solid var(--k-border)" }}
         >
           <div className="flex items-center gap-2.5">
             <LogoMark size={18} />
             <span
               style={{
-                fontFamily: T.display,
-                fontWeight: 600,
+                fontFamily: T.sans,
+                fontWeight: 700,
                 fontSize: "0.95rem",
-                color: T.fg,
+                letterSpacing: "-0.01em",
+                textTransform: "uppercase",
+                color: "var(--k-fg)",
               }}
             >
               Nullshift
             </span>
             <span
               style={{
-                fontFamily: T.mono,
+                ...monoLabel,
                 fontSize: "9px",
-                letterSpacing: "0.1em",
-                color: T.primary,
-                textTransform: "uppercase",
+                color: "var(--k-accent)",
               }}
             >
               / admin
@@ -215,7 +269,13 @@ export function AdminNav({ email }: { email: string }) {
           </div>
           <button
             onClick={() => setOpen(false)}
-            style={{ color: T.muted, fontFamily: T.mono, fontSize: 20, lineHeight: 1 }}
+            style={{
+              color: "var(--k-muted)",
+              fontFamily: T.mono,
+              fontSize: 20,
+              lineHeight: 1,
+            }}
+            aria-label="Close menu"
           >
             ×
           </button>
@@ -231,7 +291,7 @@ export function AdminNav({ email }: { email: string }) {
                   fontSize: "9px",
                   letterSpacing: "0.2em",
                   textTransform: "uppercase",
-                  color: T.faint,
+                  color: "var(--k-faint)",
                   paddingLeft: "12px",
                   marginTop: "10px",
                   marginBottom: "6px",
@@ -248,35 +308,37 @@ export function AdminNav({ email }: { email: string }) {
                     onClick={() => setOpen(false)}
                     className="flex items-center gap-3 px-3 py-2.5 transition-colors"
                     style={{
-                      background: active ? `${T.primary}18` : "transparent",
-                      borderLeft: `2px solid ${active ? T.primary : "transparent"}`,
+                      background: active ? "rgba(16,185,129,0.10)" : "transparent",
+                      borderLeft: `2px solid ${active ? "var(--k-accent)" : "transparent"}`,
                     }}
                   >
                     <l.Icon
                       size={17}
                       strokeWidth={1.75}
-                      color={active ? T.primary : T.muted}
+                      color={active ? "var(--k-accent)" : "var(--k-muted)"}
                       style={{ flexShrink: 0 }}
                     />
                     <span
                       style={{
-                        fontFamily: T.sans,
+                        fontFamily: T.mono,
                         fontWeight: 500,
-                        fontSize: "0.9375rem",
-                        letterSpacing: "-0.005em",
-                        color: active ? T.primary : T.fg,
+                        fontSize: "0.78rem",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: active ? "var(--k-accent)" : "var(--k-fg)",
                       }}
                     >
                       {l.label}
                     </span>
                     {active && (
                       <span
+                        className="k-livedot"
                         style={{
                           marginLeft: "auto",
                           width: 6,
                           height: 6,
                           borderRadius: "50%",
-                          background: T.primary,
+                          background: "var(--k-accent)",
                         }}
                       />
                     )}
@@ -290,13 +352,13 @@ export function AdminNav({ email }: { email: string }) {
         {/* Drawer footer */}
         <div
           className="px-6 py-5 shrink-0 flex flex-col gap-3"
-          style={{ borderTop: `1px solid ${T.border}` }}
+          style={{ borderTop: "1px solid var(--k-border)" }}
         >
           <div
             style={{
               fontFamily: T.mono,
               fontSize: "10px",
-              color: T.muted,
+              color: "var(--k-muted)",
               letterSpacing: "0.06em",
             }}
           >
@@ -307,12 +369,11 @@ export function AdminNav({ email }: { email: string }) {
             className="w-full h-10 inline-flex items-center justify-center transition-opacity hover:opacity-90"
             onClick={() => setOpen(false)}
             style={{
-              fontFamily: T.mono,
+              ...monoLabel,
               fontSize: "11px",
               letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: T.fg,
-              border: `1px solid ${T.border}`,
+              color: "var(--k-fg)",
+              border: "1px solid var(--k-border)",
               borderRadius: 0,
             }}
           >
@@ -322,10 +383,9 @@ export function AdminNav({ email }: { email: string }) {
             onClick={signOut}
             className="w-full h-10 transition-opacity hover:opacity-90"
             style={{
-              fontFamily: T.mono,
+              ...monoLabel,
               fontSize: "11px",
               letterSpacing: "0.08em",
-              textTransform: "uppercase",
               color: T.danger,
               border: `1px solid ${T.danger}40`,
               borderRadius: 0,

@@ -20,7 +20,7 @@ export default async function DashboardLayout({
     return (
       <main
         className="min-h-screen flex items-center justify-center px-6"
-        style={{ background: T.bg }}
+        style={{ background: "var(--k-bg)" }}
       >
         <div className="text-center max-w-lg">
           <div
@@ -37,16 +37,18 @@ export default async function DashboardLayout({
           </div>
           <h1
             style={{
-              fontFamily: T.display,
-              fontWeight: 600,
+              fontFamily: T.sans,
+              fontWeight: 700,
               fontSize: "2rem",
-              color: T.fg,
+              letterSpacing: "-0.03em",
+              textTransform: "uppercase",
+              color: "var(--k-fg)",
               marginBottom: "12px",
             }}
           >
             ADMIN LOGIN ISN'T READY YET
           </h1>
-          <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
+          <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-muted)" }}>
             Missing environment variables: <code>{missing.join(", ")}</code>. Add them to{" "}
             <code>.env.local</code>, restart the dev server, then try the admin login
             again.
@@ -76,7 +78,7 @@ export default async function DashboardLayout({
     return (
       <main
         className="min-h-screen flex items-center justify-center px-6"
-        style={{ background: T.bg }}
+        style={{ background: "var(--k-bg)" }}
       >
         <div className="text-center max-w-md">
           <div
@@ -93,18 +95,21 @@ export default async function DashboardLayout({
           </div>
           <h1
             style={{
-              fontFamily: T.display,
-              fontWeight: 600,
+              fontFamily: T.sans,
+              fontWeight: 700,
               fontSize: "2rem",
-              color: T.fg,
+              letterSpacing: "-0.03em",
+              textTransform: "uppercase",
+              color: "var(--k-fg)",
               marginBottom: "12px",
             }}
           >
             NOT AUTHORISED
           </h1>
-          <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
-            The account <span style={{ color: T.fg }}>{user.email}</span> is not on the
-            admin allowlist. Add it to <code>ADMIN_EMAILS</code> in your environment.
+          <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-muted)" }}>
+            The account <span style={{ color: "var(--k-fg)" }}>{user.email}</span> is not
+            on the admin allowlist. Add it to <code>ADMIN_EMAILS</code> in your
+            environment.
           </p>
         </div>
       </main>
@@ -112,7 +117,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen relative" style={{ background: T.bg }}>
+    <div className="min-h-screen relative" style={{ background: "var(--k-bg)" }}>
       {/* Shared funnel atmosphere — the same ambient world as /start. */}
       <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
         <Atmosphere />

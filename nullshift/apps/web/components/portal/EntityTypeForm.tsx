@@ -99,10 +99,10 @@ export function EntityTypeForm({
     fontFamily: T.sans,
     fontSize: "0.9rem",
     padding: "10px 12px",
-    background: T.bg,
-    color: T.fg,
-    border: `1px solid ${T.border}`,
-    borderRadius: T.r.sm,
+    background: "var(--k-surface)",
+    color: "var(--k-fg)",
+    border: "1px solid var(--k-border)",
+    borderRadius: 0,
     outline: "none",
   } as const;
   const label = {
@@ -110,7 +110,16 @@ export function EntityTypeForm({
     fontSize: 10,
     letterSpacing: "0.1em",
     textTransform: "uppercase" as const,
-    color: T.muted,
+    color: "var(--k-muted)",
+  };
+  // Emerald focus ring on square inputs (client component → handlers allowed).
+  const focusOn = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.currentTarget.style.borderColor = "var(--k-accent)";
+    e.currentTarget.style.boxShadow = "0 0 0 3px rgba(16,185,129,0.25)";
+  };
+  const focusOff = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.currentTarget.style.borderColor = "var(--k-border)";
+    e.currentTarget.style.boxShadow = "none";
   };
 
   const opt = (value: string, text: string) => {
@@ -121,15 +130,17 @@ export function EntityTypeForm({
         onClick={() => setType(value)}
         style={{
           flex: "1 1 160px",
-          fontFamily: T.sans,
-          fontSize: "0.9rem",
-          fontWeight: 600,
-          padding: "12px 14px",
+          fontFamily: T.mono,
+          fontSize: "0.78rem",
+          fontWeight: 500,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          padding: "13px 14px",
           textAlign: "left",
-          background: active ? `${T.primary}1a` : T.bg,
-          color: active ? T.primary : T.fg,
-          border: `1px solid ${active ? T.primary : T.border}`,
-          borderRadius: T.r.md,
+          background: active ? "rgba(16,185,129,0.12)" : "var(--k-surface)",
+          color: active ? "var(--k-accent)" : "var(--k-fg)",
+          border: `1px solid ${active ? "var(--k-accent)" : "var(--k-border)"}`,
+          borderRadius: 0,
           cursor: "pointer",
         }}
       >
@@ -144,14 +155,14 @@ export function EntityTypeForm({
         className="flex items-center gap-3"
         style={{
           padding: "16px 18px",
-          background: `${T.primary}14`,
-          border: `1px solid ${T.primary}55`,
-          borderRadius: T.r.md,
+          background: "rgba(16,185,129,0.10)",
+          border: "1px solid rgba(16,185,129,0.4)",
+          borderRadius: 0,
         }}
       >
         <span
           aria-hidden
-          style={{ fontFamily: T.mono, color: T.primary, fontSize: "1.15rem" }}
+          style={{ fontFamily: T.mono, color: "var(--k-accent)", fontSize: "1.15rem" }}
         >
           ✓
         </span>
@@ -159,9 +170,11 @@ export function EntityTypeForm({
           <p
             style={{
               fontFamily: T.sans,
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: "0.95rem",
-              color: T.fg,
+              textTransform: "uppercase",
+              letterSpacing: "-0.01em",
+              color: "var(--k-fg)",
               margin: 0,
             }}
           >
@@ -171,7 +184,7 @@ export function EntityTypeForm({
             style={{
               fontFamily: T.sans,
               fontSize: "0.82rem",
-              color: T.muted,
+              color: "var(--k-muted)",
               margin: "2px 0 0",
             }}
           >
@@ -188,7 +201,14 @@ export function EntityTypeForm({
       <input type="hidden" name="entity_type" value={type} />
 
       <p
-        style={{ fontFamily: T.sans, fontSize: "0.95rem", color: T.fg, fontWeight: 600 }}
+        style={{
+          fontFamily: T.sans,
+          fontSize: "0.95rem",
+          color: "var(--k-fg)",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "-0.01em",
+        }}
       >
         {heading}
       </p>
@@ -199,7 +219,7 @@ export function EntityTypeForm({
 
       {limited && (
         <div className="flex flex-col gap-2" style={{ marginTop: 4 }}>
-          <p style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.muted }}>
+          <p style={{ fontFamily: T.sans, fontSize: "0.82rem", color: "var(--k-muted)" }}>
             As a limited company you&apos;ll sign a Data Processing Agreement — please
             confirm your registered details so we can complete it.
           </p>
@@ -210,6 +230,8 @@ export function EntityTypeForm({
               required={limited}
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
+              onFocus={focusOn}
+              onBlur={focusOff}
               placeholder="e.g. Acme Health Ltd"
               style={input}
             />
@@ -222,6 +244,8 @@ export function EntityTypeForm({
                 required={limited}
                 value={companyNumber}
                 onChange={(e) => setCompanyNumber(e.target.value)}
+                onFocus={focusOn}
+                onBlur={focusOff}
                 placeholder="e.g. 12345678"
                 style={input}
               />
@@ -232,6 +256,8 @@ export function EntityTypeForm({
                 name="country"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
+                onFocus={focusOn}
+                onBlur={focusOff}
                 placeholder="United Kingdom"
                 style={input}
               />
@@ -245,6 +271,8 @@ export function EntityTypeForm({
               rows={2}
               value={registeredAddress}
               onChange={(e) => setRegisteredAddress(e.target.value)}
+              onFocus={focusOn}
+              onBlur={focusOff}
               placeholder="Registered office address"
               style={{ ...input, resize: "vertical" }}
             />
@@ -253,7 +281,7 @@ export function EntityTypeForm({
       )}
 
       {type === "sole_trader" && (
-        <p style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.muted }}>
+        <p style={{ fontFamily: T.sans, fontSize: "0.82rem", color: "var(--k-muted)" }}>
           No separate DPA is needed — our standard data-processing terms apply (you accept
           them when you sign the proposal). We just need the data you&apos;ll collect.
         </p>
@@ -269,12 +297,16 @@ export function EntityTypeForm({
               rows={2}
               value={personalData}
               onChange={(e) => setPersonalData(e.target.value)}
+              onFocus={focusOn}
+              onBlur={focusOff}
               placeholder="e.g. patient names, emails, phone numbers, appointment details, payment references"
               style={{ ...input, resize: "vertical" }}
             />
           </label>
           <div className="flex items-center gap-2 flex-wrap">
-            <span style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.fg }}>
+            <span
+              style={{ fontFamily: T.sans, fontSize: "0.88rem", color: "var(--k-fg)" }}
+            >
               Will you process special-category data? (e.g. health)
             </span>
             <select
@@ -296,6 +328,8 @@ export function EntityTypeForm({
                 rows={2}
                 value={specialDetail}
                 onChange={(e) => setSpecialDetail(e.target.value)}
+                onFocus={focusOn}
+                onBlur={focusOff}
                 placeholder="e.g. health information needed to deliver clinical care"
                 style={{ ...input, resize: "vertical" }}
               />
@@ -310,17 +344,11 @@ export function EntityTypeForm({
       <button
         type="submit"
         disabled={!complete || pending}
-        className="self-start"
+        className="kb kb-primary self-start"
         style={{
-          fontFamily: T.sans,
-          fontWeight: 600,
-          fontSize: "0.9rem",
-          height: 44,
-          paddingInline: 22,
-          background: complete ? T.primary : T.surface2,
-          color: complete ? T.primaryFg : T.faint,
-          border: complete ? "none" : `1px solid ${T.border}`,
-          borderRadius: T.r.md,
+          background: complete ? "var(--k-accent)" : "var(--k-surface)",
+          color: complete ? "var(--k-on-accent)" : "var(--k-faint)",
+          border: complete ? "1px solid transparent" : "1px solid var(--k-border)",
           cursor: complete ? (pending ? "wait" : "pointer") : "not-allowed",
           opacity: pending ? 0.75 : 1,
         }}

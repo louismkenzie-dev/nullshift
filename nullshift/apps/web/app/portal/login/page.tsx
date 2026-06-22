@@ -7,16 +7,18 @@ import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { LogoMark } from "@nullshift/ui/components/Logo";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
+import { Eyebrow, Display } from "@/components/kyma";
+import { Reveal } from "@/components/Reveal";
 
-/* ── Shared input style (Halo) ─────────────────────────────── */
+/* ── Shared input style (KYMA — square, hairline, emerald focus) ── */
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  height: 40,
-  background: T.bg,
-  border: `1px solid ${T.border}`,
-  borderRadius: T.r.md,
+  height: 44,
+  background: "var(--k-surface)",
+  border: "1px solid var(--k-border)",
+  borderRadius: 0,
   padding: "0 14px",
-  color: T.fg,
+  color: "var(--k-fg)",
   fontFamily: T.sans,
   fontSize: "0.9375rem",
   letterSpacing: "-0.005em",
@@ -24,12 +26,21 @@ const inputStyle: React.CSSProperties = {
   transition: `border-color ${T.duration.base} ${T.ease}, box-shadow ${T.duration.base} ${T.ease}`,
 };
 
+const labelStyle: React.CSSProperties = {
+  fontFamily: T.mono,
+  fontSize: "0.66rem",
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  color: "var(--k-muted)",
+};
+
 function onFocus(e: React.FocusEvent<HTMLInputElement>) {
   e.currentTarget.style.borderColor = T.primary;
   e.currentTarget.style.boxShadow = T.shadow.focus;
 }
 function onBlur(e: React.FocusEvent<HTMLInputElement>) {
-  e.currentTarget.style.borderColor = T.border;
+  e.currentTarget.style.borderColor = "var(--k-border)";
   e.currentTarget.style.boxShadow = "none";
 }
 
@@ -70,81 +81,50 @@ function LoginForm() {
   }
 
   if (!hasSupabaseBrowserConfig()) {
-    return <p style={{ fontFamily: T.sans, color: T.muted }}>Auth not configured.</p>;
+    return (
+      <p style={{ fontFamily: T.sans, color: "var(--k-muted)" }}>Auth not configured.</p>
+    );
   }
 
   return (
     <main
       className="min-h-screen flex items-center justify-center px-6"
-      style={{ background: T.bg }}
+      style={{ background: "var(--k-bg)" }}
     >
-      <div className="w-full max-w-sm">
+      <Reveal className="w-full max-w-sm">
         {/* Brand */}
         <div className="flex items-center gap-2.5 mb-8 justify-center">
           <LogoMark size={26} />
           <span
             style={{
               fontFamily: T.display,
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: "1.1rem",
               letterSpacing: "-0.01em",
-              color: T.fg,
+              textTransform: "uppercase",
+              color: "var(--k-fg)",
             }}
           >
             Nullshift
           </span>
         </div>
 
-        {/* Eyebrow */}
-        <div className="mb-6 text-center">
-          <span
-            className="inline-flex items-center gap-2"
-            style={{
-              fontFamily: T.sans,
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: T.muted,
-            }}
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: T.primary,
-                boxShadow: `0 0 0 4px ${T.primarySoft}`,
-                display: "inline-block",
-              }}
-            />
-            Client portal — sign in
-          </span>
+        {/* Eyebrow + title */}
+        <div className="mb-7 flex flex-col items-center gap-3 text-center">
+          <Eyebrow index="01" label="Client Portal" align="center" />
+          <Display as="h1" size="md">
+            Sign in
+          </Display>
         </div>
 
         {/* Card */}
         <form
           onSubmit={onSubmit}
-          className="flex flex-col gap-4 p-8 rounded-none"
-          style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            boxShadow: T.shadow.md,
-          }}
+          className="k-kard flex flex-col gap-4 p-8"
+          style={{ background: "var(--k-surface)" }}
         >
           <div className="flex flex-col gap-1.5">
-            <label
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.75rem",
-                fontWeight: 500,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: T.muted,
-              }}
-            >
-              Email
-            </label>
+            <label style={labelStyle}>Email</label>
             <input
               type="email"
               required
@@ -158,18 +138,7 @@ function LoginForm() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.75rem",
-                fontWeight: 500,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: T.muted,
-              }}
-            >
-              Password
-            </label>
+            <label style={labelStyle}>Password</label>
             <input
               type="password"
               required
@@ -183,7 +152,14 @@ function LoginForm() {
           </div>
 
           {error && (
-            <p style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.danger }}>
+            <p
+              style={{
+                fontFamily: T.mono,
+                fontSize: "0.7rem",
+                letterSpacing: "0.04em",
+                color: T.danger,
+              }}
+            >
               {error}
             </p>
           )}
@@ -191,30 +167,13 @@ function LoginForm() {
           <button
             type="submit"
             disabled={busy}
-            className="mt-2 h-10 font-medium cursor-pointer"
-            style={{
-              width: "100%",
-              fontFamily: T.sans,
-              fontSize: "0.9375rem",
-              fontWeight: 500,
-              letterSpacing: "-0.005em",
-              background: T.primary,
-              color: T.primaryFg,
-              borderRadius: T.r.md,
-              border: "none",
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
-              transition: `background ${T.duration.base} ${T.ease}`,
-              opacity: busy ? 0.6 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (!busy)
-                (e.currentTarget as HTMLElement).style.background = T.primaryHover;
-            }}
-            onMouseLeave={(e) => {
-              if (!busy) (e.currentTarget as HTMLElement).style.background = T.primary;
-            }}
+            className="kb kb-primary mt-2"
+            style={{ width: "100%", opacity: busy ? 0.6 : 1 }}
           >
-            {busy ? "Signing in…" : "Sign in →"}
+            {busy ? "Signing in…" : "Sign in"}
+            <span className="k-arrow" aria-hidden>
+              →
+            </span>
           </button>
         </form>
 
@@ -222,10 +181,12 @@ function LoginForm() {
           <Link
             href="/portal/signup"
             style={{
-              fontFamily: T.sans,
-              fontSize: "0.8125rem",
+              fontFamily: T.mono,
+              fontSize: "0.68rem",
               fontWeight: 500,
-              color: T.primary,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--k-accent)",
               textDecoration: "none",
             }}
           >
@@ -234,23 +195,27 @@ function LoginForm() {
           <Link
             href="/"
             style={{
-              fontFamily: T.sans,
-              fontSize: "0.8125rem",
-              color: T.muted,
+              fontFamily: T.mono,
+              fontSize: "0.66rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--k-muted)",
               textDecoration: "none",
             }}
           >
             ← Back to website
           </Link>
         </div>
-      </div>
+      </Reveal>
     </main>
   );
 }
 
 export default function PortalLoginPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: T.bg }} />}>
+    <Suspense
+      fallback={<div style={{ minHeight: "100vh", background: "var(--k-bg)" }} />}
+    >
       <LoginForm />
     </Suspense>
   );

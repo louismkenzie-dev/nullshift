@@ -7,6 +7,7 @@ import { NeuralField } from "@/components/NeuralField";
 import { Parallax } from "@/components/Parallax";
 import { Logo, LogoMark } from "@nullshift/ui/components/Logo";
 import { T } from "@nullshift/ui/tokens";
+import { ClipReveal } from "@/components/anim/ClipReveal";
 import {
   Reveal,
   Section,
@@ -678,11 +679,11 @@ export default function BrandPage() {
             <Reveal>
               <Eyebrow index="00" label="Design system" />
             </Reveal>
-            <Reveal delay={0.05}>
+            <ClipReveal delay={0.05}>
               <Display as="h1" size="hero" className="mt-6" style={{ maxWidth: "13ch" }}>
                 Brand <span style={{ color: "var(--k-accent)" }}>system.</span>
               </Display>
-            </Reveal>
+            </ClipReveal>
             <Reveal delay={0.1}>
               <Lead className="mt-7" style={{ maxWidth: "58ch", fontSize: "1.125rem" }}>
                 The single source of truth for Nullshift&apos;s identity — the

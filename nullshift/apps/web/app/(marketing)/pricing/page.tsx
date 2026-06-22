@@ -6,6 +6,7 @@ import { Parallax } from "@/components/Parallax";
 import { NeuralField } from "@/components/NeuralField";
 import { T } from "@nullshift/ui/tokens";
 import { PROOF_PILLARS, BRAND_LINE, CLINIC } from "@nullshift/content/marketing";
+import { ClipReveal } from "@/components/anim/ClipReveal";
 import {
   Reveal,
   Section,
@@ -197,12 +198,12 @@ export default function PricingPage() {
               <Eyebrow index="00" label="Pricing" />
             </Reveal>
 
-            <Reveal delay={0.05}>
+            <ClipReveal delay={0.05}>
               <Display as="h1" size="hero" className="mt-6" style={{ maxWidth: "16ch" }}>
                 Own your systems.{" "}
                 <span style={{ color: "var(--k-accent)" }}>We run them.</span>
               </Display>
-            </Reveal>
+            </ClipReveal>
 
             <Reveal delay={0.1}>
               <Lead className="mt-7" style={{ maxWidth: "58ch", fontSize: "1.125rem" }}>

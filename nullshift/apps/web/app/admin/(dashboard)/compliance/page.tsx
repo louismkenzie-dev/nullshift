@@ -4,6 +4,8 @@ import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
+import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
+import { Reveal } from "@/components/kyma";
 
 /**
  * Compliance centre — a per-client-tenant checklist + log (brief §5/§9). Tracks
@@ -54,6 +56,21 @@ async function deleteTenant(formData: FormData) {
   revalidatePath("/admin/compliance");
 }
 
+// Square mono action button used inside the per-tenant forms.
+const actionBtn = {
+  fontFamily: T.mono,
+  fontSize: "10px",
+  letterSpacing: "0.08em",
+  textTransform: "uppercase" as const,
+  height: 28,
+  paddingInline: 11,
+  background: "var(--k-surface)",
+  color: "var(--k-fg)",
+  border: "1px solid var(--k-border)",
+  borderRadius: 0,
+  cursor: "pointer",
+};
+
 export default async function CompliancePage() {
   const supabase = await createClient();
   const [{ data: tenants }, { data: records }] = await Promise.all([
@@ -65,200 +82,140 @@ export default async function CompliancePage() {
 
   return (
     <div>
-      <div
-        style={{
-          fontFamily: T.mono,
-          fontSize: "10px",
-          letterSpacing: "0.2em",
-          textTransform: "uppercase",
-          color: T.primary,
-          marginBottom: 8,
-        }}
-      >
-        // Compliance
-      </div>
-      <h1
-        style={{
-          fontFamily: T.display,
-          fontWeight: 600,
-          fontSize: "1.9rem",
-          color: T.fg,
-          marginBottom: 4,
-        }}
-      >
-        Compliance centre
-      </h1>
-      <p
-        style={{
-          fontFamily: T.sans,
-          fontSize: "0.9rem",
-          color: T.muted,
-          marginBottom: 24,
-          maxWidth: "62ch",
-        }}
-      >
-        UK GDPR controls per client. A clinic can&apos;t go live until its DPA is signed
-        and logged.
-      </p>
+      <PageHeader
+        index="07"
+        label="Compliance"
+        title="Compliance centre"
+        lead="UK GDPR controls per client. A clinic can't go live until its DPA is signed and logged."
+      />
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {tenantList.map((tenant) => {
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 28 }}>
+        {tenantList.map((tenant, ti) => {
           const recs = recordList.filter((r) => r.tenant_id === tenant.id);
+          const doneCount = CHECKS.filter((c) =>
+            recs.some((r) => r.kind === c.kind)
+          ).length;
+          const allDone = doneCount === CHECKS.length;
           return (
-            <section
-              key={tenant.id}
-              style={{
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: T.r.lg,
-                padding: "18px 20px",
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: T.display,
-                  fontWeight: 600,
-                  fontSize: "1.05rem",
-                  color: T.fg,
-                  marginBottom: 12,
-                }}
+            <Reveal key={tenant.id} delay={ti * 0.05}>
+              <Panel
+                title={tenant.name}
+                actions={
+                  <StatusChip tone={allDone ? "success" : "warning"}>
+                    {doneCount}/{CHECKS.length} controls
+                  </StatusChip>
+                }
               >
-                {tenant.name}
-              </div>
-              <div className="flex flex-col gap-2">
-                {CHECKS.map((check) => {
-                  const done = recs.find((r) => r.kind === check.kind);
-                  return (
-                    <div
-                      key={check.kind}
-                      className="flex items-center justify-between"
-                      style={{ padding: "8px 0", borderTop: `1px solid ${T.border}` }}
-                    >
-                      <span
-                        className="flex items-center gap-2"
+                <div className="flex flex-col">
+                  {CHECKS.map((check, ci) => {
+                    const done = recs.find((r) => r.kind === check.kind);
+                    return (
+                      <div
+                        key={check.kind}
+                        className="flex items-center justify-between"
                         style={{
-                          fontFamily: T.sans,
-                          fontSize: "0.88rem",
-                          color: done ? T.fg : T.muted,
+                          padding: "10px 0",
+                          borderTop: ci ? "1px solid var(--k-border)" : "none",
                         }}
                       >
-                        <span style={{ color: done ? T.success : T.faint }}>
-                          {done ? "✓" : "○"}
-                        </span>
-                        {check.label}
-                        {done && (
-                          <span
-                            style={{
-                              fontFamily: T.mono,
-                              fontSize: "10px",
-                              color: T.faint,
-                              marginLeft: 6,
-                            }}
-                          >
-                            {new Date(done.recorded_at).toLocaleDateString("en-GB")}
+                        <span
+                          className="flex items-center gap-2"
+                          style={{
+                            fontFamily: T.sans,
+                            fontSize: "0.88rem",
+                            color: done ? "var(--k-fg)" : "var(--k-muted)",
+                          }}
+                        >
+                          <span style={{ color: done ? T.success : "var(--k-faint)" }}>
+                            {done ? "✓" : "○"}
                           </span>
+                          {check.label}
+                          {done && (
+                            <span
+                              style={{
+                                fontFamily: T.mono,
+                                fontSize: "10px",
+                                letterSpacing: "0.06em",
+                                color: "var(--k-faint)",
+                                marginLeft: 6,
+                              }}
+                            >
+                              {new Date(done.recorded_at).toLocaleDateString("en-GB")}
+                            </span>
+                          )}
+                        </span>
+                        {!done && (
+                          <form action={recordCompliance}>
+                            <input type="hidden" name="tenant_id" value={tenant.id} />
+                            <input type="hidden" name="kind" value={check.kind} />
+                            <SubmitButton style={actionBtn}>Mark done</SubmitButton>
+                          </form>
                         )}
-                      </span>
-                      {!done && (
-                        <form action={recordCompliance}>
-                          <input type="hidden" name="tenant_id" value={tenant.id} />
-                          <input type="hidden" name="kind" value={check.kind} />
-                          <SubmitButton
-                            style={{
-                              fontFamily: T.mono,
-                              fontSize: "10px",
-                              letterSpacing: "0.05em",
-                              textTransform: "uppercase",
-                              height: 26,
-                              paddingInline: 10,
-                              background: T.surface2,
-                              color: T.fg,
-                              border: `1px solid ${T.border}`,
-                              borderRadius: 0,
-                              cursor: "pointer",
-                            }}
-                          >
-                            Mark done
-                          </SubmitButton>
-                        </form>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-              {/* Data subject rights — SAR export + right to erasure */}
-              <div
-                className="flex items-center gap-3 flex-wrap"
-                style={{
-                  marginTop: 14,
-                  paddingTop: 12,
-                  borderTop: `1px solid ${T.border}`,
-                }}
-              >
-                <Link
-                  href={`/api/sar/${tenant.id}`}
-                  prefetch={false}
+                {/* Data subject rights — SAR export + right to erasure */}
+                <div
+                  className="flex items-center gap-3 flex-wrap"
                   style={{
-                    fontFamily: T.mono,
-                    fontSize: "10px",
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                    height: 26,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    paddingInline: 10,
-                    background: T.surface2,
-                    color: T.fg,
-                    border: `1px solid ${T.border}`,
-                    borderRadius: 0,
-                    textDecoration: "none",
+                    marginTop: 14,
+                    paddingTop: 12,
+                    borderTop: "1px solid var(--k-border)",
                   }}
                 >
-                  ↓ Export data (SAR)
-                </Link>
-                <form action={deleteTenant} className="flex items-center gap-2">
-                  <input type="hidden" name="tenant_id" value={tenant.id} />
-                  <input
-                    name="confirm"
-                    placeholder="type DELETE"
-                    autoComplete="off"
+                  <Link
+                    href={`/api/sar/${tenant.id}`}
+                    prefetch={false}
                     style={{
-                      fontFamily: T.mono,
-                      fontSize: "10px",
-                      height: 26,
-                      padding: "0 8px",
-                      width: 96,
-                      background: T.bg,
-                      color: T.fg,
-                      border: `1px solid ${T.danger}40`,
-                      borderRadius: 0,
-                    }}
-                  />
-                  <SubmitButton
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: "10px",
-                      letterSpacing: "0.05em",
-                      textTransform: "uppercase",
-                      height: 26,
-                      paddingInline: 10,
-                      background: "transparent",
-                      color: T.danger,
-                      border: `1px solid ${T.danger}40`,
-                      borderRadius: 0,
-                      cursor: "pointer",
+                      ...actionBtn,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      textDecoration: "none",
                     }}
                   >
-                    Erase tenant
-                  </SubmitButton>
-                </form>
-              </div>
-            </section>
+                    ↓ Export data (SAR)
+                  </Link>
+                  <form action={deleteTenant} className="flex items-center gap-2">
+                    <input type="hidden" name="tenant_id" value={tenant.id} />
+                    <input
+                      name="confirm"
+                      placeholder="type DELETE"
+                      autoComplete="off"
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "10px",
+                        letterSpacing: "0.06em",
+                        height: 28,
+                        padding: "0 9px",
+                        width: 104,
+                        background: "var(--k-surface)",
+                        color: "var(--k-fg)",
+                        border: `1px solid ${T.danger}55`,
+                        borderRadius: 0,
+                      }}
+                    />
+                    <SubmitButton
+                      style={{
+                        ...actionBtn,
+                        background: "transparent",
+                        color: T.danger,
+                        border: `1px solid ${T.danger}55`,
+                      }}
+                    >
+                      Erase tenant
+                    </SubmitButton>
+                  </form>
+                </div>
+              </Panel>
+            </Reveal>
           );
         })}
         {tenantList.length === 0 && (
-          <p style={{ fontFamily: T.sans, color: T.muted }}>No client tenants yet.</p>
+          <p style={{ fontFamily: T.sans, color: "var(--k-muted)" }}>
+            No client tenants yet.
+          </p>
         )}
       </div>
     </div>

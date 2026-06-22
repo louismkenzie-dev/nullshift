@@ -29,9 +29,9 @@ function Section({
           style={{
             fontFamily: T.mono,
             fontSize: 11,
-            fontWeight: 600,
-            color: T.primary,
-            border: `1px solid ${T.primary}55`,
+            fontWeight: 500,
+            color: "var(--k-accent)",
+            border: "1px solid var(--k-border-strong)",
             borderRadius: 0,
             padding: "2px 7px",
           }}
@@ -42,9 +42,10 @@ function Section({
           style={{
             fontFamily: T.mono,
             fontSize: 11,
-            letterSpacing: "0.16em",
+            fontWeight: 500,
+            letterSpacing: "0.12em",
             textTransform: "uppercase",
-            color: T.muted,
+            color: "var(--k-muted)",
           }}
         >
           {title}
@@ -121,23 +122,27 @@ export function ProposalDocument({
   ];
   return (
     <div
+      className="k-kard"
       style={{
-        background: T.surface,
-        border: `1px solid ${T.border}`,
-        borderRadius: T.r.lg,
+        background: "var(--k-surface)",
         padding: "26px 24px",
       }}
     >
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      <div
+        className="flex items-start justify-between flex-wrap gap-3"
+        style={{ paddingBottom: 18, borderBottom: "1px solid var(--k-border)" }}
+      >
         <div className="flex items-center gap-2.5">
           <LogoMark size={24} />
           <span
             style={{
-              fontFamily: T.display,
-              fontWeight: 600,
+              fontFamily: T.sans,
+              fontWeight: 700,
               fontSize: "1.05rem",
-              color: T.fg,
+              letterSpacing: "-0.02em",
+              textTransform: "uppercase",
+              color: "var(--k-fg)",
             }}
           >
             Nullshift
@@ -148,14 +153,17 @@ export function ProposalDocument({
             style={{
               fontFamily: T.mono,
               fontSize: 10,
+              fontWeight: 500,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              color: T.muted,
+              color: "var(--k-accent)",
             }}
           >
             Proposal
           </div>
-          <div style={{ fontFamily: T.mono, fontSize: 12, color: T.fg }}>{reference}</div>
+          <div style={{ fontFamily: T.mono, fontSize: 12, color: "var(--k-fg)" }}>
+            {reference}
+          </div>
         </div>
       </div>
 
@@ -164,25 +172,29 @@ export function ProposalDocument({
           style={{
             fontFamily: T.mono,
             fontSize: 10,
+            fontWeight: 500,
             letterSpacing: "0.12em",
             textTransform: "uppercase",
-            color: T.faint,
+            color: "var(--k-faint)",
           }}
         >
           Prepared for
         </div>
         <div
           style={{
-            fontFamily: T.display,
-            fontWeight: 600,
-            fontSize: "1.35rem",
-            color: T.fg,
-            marginTop: 2,
+            fontFamily: T.sans,
+            fontWeight: 700,
+            fontSize: "1.5rem",
+            letterSpacing: "-0.03em",
+            textTransform: "uppercase",
+            color: "var(--k-fg)",
+            marginTop: 4,
+            lineHeight: 1.06,
           }}
         >
           {businessName || clientName}
         </div>
-        <div style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.muted }}>
+        <div style={{ fontFamily: T.sans, fontSize: "0.82rem", color: "var(--k-muted)" }}>
           {date}
         </div>
       </div>
@@ -194,7 +206,7 @@ export function ProposalDocument({
               fontFamily: T.sans,
               fontSize: "0.95rem",
               lineHeight: 1.7,
-              color: T.muted,
+              color: "var(--k-muted)",
               whiteSpace: "pre-wrap",
             }}
           >
@@ -209,18 +221,24 @@ export function ProposalDocument({
             <div
               key={i}
               className="flex items-center justify-between"
-              style={{ padding: "9px 0", borderTop: `1px solid ${T.border}` }}
+              style={{ padding: "10px 0", borderTop: "1px solid var(--k-border)" }}
             >
-              <span style={{ fontFamily: T.sans, fontSize: "0.92rem", color: T.fg }}>
+              <span
+                style={{ fontFamily: T.sans, fontSize: "0.92rem", color: "var(--k-fg)" }}
+              >
                 {it.name}
               </span>
-              <span style={{ fontFamily: T.mono, fontSize: "0.88rem", color: T.muted }}>
+              <span
+                style={{ fontFamily: T.mono, fontSize: "0.88rem", color: "var(--k-fg)" }}
+              >
                 {gbp(Number(it.amount))}
               </span>
             </div>
           ))}
           {items.length === 0 && (
-            <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>
+            <p
+              style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-faint)" }}
+            >
               Build modules will be listed here.
             </p>
           )}
@@ -233,13 +251,14 @@ export function ProposalDocument({
             <div
               key={i}
               className="flex items-start gap-3"
-              style={{ padding: "9px 0", borderTop: `1px solid ${T.border}` }}
+              style={{ padding: "10px 0", borderTop: "1px solid var(--k-border)" }}
             >
               <span
                 style={{
                   fontFamily: T.mono,
                   fontSize: 11,
-                  color: T.primary,
+                  fontWeight: 500,
+                  color: "var(--k-accent)",
                   paddingTop: 2,
                   minWidth: 22,
                 }}
@@ -247,14 +266,21 @@ export function ProposalDocument({
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div>
-                <div style={{ fontFamily: T.sans, fontSize: "0.92rem", color: T.fg }}>
+                <div
+                  style={{
+                    fontFamily: T.sans,
+                    fontWeight: 600,
+                    fontSize: "0.92rem",
+                    color: "var(--k-fg)",
+                  }}
+                >
                   {p.title}
                 </div>
                 <div
                   style={{
                     fontFamily: T.sans,
                     fontSize: "0.84rem",
-                    color: T.muted,
+                    color: "var(--k-muted)",
                     lineHeight: 1.55,
                   }}
                 >
@@ -269,17 +295,18 @@ export function ProposalDocument({
       <Section n={sec()} title="Investment">
         <div
           className="flex items-center justify-between"
-          style={{ padding: "12px 0", borderTop: `1px solid ${T.border}` }}
+          style={{ padding: "12px 0", borderTop: "1px solid var(--k-border)" }}
         >
-          <span style={{ fontFamily: T.sans, fontWeight: 600, color: T.fg }}>
+          <span style={{ fontFamily: T.sans, fontWeight: 600, color: "var(--k-fg)" }}>
             One-off build (you own it)
           </span>
           <span
             style={{
-              fontFamily: T.display,
-              fontWeight: 700,
-              fontSize: "1.4rem",
-              color: T.fg,
+              fontFamily: T.sans,
+              fontWeight: 800,
+              fontSize: "1.6rem",
+              letterSpacing: "-0.03em",
+              color: "var(--k-fg)",
             }}
           >
             {gbp(total)}
@@ -288,12 +315,18 @@ export function ProposalDocument({
         {carePlan && (
           <div
             className="flex items-center justify-between"
-            style={{ padding: "12px 0", borderTop: `1px solid ${T.border}` }}
+            style={{ padding: "12px 0", borderTop: "1px solid var(--k-border)" }}
           >
-            <span style={{ fontFamily: T.sans, fontWeight: 600, color: T.fg }}>
+            <span style={{ fontFamily: T.sans, fontWeight: 600, color: "var(--k-fg)" }}>
               Ongoing care · {carePlan.label}
             </span>
-            <span style={{ fontFamily: T.mono, fontSize: "0.95rem", color: T.primary }}>
+            <span
+              style={{
+                fontFamily: T.mono,
+                fontSize: "0.95rem",
+                color: "var(--k-accent)",
+              }}
+            >
               {gbp(carePlan.mrr)}/mo
             </span>
           </div>
@@ -308,12 +341,14 @@ export function ProposalDocument({
                 fontFamily: T.sans,
                 fontWeight: 600,
                 fontSize: "0.95rem",
-                color: T.fg,
+                color: "var(--k-fg)",
               }}
             >
               {carePlan.label}
             </span>
-            <span style={{ fontFamily: T.mono, fontSize: "0.9rem", color: T.primary }}>
+            <span
+              style={{ fontFamily: T.mono, fontSize: "0.9rem", color: "var(--k-accent)" }}
+            >
               {gbp(carePlan.mrr)}/mo
             </span>
           </div>
@@ -322,7 +357,7 @@ export function ProposalDocument({
               style={{
                 fontFamily: T.sans,
                 fontSize: "0.88rem",
-                color: T.muted,
+                color: "var(--k-muted)",
                 lineHeight: 1.6,
                 marginBottom: 10,
               }}
@@ -342,14 +377,14 @@ export function ProposalDocument({
                     padding: "5px 0",
                   }}
                 >
-                  <span style={{ color: T.primary, lineHeight: 1.5 }} aria-hidden>
-                    ✓
+                  <span style={{ color: "var(--k-accent)", lineHeight: 1.5 }} aria-hidden>
+                    ▸
                   </span>
                   <span
                     style={{
                       fontFamily: T.sans,
                       fontSize: "0.88rem",
-                      color: T.muted,
+                      color: "var(--k-muted)",
                       lineHeight: 1.5,
                     }}
                   >
@@ -363,7 +398,8 @@ export function ProposalDocument({
             style={{
               fontFamily: T.mono,
               fontSize: 10.5,
-              color: T.faint,
+              letterSpacing: "0.06em",
+              color: "var(--k-faint)",
               marginTop: 10,
             }}
           >
@@ -378,7 +414,7 @@ export function ProposalDocument({
             fontFamily: T.sans,
             fontSize: "0.92rem",
             lineHeight: 1.7,
-            color: T.muted,
+            color: "var(--k-muted)",
             whiteSpace: "pre-wrap",
           }}
         >
@@ -395,7 +431,7 @@ export function ProposalDocument({
             fontFamily: T.sans,
             fontSize: "0.92rem",
             lineHeight: 1.7,
-            color: T.muted,
+            color: "var(--k-muted)",
           }}
         >
           {dpaRequired === true
@@ -411,12 +447,15 @@ export function ProposalDocument({
           style={{
             marginTop: 24,
             padding: "12px 14px",
-            background: `${T.primary}14`,
-            border: `1px solid ${T.primary}`,
-            borderRadius: T.r.md,
+            background: "rgba(16,185,129,0.12)",
+            borderLeft: "2px solid var(--k-accent)",
+            border: "1px solid var(--k-border)",
+            borderLeftWidth: 2,
+            borderLeftColor: "var(--k-accent)",
             fontFamily: T.mono,
             fontSize: 11,
-            color: T.fg,
+            letterSpacing: "0.04em",
+            color: "var(--k-fg)",
           }}
         >
           ✓ Accepted &amp; signed by {accepted.name} —{" "}

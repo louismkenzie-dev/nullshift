@@ -83,7 +83,7 @@ export function SignProposal({
           position: "fixed",
           inset: 0,
           zIndex: 9999,
-          background: T.bg,
+          background: "var(--k-bg)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -105,7 +105,7 @@ export function SignProposal({
               position: "absolute",
               inset: 0,
               borderRadius: "50%",
-              border: `2px solid ${T.primary}`,
+              border: "2px solid var(--k-accent)",
               animation: "ns-tick-ring 1.8s ease-out infinite",
             }}
           />
@@ -114,8 +114,8 @@ export function SignProposal({
               width: 104,
               height: 104,
               borderRadius: "50%",
-              background: `${T.primary}1a`,
-              border: `2px solid ${T.primary}`,
+              background: "rgba(16,185,129,0.1)",
+              border: "2px solid var(--k-accent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -125,7 +125,7 @@ export function SignProposal({
             <svg width="48" height="48" viewBox="0 0 52 52" fill="none" aria-hidden>
               <path
                 d="M14 27l8 8 16-18"
-                stroke={T.primary}
+                stroke="var(--k-accent)"
                 strokeWidth="4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -138,10 +138,13 @@ export function SignProposal({
         </div>
         <h2
           style={{
-            fontFamily: T.display,
-            fontWeight: 600,
-            fontSize: "1.9rem",
-            color: T.fg,
+            fontFamily: T.sans,
+            fontWeight: 700,
+            fontSize: "clamp(1.5rem,2.8vw,2rem)",
+            letterSpacing: "-0.03em",
+            textTransform: "uppercase",
+            lineHeight: 1.06,
+            color: "var(--k-fg)",
             margin: 0,
             animation: "ns-tick-fade 0.5s 0.5s both",
           }}
@@ -152,7 +155,7 @@ export function SignProposal({
           style={{
             fontFamily: T.sans,
             fontSize: "0.98rem",
-            color: T.muted,
+            color: "var(--k-muted)",
             maxWidth: "42ch",
             lineHeight: 1.6,
             margin: 0,
@@ -169,11 +172,11 @@ export function SignProposal({
 
   return (
     <div
+      className="k-kard"
       style={{
         marginTop: 14,
-        background: T.surface,
-        border: `1px solid ${T.primary}55`,
-        borderRadius: T.r.lg,
+        background: "var(--k-surface)",
+        borderColor: "var(--k-accent)",
         padding: "20px 22px",
       }}
     >
@@ -181,7 +184,7 @@ export function SignProposal({
         style={{
           fontFamily: T.sans,
           fontSize: "0.9rem",
-          color: T.muted,
+          color: "var(--k-muted)",
           lineHeight: 1.6,
           marginBottom: 16,
         }}
@@ -195,48 +198,42 @@ export function SignProposal({
       <form onSubmit={onAccept}>
         <SignatureField />
         {error && (
-          <p style={{ fontFamily: T.mono, fontSize: 11, color: T.danger, marginTop: 10 }}>
+          <p
+            style={{
+              fontFamily: T.mono,
+              fontSize: 11,
+              letterSpacing: "0.06em",
+              color: T.danger,
+              marginTop: 10,
+            }}
+          >
             {error}
           </p>
         )}
         <button
           type="submit"
           disabled={pending}
+          className="kb kb-primary"
           style={{
             marginTop: 16,
-            fontFamily: T.sans,
-            fontWeight: 600,
-            fontSize: "0.95rem",
-            height: 46,
-            paddingInline: 24,
-            background: T.primary,
-            color: T.primaryFg,
-            border: "none",
-            borderRadius: T.r.md,
             cursor: pending ? "wait" : "pointer",
             opacity: pending ? 0.75 : 1,
-            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
           }}
         >
-          {pending ? "Signing…" : "Accept & sign →"}
+          {pending ? "Signing…" : "Accept & sign"}
+          {!pending && (
+            <span className="k-arrow" aria-hidden>
+              →
+            </span>
+          )}
         </button>
       </form>
       <form onSubmit={onDecline} style={{ marginTop: 10 }}>
         <button
           type="submit"
           disabled={pending}
-          style={{
-            fontFamily: T.sans,
-            fontWeight: 600,
-            fontSize: "0.85rem",
-            height: 40,
-            paddingInline: 18,
-            background: "transparent",
-            color: T.muted,
-            border: `1px solid ${T.border}`,
-            borderRadius: T.r.md,
-            cursor: pending ? "wait" : "pointer",
-          }}
+          className="kb kb-outline kb-sm"
+          style={{ cursor: pending ? "wait" : "pointer" }}
         >
           Decline
         </button>

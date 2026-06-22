@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
+import { PageHeader, StatusChip } from "@/components/app/AppKit";
+import { Reveal } from "@/components/kyma";
 
 type Enquiry = {
   id: string;
@@ -21,12 +23,14 @@ type Enquiry = {
 };
 
 const STATUSES = ["new", "in_progress", "quoted", "won", "lost"];
-const statusColor: Record<string, string> = {
-  new: T.primary,
-  in_progress: "#facc15",
-  quoted: "#06b6d4",
-  won: "#10b981",
-  lost: T.danger,
+// Emerald is the only brand colour; everything else maps to a signal tone.
+type Tone = "accent" | "success" | "warning" | "danger" | "muted";
+const statusTone: Record<string, Tone> = {
+  new: "accent",
+  in_progress: "warning",
+  quoted: "muted",
+  won: "success",
+  lost: "danger",
 };
 
 export default function EnquiriesPage() {
@@ -107,64 +111,90 @@ export default function EnquiriesPage() {
 
   return (
     <div>
-      <div className="flex items-end justify-between mb-8">
-        <div>
-          <div
-            style={{
-              fontFamily: T.mono,
-              fontSize: "10px",
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: T.primary,
-              marginBottom: "8px",
-            }}
-          >
-            // INBOX
-          </div>
-          <h1
-            style={{
-              fontFamily: T.display,
-              fontWeight: 600,
-              fontSize: "2.4rem",
-              letterSpacing: "0.01em",
-              color: T.fg,
-            }}
-          >
-            ENQUIRIES
-          </h1>
-        </div>
-        <div style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
-          {rows.length} total · <span style={{ color: T.primary }}>{newCount} new</span>
-        </div>
-      </div>
+      <PageHeader
+        index="01"
+        label="Inbox"
+        title="Enquiries"
+        actions={
+          <span style={{ fontFamily: T.mono, fontSize: "11px", color: "var(--k-muted)" }}>
+            {rows.length} total ·{" "}
+            <span style={{ color: "var(--k-accent)" }}>{newCount} new</span>
+          </span>
+        }
+        className="mb-8"
+      />
 
       {loading ? (
-        <p style={{ fontFamily: T.mono, fontSize: "12px", color: T.muted }}>Loading…</p>
+        <p
+          style={{
+            fontFamily: T.mono,
+            fontSize: "12px",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "var(--k-muted)",
+          }}
+        >
+          Loading…
+        </p>
       ) : rows.length === 0 ? (
-        <p style={{ fontFamily: T.mono, fontSize: "12px", color: T.muted }}>
+        <p
+          style={{
+            fontFamily: T.mono,
+            fontSize: "12px",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "var(--k-muted)",
+          }}
+        >
           No enquiries yet.
         </p>
       ) : (
-        <div className="overflow-hidden" style={{ border: `1px solid ${T.border}` }}>
+        <Reveal className="k-kard overflow-hidden">
+          {/* mono uppercase column headers */}
+          <div
+            className="px-5 py-3 grid grid-cols-[90px_1fr_140px_120px] gap-4 items-center"
+            style={{
+              borderBottom: "1px solid var(--k-border)",
+              fontFamily: T.mono,
+              fontSize: "10px",
+              fontWeight: 500,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--k-faint)",
+            }}
+          >
+            <span>Source</span>
+            <span>Name</span>
+            <span>Received</span>
+            <span>Status</span>
+          </div>
           {rows.map((e, i) => (
             <div
               key={e.id}
               style={{
-                borderTop: i ? `1px solid ${T.border}` : "none",
-                background: T.surface,
+                borderTop: i ? "1px solid var(--k-border)" : "none",
+                background: "var(--k-surface)",
               }}
             >
               <button
                 onClick={() => setOpen(open === e.id ? null : e.id)}
-                className="w-full text-left px-5 py-4 grid grid-cols-[90px_1fr_140px_120px] gap-4 items-center hover:bg-[#1f1f23] transition-colors"
+                className="w-full text-left px-5 py-4 grid grid-cols-[90px_1fr_140px_120px] gap-4 items-center transition-colors"
+                style={{ background: "transparent" }}
+                onMouseEnter={(ev) => {
+                  ev.currentTarget.style.background = "var(--k-bg)";
+                }}
+                onMouseLeave={(ev) => {
+                  ev.currentTarget.style.background = "transparent";
+                }}
               >
                 <span
                   style={{
                     fontFamily: T.mono,
                     fontSize: "10px",
-                    letterSpacing: "0.08em",
+                    fontWeight: 500,
+                    letterSpacing: "0.1em",
                     textTransform: "uppercase",
-                    color: T.muted,
+                    color: "var(--k-muted)",
                   }}
                 >
                   {e.source}
@@ -173,64 +203,85 @@ export default function EnquiriesPage() {
                   <span
                     style={{
                       fontFamily: T.display,
-                      fontWeight: 600,
+                      fontWeight: 700,
                       fontSize: "1rem",
-                      color: T.fg,
+                      letterSpacing: "-0.01em",
+                      textTransform: "uppercase",
+                      color: "var(--k-fg)",
                     }}
                   >
                     {e.name}
                   </span>
                   {e.business_name && (
                     <span
-                      style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.85rem",
+                        color: "var(--k-muted)",
+                      }}
                     >
                       {" "}
                       · {e.business_name}
                     </span>
                   )}
                 </span>
-                <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted }}>
-                  {new Date(e.created_at).toLocaleDateString()}
-                </span>
                 <span
                   style={{
                     fontFamily: T.mono,
                     fontSize: "10px",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: statusColor[e.status] ?? T.muted,
+                    color: "var(--k-muted)",
                   }}
                 >
-                  ● {e.status.replace("_", " ")}
+                  {new Date(e.created_at).toLocaleDateString()}
+                </span>
+                <span className="justify-self-start">
+                  <StatusChip tone={statusTone[e.status] ?? "muted"}>
+                    {e.status === "new" && (
+                      <span className="k-livedot" aria-hidden>
+                        ●
+                      </span>
+                    )}
+                    {e.status.replace("_", " ")}
+                  </StatusChip>
                 </span>
               </button>
 
               {open === e.id && (
-                <div className="px-5 pb-5 pt-1" style={{ background: T.bg }}>
+                <div
+                  className="px-5 pb-5 pt-1"
+                  style={{
+                    background: "var(--k-bg)",
+                    borderTop: "1px solid var(--k-border)",
+                  }}
+                >
                   <div
-                    className="grid md:grid-cols-2 gap-x-8 gap-y-2 mb-4"
-                    style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}
+                    className="grid md:grid-cols-2 gap-x-8 gap-y-2 mb-4 pt-4"
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.85rem",
+                      color: "var(--k-muted)",
+                    }}
                   >
                     <div>
-                      <b style={{ color: T.fg }}>Email:</b>{" "}
-                      <a href={`mailto:${e.email}`} style={{ color: T.primary }}>
+                      <b style={{ color: "var(--k-fg)" }}>Email:</b>{" "}
+                      <a href={`mailto:${e.email}`} style={{ color: "var(--k-accent)" }}>
                         {e.email}
                       </a>
                     </div>
                     {e.phone && (
                       <div>
-                        <b style={{ color: T.fg }}>Phone:</b> {e.phone}
+                        <b style={{ color: "var(--k-fg)" }}>Phone:</b> {e.phone}
                       </div>
                     )}
                     {e.preferred_date && (
                       <div>
-                        <b style={{ color: T.fg }}>Preferred:</b> {e.preferred_date}{" "}
-                        {e.preferred_time}
+                        <b style={{ color: "var(--k-fg)" }}>Preferred:</b>{" "}
+                        {e.preferred_date} {e.preferred_time}
                       </div>
                     )}
                     {e.referral && (
                       <div>
-                        <b style={{ color: T.fg }}>Heard via:</b> {e.referral}
+                        <b style={{ color: "var(--k-fg)" }}>Heard via:</b> {e.referral}
                       </div>
                     )}
                   </div>
@@ -241,7 +292,7 @@ export default function EnquiriesPage() {
                         fontFamily: T.sans,
                         fontSize: "0.9rem",
                         lineHeight: 1.7,
-                        color: T.fg,
+                        color: "var(--k-fg)",
                         whiteSpace: "pre-wrap",
                       }}
                     >
@@ -253,52 +304,56 @@ export default function EnquiriesPage() {
                       style={{
                         fontFamily: T.mono,
                         fontSize: "10px",
-                        color: T.muted,
+                        fontWeight: 500,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: "var(--k-faint)",
                         marginRight: "4px",
                       }}
                     >
-                      STATUS:
+                      Status:
                     </span>
-                    {STATUSES.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setStatus(e.id, s)}
-                        className="px-3 py-1.5 transition-opacity hover:opacity-90"
-                        style={{
-                          fontFamily: T.mono,
-                          fontSize: "10px",
-                          letterSpacing: "0.06em",
-                          textTransform: "uppercase",
-                          borderRadius: T.r.sm,
-                          background: e.status === s ? statusColor[s] : "transparent",
-                          color: e.status === s ? T.primaryFg : T.muted,
-                          border: `1px solid ${e.status === s ? statusColor[s] : T.border}`,
-                        }}
-                      >
-                        {s.replace("_", " ")}
-                      </button>
-                    ))}
+                    {STATUSES.map((s) => {
+                      const active = e.status === s;
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => setStatus(e.id, s)}
+                          className="px-3 py-1.5 transition-colors"
+                          style={{
+                            fontFamily: T.mono,
+                            fontSize: "10px",
+                            fontWeight: 500,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                            borderRadius: 0,
+                            background: active ? "var(--k-accent)" : "transparent",
+                            color: active ? "var(--k-on-accent)" : "var(--k-muted)",
+                            border: `1px solid ${
+                              active ? "var(--k-accent)" : "var(--k-border)"
+                            }`,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {s.replace("_", " ")}
+                        </button>
+                      );
+                    })}
                     <button
                       onClick={() => convertToClient(e)}
-                      className="ml-auto px-4 py-1.5 transition-opacity hover:opacity-90"
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "10px",
-                        letterSpacing: "0.06em",
-                        textTransform: "uppercase",
-                        background: T.primary,
-                        color: T.primaryFg,
-                        borderRadius: T.r.sm,
-                      }}
+                      className="kb kb-primary kb-sm ml-auto"
                     >
-                      Convert to client →
+                      Convert to client
+                      <span className="k-arrow" aria-hidden>
+                        →
+                      </span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
           ))}
-        </div>
+        </Reveal>
       )}
     </div>
   );

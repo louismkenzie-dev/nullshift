@@ -3,6 +3,7 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Parallax } from "@/components/Parallax";
 import { NeuralField } from "@/components/NeuralField";
+import { ClipReveal } from "@/components/anim/ClipReveal";
 import {
   Reveal,
   Section,
@@ -122,12 +123,12 @@ export default function FaqPage() {
               <Eyebrow index="01" label="Frequently asked" />
             </Reveal>
             <div className="mt-7 grid grid-cols-1 lg:grid-cols-[1.25fr_0.75fr] gap-8 lg:gap-12 items-end">
-              <Reveal delay={0.05}>
+              <ClipReveal delay={0.05}>
                 <Display as="h1" size="hero" style={{ maxWidth: "14ch" }}>
                   Everything you <span style={{ color: "var(--k-accent)" }}>[need]</span>{" "}
                   to know.
                 </Display>
-              </Reveal>
+              </ClipReveal>
               <Reveal delay={0.1}>
                 <div>
                   <Lead style={{ maxWidth: "44ch" }}>

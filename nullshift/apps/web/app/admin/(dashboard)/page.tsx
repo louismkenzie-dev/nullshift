@@ -5,6 +5,8 @@ import Link from "next/link";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { formatCallDate, formatCallTime, money, LONDON_TZ } from "@nullshift/ui/format";
+import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
+import { Reveal } from "@/components/kyma";
 
 // Dashboard reads the unified multi-tenant model: calls + projects + invoices are
 // all tenant-scoped, and every client link points at the unified hub
@@ -56,6 +58,17 @@ const MONTHS = [
   "Dec",
 ];
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// KYMA app-surface tokens (dark): the dashboard wears the same hairline /
+// emerald language as the marketing site via the shared --k-* vars.
+const monoLabel: React.CSSProperties = {
+  fontFamily: T.mono,
+  fontSize: "0.62rem",
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  color: "var(--k-muted)",
+};
 
 export default function DashboardPage() {
   const supabase = createClient();
@@ -154,7 +167,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <p style={{ fontFamily: T.mono, fontSize: "12px", color: T.muted }}>
+      <p style={{ fontFamily: T.mono, fontSize: "12px", color: "var(--k-muted)" }}>
         Loading dashboard…
       </p>
     );
@@ -163,63 +176,50 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-end justify-between mb-8">
-        <div>
-          <div
-            style={{
-              fontFamily: T.mono,
-              fontSize: "10px",
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: T.primary,
-              marginBottom: "8px",
-            }}
-          >
-            // OVERVIEW
-          </div>
-          <h1
-            style={{
-              fontFamily: T.display,
-              fontWeight: 600,
-              fontSize: "2.4rem",
-              letterSpacing: "0.01em",
-              color: T.fg,
-            }}
-          >
-            DASHBOARD
-          </h1>
-        </div>
-        <div style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
-          {new Date().toLocaleDateString("en-GB", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-            timeZone: LONDON_TZ,
-          })}
-        </div>
-      </div>
+      <PageHeader
+        index="01"
+        label="OVERVIEW"
+        title="DASHBOARD"
+        actions={
+          <span style={{ ...monoLabel, fontSize: "0.66rem" }}>
+            {new Date().toLocaleDateString("en-GB", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+              timeZone: LONDON_TZ,
+            })}
+          </span>
+        }
+        className="mb-8"
+      />
 
       {/* Stat row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <StatCard
-          label="Invoiced this month"
-          sublabel={`${MONTHS[currentMonth]} ${currentYear}`}
-          value={money(monthlyIncome)}
-          accent={T.primary}
-        />
-        <StatCard
-          label="New enquiries"
-          sublabel="Awaiting action"
-          value={String(newEnquiries.length)}
-          accent={newEnquiries.length > 0 ? "#facc15" : T.primary}
-        />
-        <StatCard
-          label="Awaiting acceptance"
-          sublabel="Proposals sent to clients"
-          value={String(awaiting.length)}
-          accent={awaiting.length > 0 ? T.accent : T.primary}
-        />
+        {[
+          {
+            value: money(monthlyIncome),
+            label: "Invoiced this month",
+            sub: `${MONTHS[currentMonth]} ${currentYear}`,
+            accent: true,
+          },
+          {
+            value: String(newEnquiries.length),
+            label: "New enquiries",
+            sub: "Awaiting action",
+            accent: false,
+          },
+          {
+            value: String(awaiting.length),
+            label: "Awaiting acceptance",
+            sub: "Proposals sent to clients",
+            accent: false,
+          },
+        ].map((s, i) => (
+          <Reveal key={s.label} delay={i * 0.05}>
+            <StatCard value={s.value} label={s.label} sub={s.sub} accent={s.accent} />
+          </Reveal>
+        ))}
       </div>
 
       {/* Main grid */}
@@ -227,496 +227,439 @@ export default function DashboardPage() {
         {/* Left: tasks */}
         <div className="flex flex-col gap-6">
           {/* New enquiries */}
-          <Section title="New enquiries" label="// INBOX" href="/admin/enquiries">
-            {newEnquiries.length === 0 ? (
-              <EmptyState text="No new enquiries — you're all caught up." />
-            ) : (
-              <>
-                {newEnquiries.slice(0, 6).map((e, i) => (
-                  <Link
-                    key={e.id}
-                    href="/admin/enquiries"
-                    className="flex items-center justify-between py-3 px-3 hover:bg-[#1f1f23] transition-colors"
-                    style={{ borderTop: i ? `1px solid ${T.border}` : "none" }}
-                  >
-                    <div className="min-w-0">
-                      <div
-                        style={{
-                          fontFamily: T.display,
-                          fontWeight: 600,
-                          fontSize: "0.95rem",
-                          color: T.fg,
-                        }}
-                      >
-                        {e.name}
+          <Reveal delay={0.1}>
+            <Panel
+              label="// INBOX"
+              title="New enquiries"
+              pad={false}
+              actions={<ViewAll href="/admin/enquiries" />}
+            >
+              {newEnquiries.length === 0 ? (
+                <EmptyState text="No new enquiries — you're all caught up." />
+              ) : (
+                <>
+                  {newEnquiries.slice(0, 6).map((e, i) => (
+                    <Link
+                      key={e.id}
+                      href="/admin/enquiries"
+                      className="flex items-center justify-between py-3.5 px-4 transition-colors"
+                      style={{
+                        borderTop: i ? "1px solid var(--k-border)" : "none",
+                      }}
+                      onMouseEnter={(ev) =>
+                        (ev.currentTarget.style.background = "rgba(255,255,255,0.03)")
+                      }
+                      onMouseLeave={(ev) =>
+                        (ev.currentTarget.style.background = "transparent")
+                      }
+                    >
+                      <div className="min-w-0">
+                        <div
+                          style={{
+                            fontFamily: T.sans,
+                            fontWeight: 700,
+                            fontSize: "0.95rem",
+                            letterSpacing: "-0.01em",
+                            color: "var(--k-fg)",
+                          }}
+                        >
+                          {e.name}
+                        </div>
+                        {e.business_name && (
+                          <div
+                            style={{
+                              fontFamily: T.sans,
+                              fontSize: "0.8rem",
+                              color: "var(--k-muted)",
+                            }}
+                          >
+                            {e.business_name}
+                          </div>
+                        )}
                       </div>
-                      {e.business_name && (
+                      <div className="flex flex-col items-end gap-1.5 shrink-0 ml-4">
+                        <StatusChip tone="warning">
+                          <span className="k-livedot" aria-hidden>
+                            ●
+                          </span>
+                          NEW
+                        </StatusChip>
+                        <span style={{ ...monoLabel, fontSize: "0.6rem" }}>
+                          {new Date(e.created_at).toLocaleDateString("en-GB")}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                  {newEnquiries.length > 6 && (
+                    <MoreLink href="/admin/enquiries" count={newEnquiries.length - 6} />
+                  )}
+                </>
+              )}
+            </Panel>
+          </Reveal>
+
+          {/* Awaiting client acceptance */}
+          <Reveal delay={0.15}>
+            <Panel
+              label="// PROPOSALS SENT"
+              title="Awaiting client acceptance"
+              pad={false}
+              actions={<ViewAll href="/admin/clients" />}
+            >
+              {awaiting.length === 0 ? (
+                <EmptyState text="No proposals are waiting on a client signature." />
+              ) : (
+                <>
+                  {awaiting.slice(0, 6).map((p, i) => (
+                    <Link
+                      key={p.id}
+                      href={`/admin/clients/${p.tenant_id}`}
+                      className="flex items-center justify-between py-3.5 px-4 transition-colors"
+                      style={{
+                        borderTop: i ? "1px solid var(--k-border)" : "none",
+                      }}
+                      onMouseEnter={(ev) =>
+                        (ev.currentTarget.style.background = "rgba(255,255,255,0.03)")
+                      }
+                      onMouseLeave={(ev) =>
+                        (ev.currentTarget.style.background = "transparent")
+                      }
+                    >
+                      <div className="min-w-0">
+                        <div
+                          style={{
+                            fontFamily: T.sans,
+                            fontWeight: 700,
+                            fontSize: "0.95rem",
+                            letterSpacing: "-0.01em",
+                            color: "var(--k-fg)",
+                          }}
+                        >
+                          {p.tenants?.name ?? "Client"}
+                        </div>
                         <div
                           style={{
                             fontFamily: T.sans,
                             fontSize: "0.8rem",
-                            color: T.muted,
+                            color: "var(--k-muted)",
                           }}
                         >
-                          {e.business_name}
+                          {p.name}
                         </div>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0 ml-4">
-                      <div
-                        style={{
-                          fontFamily: T.mono,
-                          fontSize: "10px",
-                          letterSpacing: "0.06em",
-                          textTransform: "uppercase",
-                          color: "#facc15",
-                        }}
-                      >
-                        ● new
                       </div>
-                      <div
-                        style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted }}
-                      >
-                        {new Date(e.created_at).toLocaleDateString("en-GB")}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-                {newEnquiries.length > 6 && (
-                  <div
-                    style={{
-                      borderTop: `1px solid ${T.border}`,
-                      paddingTop: "10px",
-                      paddingLeft: "12px",
-                    }}
-                  >
-                    <Link
-                      href="/admin/enquiries"
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "10px",
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        color: T.primary,
-                      }}
-                    >
-                      +{newEnquiries.length - 6} more →
-                    </Link>
-                  </div>
-                )}
-              </>
-            )}
-          </Section>
-
-          {/* Awaiting client acceptance */}
-          <Section
-            title="Awaiting client acceptance"
-            label="// PROPOSALS SENT"
-            href="/admin/clients"
-          >
-            {awaiting.length === 0 ? (
-              <EmptyState text="No proposals are waiting on a client signature." />
-            ) : (
-              <>
-                {awaiting.slice(0, 6).map((p, i) => (
-                  <Link
-                    key={p.id}
-                    href={`/admin/clients/${p.tenant_id}`}
-                    className="flex items-center justify-between py-3 px-3 hover:bg-[#1f1f23] transition-colors"
-                    style={{ borderTop: i ? `1px solid ${T.border}` : "none" }}
-                  >
-                    <div className="min-w-0">
-                      <div
-                        style={{
-                          fontFamily: T.display,
-                          fontWeight: 600,
-                          fontSize: "0.95rem",
-                          color: T.fg,
-                        }}
-                      >
-                        {p.tenants?.name ?? "Client"}
-                      </div>
-                      <div
-                        style={{ fontFamily: T.sans, fontSize: "0.8rem", color: T.muted }}
-                      >
-                        {p.name}
-                      </div>
-                    </div>
-                    <div className="shrink-0 ml-4">
                       <span
+                        className="shrink-0 ml-4 inline-flex items-center gap-1.5"
                         style={{
                           fontFamily: T.mono,
-                          fontSize: "10px",
-                          letterSpacing: "0.06em",
+                          fontSize: "0.62rem",
+                          fontWeight: 500,
+                          letterSpacing: "0.1em",
                           textTransform: "uppercase",
-                          color: T.accent,
+                          color: "var(--k-accent)",
                         }}
                       >
-                        Open →
+                        OPEN
+                        <span aria-hidden>→</span>
                       </span>
-                    </div>
-                  </Link>
-                ))}
-                {awaiting.length > 6 && (
-                  <div
-                    style={{
-                      borderTop: `1px solid ${T.border}`,
-                      paddingTop: "10px",
-                      paddingLeft: "12px",
-                    }}
-                  >
-                    <Link
-                      href="/admin/clients"
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "10px",
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        color: T.primary,
-                      }}
-                    >
-                      +{awaiting.length - 6} more →
                     </Link>
-                  </div>
-                )}
-              </>
-            )}
-          </Section>
+                  ))}
+                  {awaiting.length > 6 && (
+                    <MoreLink href="/admin/clients" count={awaiting.length - 6} />
+                  )}
+                </>
+              )}
+            </Panel>
+          </Reveal>
         </div>
 
         {/* Right: calendar + next call */}
         <div className="flex flex-col gap-6">
           {/* Next call */}
-          <div
-            className="p-5"
-            style={{
-              background: T.surface,
-              border: `1px solid ${nextCall ? T.primary : T.border}`,
-              boxShadow: nextCall ? `0 0 30px -8px ${T.primary}50` : "none",
-            }}
-          >
+          <Reveal delay={0.1}>
             <div
+              className="k-kard p-5"
               style={{
-                fontFamily: T.mono,
-                fontSize: "10px",
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: T.primary,
-                marginBottom: "12px",
+                background: "var(--k-surface)",
+                border: `1px solid ${nextCall ? "var(--k-accent)" : "var(--k-border)"}`,
               }}
             >
-              // NEXT CALL
-            </div>
-            {nextCall ? (
-              <Link
-                href={`/admin/clients/${nextCall.tenant_id}`}
-                className="block hover:opacity-90 transition-opacity"
-              >
-                <div
-                  style={{
-                    fontFamily: T.display,
-                    fontWeight: 600,
-                    fontSize: "1.3rem",
-                    color: T.fg,
-                    marginBottom: "10px",
-                  }}
-                >
-                  {nextCall.tenants?.name || "Client"}
-                </div>
-                <div
-                  className="flex items-center gap-3 p-3"
-                  style={{
-                    background: `${T.primary}14`,
-                    border: `1px solid ${T.primary}30`,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: T.primary,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <div>
-                    <div
-                      style={{
-                        fontFamily: T.sans,
-                        fontSize: "0.88rem",
-                        color: T.fg,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {formatCallDate(nextCall.call_date)}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "0.78rem",
-                        color: T.primary,
-                      }}
-                    >
-                      {formatCallTime(nextCall.call_time)} · {nextCall.duration_min} min
-                    </div>
-                  </div>
-                </div>
-                {calls.length > 1 && (
-                  <div
-                    className="mt-3"
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: "10px",
-                      color: T.muted,
-                      letterSpacing: "0.06em",
-                    }}
-                  >
-                    +{calls.length - 1} more upcoming call{calls.length > 2 ? "s" : ""}
-                  </div>
-                )}
-              </Link>
-            ) : (
-              <div>
-                <p
-                  style={{
-                    fontFamily: T.sans,
-                    fontSize: "0.88rem",
-                    color: T.muted,
-                    marginBottom: "12px",
-                  }}
-                >
-                  No upcoming calls booked.
-                </p>
-                <Link
-                  href="/admin/calendar"
-                  style={{
-                    fontFamily: T.mono,
-                    fontSize: "10px",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: T.primary,
-                  }}
-                >
-                  View calendar →
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Mini calendar */}
-          <div
-            className="overflow-hidden"
-            style={{ background: T.surface, border: `1px solid ${T.border}` }}
-          >
-            <div
-              className="flex items-center justify-between px-4 py-3"
-              style={{ borderBottom: `1px solid ${T.border}` }}
-            >
-              <span
-                style={{
-                  fontFamily: T.display,
-                  fontWeight: 600,
-                  fontSize: "1rem",
-                  color: T.fg,
-                }}
-              >
-                {MONTHS[calView.m]} <span style={{ color: T.muted }}>{calView.y}</span>
-              </span>
-              <Link
-                href="/admin/calendar"
+              <div
                 style={{
                   fontFamily: T.mono,
-                  fontSize: "10px",
-                  letterSpacing: "0.06em",
+                  fontSize: "0.62rem",
+                  letterSpacing: "0.1em",
                   textTransform: "uppercase",
-                  color: T.muted,
+                  color: "var(--k-accent)",
+                  marginBottom: "14px",
                 }}
               >
-                Full calendar →
-              </Link>
-            </div>
-            <div className="p-3">
-              <div className="grid grid-cols-7 mb-1">
-                {WEEKDAYS.map((w, i) => (
+                {"// NEXT CALL"}
+              </div>
+              {nextCall ? (
+                <Link
+                  href={`/admin/clients/${nextCall.tenant_id}`}
+                  className="block hover:opacity-90 transition-opacity"
+                >
                   <div
-                    key={w}
-                    className="text-center py-1"
                     style={{
-                      fontFamily: T.mono,
-                      fontSize: 8,
-                      letterSpacing: "0.08em",
+                      fontFamily: T.sans,
+                      fontWeight: 700,
+                      fontSize: "1.3rem",
+                      letterSpacing: "-0.02em",
                       textTransform: "uppercase",
-                      color: i >= 5 ? `${T.muted}55` : T.muted,
+                      color: "var(--k-fg)",
+                      marginBottom: "12px",
                     }}
                   >
-                    {w}
+                    {nextCall.tenants?.name || "Client"}
                   </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-0.5">
-                {cells.map((c) => {
-                  if (!c.inMonth) return <div key={c.key} />;
-                  const isToday = c.day === todayDay;
-                  const hasCall = callDates.has(c.key);
-                  return (
-                    <div
-                      key={c.key}
-                      className="aspect-square flex flex-col items-center justify-center relative"
+                  <div
+                    className="flex items-center gap-3 p-3"
+                    style={{
+                      background: "rgba(16,185,129,0.10)",
+                      border: "1px solid rgba(16,185,129,0.28)",
+                    }}
+                  >
+                    <span
+                      className="k-livedot"
                       style={{
-                        background: isToday
-                          ? T.primary
-                          : hasCall
-                            ? `${T.primary}20`
-                            : "transparent",
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: "var(--k-accent)",
+                        flexShrink: 0,
                       }}
-                    >
-                      <span
+                    />
+                    <div>
+                      <div
                         style={{
-                          fontFamily: T.mono,
-                          fontSize: 10,
-                          color: isToday ? T.primaryFg : T.fg,
-                          fontWeight: isToday ? 700 : 400,
+                          fontFamily: T.sans,
+                          fontSize: "0.88rem",
+                          color: "var(--k-fg)",
+                          fontWeight: 600,
                         }}
                       >
-                        {c.day}
-                      </span>
-                      {hasCall && !isToday && (
+                        {formatCallDate(nextCall.call_date)}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: "0.78rem",
+                          color: "var(--k-accent)",
+                        }}
+                      >
+                        {formatCallTime(nextCall.call_time)} · {nextCall.duration_min} min
+                      </div>
+                    </div>
+                  </div>
+                  {calls.length > 1 && (
+                    <div
+                      className="mt-3"
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "0.62rem",
+                        color: "var(--k-muted)",
+                        letterSpacing: "0.08em",
+                      }}
+                    >
+                      +{calls.length - 1} more upcoming call
+                      {calls.length > 2 ? "s" : ""}
+                    </div>
+                  )}
+                </Link>
+              ) : (
+                <div>
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.88rem",
+                      color: "var(--k-muted)",
+                      marginBottom: "14px",
+                    }}
+                  >
+                    No upcoming calls booked.
+                  </p>
+                  <InlineLink href="/admin/calendar" label="VIEW CALENDAR" />
+                </div>
+              )}
+            </div>
+          </Reveal>
+
+          {/* Mini calendar */}
+          <Reveal delay={0.15}>
+            <div
+              className="k-kard overflow-hidden"
+              style={{
+                background: "var(--k-surface)",
+                border: "1px solid var(--k-border)",
+              }}
+            >
+              <div
+                className="flex items-center justify-between px-4 py-3"
+                style={{ borderBottom: "1px solid var(--k-border)" }}
+              >
+                <span
+                  style={{
+                    fontFamily: T.sans,
+                    fontWeight: 700,
+                    fontSize: "1rem",
+                    letterSpacing: "-0.01em",
+                    textTransform: "uppercase",
+                    color: "var(--k-fg)",
+                  }}
+                >
+                  {MONTHS[calView.m]}{" "}
+                  <span style={{ color: "var(--k-muted)" }}>{calView.y}</span>
+                </span>
+                <InlineLink href="/admin/calendar" label="FULL CALENDAR" tone="muted" />
+              </div>
+              <div className="p-3">
+                <div className="grid grid-cols-7 mb-1">
+                  {WEEKDAYS.map((w, i) => (
+                    <div
+                      key={w}
+                      className="text-center py-1"
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: 8,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: i >= 5 ? "var(--k-faint)" : "var(--k-muted)",
+                      }}
+                    >
+                      {w}
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-0.5">
+                  {cells.map((c) => {
+                    if (!c.inMonth) return <div key={c.key} />;
+                    const isToday = c.day === todayDay;
+                    const hasCall = callDates.has(c.key);
+                    return (
+                      <div
+                        key={c.key}
+                        className="aspect-square flex flex-col items-center justify-center relative"
+                        style={{
+                          background: isToday
+                            ? "var(--k-accent)"
+                            : hasCall
+                              ? "rgba(16,185,129,0.16)"
+                              : "transparent",
+                        }}
+                      >
                         <span
                           style={{
-                            position: "absolute",
-                            bottom: 3,
-                            width: 3,
-                            height: 3,
-                            borderRadius: "50%",
-                            background: T.primary,
+                            fontFamily: T.mono,
+                            fontSize: 10,
+                            color: isToday ? T.primaryFg : "var(--k-fg)",
+                            fontWeight: isToday ? 700 : 400,
                           }}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
+                        >
+                          {c.day}
+                        </span>
+                        {hasCall && !isToday && (
+                          <span
+                            style={{
+                              position: "absolute",
+                              bottom: 3,
+                              width: 3,
+                              height: 3,
+                              borderRadius: "50%",
+                              background: "var(--k-accent)",
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
     </div>
   );
 }
 
-function StatCard({
+/** Mono uppercase "view all →" link for Panel headers. */
+function ViewAll({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1.5"
+      style={{
+        fontFamily: T.mono,
+        fontSize: "0.62rem",
+        fontWeight: 500,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        color: "var(--k-muted)",
+      }}
+    >
+      VIEW ALL
+      <span aria-hidden>→</span>
+    </Link>
+  );
+}
+
+/** Mono inline link with optional emerald/muted tone. */
+function InlineLink({
+  href,
   label,
-  sublabel,
-  value,
-  accent,
+  tone = "accent",
 }: {
+  href: string;
   label: string;
-  sublabel: string;
-  value: string;
-  accent: string;
+  tone?: "accent" | "muted";
 }) {
   return (
-    <div
-      className="p-5"
-      style={{ background: T.surface, border: `1px solid ${T.border}` }}
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1.5"
+      style={{
+        fontFamily: T.mono,
+        fontSize: "0.62rem",
+        fontWeight: 500,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        color: tone === "muted" ? "var(--k-muted)" : "var(--k-accent)",
+      }}
     >
-      <div
+      {label}
+      <span aria-hidden>→</span>
+    </Link>
+  );
+}
+
+/** "+N more" footer row inside a list Panel. */
+function MoreLink({ href, count }: { href: string; count: number }) {
+  return (
+    <div style={{ borderTop: "1px solid var(--k-border)", padding: "12px 16px" }}>
+      <Link
+        href={href}
+        className="inline-flex items-center gap-1.5"
         style={{
           fontFamily: T.mono,
-          fontSize: "10px",
-          letterSpacing: "0.12em",
+          fontSize: "0.62rem",
+          fontWeight: 500,
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
-          color: T.muted,
-          marginBottom: "8px",
+          color: "var(--k-accent)",
         }}
       >
-        {label}
-      </div>
-      <div
-        style={{
-          fontFamily: T.display,
-          fontWeight: 600,
-          fontSize: "1.9rem",
-          color: accent,
-          lineHeight: 1,
-          marginBottom: "6px",
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontFamily: T.mono, fontSize: "10px", color: T.muted }}>
-        {sublabel}
-      </div>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  label,
-  href,
-  children,
-}: {
-  title: string;
-  label: string;
-  href: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className="overflow-hidden"
-      style={{ background: T.surface, border: `1px solid ${T.border}` }}
-    >
-      <div
-        className="flex items-center justify-between px-5 py-4"
-        style={{ borderBottom: `1px solid ${T.border}` }}
-      >
-        <div>
-          <div
-            style={{
-              fontFamily: T.mono,
-              fontSize: "9px",
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: T.primary,
-              marginBottom: "2px",
-            }}
-          >
-            {label}
-          </div>
-          <div
-            style={{
-              fontFamily: T.display,
-              fontWeight: 600,
-              fontSize: "1rem",
-              color: T.fg,
-            }}
-          >
-            {title}
-          </div>
-        </div>
-        <Link
-          href={href}
-          style={{
-            fontFamily: T.mono,
-            fontSize: "10px",
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color: T.muted,
-          }}
-        >
-          View all →
-        </Link>
-      </div>
-      <div className="px-2 py-1">{children}</div>
+        +{count} more
+        <span aria-hidden>→</span>
+      </Link>
     </div>
   );
 }
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="py-6 px-3 text-center">
-      <span style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}>
+    <div className="py-7 px-4 text-center">
+      <span style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}>
         {text}
       </span>
     </div>

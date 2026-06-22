@@ -6,6 +6,8 @@ import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 import { carePlan } from "@/lib/carePlans";
 import { StageStepper } from "@/components/portal/StageStepper";
+import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
+import { Reveal } from "@/components/Reveal";
 
 /**
  * Client project hub — everything for one project on a single mobile-first page:
@@ -42,55 +44,24 @@ type CR = {
   quoted_price: number | null;
 };
 
-const TONE: Record<string, string> = {
-  backlog: T.faint,
-  scoped: T.warning,
-  approved: T.primary,
-  in_progress: T.primary,
-  review: T.warning,
-  shipped: T.success,
-  submitted: T.info,
-  triaged: T.info,
-  awaiting_approval: T.warning,
-  rejected: T.danger,
+// Map each workflow status onto a StatusChip tone (mono uppercase, square).
+type Tone = "accent" | "success" | "warning" | "danger" | "muted";
+const TONE: Record<string, Tone> = {
+  backlog: "muted",
+  scoped: "warning",
+  approved: "accent",
+  in_progress: "accent",
+  review: "warning",
+  shipped: "success",
+  submitted: "accent",
+  triaged: "accent",
+  awaiting_approval: "warning",
+  rejected: "danger",
 };
 
 function Pill({ s }: { s: string }) {
-  const c = TONE[s] ?? T.muted;
-  return (
-    <span
-      style={{
-        fontFamily: T.mono,
-        fontSize: 10,
-        letterSpacing: "0.05em",
-        textTransform: "uppercase",
-        color: c,
-        background: `${c}14`,
-        border: `1px solid ${c}40`,
-        borderRadius: 999,
-        padding: "2px 8px",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {s.replace(/_/g, " ")}
-    </span>
-  );
+  return <StatusChip tone={TONE[s] ?? "muted"}>{s.replace(/_/g, " ")}</StatusChip>;
 }
-
-const card = {
-  background: T.surface,
-  border: `1px solid ${T.border}`,
-  borderRadius: T.r.lg,
-  padding: "18px 18px",
-  marginBottom: 14,
-} as const;
-const h2 = {
-  fontFamily: T.display,
-  fontWeight: 600,
-  fontSize: "1.05rem",
-  color: T.fg,
-  marginBottom: 12,
-} as const;
 
 // ── server actions ─────────────────────────────────────────────
 async function submitRequest(formData: FormData) {
@@ -218,404 +189,416 @@ export default async function PortalProject({
   const sub = (subs ?? [])[0] as { plan: string; mrr: number } | undefined;
   const plan = sub ? carePlan(sub.plan) : null;
 
+  // Square link-row style shared by the documents block.
+  const docRow: React.CSSProperties = {
+    padding: "11px 13px",
+    textDecoration: "none",
+  };
+
   return (
     <div style={{ maxWidth: 880, margin: "0 auto", padding: "24px 16px 56px" }}>
-      <Link
-        href="/portal"
-        style={{
-          fontFamily: T.mono,
-          fontSize: 11,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          color: T.muted,
-          textDecoration: "none",
-        }}
-      >
-        ← Your projects
-      </Link>
+      <Reveal>
+        <Link
+          href="/portal"
+          className="inline-flex items-center gap-2"
+          style={{
+            fontFamily: T.mono,
+            fontSize: "0.68rem",
+            fontWeight: 500,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "var(--k-muted)",
+            textDecoration: "none",
+          }}
+        >
+          <span aria-hidden>←</span> Your projects
+        </Link>
+      </Reveal>
 
-      <h1
-        style={{
-          fontFamily: T.display,
-          fontWeight: 600,
-          fontSize: "1.7rem",
-          color: T.fg,
-          margin: "12px 0 14px",
-        }}
-      >
-        {p.name}
-      </h1>
-      <div style={{ marginBottom: 18 }}>
+      <div style={{ marginTop: 14 }}>
+        <PageHeader index="02" label="PROJECT" title={p.name} />
+      </div>
+      <div style={{ margin: "16px 0 18px" }}>
         <StageStepper stage={p.stage} />
       </div>
 
       {/* Live site */}
       {p.live_url && (
-        <a
-          href={p.live_url}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center justify-between"
-          style={{
-            ...card,
-            textDecoration: "none",
-            borderColor: `${T.primary}66`,
-          }}
-        >
-          <div>
-            <div
+        <Reveal>
+          <a
+            href={p.live_url}
+            target="_blank"
+            rel="noreferrer"
+            className="k-kard k-kard-h flex items-center justify-between"
+            style={{
+              background: "var(--k-surface)",
+              borderColor: "var(--k-accent)",
+              padding: "18px",
+              marginBottom: 14,
+              textDecoration: "none",
+            }}
+          >
+            <div>
+              <div
+                className="inline-flex items-center gap-2"
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.66rem",
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--k-accent)",
+                }}
+              >
+                <span className="k-livedot" aria-hidden />
+                Your live site
+              </div>
+              <div
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.92rem",
+                  color: "var(--k-fg)",
+                  marginTop: 4,
+                  wordBreak: "break-all",
+                }}
+              >
+                {p.live_url.replace(/^https?:\/\//, "")}
+              </div>
+            </div>
+            <span
+              className="inline-flex items-center gap-1.5"
               style={{
                 fontFamily: T.mono,
-                fontSize: 10,
+                fontSize: "0.68rem",
+                fontWeight: 500,
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
-                color: T.primary,
+                color: "var(--k-accent)",
               }}
             >
-              Your live site
-            </div>
-            <div
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.92rem",
-                color: T.fg,
-                marginTop: 2,
-                wordBreak: "break-all",
-              }}
-            >
-              {p.live_url.replace(/^https?:\/\//, "")}
-            </div>
-          </div>
-          <span style={{ fontFamily: T.mono, fontSize: 12, color: T.primary }}>
-            Open ↗
-          </span>
-        </a>
+              Open
+              <span className="k-arrow" aria-hidden>
+                ↗
+              </span>
+            </span>
+          </a>
+        </Reveal>
       )}
 
       {/* Invested + plan */}
       <div className="grid grid-cols-2 gap-3" style={{ marginBottom: 14 }}>
-        <div style={{ ...card, marginBottom: 0 }}>
-          <div
-            style={{
-              fontFamily: T.mono,
-              fontSize: 10,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: T.muted,
-            }}
-          >
-            Invested
-          </div>
-          <div
-            style={{
-              fontFamily: T.display,
-              fontWeight: 700,
-              fontSize: "1.4rem",
-              color: T.fg,
-              marginTop: 4,
-            }}
-          >
-            {gbp(invested)}
-          </div>
-        </div>
-        <div style={{ ...card, marginBottom: 0 }}>
-          <div
-            style={{
-              fontFamily: T.mono,
-              fontSize: 10,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: T.muted,
-            }}
-          >
-            Care plan
-          </div>
-          <div
-            style={{
-              fontFamily: T.display,
-              fontWeight: 700,
-              fontSize: "1.05rem",
-              color: plan ? T.fg : T.faint,
-              marginTop: 4,
-            }}
-          >
-            {plan ? `${plan.label} · ${gbp(plan.mrr)}/mo` : "None yet"}
-          </div>
-        </div>
+        <Reveal delay={0}>
+          <StatCard value={gbp(invested)} label="Invested" />
+        </Reveal>
+        <Reveal delay={0.05}>
+          <StatCard
+            value={plan ? plan.label : "None yet"}
+            label="Care plan"
+            sub={plan ? `${gbp(plan.mrr)}/mo` : undefined}
+            accent={!!plan}
+          />
+        </Reveal>
       </div>
 
       {/* Documents + deliverables */}
-      <section style={card}>
-        <h2 style={h2}>Documents</h2>
-        <div className="flex flex-col gap-2">
-          <Link
-            href="/portal/proposal"
-            className="flex items-center justify-between"
-            style={{
-              padding: "11px 13px",
-              background: p.proposal_status === "sent" ? `${T.primary}14` : T.bg,
-              border: `1px solid ${p.proposal_status === "sent" ? T.primary : T.border}`,
-              borderRadius: T.r.md,
-              textDecoration: "none",
-            }}
-          >
-            <span style={{ fontFamily: T.sans, fontSize: "0.92rem", color: T.fg }}>
-              {p.proposal_status === "sent"
-                ? "Review & sign your proposal + DPA"
-                : "Your proposal & DPA"}
-            </span>
-            <span style={{ fontFamily: T.mono, fontSize: 12, color: T.primary }}>
-              {p.proposal_status === "sent" ? "Action →" : "View →"}
-            </span>
-          </Link>
-          <Link
-            href="/portal/deliverables"
-            className="flex items-center justify-between"
-            style={{
-              padding: "11px 13px",
-              background: T.bg,
-              border: `1px solid ${T.border}`,
-              borderRadius: T.r.md,
-              textDecoration: "none",
-            }}
-          >
-            <span style={{ fontFamily: T.sans, fontSize: "0.92rem", color: T.fg }}>
-              Deliverables{docCount ? ` (${docCount})` : ""}
-            </span>
-            <span style={{ fontFamily: T.mono, fontSize: 12, color: T.primary }}>
-              View →
-            </span>
-          </Link>
-        </div>
-      </section>
-
-      {/* Outstanding tasks */}
-      <section style={card}>
-        <h2 style={h2}>What we're working on</h2>
-        {taskList.length === 0 ? (
-          <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>
-            No outstanding tasks right now.
-          </p>
-        ) : (
-          <div className="flex flex-col">
-            {taskList.map((t, i) => (
-              <div
-                key={t.id}
-                className="flex items-center justify-between gap-3"
+      <Reveal>
+        <Panel label="DOCUMENTS" title="Documents" className="mb-[14px]">
+          <div className="flex flex-col gap-2">
+            <Link
+              href="/portal/proposal"
+              className="flex items-center justify-between"
+              style={{
+                ...docRow,
+                background:
+                  p.proposal_status === "sent" ? "rgba(16,185,129,0.12)" : "var(--k-bg)",
+                border: `1px solid ${
+                  p.proposal_status === "sent" ? "var(--k-accent)" : "var(--k-border)"
+                }`,
+              }}
+            >
+              <span
                 style={{
-                  padding: "9px 0",
-                  borderTop: i ? `1px solid ${T.border}` : "none",
+                  fontFamily: T.sans,
+                  fontSize: "0.92rem",
+                  color: "var(--k-fg)",
                 }}
               >
-                <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>
-                  {t.title}
-                </span>
-                <Pill s={t.status} />
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Team updates */}
-      <section style={card}>
-        <h2 style={h2}>Updates from the team</h2>
-        {updateList.length === 0 ? (
-          <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>
-            No updates yet — we'll post progress here.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {updateList.map((u) => (
-              <div
-                key={u.id}
-                style={{ padding: "8px 0", borderTop: `1px solid ${T.border}` }}
+                {p.proposal_status === "sent"
+                  ? "Review & sign your proposal + DPA"
+                  : "Your proposal & DPA"}
+              </span>
+              <span
+                className="inline-flex items-center gap-1.5"
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.66rem",
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--k-accent)",
+                }}
               >
+                {p.proposal_status === "sent" ? "Action" : "View"}
+                <span className="k-arrow" aria-hidden>
+                  →
+                </span>
+              </span>
+            </Link>
+            <Link
+              href="/portal/deliverables"
+              className="flex items-center justify-between"
+              style={{
+                ...docRow,
+                background: "var(--k-bg)",
+                border: "1px solid var(--k-border)",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.92rem",
+                  color: "var(--k-fg)",
+                }}
+              >
+                Deliverables{docCount ? ` (${docCount})` : ""}
+              </span>
+              <span
+                className="inline-flex items-center gap-1.5"
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.66rem",
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--k-accent)",
+                }}
+              >
+                View
+                <span className="k-arrow" aria-hidden>
+                  →
+                </span>
+              </span>
+            </Link>
+          </div>
+        </Panel>
+      </Reveal>
+
+      {/* Outstanding tasks */}
+      <Reveal>
+        <Panel label="IN PROGRESS" title="What we're working on" className="mb-[14px]">
+          {taskList.length === 0 ? (
+            <p
+              style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-faint)" }}
+            >
+              No outstanding tasks right now.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {taskList.map((t, i) => (
                 <div
-                  className="flex items-center justify-between gap-2"
-                  style={{ marginBottom: 4 }}
+                  key={t.id}
+                  className="flex items-center justify-between gap-3"
+                  style={{
+                    padding: "9px 0",
+                    borderTop: i ? "1px solid var(--k-border)" : "none",
+                  }}
                 >
                   <span
                     style={{
                       fontFamily: T.sans,
-                      fontWeight: 600,
                       fontSize: "0.9rem",
-                      color: T.fg,
+                      color: "var(--k-fg)",
                     }}
                   >
-                    {u.title}
+                    {t.title}
                   </span>
-                  <span style={{ fontFamily: T.mono, fontSize: 10, color: T.faint }}>
-                    {new Date(u.created_at).toLocaleDateString("en-GB")}
-                  </span>
+                  <Pill s={t.status} />
                 </div>
-                {u.body && (
-                  <p
-                    style={{
-                      fontFamily: T.sans,
-                      fontSize: "0.86rem",
-                      color: T.muted,
-                      lineHeight: 1.6,
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {u.body}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </Reveal>
 
-      {/* Change requests */}
-      <section style={card}>
-        <h2 style={h2}>Requests & changes</h2>
-        {p.proposal_status === "accepted" ? (
-          <form
-            action={submitRequest}
-            className="flex flex-col gap-2"
-            style={{ marginBottom: 14 }}
-          >
-            <input type="hidden" name="project_id" value={p.id} />
-            <textarea
-              name="description"
-              required
-              rows={2}
-              placeholder="Request a change or ask for something new…"
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.9rem",
-                padding: "10px 12px",
-                background: T.bg,
-                color: T.fg,
-                border: `1px solid ${T.border}`,
-                borderRadius: T.r.sm,
-                outline: "none",
-                resize: "vertical",
-              }}
-            />
-            <button
-              type="submit"
-              className="self-start"
-              style={{
-                fontFamily: T.sans,
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                height: 40,
-                paddingInline: 18,
-                background: T.primary,
-                color: T.primaryFg,
-                border: "none",
-                borderRadius: T.r.md,
-                cursor: "pointer",
-              }}
+      {/* Team updates */}
+      <Reveal>
+        <Panel label="UPDATES" title="Updates from the team" className="mb-[14px]">
+          {updateList.length === 0 ? (
+            <p
+              style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-faint)" }}
             >
-              Submit request
-            </button>
-          </form>
-        ) : (
-          <p
-            style={{
-              fontFamily: T.sans,
-              fontSize: "0.85rem",
-              color: T.muted,
-              lineHeight: 1.6,
-              marginBottom: 14,
-            }}
-          >
-            You&apos;ll be able to request build edits here once you&apos;ve signed your
-            proposal.
-          </p>
-        )}
-        {crList.length === 0 ? (
-          <p style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.faint }}>
-            No requests yet.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {crList.map((cr) => (
-              <div
-                key={cr.id}
-                style={{
-                  background: T.bg,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 0,
-                  padding: "10px 12px",
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <p style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.fg }}>
-                    {cr.description}
-                  </p>
-                  <Pill s={cr.status} />
-                </div>
-                {cr.status === "awaiting_approval" && (
-                  <div style={{ marginTop: 8 }}>
-                    <p
+              No updates yet — we&apos;ll post progress here.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {updateList.map((u, i) => (
+                <div
+                  key={u.id}
+                  style={{
+                    padding: "8px 0",
+                    borderTop: i ? "1px solid var(--k-border)" : "none",
+                  }}
+                >
+                  <div
+                    className="flex items-center justify-between gap-2"
+                    style={{ marginBottom: 4 }}
+                  >
+                    <span
                       style={{
-                        fontFamily: T.mono,
-                        fontSize: 11,
-                        color: T.muted,
-                        marginBottom: 8,
+                        fontFamily: T.sans,
+                        fontWeight: 600,
+                        fontSize: "0.9rem",
+                        color: "var(--k-fg)",
                       }}
                     >
-                      Quote: {cr.estimate_hours ?? "—"}h
-                      {cr.quoted_price != null ? ` · £${cr.quoted_price}` : ""}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <form action={decideRequest}>
-                        <input type="hidden" name="id" value={cr.id} />
-                        <input type="hidden" name="project_id" value={p.id} />
-                        <input type="hidden" name="decision" value="approved" />
-                        <button
-                          type="submit"
-                          style={{
-                            fontFamily: T.mono,
-                            fontSize: 11,
-                            textTransform: "uppercase",
-                            height: 32,
-                            paddingInline: 12,
-                            background: T.primary,
-                            color: T.primaryFg,
-                            border: "none",
-                            borderRadius: 0,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Approve
-                        </button>
-                      </form>
-                      <form action={decideRequest}>
-                        <input type="hidden" name="id" value={cr.id} />
-                        <input type="hidden" name="project_id" value={p.id} />
-                        <input type="hidden" name="decision" value="rejected" />
-                        <button
-                          type="submit"
-                          style={{
-                            fontFamily: T.mono,
-                            fontSize: 11,
-                            textTransform: "uppercase",
-                            height: 32,
-                            paddingInline: 12,
-                            background: "transparent",
-                            color: T.muted,
-                            border: `1px solid ${T.border}`,
-                            borderRadius: 0,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Decline
-                        </button>
-                      </form>
-                    </div>
+                      {u.title}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "0.62rem",
+                        letterSpacing: "0.06em",
+                        color: "var(--k-faint)",
+                      }}
+                    >
+                      {new Date(u.created_at).toLocaleDateString("en-GB")}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+                  {u.body && (
+                    <p
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.86rem",
+                        color: "var(--k-muted)",
+                        lineHeight: 1.6,
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {u.body}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </Reveal>
+
+      {/* Change requests */}
+      <Reveal>
+        <Panel label="REQUESTS" title="Requests & changes">
+          {p.proposal_status === "accepted" ? (
+            <form
+              action={submitRequest}
+              className="flex flex-col gap-2"
+              style={{ marginBottom: 14 }}
+            >
+              <input type="hidden" name="project_id" value={p.id} />
+              <textarea
+                name="description"
+                required
+                rows={2}
+                placeholder="Request a change or ask for something new…"
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.9rem",
+                  padding: "10px 12px",
+                  background: "var(--k-surface)",
+                  color: "var(--k-fg)",
+                  border: "1px solid var(--k-border)",
+                  borderRadius: 0,
+                  outline: "none",
+                  resize: "vertical",
+                }}
+              />
+              <button type="submit" className="kb kb-primary kb-sm self-start">
+                Submit request
+              </button>
+            </form>
+          ) : (
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.85rem",
+                color: "var(--k-muted)",
+                lineHeight: 1.6,
+                marginBottom: 14,
+              }}
+            >
+              You&apos;ll be able to request build edits here once you&apos;ve signed your
+              proposal.
+            </p>
+          )}
+          {crList.length === 0 ? (
+            <p
+              style={{ fontFamily: T.sans, fontSize: "0.82rem", color: "var(--k-faint)" }}
+            >
+              No requests yet.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {crList.map((cr) => (
+                <div
+                  key={cr.id}
+                  style={{
+                    background: "var(--k-bg)",
+                    border: "1px solid var(--k-border)",
+                    borderRadius: 0,
+                    padding: "10px 12px",
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.88rem",
+                        color: "var(--k-fg)",
+                      }}
+                    >
+                      {cr.description}
+                    </p>
+                    <Pill s={cr.status} />
+                  </div>
+                  {cr.status === "awaiting_approval" && (
+                    <div style={{ marginTop: 8 }}>
+                      <p
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: "0.66rem",
+                          letterSpacing: "0.06em",
+                          color: "var(--k-muted)",
+                          marginBottom: 8,
+                        }}
+                      >
+                        Quote: {cr.estimate_hours ?? "—"}h
+                        {cr.quoted_price != null ? ` · £${cr.quoted_price}` : ""}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <form action={decideRequest}>
+                          <input type="hidden" name="id" value={cr.id} />
+                          <input type="hidden" name="project_id" value={p.id} />
+                          <input type="hidden" name="decision" value="approved" />
+                          <button type="submit" className="kb kb-primary kb-sm">
+                            Approve
+                          </button>
+                        </form>
+                        <form action={decideRequest}>
+                          <input type="hidden" name="id" value={cr.id} />
+                          <input type="hidden" name="project_id" value={p.id} />
+                          <input type="hidden" name="decision" value="rejected" />
+                          <button type="submit" className="kb kb-outline kb-sm">
+                            Decline
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </Reveal>
     </div>
   );
 }

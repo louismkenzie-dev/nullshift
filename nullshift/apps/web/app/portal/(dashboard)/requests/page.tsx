@@ -2,6 +2,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
+import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
+import { Reveal } from "@/components/Reveal";
 
 /**
  * Client portal — requests. The structured intake that replaces email threads:
@@ -84,38 +86,39 @@ async function decideRequest(formData: FormData) {
   revalidatePath("/portal/requests");
 }
 
-const STATUS_TONE: Record<string, string> = {
-  submitted: T.info,
-  triaged: T.info,
-  scoped: T.warning,
-  awaiting_approval: T.warning,
-  approved: T.primary,
-  rejected: T.danger,
-  in_progress: T.primary,
-  review: T.warning,
-  shipped: T.success,
-};
+const STATUS_TONE: Record<string, "accent" | "success" | "warning" | "danger" | "muted"> =
+  {
+    submitted: "muted",
+    triaged: "muted",
+    scoped: "warning",
+    awaiting_approval: "warning",
+    approved: "accent",
+    rejected: "danger",
+    in_progress: "accent",
+    review: "warning",
+    shipped: "success",
+  };
 
 function Pill({ status }: { status: string }) {
-  const tone = STATUS_TONE[status] ?? T.muted;
   return (
-    <span
-      style={{
-        fontFamily: T.mono,
-        fontSize: "10px",
-        letterSpacing: "0.06em",
-        textTransform: "uppercase",
-        color: tone,
-        background: `${tone}14`,
-        border: `1px solid ${tone}40`,
-        borderRadius: 999,
-        padding: "2px 8px",
-      }}
-    >
+    <StatusChip tone={STATUS_TONE[status] ?? "muted"}>
       {status.replace(/_/g, " ")}
-    </span>
+    </StatusChip>
   );
 }
+
+const inputStyle = {
+  fontFamily: T.sans,
+  fontSize: "0.9rem",
+  width: "100%",
+  height: 44,
+  padding: "0 12px",
+  background: "var(--k-surface)",
+  color: "var(--k-fg)",
+  border: "1px solid var(--k-border)",
+  borderRadius: 0,
+  outline: "none",
+} as const;
 
 export default async function PortalRequestsPage() {
   const supabase = await createClient();
@@ -130,245 +133,161 @@ export default async function PortalRequestsPage() {
   const requestList = (requests ?? []) as CR[];
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "40px 24px" }}>
-      <div
-        style={{
-          fontFamily: T.mono,
-          fontSize: "10px",
-          letterSpacing: "0.2em",
-          textTransform: "uppercase",
-          color: T.primary,
-          marginBottom: 8,
-        }}
-      >
-        {"// Requests"}
-      </div>
-      <h1
-        style={{
-          fontFamily: T.display,
-          fontWeight: 600,
-          fontSize: "1.8rem",
-          color: T.fg,
-          marginBottom: 6,
-        }}
-      >
-        Requests &amp; approvals
-      </h1>
-      <p
-        style={{
-          fontFamily: T.sans,
-          fontSize: "0.9rem",
-          color: T.muted,
-          marginBottom: 28,
-          lineHeight: 1.6,
-        }}
-      >
-        Submit a change here — never by email. We scope and quote every request before any
-        work starts, and you approve the price below before we begin.
-      </p>
+    <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 16px 56px" }}>
+      <PageHeader
+        index="01"
+        label="REQUESTS"
+        title="Requests & approvals"
+        lead="Submit a change here — never by email. We scope and quote every request before any work starts, and you approve the price below before we begin."
+      />
 
       {/* Submit */}
-      {projectList.length > 0 ? (
-        <form
-          action={submitRequest}
-          style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: T.r.lg,
-            padding: 20,
-            marginBottom: 28,
-          }}
-        >
-          <div
-            style={{
-              fontFamily: T.sans,
-              fontWeight: 600,
-              fontSize: "0.95rem",
-              color: T.fg,
-              marginBottom: 12,
-            }}
-          >
-            New request
-          </div>
-          {projectList.length > 1 && (
-            <select name="project_id" style={selectStyle} required defaultValue="">
-              <option value="" disabled>
-                Choose a project…
-              </option>
-              {projectList.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          )}
-          {projectList.length === 1 && (
-            <input type="hidden" name="project_id" value={projectList[0].id} />
-          )}
-          <textarea
-            name="description"
-            placeholder="What would you like changed or added?"
-            required
-            rows={3}
-            style={{
-              ...selectStyle,
-              height: "auto",
-              padding: 12,
-              resize: "vertical",
-              marginTop: projectList.length > 1 ? 10 : 0,
-            }}
-          />
-          <button
-            type="submit"
-            style={{
-              fontFamily: T.sans,
-              fontWeight: 600,
-              fontSize: "0.9rem",
-              height: 42,
-              paddingInline: 20,
-              background: T.primary,
-              color: T.primaryFg,
-              border: "none",
-              borderRadius: T.r.md,
-              cursor: "pointer",
-              marginTop: 12,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
-            }}
-          >
-            Submit request →
-          </button>
-        </form>
-      ) : (
-        <p style={{ fontFamily: T.sans, color: T.muted, marginBottom: 28 }}>
-          Your project is being set up — you&apos;ll be able to submit requests here once
-          it&apos;s live.
-        </p>
-      )}
+      <div style={{ margin: "24px 0 20px" }}>
+        {projectList.length > 0 ? (
+          <Reveal>
+            <Panel label="NEW REQUEST" title="Submit a change">
+              <form action={submitRequest} className="flex flex-col gap-3">
+                {projectList.length > 1 && (
+                  <select name="project_id" style={inputStyle} required defaultValue="">
+                    <option value="" disabled>
+                      Choose a project…
+                    </option>
+                    {projectList.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {projectList.length === 1 && (
+                  <input type="hidden" name="project_id" value={projectList[0].id} />
+                )}
+                <textarea
+                  name="description"
+                  placeholder="What would you like changed or added?"
+                  required
+                  rows={3}
+                  style={{
+                    ...inputStyle,
+                    height: "auto",
+                    padding: 12,
+                    resize: "vertical",
+                  }}
+                />
+                <button type="submit" className="kb kb-primary self-start">
+                  Submit request
+                  <span className="k-arrow" aria-hidden>
+                    →
+                  </span>
+                </button>
+              </form>
+            </Panel>
+          </Reveal>
+        ) : (
+          <Reveal>
+            <p style={{ fontFamily: T.sans, color: "var(--k-muted)" }}>
+              Your project is being set up — you&apos;ll be able to submit requests here
+              once it&apos;s live.
+            </p>
+          </Reveal>
+        )}
+      </div>
 
       {/* List */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {requestList.map((cr) => {
+        {requestList.map((cr, i) => {
           const project = projectList.find((p) => p.id === cr.project_id);
           return (
-            <div
-              key={cr.id}
-              style={{
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: T.r.lg,
-                padding: "16px 18px",
-              }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  {project && (
+            <Reveal key={cr.id} delay={i * 0.05}>
+              <div
+                className="k-kard k-kard-h"
+                style={{ background: "var(--k-surface)", padding: "16px 18px" }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    {project && (
+                      <div
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: "0.66rem",
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          color: "var(--k-faint)",
+                          marginBottom: 4,
+                        }}
+                      >
+                        {project.name}
+                      </div>
+                    )}
+                    <p
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.92rem",
+                        color: "var(--k-fg)",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {cr.description}
+                    </p>
+                  </div>
+                  <Pill status={cr.status} />
+                </div>
+
+                {cr.status === "awaiting_approval" && (
+                  <div
+                    style={{
+                      marginTop: 14,
+                      padding: "14px 16px",
+                      background: "var(--k-bg)",
+                      border: `1px solid ${T.warning}40`,
+                      borderRadius: 0,
+                    }}
+                  >
                     <div
                       style={{
-                        fontFamily: T.mono,
-                        fontSize: "10px",
-                        color: T.faint,
+                        fontFamily: T.sans,
+                        fontSize: "0.9rem",
+                        color: "var(--k-fg)",
                         marginBottom: 4,
                       }}
                     >
-                      {project.name}
+                      Quote ready for your approval
                     </div>
-                  )}
-                  <p
-                    style={{
-                      fontFamily: T.sans,
-                      fontSize: "0.92rem",
-                      color: T.fg,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {cr.description}
-                  </p>
-                </div>
-                <Pill status={cr.status} />
+                    <div
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "0.85rem",
+                        color: "var(--k-muted)",
+                        marginBottom: 12,
+                      }}
+                    >
+                      {cr.estimate_hours != null && <>est {cr.estimate_hours}h</>}
+                      {cr.quoted_price != null && <> · £{cr.quoted_price}</>}
+                    </div>
+                    <div className="flex gap-2">
+                      <form action={decideRequest}>
+                        <input type="hidden" name="id" value={cr.id} />
+                        <input type="hidden" name="decision" value="approved" />
+                        <button type="submit" className="kb kb-primary kb-sm">
+                          Approve £{cr.quoted_price}
+                        </button>
+                      </form>
+                      <form action={decideRequest}>
+                        <input type="hidden" name="id" value={cr.id} />
+                        <input type="hidden" name="decision" value="rejected" />
+                        <button type="submit" className="kb kb-outline kb-sm">
+                          Decline
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {cr.status === "awaiting_approval" && (
-                <div
-                  style={{
-                    marginTop: 14,
-                    padding: "14px 16px",
-                    background: T.bg,
-                    border: `1px solid ${T.warning}40`,
-                    borderRadius: T.r.md,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: T.sans,
-                      fontSize: "0.9rem",
-                      color: T.fg,
-                      marginBottom: 4,
-                    }}
-                  >
-                    Quote ready for your approval
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: "0.85rem",
-                      color: T.muted,
-                      marginBottom: 12,
-                    }}
-                  >
-                    {cr.estimate_hours != null && <>est {cr.estimate_hours}h</>}
-                    {cr.quoted_price != null && <> · £{cr.quoted_price}</>}
-                  </div>
-                  <div className="flex gap-2">
-                    <form action={decideRequest}>
-                      <input type="hidden" name="id" value={cr.id} />
-                      <input type="hidden" name="decision" value="approved" />
-                      <button
-                        type="submit"
-                        style={{
-                          fontFamily: T.sans,
-                          fontWeight: 600,
-                          fontSize: "0.85rem",
-                          height: 38,
-                          paddingInline: 18,
-                          background: T.primary,
-                          color: T.primaryFg,
-                          border: "none",
-                          borderRadius: T.r.md,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Approve £{cr.quoted_price}
-                      </button>
-                    </form>
-                    <form action={decideRequest}>
-                      <input type="hidden" name="id" value={cr.id} />
-                      <input type="hidden" name="decision" value="rejected" />
-                      <button
-                        type="submit"
-                        style={{
-                          fontFamily: T.sans,
-                          fontWeight: 500,
-                          fontSize: "0.85rem",
-                          height: 38,
-                          paddingInline: 16,
-                          background: "transparent",
-                          color: T.muted,
-                          border: `1px solid ${T.borderStr}`,
-                          borderRadius: T.r.md,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Decline
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              )}
-            </div>
+            </Reveal>
           );
         })}
         {requestList.length === 0 && (
-          <p style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.faint }}>
+          <p style={{ fontFamily: T.sans, fontSize: "0.88rem", color: "var(--k-faint)" }}>
             No requests yet.
           </p>
         )}
@@ -376,15 +295,3 @@ export default async function PortalRequestsPage() {
     </div>
   );
 }
-
-const selectStyle = {
-  fontFamily: T.sans,
-  fontSize: "0.9rem",
-  width: "100%",
-  height: 42,
-  padding: "0 12px",
-  background: T.bg,
-  color: T.fg,
-  border: `1px solid ${T.border}`,
-  borderRadius: T.r.md,
-} as const;

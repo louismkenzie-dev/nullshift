@@ -13,7 +13,6 @@ const ROUTES = [
   "/faq",
   "/brand",
   "/book",
-  "/learn",
   "/legal",
 ];
 

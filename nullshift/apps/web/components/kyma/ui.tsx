@@ -12,6 +12,8 @@
 import React from "react";
 import Link from "next/link";
 import { T } from "@nullshift/ui/tokens";
+import { ScrambleText } from "@/components/anim/ScrambleText";
+import { CountUp } from "@/components/anim/CountUp";
 
 const MONO = T.mono; // Roboto Mono
 const SANS = T.sans; // TASA Orbiter (display + body)
@@ -143,10 +145,11 @@ export function Eyebrow({
       }}
     >
       {index && <span style={{ color: accent }}>[{index}]</span>}
-      <span>{label}</span>
+      <ScrambleText as="span" text={label} />
       {cursor && (
         <span
           aria-hidden
+          className="k-eyebrow-cursor"
           style={{
             width: 7,
             height: 13,
@@ -359,8 +362,8 @@ export function BarButton({
     <>
       <span>{children}</span>
       <span className="inline-flex items-center gap-3">
-        {meta && <span style={{ color: "var(--k-muted)" }}>{meta}</span>}
-        <span className="k-arrow" aria-hidden style={{ color: "var(--k-accent)" }}>
+        {meta && <span className="k-bar-metatext">{meta}</span>}
+        <span className="k-arrow" aria-hidden>
           ▸
         </span>
       </span>
@@ -492,7 +495,7 @@ export function StatBig({
           color: "var(--k-fg)",
         }}
       >
-        {value}
+        <CountUp value={value} />
       </span>
       {label && (
         <span
@@ -548,7 +551,7 @@ export function StatGrid({ stats, cols = 4 }: { stats: Stat[]; cols?: 2 | 3 | 4 
               color: "var(--k-fg)",
             }}
           >
-            {s.value}
+            <CountUp value={s.value} />
           </span>
           <span
             style={{
@@ -770,29 +773,88 @@ export function Watermark({ children }: { children: React.ReactNode }) {
 export function Marquee({
   items,
   separator = "✳",
+  direction = "left",
+  speed = 42,
+  pauseOnHover = false,
+  variant = "ticker",
 }: {
   items: string[];
   separator?: string;
+  direction?: "left" | "right";
+  /** seconds for one full loop */
+  speed?: number;
+  pauseOnHover?: boolean;
+  variant?: "ticker" | "large";
 }) {
+  const large = variant === "large";
   return (
-    <div className="k-marquee">
+    <div
+      className="k-marquee"
+      data-dir={direction}
+      data-variant={variant}
+      data-pause={pauseOnHover ? "true" : undefined}
+      style={{ ["--mq-speed"]: `${speed}s` } as React.CSSProperties}
+    >
       <div className="k-marquee-track" aria-hidden>
         {[...items, ...items].map((it, i) => (
           <span
             key={i}
             className="flex items-center"
             style={{
-              fontFamily: MONO,
-              fontSize: "0.8rem",
-              letterSpacing: "0.08em",
+              fontFamily: large ? SANS : MONO,
+              fontWeight: large ? 800 : 500,
+              fontSize: large ? "clamp(1.6rem,4vw,2.8rem)" : "0.8rem",
+              letterSpacing: large ? "-0.02em" : "0.08em",
               textTransform: "uppercase",
               color: "var(--k-fg)",
-              paddingInline: 26,
+              paddingInline: large ? 36 : 26,
               whiteSpace: "nowrap",
             }}
           >
             {it}
-            <span style={{ color: "var(--k-accent)", marginLeft: 26 }}>{separator}</span>
+            <span style={{ color: "var(--k-accent)", marginLeft: large ? 36 : 26 }}>
+              {separator}
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Brand strip — full-bleed accent band, NULLSHIFT® repeating (ANIM 16) */
+export function BrandStrip({
+  text = "NULLSHIFT®",
+  speed = 18,
+}: {
+  text?: string;
+  speed?: number;
+}) {
+  const items = Array.from({ length: 8 }, () => text);
+  return (
+    <div
+      className="k-marquee"
+      data-variant="brand"
+      data-dir="left"
+      style={{ ["--mq-speed"]: `${speed}s` } as React.CSSProperties}
+    >
+      <div className="k-marquee-track" aria-hidden>
+        {[...items, ...items].map((it, i) => (
+          <span
+            key={i}
+            style={{
+              fontFamily: SANS,
+              fontWeight: 800,
+              fontSize: "clamp(0.95rem,1.5vw,1.15rem)",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: "var(--k-on-accent)",
+              paddingInline: 22,
+              whiteSpace: "nowrap",
+              display: "inline-flex",
+            }}
+          >
+            {it}
           </span>
         ))}
       </div>

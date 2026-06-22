@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { formatCallDate, formatCallTime, LONDON_TZ } from "@nullshift/ui/format";
+import { PageHeader } from "@/components/app/AppKit";
 
 type Call = {
   id: string;
@@ -120,80 +121,85 @@ export default function CalendarPage() {
 
   const cellName = (c: Call) => c.tenants?.name || "Client";
   const navBtn: React.CSSProperties = {
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     display: "grid",
     placeItems: "center",
     fontFamily: T.mono,
     fontSize: 13,
-    color: T.fg,
-    background: T.surface2,
+    color: "var(--k-fg)",
+    background: "var(--k-surface)",
+    border: "1px solid var(--k-border)",
     borderRadius: 0,
   };
 
   return (
     <div>
-      <div className="flex items-end justify-between mb-8">
-        <div>
-          <div
+      <PageHeader
+        index="09"
+        label="Schedule"
+        title="Call calendar"
+        actions={
+          <span
             style={{
               fontFamily: T.mono,
-              fontSize: "10px",
-              letterSpacing: "0.2em",
+              fontSize: "0.7rem",
+              letterSpacing: "0.08em",
               textTransform: "uppercase",
-              color: T.primary,
-              marginBottom: "8px",
+              color: "var(--k-muted)",
             }}
           >
-            // SCHEDULE
-          </div>
-          <h1
-            style={{
-              fontFamily: T.display,
-              fontWeight: 600,
-              fontSize: "2.4rem",
-              color: T.fg,
-            }}
-          >
-            CALL CALENDAR
-          </h1>
-        </div>
-        <div style={{ fontFamily: T.mono, fontSize: "11px", color: T.muted }}>
-          {upcoming.length} upcoming · London time
-        </div>
-      </div>
+            <span className="k-livedot" style={{ marginRight: 8 }} />
+            {upcoming.length} upcoming · London time
+          </span>
+        }
+      />
 
       {loading ? (
-        <p style={{ fontFamily: T.mono, fontSize: 12, color: T.muted }}>Loading…</p>
+        <p
+          style={{
+            fontFamily: T.mono,
+            fontSize: 12,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "var(--k-muted)",
+            marginTop: 28,
+          }}
+        >
+          Loading…
+        </p>
       ) : (
-        <div className="grid lg:grid-cols-[1fr_300px] gap-6">
+        <div className="grid lg:grid-cols-[1fr_300px] gap-6" style={{ marginTop: 28 }}>
           {/* Month grid */}
           <div
-            className="overflow-hidden"
-            style={{ background: T.surface, border: `1px solid ${T.border}` }}
+            className="k-kard overflow-hidden"
+            style={{ background: "var(--k-surface)" }}
           >
             {/* Header */}
             <div
               className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: `1px solid ${T.border}` }}
+              style={{ borderBottom: "1px solid var(--k-border)" }}
             >
               <div className="flex items-baseline gap-2">
                 <span
                   style={{
                     fontFamily: T.display,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     fontSize: "1.4rem",
-                    color: T.fg,
+                    letterSpacing: "-0.02em",
+                    textTransform: "uppercase",
+                    color: "var(--k-fg)",
                   }}
                 >
                   {MONTHS[view.m]}
                 </span>
                 <span
                   style={{
-                    fontFamily: T.display,
-                    fontWeight: 600,
-                    fontSize: "1.4rem",
-                    color: T.muted,
+                    fontFamily: T.mono,
+                    fontWeight: 500,
+                    fontSize: "1rem",
+                    letterSpacing: "0.04em",
+                    color: "var(--k-muted)",
                   }}
                 >
                   {view.y}
@@ -202,7 +208,7 @@ export default function CalendarPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={goToday}
-                  className="transition-opacity hover:opacity-80"
+                  className="transition-colors hover:text-[var(--k-fg)]"
                   style={{
                     ...navBtn,
                     width: "auto",
@@ -210,7 +216,7 @@ export default function CalendarPage() {
                     fontSize: 10,
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
-                    color: T.muted,
+                    color: "var(--k-muted)",
                   }}
                 >
                   Today
@@ -241,9 +247,10 @@ export default function CalendarPage() {
                   style={{
                     fontFamily: T.mono,
                     fontSize: 9,
-                    letterSpacing: "0.1em",
+                    fontWeight: 500,
+                    letterSpacing: "0.12em",
                     textTransform: "uppercase",
-                    color: i >= 5 ? `${T.muted}88` : T.muted,
+                    color: i >= 5 ? "var(--k-faint)" : "var(--k-muted)",
                   }}
                 >
                   {w}
@@ -265,7 +272,7 @@ export default function CalendarPage() {
                     key={c.key + i}
                     className="min-h-[92px] p-2"
                     style={{
-                      background: c.inMonth ? T.bg : "transparent",
+                      background: c.inMonth ? "var(--k-bg)" : "transparent",
                       opacity: c.inMonth ? 1 : 0.35,
                     }}
                   >
@@ -279,8 +286,12 @@ export default function CalendarPage() {
                           fontFamily: T.mono,
                           fontSize: 11,
                           lineHeight: 1,
-                          background: isToday ? T.primary : "transparent",
-                          color: isToday ? T.primaryFg : weekend ? `${T.muted}aa` : T.fg,
+                          background: isToday ? "var(--k-accent)" : "transparent",
+                          color: isToday
+                            ? "var(--k-on-accent)"
+                            : weekend
+                              ? "var(--k-faint)"
+                              : "var(--k-fg)",
                           fontWeight: isToday ? 700 : 400,
                         }}
                       >
@@ -294,8 +305,8 @@ export default function CalendarPage() {
                           href={`/admin/clients/${call.tenant_id}`}
                           className="block transition-opacity hover:opacity-80 px-1.5 py-1"
                           style={{
-                            background: `${T.primary}22`,
-                            borderLeft: `2px solid ${T.primary}`,
+                            background: "var(--k-accent-soft, rgba(16,185,129,0.14))",
+                            borderLeft: "2px solid var(--k-accent)",
                           }}
                         >
                           <div
@@ -304,13 +315,18 @@ export default function CalendarPage() {
                               fontFamily: T.sans,
                               fontSize: 11,
                               fontWeight: 600,
-                              color: T.fg,
+                              color: "var(--k-fg)",
                             }}
                           >
                             {cellName(call)}
                           </div>
                           <div
-                            style={{ fontFamily: T.mono, fontSize: 9, color: T.primary }}
+                            style={{
+                              fontFamily: T.mono,
+                              fontSize: 9,
+                              letterSpacing: "0.04em",
+                              color: "var(--k-accent)",
+                            }}
                           >
                             {call.call_time}
                           </div>
@@ -325,27 +341,38 @@ export default function CalendarPage() {
 
           {/* Upcoming list */}
           <div
-            className="p-5"
-            style={{
-              background: T.surface,
-              border: `1px solid ${T.border}`,
-              alignSelf: "start",
-            }}
+            className="k-kard p-5"
+            style={{ background: "var(--k-surface)", alignSelf: "start" }}
           >
             <div
-              className="mb-4"
+              className="mb-4 inline-flex items-center gap-2"
               style={{
                 fontFamily: T.mono,
                 fontSize: 10,
+                fontWeight: 500,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                color: T.muted,
+                color: "var(--k-muted)",
               }}
             >
+              <span
+                style={{
+                  height: 1,
+                  width: 14,
+                  background: "var(--k-accent)",
+                  display: "inline-block",
+                }}
+              />
               Upcoming calls
             </div>
             {upcoming.length === 0 ? (
-              <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}>
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.85rem",
+                  color: "var(--k-muted)",
+                }}
+              >
                 No upcoming calls booked.
               </p>
             ) : (
@@ -355,7 +382,7 @@ export default function CalendarPage() {
                     key={c.id}
                     href={`/admin/clients/${c.tenant_id}`}
                     className="block transition-opacity hover:opacity-80 py-3"
-                    style={{ borderTop: i ? `1px solid ${T.border}` : "none" }}
+                    style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <span
@@ -363,16 +390,18 @@ export default function CalendarPage() {
                           width: 6,
                           height: 6,
                           borderRadius: "50%",
-                          background: T.primary,
+                          background: "var(--k-accent)",
                           flexShrink: 0,
                         }}
                       />
                       <span
                         style={{
                           fontFamily: T.display,
-                          fontWeight: 600,
+                          fontWeight: 700,
                           fontSize: "0.95rem",
-                          color: T.fg,
+                          letterSpacing: "-0.01em",
+                          textTransform: "uppercase",
+                          color: "var(--k-fg)",
                         }}
                       >
                         {cellName(c)}
@@ -382,7 +411,7 @@ export default function CalendarPage() {
                       style={{
                         fontFamily: T.sans,
                         fontSize: "0.8rem",
-                        color: T.muted,
+                        color: "var(--k-muted)",
                         paddingLeft: 14,
                       }}
                     >
@@ -391,8 +420,9 @@ export default function CalendarPage() {
                     <div
                       style={{
                         fontFamily: T.mono,
-                        fontSize: "0.74rem",
-                        color: T.primary,
+                        fontSize: "0.72rem",
+                        letterSpacing: "0.04em",
+                        color: "var(--k-accent)",
                         paddingLeft: 14,
                       }}
                     >

@@ -203,7 +203,6 @@ async function updateMembership(formData: FormData) {
   });
 
   revalidatePath("/admin/users");
-  revalidatePath("/learn");
 }
 
 async function deleteUser(formData: FormData) {

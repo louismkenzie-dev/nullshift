@@ -9,7 +9,12 @@ export function useReveal(threshold = 0.12) {
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); io.unobserve(el); } },
+      ([e]) => {
+        if (e.isIntersecting) {
+          setVisible(true);
+          io.unobserve(el);
+        }
+      },
       { threshold, rootMargin: "0px 0px -40px 0px" }
     );
     io.observe(el);
@@ -21,11 +26,11 @@ export function useReveal(threshold = 0.12) {
 type Dir = "up" | "down" | "left" | "right" | "none";
 
 const OFFSETS: Record<Dir, [number, number]> = {
-  up:    [0, 40],
-  down:  [0, -40],
-  left:  [40, 0],
+  up: [0, 40],
+  down: [0, -40],
+  left: [40, 0],
   right: [-40, 0],
-  none:  [0, 0],
+  none: [0, 0],
 };
 
 /**
@@ -48,6 +53,24 @@ export function Reveal({
   distance?: number;
 }) {
   const { ref, visible } = useReveal();
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // Reduced motion: render the final state, no transform / blur / fade.
+  if (reduced) {
+    return (
+      <div ref={ref} className={className}>
+        {children}
+      </div>
+    );
+  }
 
   let [tx, ty] = OFFSETS[direction];
   if (distance !== undefined) {
@@ -67,9 +90,9 @@ export function Reveal({
         filter: visible ? "blur(0px)" : "blur(12px)",
         willChange: "opacity, transform, filter",
         transition: [
-          `opacity 0.7s cubic-bezier(.16,1,.3,1) ${delay}s`,
-          `transform 0.95s cubic-bezier(.16,1,.3,1) ${delay}s`,
-          `filter 0.7s cubic-bezier(.16,1,.3,1) ${delay}s`,
+          `opacity 0.7s var(--ease-out-expo) ${delay}s`,
+          `transform 0.95s var(--ease-out-expo) ${delay}s`,
+          `filter 0.7s var(--ease-out-expo) ${delay}s`,
         ].join(", "),
       }}
     >

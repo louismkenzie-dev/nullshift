@@ -46,7 +46,7 @@ export default function Loading() {
           width="17"
           height="50"
           rx="4.5"
-          fill={T.primary}
+          fill="var(--k-accent)"
           style={{ animation: "ns-pill-b 1.05s ease-in-out infinite" }}
         />
       </svg>
@@ -56,7 +56,7 @@ export default function Loading() {
           fontSize: 11,
           letterSpacing: "0.18em",
           textTransform: "uppercase",
-          color: T.muted,
+          color: "var(--k-muted)",
         }}
       >
         Loading client…

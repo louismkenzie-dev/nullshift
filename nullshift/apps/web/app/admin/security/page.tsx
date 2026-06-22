@@ -3,6 +3,8 @@ import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { isAdminEmail } from "@nullshift/auth/admin";
 import { T } from "@nullshift/ui/tokens";
+import { PageHeader } from "@/components/app/AppKit";
+import { Reveal } from "@/components/kyma";
 import { MfaPanel } from "./MfaPanel";
 
 /**
@@ -21,42 +23,22 @@ export default async function SecurityPage() {
   if (!isAdminEmail(user.email)) redirect("/admin/login");
 
   return (
-    <main style={{ minHeight: "100vh", background: T.bg }}>
+    <main style={{ minHeight: "100vh", background: "var(--k-bg)" }}>
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "80px 24px" }}>
-        <div
-          style={{
-            fontFamily: T.mono,
-            fontSize: "10px",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: T.primary,
-            marginBottom: 8,
-          }}
-        >
-          {"// Security"}
-        </div>
-        <h1
-          style={{
-            fontFamily: T.display,
-            fontWeight: 600,
-            fontSize: "1.9rem",
-            color: T.fg,
-            marginBottom: 20,
-          }}
-        >
-          Two-factor authentication
-        </h1>
-        <MfaPanel />
+        <PageHeader index="SEC" label="SECURITY" title="Two-factor authentication" />
+        <Reveal delay={0.05} className="mt-8">
+          <MfaPanel />
+        </Reveal>
         <Link
           href="/admin"
           style={{
             display: "inline-block",
             marginTop: 22,
             fontFamily: T.mono,
-            fontSize: 11,
-            letterSpacing: "0.06em",
+            fontSize: "0.66rem",
+            letterSpacing: "0.1em",
             textTransform: "uppercase",
-            color: T.muted,
+            color: "var(--k-muted)",
             textDecoration: "none",
           }}
         >

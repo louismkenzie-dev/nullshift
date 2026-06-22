@@ -14,6 +14,8 @@ import { setEntityType } from "../dpa-actions";
 import { dpaReadyToSend } from "@/lib/dpa";
 import { sendEmail } from "@/lib/sendEmail";
 import { proposalSignedEmail } from "@/lib/clientEmails";
+import { PageHeader, StatusChip } from "@/components/app/AppKit";
+import { Reveal, MonoTag } from "@/components/kyma";
 
 /**
  * Client portal — proposal & invoices. The client reviews the itemised proposal
@@ -226,34 +228,18 @@ async function declineProposal(formData: FormData) {
   revalidatePath("/portal/proposal");
 }
 
-const tone: Record<string, string> = {
-  draft: T.muted,
-  sent: T.warning,
-  accepted: T.primary,
-  declined: T.danger,
-  paid: T.success,
-  open: T.warning,
-  void: T.muted,
+// Status → StatusChip tone. Square mono chips, brand-aligned (no rounded pills).
+const tone: Record<string, "accent" | "success" | "warning" | "danger" | "muted"> = {
+  draft: "muted",
+  sent: "warning",
+  accepted: "accent",
+  declined: "danger",
+  paid: "success",
+  open: "warning",
+  void: "muted",
 };
 function Badge({ s }: { s: string }) {
-  const c = tone[s] ?? T.muted;
-  return (
-    <span
-      style={{
-        fontFamily: T.mono,
-        fontSize: "10px",
-        letterSpacing: "0.05em",
-        textTransform: "uppercase",
-        color: c,
-        background: `${c}14`,
-        border: `1px solid ${c}40`,
-        borderRadius: 999,
-        padding: "2px 8px",
-      }}
-    >
-      {s.replace(/_/g, " ")}
-    </span>
-  );
+  return <StatusChip tone={tone[s] ?? "muted"}>{s.replace(/_/g, " ")}</StatusChip>;
 }
 
 export default async function PortalProposal() {
@@ -284,34 +270,19 @@ export default async function PortalProposal() {
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "40px 24px" }}>
-      <div
-        style={{
-          fontFamily: T.mono,
-          fontSize: "10px",
-          letterSpacing: "0.2em",
-          textTransform: "uppercase",
-          color: T.primary,
-          marginBottom: 8,
-        }}
-      >
-        {"// Proposal & invoices"}
-      </div>
-      <h1
-        style={{
-          fontFamily: T.display,
-          fontWeight: 600,
-          fontSize: "1.8rem",
-          color: T.fg,
-          marginBottom: 24,
-        }}
-      >
-        Your project
-      </h1>
+      <PageHeader
+        index="01"
+        label="Proposal & invoices"
+        title="Your project"
+        className="mb-8"
+      />
 
       {projectList.length === 0 && (
-        <p style={{ fontFamily: T.sans, color: T.muted }}>
-          Your project is being set up — your proposal will appear here.
-        </p>
+        <Reveal>
+          <p style={{ fontFamily: T.sans, color: "var(--k-muted)" }}>
+            Your project is being set up — your proposal will appear here.
+          </p>
+        </Reveal>
       )}
 
       {projectList.map((project) => {
@@ -351,374 +322,377 @@ export default async function PortalProposal() {
           />
         );
         return (
-          <div key={project.id} style={{ marginBottom: 32 }}>
-            <div className="flex items-center gap-3" style={{ marginBottom: 14 }}>
-              <span
-                style={{
-                  fontFamily: T.display,
-                  fontWeight: 600,
-                  fontSize: "1.1rem",
-                  color: T.fg,
-                }}
-              >
-                {project.name}
-              </span>
-              <Badge s={project.stage} />
-            </div>
+          <Reveal key={project.id} className="block" delay={0.05}>
+            <div style={{ marginBottom: 32 }}>
+              <div className="flex items-center gap-3" style={{ marginBottom: 14 }}>
+                <span
+                  style={{
+                    fontFamily: T.sans,
+                    fontWeight: 700,
+                    fontSize: "1.1rem",
+                    letterSpacing: "-0.01em",
+                    textTransform: "uppercase",
+                    color: "var(--k-fg)",
+                  }}
+                >
+                  {project.name}
+                </span>
+                <Badge s={project.stage} />
+              </div>
 
-            {/* Your business details — the client fills these as soon as their
+              {/* Your business details — the client fills these as soon as their
                 portal exists (the admin can also edit them for discrepancies).
                 The DPA applies to limited companies; sole traders sign the
                 proposal only. */}
-            {project.proposal_status !== "accepted" &&
-              project.proposal_status !== "declined" && (
-                <div
-                  style={{
-                    marginBottom: 14,
-                    background: T.surface,
-                    border: `1px solid ${declared ? T.border : `${T.primary}55`}`,
-                    borderRadius: T.r.lg,
-                    padding: "20px 22px",
-                  }}
-                >
-                  {declared ? (
-                    <>
-                      <div
-                        className="flex items-center justify-between gap-3 flex-wrap"
-                        style={{ marginBottom: limited ? 8 : 0 }}
-                      >
-                        <span
-                          style={{
-                            fontFamily: T.sans,
-                            fontWeight: 600,
-                            fontSize: "0.95rem",
-                            color: T.fg,
-                          }}
-                        >
-                          Your business details
-                        </span>
-                        <span
-                          style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}
-                        >
-                          {limited ? "Limited company" : "Sole trader / other"}
-                        </span>
-                      </div>
-                      {limited && (
-                        <p
-                          style={{
-                            fontFamily: T.sans,
-                            fontSize: "0.85rem",
-                            color: T.muted,
-                            lineHeight: 1.6,
-                          }}
-                        >
-                          {project.dpa_client_company_number
-                            ? `Company no. ${project.dpa_client_company_number}`
-                            : "Company number — to add"}
-                          {project.dpa_client_registered_address
-                            ? ` · ${project.dpa_client_registered_address}`
-                            : ""}
-                        </p>
-                      )}
-                      <details style={{ marginTop: 10 }}>
-                        <summary
-                          style={{
-                            cursor: "pointer",
-                            fontFamily: T.mono,
-                            fontSize: 11,
-                            color: T.primary,
-                          }}
-                        >
-                          Edit business details
-                        </summary>
-                        <div style={{ marginTop: 14 }}>
-                          <EntityTypeForm
-                            action={setEntityType}
-                            projectId={project.id}
-                            heading="Are you a limited company?"
-                            submitLabel="Save business details"
-                            defaults={{
-                              entityType: project.client_entity_type,
-                              companyName: project.dpa_client_company_name,
-                              companyNumber: project.dpa_client_company_number,
-                              registeredAddress: project.dpa_client_registered_address,
-                              country: project.dpa_client_country,
-                              personalData: project.dpa_personal_data,
-                              specialCategory: project.dpa_special_category,
-                              specialCategoryDetail: project.dpa_special_category_detail,
-                            }}
-                          />
-                        </div>
-                      </details>
-                    </>
-                  ) : (
-                    <EntityTypeForm
-                      action={setEntityType}
-                      projectId={project.id}
-                      heading="Tell us about your business — for your agreement"
-                      submitLabel="Save business details"
-                      defaults={{
-                        entityType: project.client_entity_type,
-                        companyName: project.dpa_client_company_name,
-                        companyNumber: project.dpa_client_company_number,
-                        registeredAddress: project.dpa_client_registered_address,
-                        country: project.dpa_client_country,
-                        personalData: project.dpa_personal_data,
-                        specialCategory: project.dpa_special_category,
-                        specialCategoryDetail: project.dpa_special_category_detail,
-                      }}
-                    />
-                  )}
-                </div>
-              )}
-
-            {/* Proposal + DPA documents — visible once the admin sends them. */}
-            {(project.proposal_status === "sent" || accepted) && (
-              <div style={{ marginBottom: 14 }}>
-                {/* Download bar — anchored at the top once signed (both docs). */}
-                {accepted && (
+              {project.proposal_status !== "accepted" &&
+                project.proposal_status !== "declined" && (
                   <div
+                    className="k-kard"
                     style={{
-                      position: "sticky",
-                      top: 72,
-                      zIndex: 5,
-                      display: "flex",
-                      gap: 10,
-                      flexWrap: "wrap",
-                      alignItems: "center",
                       marginBottom: 14,
-                      padding: "10px 12px",
-                      background: `${T.surface}e6`,
-                      border: `1px solid ${T.border}`,
-                      borderRadius: T.r.md,
-                      backdropFilter: "blur(8px)",
-                      WebkitBackdropFilter: "blur(8px)",
+                      background: "var(--k-surface)",
+                      borderColor: declared ? "var(--k-border)" : "var(--k-accent)",
+                      padding: "20px 22px",
                     }}
                   >
-                    <span
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: 10,
-                        letterSpacing: "0.12em",
-                        textTransform: "uppercase",
-                        color: T.muted,
-                        marginRight: "auto",
-                      }}
-                    >
-                      Signed documents
-                    </span>
-                    <DownloadDocButton
-                      targetId={`proposal-document-${project.id}`}
-                      filename={`nullshift-proposal-${clientRef(project.tenant_id)}.pdf`}
-                      label="Proposal PDF"
-                    />
-                    {limited && (
-                      <DownloadDocButton
-                        targetId={`dpa-document-${project.id}`}
-                        filename={`nullshift-dpa-${clientRef(project.tenant_id)}.pdf`}
-                        label="DPA PDF"
+                    {declared ? (
+                      <>
+                        <div
+                          className="flex items-center justify-between gap-3 flex-wrap"
+                          style={{ marginBottom: limited ? 8 : 0 }}
+                        >
+                          <span
+                            style={{
+                              fontFamily: T.sans,
+                              fontWeight: 700,
+                              fontSize: "0.95rem",
+                              textTransform: "uppercase",
+                              letterSpacing: "-0.01em",
+                              color: "var(--k-fg)",
+                            }}
+                          >
+                            Your business details
+                          </span>
+                          <span
+                            style={{
+                              fontFamily: T.mono,
+                              fontSize: 11,
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              color: "var(--k-muted)",
+                            }}
+                          >
+                            {limited ? "Limited company" : "Sole trader / other"}
+                          </span>
+                        </div>
+                        {limited && (
+                          <p
+                            style={{
+                              fontFamily: T.sans,
+                              fontSize: "0.85rem",
+                              color: "var(--k-muted)",
+                              lineHeight: 1.6,
+                            }}
+                          >
+                            {project.dpa_client_company_number
+                              ? `Company no. ${project.dpa_client_company_number}`
+                              : "Company number — to add"}
+                            {project.dpa_client_registered_address
+                              ? ` · ${project.dpa_client_registered_address}`
+                              : ""}
+                          </p>
+                        )}
+                        <details style={{ marginTop: 10 }}>
+                          <summary
+                            style={{
+                              cursor: "pointer",
+                              fontFamily: T.mono,
+                              fontSize: 11,
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              color: "var(--k-accent)",
+                            }}
+                          >
+                            Edit business details
+                          </summary>
+                          <div style={{ marginTop: 14 }}>
+                            <EntityTypeForm
+                              action={setEntityType}
+                              projectId={project.id}
+                              heading="Are you a limited company?"
+                              submitLabel="Save business details"
+                              defaults={{
+                                entityType: project.client_entity_type,
+                                companyName: project.dpa_client_company_name,
+                                companyNumber: project.dpa_client_company_number,
+                                registeredAddress: project.dpa_client_registered_address,
+                                country: project.dpa_client_country,
+                                personalData: project.dpa_personal_data,
+                                specialCategory: project.dpa_special_category,
+                                specialCategoryDetail:
+                                  project.dpa_special_category_detail,
+                              }}
+                            />
+                          </div>
+                        </details>
+                      </>
+                    ) : (
+                      <EntityTypeForm
+                        action={setEntityType}
+                        projectId={project.id}
+                        heading="Tell us about your business — for your agreement"
+                        submitLabel="Save business details"
+                        defaults={{
+                          entityType: project.client_entity_type,
+                          companyName: project.dpa_client_company_name,
+                          companyNumber: project.dpa_client_company_number,
+                          registeredAddress: project.dpa_client_registered_address,
+                          country: project.dpa_client_country,
+                          personalData: project.dpa_personal_data,
+                          specialCategory: project.dpa_special_category,
+                          specialCategoryDetail: project.dpa_special_category_detail,
+                        }}
                       />
                     )}
                   </div>
                 )}
 
-                <div id={`proposal-document-${project.id}`}>
-                  <ProposalDocument
-                    reference={clientRef(project.tenant_id)}
-                    clientName={project.tenants?.name ?? "Client"}
-                    businessName={project.tenants?.name}
-                    date={new Date().toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                    overview={project.overview}
-                    items={pItems.map((i) => ({ name: i.name, amount: i.amount }))}
-                    total={total}
-                    carePlan={carePlan(project.proposed_plan)}
-                    paymentTerms={project.payment_terms}
-                    accepted={
-                      project.accepted_at
-                        ? { name: project.accepted_name ?? "", at: project.accepted_at }
-                        : null
-                    }
-                    dpaRequired={dpaRequired}
-                  />
-                </div>
-
-                {/* Full DPA — limited companies only. Collapsible while pending,
-                    rendered in full once signed so it reads + saves to PDF. */}
-                {limited &&
-                  (accepted ? (
-                    <div id={`dpa-document-${project.id}`} style={{ marginTop: 12 }}>
-                      {dpaDoc}
-                    </div>
-                  ) : (
-                    <details
+              {/* Proposal + DPA documents — visible once the admin sends them. */}
+              {(project.proposal_status === "sent" || accepted) && (
+                <div style={{ marginBottom: 14 }}>
+                  {/* Download bar — anchored at the top once signed (both docs). */}
+                  {accepted && (
+                    <div
                       style={{
-                        marginTop: 12,
-                        background: T.surface,
-                        border: `1px solid ${T.border}`,
-                        borderRadius: T.r.lg,
-                        padding: "14px 18px",
+                        position: "sticky",
+                        top: 72,
+                        zIndex: 5,
+                        display: "flex",
+                        gap: 10,
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                        marginBottom: 14,
+                        padding: "10px 12px",
+                        background:
+                          "color-mix(in oklab, var(--k-surface) 90%, transparent)",
+                        border: "1px solid var(--k-border)",
+                        backdropFilter: "blur(8px)",
+                        WebkitBackdropFilter: "blur(8px)",
                       }}
                     >
-                      <summary
+                      <span style={{ marginRight: "auto" }}>
+                        <MonoTag>Signed documents</MonoTag>
+                      </span>
+                      <DownloadDocButton
+                        targetId={`proposal-document-${project.id}`}
+                        filename={`nullshift-proposal-${clientRef(project.tenant_id)}.pdf`}
+                        label="Proposal PDF"
+                      />
+                      {limited && (
+                        <DownloadDocButton
+                          targetId={`dpa-document-${project.id}`}
+                          filename={`nullshift-dpa-${clientRef(project.tenant_id)}.pdf`}
+                          label="DPA PDF"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  <div id={`proposal-document-${project.id}`}>
+                    <ProposalDocument
+                      reference={clientRef(project.tenant_id)}
+                      clientName={project.tenants?.name ?? "Client"}
+                      businessName={project.tenants?.name}
+                      date={new Date().toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                      overview={project.overview}
+                      items={pItems.map((i) => ({ name: i.name, amount: i.amount }))}
+                      total={total}
+                      carePlan={carePlan(project.proposed_plan)}
+                      paymentTerms={project.payment_terms}
+                      accepted={
+                        project.accepted_at
+                          ? { name: project.accepted_name ?? "", at: project.accepted_at }
+                          : null
+                      }
+                      dpaRequired={dpaRequired}
+                    />
+                  </div>
+
+                  {/* Full DPA — limited companies only. Collapsible while pending,
+                    rendered in full once signed so it reads + saves to PDF. */}
+                  {limited &&
+                    (accepted ? (
+                      <div id={`dpa-document-${project.id}`} style={{ marginTop: 12 }}>
+                        {dpaDoc}
+                      </div>
+                    ) : (
+                      <details
+                        className="k-kard"
                         style={{
-                          cursor: "pointer",
-                          fontFamily: T.sans,
-                          fontWeight: 600,
-                          fontSize: "0.95rem",
-                          color: T.fg,
+                          marginTop: 12,
+                          background: "var(--k-surface)",
+                          padding: "14px 18px",
                         }}
                       >
-                        View the full Data Processing Agreement
-                      </summary>
-                      <div style={{ marginTop: 16 }}>{dpaDoc}</div>
-                    </details>
-                  ))}
+                        <summary
+                          style={{
+                            cursor: "pointer",
+                            fontFamily: T.sans,
+                            fontWeight: 700,
+                            fontSize: "0.95rem",
+                            textTransform: "uppercase",
+                            letterSpacing: "-0.01em",
+                            color: "var(--k-fg)",
+                          }}
+                        >
+                          View the full Data Processing Agreement
+                        </summary>
+                        <div style={{ marginTop: 16 }}>{dpaDoc}</div>
+                      </details>
+                    ))}
 
-                {/* Sign / decline — business details are captured above. */}
-                {project.proposal_status === "sent" && dpaReadyToSend(project) && (
-                  <SignProposal
-                    acceptAction={acceptProposal}
-                    declineAction={declineProposal}
-                    projectId={project.id}
-                    limited={limited}
-                    carePlanLabel={carePlan(project.proposed_plan)?.label ?? null}
-                  />
-                )}
-                {project.proposal_status === "sent" && !dpaReadyToSend(project) && (
-                  <p
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: 11,
-                      color: T.warning,
-                      marginTop: 14,
-                    }}
-                  >
-                    Confirm your business details above, then you can sign.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {project.proposal_status === "draft" && (
-              <p
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: 11,
-                  color: T.muted,
-                  marginBottom: 14,
-                }}
-              >
-                Your proposal is being prepared — we&apos;ll email you when it&apos;s
-                ready to review and sign.
-              </p>
-            )}
-            {project.proposal_status === "declined" && (
-              <p
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: 11,
-                  color: T.danger,
-                  marginBottom: 14,
-                }}
-              >
-                You declined this proposal. Contact us if you&apos;d like changes.
-              </p>
-            )}
-
-            {/* Invoices */}
-            {pInvoices.map((inv) => {
-              const lines = invItemList.filter((l) => l.invoice_id === inv.id);
-              return (
-                <div
-                  key={inv.id}
-                  style={{
-                    background: T.surface,
-                    border: `1px solid ${T.border}`,
-                    borderRadius: T.r.lg,
-                    padding: "18px 20px",
-                    marginBottom: 10,
-                  }}
-                >
-                  <div
-                    className="flex items-center justify-between"
-                    style={{ marginBottom: 10 }}
-                  >
-                    <span
-                      style={{
-                        fontFamily: T.sans,
-                        fontWeight: 600,
-                        fontSize: "0.95rem",
-                        color: T.fg,
-                      }}
-                    >
-                      Invoice · {gbp(Number(inv.amount))}
-                    </span>
-                    <Badge s={inv.status} />
-                  </div>
-                  {lines.map((l, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between"
-                      style={{
-                        padding: "5px 0",
-                        borderTop: `1px solid ${T.border}`,
-                        fontFamily: T.sans,
-                        fontSize: "0.84rem",
-                        color: T.muted,
-                      }}
-                    >
-                      <span>
-                        {l.name}
-                        {l.quantity > 1 ? ` ×${l.quantity}` : ""}
-                      </span>
-                      <span style={{ fontFamily: T.mono }}>
-                        {gbp(Number(l.amount) * l.quantity)}
-                      </span>
-                    </div>
-                  ))}
-                  {inv.status !== "paid" && inv.hosted_invoice_url && (
-                    <a
-                      href={inv.hosted_invoice_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        display: "inline-block",
-                        marginTop: 14,
-                        fontFamily: T.sans,
-                        fontWeight: 600,
-                        fontSize: "0.88rem",
-                        height: 40,
-                        lineHeight: "40px",
-                        paddingInline: 20,
-                        background: T.primary,
-                        color: T.primaryFg,
-                        borderRadius: T.r.md,
-                        textDecoration: "none",
-                      }}
-                    >
-                      Pay now →
-                    </a>
+                  {/* Sign / decline — business details are captured above. */}
+                  {project.proposal_status === "sent" && dpaReadyToSend(project) && (
+                    <SignProposal
+                      acceptAction={acceptProposal}
+                      declineAction={declineProposal}
+                      projectId={project.id}
+                      limited={limited}
+                      carePlanLabel={carePlan(project.proposed_plan)?.label ?? null}
+                    />
                   )}
-                  {inv.status === "paid" && (
+                  {project.proposal_status === "sent" && !dpaReadyToSend(project) && (
                     <p
                       style={{
                         fontFamily: T.mono,
                         fontSize: 11,
-                        color: T.success,
-                        marginTop: 12,
+                        letterSpacing: "0.06em",
+                        color: T.warning,
+                        marginTop: 14,
                       }}
                     >
-                      Paid ✓ — thank you.
+                      Confirm your business details above, then you can sign.
                     </p>
                   )}
                 </div>
-              );
-            })}
-          </div>
+              )}
+
+              {project.proposal_status === "draft" && (
+                <p
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    letterSpacing: "0.06em",
+                    color: "var(--k-muted)",
+                    marginBottom: 14,
+                  }}
+                >
+                  Your proposal is being prepared — we&apos;ll email you when it&apos;s
+                  ready to review and sign.
+                </p>
+              )}
+              {project.proposal_status === "declined" && (
+                <p
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    letterSpacing: "0.06em",
+                    color: T.danger,
+                    marginBottom: 14,
+                  }}
+                >
+                  You declined this proposal. Contact us if you&apos;d like changes.
+                </p>
+              )}
+
+              {/* Invoices */}
+              {pInvoices.map((inv) => {
+                const lines = invItemList.filter((l) => l.invoice_id === inv.id);
+                return (
+                  <div
+                    key={inv.id}
+                    className="k-kard"
+                    style={{
+                      background: "var(--k-surface)",
+                      padding: "18px 20px",
+                      marginBottom: 10,
+                    }}
+                  >
+                    <div
+                      className="flex items-center justify-between"
+                      style={{ marginBottom: 10 }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: T.sans,
+                          fontWeight: 700,
+                          fontSize: "0.95rem",
+                          textTransform: "uppercase",
+                          letterSpacing: "-0.01em",
+                          color: "var(--k-fg)",
+                        }}
+                      >
+                        Invoice · {gbp(Number(inv.amount))}
+                      </span>
+                      <Badge s={inv.status} />
+                    </div>
+                    {lines.map((l, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between"
+                        style={{
+                          padding: "8px 0",
+                          borderTop: "1px solid var(--k-border)",
+                          fontFamily: T.sans,
+                          fontSize: "0.84rem",
+                          color: "var(--k-muted)",
+                        }}
+                      >
+                        <span>
+                          {l.name}
+                          {l.quantity > 1 ? ` ×${l.quantity}` : ""}
+                        </span>
+                        <span style={{ fontFamily: T.mono, color: "var(--k-fg)" }}>
+                          {gbp(Number(l.amount) * l.quantity)}
+                        </span>
+                      </div>
+                    ))}
+                    {inv.status !== "paid" && inv.hosted_invoice_url && (
+                      <a
+                        href={inv.hosted_invoice_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="kb kb-primary kb-sm"
+                        style={{ marginTop: 14 }}
+                      >
+                        Pay now
+                        <span className="k-arrow" aria-hidden>
+                          →
+                        </span>
+                      </a>
+                    )}
+                    {inv.status === "paid" && (
+                      <p
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: 11,
+                          letterSpacing: "0.06em",
+                          color: T.success,
+                          marginTop: 12,
+                        }}
+                      >
+                        Paid ✓ — thank you.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Reveal>
         );
       })}
     </div>

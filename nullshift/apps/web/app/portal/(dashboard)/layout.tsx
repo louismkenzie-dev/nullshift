@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@nullshift/db";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
 import { T } from "@nullshift/ui/tokens";
+import { PageHeader, Panel } from "@/components/app/AppKit";
 import { PortalHeader } from "./PortalHeader";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 import { setEntityType } from "./dpa-actions";
@@ -92,49 +93,13 @@ export default async function PortalLayout({ children }: { children: React.React
           }}
         >
           <div style={{ maxWidth: 640, width: "100%" }}>
-            <div
-              style={{
-                fontFamily: T.mono,
-                fontSize: 10,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: T.primary,
-                marginBottom: 8,
-              }}
-            >
-              {"// One quick step"}
-            </div>
-            <h1
-              style={{
-                fontFamily: T.display,
-                fontWeight: 600,
-                fontSize: "1.6rem",
-                color: T.fg,
-                marginBottom: 6,
-              }}
-            >
-              Before we begin — your agreement details
-            </h1>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.95rem",
-                lineHeight: 1.6,
-                color: T.muted,
-                marginBottom: 20,
-              }}
-            >
-              We need a few details to prepare your Data Processing Agreement. It takes a
-              minute, and unlocks the rest of your portal.
-            </p>
-            <div
-              style={{
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: T.r.lg,
-                padding: "22px 22px 24px",
-              }}
-            >
+            <PageHeader
+              index="00"
+              label="One quick step"
+              title="Before we begin — your agreement details"
+              lead="We need a few details to prepare your Data Processing Agreement. It takes a minute, and unlocks the rest of your portal."
+            />
+            <Panel pad className="mt-7">
               <EntityTypeForm
                 action={setEntityType}
                 projectId={project.id}
@@ -151,7 +116,7 @@ export default async function PortalLayout({ children }: { children: React.React
                   specialCategoryDetail: project.dpa_special_category_detail,
                 }}
               />
-            </div>
+            </Panel>
           </div>
         </main>
       ) : (

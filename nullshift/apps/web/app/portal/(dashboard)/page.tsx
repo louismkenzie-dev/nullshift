@@ -3,6 +3,9 @@ import { createClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
 import { carePlan } from "@/lib/carePlans";
 import { StageStepper } from "@/components/portal/StageStepper";
+import { PageHeader, Panel, StatCard } from "@/components/app/AppKit";
+import { Eyebrow, Display, Lead } from "@/components/kyma";
+import { Reveal } from "@/components/Reveal";
 
 /**
  * Client portal home — project-centric. The client's project(s) are front and
@@ -49,221 +52,138 @@ export default async function PortalHome() {
   if (!hasActiveProposal) {
     return (
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "64px 20px" }}>
-        <div
-          style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: T.r.lg,
-            padding: "34px 28px",
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: T.mono,
-              fontSize: 10,
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: T.primary,
-              marginBottom: 12,
-            }}
-          >
-            {"// You're all set"}
-          </div>
-          <h1
-            style={{
-              fontFamily: T.display,
-              fontWeight: 600,
-              fontSize: "1.5rem",
-              color: T.fg,
-              marginBottom: 10,
-            }}
-          >
-            Thanks — we&apos;ve got your details
-          </h1>
-          <p
-            style={{
-              fontFamily: T.sans,
-              fontSize: "0.95rem",
-              lineHeight: 1.65,
-              color: T.muted,
-              marginBottom: 16,
-            }}
-          >
-            We&apos;ll talk through your project on your call with one of our team, then
-            prepare your proposal right here for you to review and sign.
-          </p>
-          <p
-            style={{
-              fontFamily: T.sans,
-              fontSize: "0.95rem",
-              fontWeight: 600,
-              color: T.primary,
-            }}
-          >
-            Check back here after your call.
-          </p>
-        </div>
+        <Reveal>
+          <Panel className="k-kard-h">
+            <div className="flex flex-col items-center text-center" style={{ gap: 14 }}>
+              <Eyebrow index="00" label="YOU'RE ALL SET" align="center" />
+              <Display as="h1" size="md">
+                Thanks — we&apos;ve got your details
+              </Display>
+              <Lead style={{ marginInline: "auto" }}>
+                We&apos;ll talk through your project on your call with one of our team,
+                then prepare your proposal right here for you to review and sign.
+              </Lead>
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.72rem",
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--k-accent)",
+                  marginTop: 4,
+                }}
+              >
+                Check back here after your call
+              </span>
+            </div>
+          </Panel>
+        </Reveal>
       </div>
     );
   }
 
   return (
     <div style={{ maxWidth: 880, margin: "0 auto", padding: "28px 16px 56px" }}>
-      <h1
-        style={{
-          fontFamily: T.display,
-          fontWeight: 600,
-          fontSize: "1.7rem",
-          color: T.fg,
-          marginBottom: 4,
-        }}
-      >
-        Your projects
-      </h1>
-      <p
-        style={{
-          fontFamily: T.sans,
-          fontSize: "0.9rem",
-          color: T.muted,
-          marginBottom: 20,
-        }}
-      >
-        Tap a project to see its status, updates, tasks and documents.
-      </p>
+      <PageHeader
+        index="01"
+        label="CLIENT PORTAL"
+        title="Your projects"
+        lead="Tap a project to see its status, updates, tasks and documents."
+      />
 
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-3" style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: T.r.lg,
-            padding: "14px 16px",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: T.mono,
-              fontSize: 10,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: T.muted,
-            }}
-          >
-            Invested
-          </div>
-          <div
-            style={{
-              fontFamily: T.display,
-              fontWeight: 700,
-              fontSize: "1.5rem",
-              color: T.fg,
-              marginTop: 4,
-            }}
-          >
-            {gbp(invested)}
-          </div>
-          {outstanding > 0 && (
-            <div
-              style={{ fontFamily: T.mono, fontSize: 11, color: T.warning, marginTop: 2 }}
-            >
-              {gbp(outstanding)} outstanding
-            </div>
-          )}
-        </div>
-        <div
-          style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: T.r.lg,
-            padding: "14px 16px",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: T.mono,
-              fontSize: 10,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: T.muted,
-            }}
-          >
-            Care plan
-          </div>
-          <div
-            style={{
-              fontFamily: T.display,
-              fontWeight: 700,
-              fontSize: "1.2rem",
-              color: plan ? T.fg : T.faint,
-              marginTop: 4,
-            }}
-          >
-            {plan ? plan.label : "None yet"}
-          </div>
-          {plan && (
-            <div
-              style={{ fontFamily: T.mono, fontSize: 11, color: T.primary, marginTop: 2 }}
-            >
-              {gbp(plan.mrr)}/mo
-            </div>
-          )}
-        </div>
+      <div className="grid grid-cols-2 gap-3" style={{ margin: "24px 0 20px" }}>
+        <Reveal delay={0}>
+          <StatCard
+            value={gbp(invested)}
+            label="Invested"
+            sub={outstanding > 0 ? `${gbp(outstanding)} outstanding` : undefined}
+          />
+        </Reveal>
+        <Reveal delay={0.05}>
+          <StatCard
+            value={plan ? plan.label : "None yet"}
+            label="Care plan"
+            sub={plan ? `${gbp(plan.mrr)}/mo` : undefined}
+            accent={!!plan}
+          />
+        </Reveal>
       </div>
 
       {/* Project cards */}
       {projectList.length === 0 ? (
-        <p style={{ fontFamily: T.sans, fontSize: "0.92rem", color: T.muted }}>
-          Your project is being set up — it'll appear here shortly.
-        </p>
+        <Reveal>
+          <p style={{ fontFamily: T.sans, fontSize: "0.92rem", color: "var(--k-muted)" }}>
+            Your project is being set up — it&apos;ll appear here shortly.
+          </p>
+        </Reveal>
       ) : (
         <div className="flex flex-col gap-3">
-          {projectList.map((p) => (
-            <Link
-              key={p.id}
-              href={`/portal/project/${p.id}`}
-              className="block hover:opacity-95 transition-opacity"
-              style={{
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: T.r.lg,
-                padding: "18px 20px",
-                textDecoration: "none",
-              }}
-            >
-              <div
-                className="flex items-center justify-between gap-3"
-                style={{ marginBottom: 12 }}
+          {projectList.map((p, i) => (
+            <Reveal key={p.id} delay={i * 0.05}>
+              <Link
+                href={`/portal/project/${p.id}`}
+                className="k-kard k-kard-h block"
+                style={{
+                  background: "var(--k-surface)",
+                  padding: "18px 20px",
+                  textDecoration: "none",
+                }}
               >
-                <span
-                  style={{
-                    fontFamily: T.display,
-                    fontWeight: 600,
-                    fontSize: "1.1rem",
-                    color: T.fg,
-                  }}
-                >
-                  {p.name}
-                </span>
-                <span style={{ fontFamily: T.mono, fontSize: 11, color: T.primary }}>
-                  Open →
-                </span>
-              </div>
-              <StageStepper stage={p.stage} />
-              {p.live_url && (
                 <div
-                  style={{
-                    fontFamily: T.mono,
-                    fontSize: 11,
-                    color: T.primary,
-                    marginTop: 12,
-                  }}
+                  className="flex items-center justify-between gap-3"
+                  style={{ marginBottom: 12 }}
                 >
-                  ● Live site available
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: 700,
+                      fontSize: "1.1rem",
+                      letterSpacing: "-0.01em",
+                      textTransform: "uppercase",
+                      color: "var(--k-fg)",
+                    }}
+                  >
+                    {p.name}
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.68rem",
+                      fontWeight: 500,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "var(--k-accent)",
+                    }}
+                  >
+                    Open
+                    <span className="k-arrow" aria-hidden>
+                      →
+                    </span>
+                  </span>
                 </div>
-              )}
-            </Link>
+                <StageStepper stage={p.stage} />
+                {p.live_url && (
+                  <div
+                    className="inline-flex items-center gap-2"
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.66rem",
+                      fontWeight: 500,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "var(--k-accent)",
+                      marginTop: 12,
+                    }}
+                  >
+                    <span className="k-livedot" aria-hidden />
+                    Live site available
+                  </div>
+                )}
+              </Link>
+            </Reveal>
           ))}
         </div>
       )}

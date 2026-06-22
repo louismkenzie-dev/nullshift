@@ -8,7 +8,6 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         "/admin/",
         "/portal/",
-        "/learn/login",
         "/proposal/",
         "/onboard",
         "/client-signup",

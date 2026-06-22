@@ -8,6 +8,7 @@ import { carePlan } from "@/lib/carePlans";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
 import { ProposalDocument } from "@/components/portal/ProposalDocument";
 import { DownloadDocButton } from "@/components/portal/DownloadDocButton";
+import { PageHeader } from "@/components/app/AppKit";
 
 /**
  * Admin view of a client's signable documents — the same ProposalDocument +
@@ -83,7 +84,7 @@ export default async function ClientDocuments({
         fontSize: 11,
         letterSpacing: "0.08em",
         textTransform: "uppercase",
-        color: T.muted,
+        color: "var(--k-muted)",
         textDecoration: "none",
       }}
     >
@@ -95,7 +96,7 @@ export default async function ClientDocuments({
     return (
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
         {back}
-        <p style={{ fontFamily: T.sans, color: T.muted, marginTop: 20 }}>
+        <p style={{ fontFamily: T.sans, color: "var(--k-muted)", marginTop: 20 }}>
           No project documents for {t.name} yet.
         </p>
       </div>
@@ -131,34 +132,16 @@ export default async function ClientDocuments({
       </div>
 
       <div style={{ marginTop: 18 }}>
-        <div
-          style={{
-            fontFamily: T.mono,
-            fontSize: 10,
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: T.primary,
-            marginBottom: 8,
-          }}
-        >
-          {"// Documents"}
-        </div>
-        <h1
-          style={{
-            fontFamily: T.display,
-            fontWeight: 600,
-            fontSize: "1.6rem",
-            color: T.fg,
-            marginBottom: 4,
-          }}
-        >
-          {t.name}
-        </h1>
-        <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.muted }}>
-          {project.proposal_status === "accepted"
-            ? "Signed proposal" + (limited ? " and DPA." : ".")
-            : "Draft / sent — not yet signed."}
-        </p>
+        <PageHeader
+          index="02"
+          label="Documents"
+          title={t.name}
+          lead={
+            project.proposal_status === "accepted"
+              ? "Signed proposal" + (limited ? " and DPA." : ".")
+              : "Draft / sent — not yet signed."
+          }
+        />
       </div>
 
       <div id="admin-proposal-document" style={{ marginTop: 18 }}>

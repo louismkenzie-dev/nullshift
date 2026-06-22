@@ -7,6 +7,8 @@ import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { LogoMark } from "@nullshift/ui/components/Logo";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
+import { Eyebrow, Display } from "@/components/kyma";
+import { Reveal } from "@/components/Reveal";
 
 /**
  * Set-a-new-password page. The admin sends a branded recovery email whose link
@@ -17,16 +19,33 @@ import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
  */
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  height: 40,
-  background: T.bg,
-  border: `1px solid ${T.border}`,
-  borderRadius: T.r.md,
+  height: 44,
+  background: "var(--k-surface)",
+  border: "1px solid var(--k-border)",
+  borderRadius: 0,
   padding: "0 14px",
-  color: T.fg,
+  color: "var(--k-fg)",
   fontFamily: T.sans,
   fontSize: "0.9375rem",
   outline: "none",
+  transition: `border-color ${T.duration.base} ${T.ease}, box-shadow ${T.duration.base} ${T.ease}`,
 };
+const labelStyle: React.CSSProperties = {
+  fontFamily: T.mono,
+  fontSize: "0.66rem",
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  color: "var(--k-muted)",
+};
+function onFocus(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = T.primary;
+  e.currentTarget.style.boxShadow = T.shadow.focus;
+}
+function onBlur(e: React.FocusEvent<HTMLInputElement>) {
+  e.currentTarget.style.borderColor = "var(--k-border)";
+  e.currentTarget.style.boxShadow = "none";
+}
 
 function ResetForm() {
   const router = useRouter();
@@ -75,66 +94,60 @@ function ResetForm() {
   }
 
   if (!hasSupabaseBrowserConfig()) {
-    return <p style={{ fontFamily: T.sans, color: T.muted }}>Auth not configured.</p>;
+    return (
+      <p style={{ fontFamily: T.sans, color: "var(--k-muted)" }}>Auth not configured.</p>
+    );
   }
 
   return (
     <main
       className="min-h-screen flex items-center justify-center px-6"
-      style={{ background: T.bg }}
+      style={{ background: "var(--k-bg)" }}
     >
-      <div className="w-full max-w-sm">
+      <Reveal className="w-full max-w-sm">
         <div className="flex items-center gap-2.5 mb-8 justify-center">
           <LogoMark size={26} />
           <span
             style={{
               fontFamily: T.display,
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: "1.1rem",
-              color: T.fg,
+              letterSpacing: "-0.01em",
+              textTransform: "uppercase",
+              color: "var(--k-fg)",
             }}
           >
             Nullshift
           </span>
         </div>
 
-        <div className="mb-6 text-center">
-          <span
-            style={{
-              fontFamily: T.sans,
-              fontSize: "0.75rem",
-              fontWeight: 500,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: T.muted,
-            }}
-          >
+        <div className="mb-7 flex flex-col items-center gap-3 text-center">
+          <Eyebrow index="01" label="Account Recovery" align="center" />
+          <Display as="h1" size="md">
             Set a new password
-          </span>
+          </Display>
         </div>
 
         {done ? (
           <p
-            className="text-center p-8 rounded-none"
+            className="k-kard text-center p-8"
             style={{
-              background: T.surface,
-              border: `1px solid ${T.border}`,
+              background: "var(--k-surface)",
               fontFamily: T.sans,
               fontSize: "0.9rem",
-              color: T.primary,
+              color: "var(--k-accent)",
             }}
           >
             Password updated — taking you to your portal…
           </p>
         ) : !ready ? (
           <p
-            className="text-center p-8 rounded-none"
+            className="k-kard text-center p-8"
             style={{
-              background: T.surface,
-              border: `1px solid ${T.border}`,
+              background: "var(--k-surface)",
               fontFamily: T.sans,
               fontSize: "0.875rem",
-              color: T.muted,
+              color: "var(--k-muted)",
             }}
           >
             Opening your secure reset link… If nothing happens, the link may have expired
@@ -143,22 +156,11 @@ function ResetForm() {
         ) : (
           <form
             onSubmit={onSubmit}
-            className="flex flex-col gap-4 p-8 rounded-none"
-            style={{ background: T.surface, border: `1px solid ${T.border}` }}
+            className="k-kard flex flex-col gap-4 p-8"
+            style={{ background: "var(--k-surface)" }}
           >
             <div className="flex flex-col gap-1.5">
-              <label
-                style={{
-                  fontFamily: T.sans,
-                  fontSize: "0.75rem",
-                  fontWeight: 500,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: T.muted,
-                }}
-              >
-                New password
-              </label>
+              <label style={labelStyle}>New password</label>
               <input
                 type="password"
                 required
@@ -168,21 +170,12 @@ function ResetForm() {
                 style={inputStyle}
                 autoComplete="new-password"
                 placeholder="Min. 8 characters"
+                onFocus={onFocus}
+                onBlur={onBlur}
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label
-                style={{
-                  fontFamily: T.sans,
-                  fontSize: "0.75rem",
-                  fontWeight: 500,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: T.muted,
-                }}
-              >
-                Confirm password
-              </label>
+              <label style={labelStyle}>Confirm password</label>
               <input
                 type="password"
                 required
@@ -192,11 +185,20 @@ function ResetForm() {
                 style={inputStyle}
                 autoComplete="new-password"
                 placeholder="Re-enter password"
+                onFocus={onFocus}
+                onBlur={onBlur}
               />
             </div>
 
             {error && (
-              <p style={{ fontFamily: T.sans, fontSize: "0.8125rem", color: T.danger }}>
+              <p
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.04em",
+                  color: T.danger,
+                }}
+              >
                 {error}
               </p>
             )}
@@ -204,20 +206,13 @@ function ResetForm() {
             <button
               type="submit"
               disabled={busy}
-              className="mt-2 h-10 font-medium cursor-pointer"
-              style={{
-                width: "100%",
-                fontFamily: T.sans,
-                fontSize: "0.9375rem",
-                fontWeight: 500,
-                background: T.primary,
-                color: T.primaryFg,
-                borderRadius: T.r.md,
-                border: "none",
-                opacity: busy ? 0.6 : 1,
-              }}
+              className="kb kb-primary mt-2"
+              style={{ width: "100%", opacity: busy ? 0.6 : 1 }}
             >
-              {busy ? "Saving…" : "Update password →"}
+              {busy ? "Saving…" : "Update password"}
+              <span className="k-arrow" aria-hidden>
+                →
+              </span>
             </button>
           </form>
         )}
@@ -226,23 +221,27 @@ function ResetForm() {
           <Link
             href="/portal/login"
             style={{
-              fontFamily: T.sans,
-              fontSize: "0.8125rem",
-              color: T.muted,
+              fontFamily: T.mono,
+              fontSize: "0.66rem",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--k-muted)",
               textDecoration: "none",
             }}
           >
             ← Back to sign in
           </Link>
         </div>
-      </div>
+      </Reveal>
     </main>
   );
 }
 
 export default function PortalResetPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: T.bg }} />}>
+    <Suspense
+      fallback={<div style={{ minHeight: "100vh", background: "var(--k-bg)" }} />}
+    >
       <ResetForm />
     </Suspense>
   );

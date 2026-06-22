@@ -1,168 +1,128 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { T } from "@nullshift/ui/tokens";
+import { ScrambleText } from "@/components/anim/ScrambleText";
 
 /* ════════════════════════════════════════════════════════════════
-   Intro splash — a minimalistic node-network that wires up a couple
-   of connections (at the static-mark's scale) and then resolves into
-   the NULLSHIFT wordmark. Plays on every landing, refresh and page
-   change (no once-per-session gating). Click anywhere to skip.
+   Intro splash (ANIM 1) — a full-viewport emerald screen with the
+   wordmark + tagline. Holds briefly on first landing / refresh, then
+   slides UP off-screen (ease-in-expo) to reveal the hero beneath.
+   Client-side route changes are handled by the page-transition wipe,
+   not the splash, so this fires once per load. Click anywhere to skip.
    ════════════════════════════════════════════════════════════════ */
 
-const WORD = "NULLSHIFT";
+const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const; // snappy arrive
+const EASE_IN_EXPO = [0.76, 0, 0.24, 1] as const; // aggressive depart
 
-// Small node cluster (viewBox 0 0 140 140) — the size of the static mark.
-const NODES: { x: number; y: number; accent?: boolean }[] = [
-  { x: 70, y: 70, accent: true }, // 0 — hub
-  { x: 26, y: 40 }, //               1
-  { x: 112, y: 30 }, //              2
-  { x: 116, y: 98 }, //              3
-  { x: 40, y: 110 }, //              4
-  { x: 100, y: 74, accent: true }, // 5
-];
-// A couple of connections — kept sparse.
-const LINKS: [number, number][] = [
-  [0, 1],
-  [0, 2],
-  [0, 5],
-  [5, 3],
-  [1, 4],
-];
-const PULSE: [number, number] = [0, 5]; // edge the data-pulse routes along
-
-const BONE = "#f4f4e8";
-const HIDE_MS = 1550;
+const HOLD_MS = 1400;
+const HOLD_REDUCED_MS = 700;
 
 export function IntroSplash() {
-  const pathname = usePathname();
   const reduce = useReducedMotion();
   const [show, setShow] = useState(true);
-  const [run, setRun] = useState(0);
-  const first = useRef(true);
 
-  // Trigger on mount (land / refresh) and on every pathname change.
+  // Hold, then begin the exit. Runs once on mount (landing / refresh).
+  // Signal the nav (and anything else gated on the intro) when we lift.
   useEffect(() => {
-    if (!first.current) {
-      setShow(true);
-      setRun((r) => r + 1);
-    }
-    first.current = false;
-    const t = setTimeout(() => setShow(false), reduce ? 750 : HIDE_MS);
-    return () => clearTimeout(t);
-  }, [pathname, reduce]);
+    const id = setTimeout(
+      () => {
+        setShow(false);
+        window.dispatchEvent(new Event("ns:intro-done"));
+      },
+      reduce ? HOLD_REDUCED_MS : HOLD_MS
+    );
+    return () => clearTimeout(id);
+  }, [reduce]);
 
-  const t = (delay: number, duration: number) =>
-    reduce
-      ? { duration: 0.001, delay: 0 }
-      : { delay, duration, ease: [0.16, 1, 0.3, 1] as const };
+  // Lock body scroll while the splash covers the viewport.
+  useEffect(() => {
+    if (!show) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [show]);
+
+  // Stagger-in transition for the centred content.
+  const enter = (delay: number, duration: number) =>
+    reduce ? { duration: 0.001, delay: 0 } : { delay, duration, ease: EASE_OUT_EXPO };
+  const offset = (y: number) => (reduce ? 0 : y);
 
   return (
     <AnimatePresence>
       {show && (
         <motion.div
-          key={run}
           aria-hidden
-          onClick={() => setShow(false)}
-          initial={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.45, ease: [0.76, 0, 0.24, 1] }}
+          data-intro-splash=""
+          onClick={() => {
+            setShow(false);
+            window.dispatchEvent(new Event("ns:intro-done"));
+          }}
+          initial={{ y: 0 }}
+          exit={
+            reduce
+              ? { opacity: 0, transition: { duration: 0.2 } }
+              : { y: "-100%", transition: { duration: 0.55, ease: EASE_IN_EXPO } }
+          }
           style={{
             position: "fixed",
             inset: 0,
             zIndex: 9999,
-            background: "#0a0a0a",
+            background: T.primary,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: 30,
+            gap: 18,
             overflow: "hidden",
+            willChange: "transform",
           }}
         >
-          {/* node-network */}
-          <svg
-            viewBox="0 0 140 140"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+          {/* Wordmark */}
+          <motion.div
+            initial={{ opacity: reduce ? 1 : 0, y: offset(8) }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={enter(0.1, 0.45)}
             style={{
-              width: "clamp(118px,22vw,168px)",
-              height: "auto",
-              overflow: "visible",
-            }}
-          >
-            {/* connections draw in */}
-            {LINKS.map(([a, b], i) => (
-              <motion.line
-                key={i}
-                x1={NODES[a].x}
-                y1={NODES[a].y}
-                x2={NODES[b].x}
-                y2={NODES[b].y}
-                stroke={BONE}
-                strokeOpacity={0.32}
-                strokeWidth={1.2}
-                initial={{ pathLength: reduce ? 1 : 0 }}
-                animate={{ pathLength: 1 }}
-                transition={t(0.28 + i * 0.1, 0.5)}
-              />
-            ))}
-            {/* nodes pop in */}
-            {NODES.map((n, i) => (
-              <motion.circle
-                key={i}
-                cx={n.x}
-                cy={n.y}
-                r={i === 0 ? 5.5 : 3.4}
-                fill={n.accent ? T.primary : BONE}
-                initial={{ scale: reduce ? 1 : 0, opacity: reduce ? 1 : 0 }}
-                animate={{ scale: 1, opacity: n.accent ? 1 : 0.85 }}
-                transition={t(i * 0.08, 0.4)}
-                style={{ transformOrigin: `${n.x}px ${n.y}px` }}
-              />
-            ))}
-            {/* one emerald data-pulse routes an edge */}
-            {!reduce && (
-              <motion.circle
-                r={3}
-                fill={T.primaryHover}
-                initial={{ cx: NODES[PULSE[0]].x, cy: NODES[PULSE[0]].y, opacity: 0 }}
-                animate={{
-                  cx: [NODES[PULSE[0]].x, NODES[PULSE[1]].x],
-                  cy: [NODES[PULSE[0]].y, NODES[PULSE[1]].y],
-                  opacity: [0, 1, 1, 0],
-                }}
-                transition={{ delay: 0.8, duration: 0.7, ease: "easeInOut" }}
-              />
-            )}
-          </svg>
-
-          {/* NULLSHIFT forms */}
-          <div
-            style={{
-              display: "flex",
               fontFamily: T.sans,
               fontWeight: 800,
               fontSize: "clamp(1.9rem,7vw,3.4rem)",
               letterSpacing: "0.04em",
               textTransform: "uppercase",
-              color: BONE,
+              color: T.primaryFg,
               lineHeight: 1,
             }}
           >
-            {WORD.split("").map((ch, i) => (
-              <motion.span
-                key={i}
-                initial={{ opacity: reduce ? 1 : 0, y: reduce ? 0 : 9 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={t(0.72 + i * 0.045, 0.4)}
-              >
-                {ch}
-              </motion.span>
-            ))}
-          </div>
+            <ScrambleText
+              as="span"
+              text="NULLSHIFT"
+              startOnView={false}
+              durationMs={700}
+              charset="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#@$%&"
+            />
+            <sup style={{ fontSize: "0.42em", fontWeight: 600, marginLeft: "0.05em" }}>
+              ®
+            </sup>
+          </motion.div>
+
+          {/* Tagline */}
+          <motion.div
+            initial={{ opacity: reduce ? 1 : 0, y: offset(6) }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={enter(0.3, 0.4)}
+            style={{
+              fontFamily: T.mono,
+              fontSize: "clamp(0.6rem,1.4vw,0.72rem)",
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: "rgba(10,11,15,0.72)",
+            }}
+          >
+            Agentic AI · Automation · Systems
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

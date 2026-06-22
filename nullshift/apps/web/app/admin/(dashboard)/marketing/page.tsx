@@ -5,6 +5,7 @@ import { T } from "@nullshift/ui/tokens";
 import { TRADES, WELLNESS } from "@nullshift/content/marketing";
 import { PlanLadder } from "@nullshift/ui/components/PlanLadder";
 import { RevenueCalculator } from "@nullshift/ui/components/RevenueCalculator";
+import { PageHeader } from "@/components/app/AppKit";
 
 const TABS = [
   "Advisor",
@@ -18,13 +19,14 @@ type Tab = (typeof TABS)[number];
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 
-/* ── Small branded primitives ──────────────────────────────── */
+/* ── Small branded primitives (KYMA: square, hairline, emerald) ── */
 const Card = ({ children, accent }: { children: React.ReactNode; accent?: boolean }) => (
   <div
+    className="k-kard k-kard-h"
     style={{
-      background: T.surface,
-      border: `1px solid ${accent ? T.primary : T.border}`,
-      borderRadius: T.r.lg,
+      background: "var(--k-surface)",
+      border: `1px solid ${accent ? "var(--k-accent)" : "var(--k-border)"}`,
+      borderRadius: 0,
       padding: 20,
       height: "100%",
     }}
@@ -32,37 +34,15 @@ const Card = ({ children, accent }: { children: React.ReactNode; accent?: boolea
     {children}
   </div>
 );
-const Eyebrow = ({ children }: { children: React.ReactNode }) => (
-  <div
-    className="inline-flex items-center gap-2"
-    style={{
-      fontFamily: T.mono,
-      fontSize: "0.66rem",
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
-      color: T.muted,
-    }}
-  >
-    <span
-      style={{
-        width: 7,
-        height: 7,
-        borderRadius: "50%",
-        background: T.primary,
-        boxShadow: `0 0 0 4px ${T.primary}22`,
-      }}
-    />
-    {children}
-  </div>
-);
 const H2 = ({ children }: { children: React.ReactNode }) => (
   <h2
     style={{
       fontFamily: T.display,
-      fontWeight: 600,
+      fontWeight: 700,
       fontSize: "clamp(1.4rem,2.6vw,2rem)",
-      letterSpacing: "-0.02em",
-      color: T.fg,
+      letterSpacing: "-0.03em",
+      textTransform: "uppercase",
+      color: "var(--k-fg)",
       margin: "8px 0 14px",
     }}
   >
@@ -76,18 +56,26 @@ const Tag = ({
   children: React.ReactNode;
   tone?: "primary" | "warn" | "info";
 }) => {
-  const c = tone === "warn" ? T.warning : tone === "info" ? T.info : T.primary;
+  const c =
+    tone === "warn" ? T.warning : tone === "info" ? "var(--k-muted)" : "var(--k-accent)";
+  const bg =
+    tone === "warn"
+      ? `${T.warning}1f`
+      : tone === "info"
+        ? "rgba(255,255,255,0.05)"
+        : "rgba(16,185,129,0.12)";
   return (
     <span
       style={{
         fontFamily: T.mono,
-        fontSize: "0.62rem",
-        letterSpacing: "0.04em",
-        padding: "3px 9px",
-        borderRadius: 999,
-        background: `${c}1f`,
+        fontSize: "0.6rem",
+        fontWeight: 500,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        padding: "4px 9px",
+        borderRadius: 0,
+        background: bg,
         color: c,
-        border: `1px solid ${c}44`,
       }}
     >
       {children}
@@ -189,93 +177,92 @@ export default function MarketingCommandCentre() {
   return (
     <div>
       {/* Hero */}
-      <div style={{ marginBottom: 18 }}>
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <Eyebrow>Marketing Command Centre · June 2026</Eyebrow>
+      <PageHeader
+        index="10"
+        label="Marketing Command Centre · June 2026"
+        title={
+          <>
+            Stop selling websites.
+            <br />
+            <span style={{ color: "var(--k-accent)" }}>
+              Start selling recovered revenue.
+            </span>
+          </>
+        }
+        actions={
           <span
             style={{
               fontFamily: T.mono,
-              fontSize: "0.66rem",
-              letterSpacing: "0.06em",
+              fontSize: "0.62rem",
+              fontWeight: 500,
+              letterSpacing: "0.08em",
               textTransform: "uppercase",
-              color: T.primary,
-              border: `1px solid ${T.primary}44`,
-              background: `${T.primary}12`,
-              borderRadius: 999,
+              color: "var(--k-accent)",
+              border: "1px solid var(--k-border)",
+              background: "rgba(16,185,129,0.12)",
+              borderRadius: 0,
               padding: "6px 12px",
             }}
           >
             North star — Recurring revenue
           </span>
-        </div>
-        <h1
-          style={{
-            fontFamily: T.display,
-            fontWeight: 600,
-            fontSize: "clamp(1.9rem,4vw,3rem)",
-            letterSpacing: "-0.03em",
-            lineHeight: 1.05,
-            color: T.fg,
-            marginTop: 14,
-          }}
-        >
-          Stop selling websites.
-          <br />
-          <span className="hero-glow" style={{ color: T.primary }}>
-            Start selling recovered revenue.
-          </span>
-        </h1>
-        <div
-          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3"
-          style={{ marginTop: 22 }}
-        >
-          {[
-            ["£24k/yr", "lost by the average UK trade to missed calls — our hook"],
-            ["£1.6bn", "lost to salon no-shows a year — the clone market"],
-            ["~85%", "gross margin on the recurring automation layer"],
-            ["£3.5–6k", "target MRR by day 90 (15–25 retainer clients)"],
-          ].map(([n, l]) => (
+        }
+      />
+      <div
+        className="grid sm:grid-cols-2 lg:grid-cols-4"
+        style={{
+          marginTop: 24,
+          marginBottom: 18,
+          borderTop: "1px solid var(--k-border)",
+          borderLeft: "1px solid var(--k-border)",
+        }}
+      >
+        {[
+          ["£24k/yr", "lost by the average UK trade to missed calls — our hook"],
+          ["£1.6bn", "lost to salon no-shows a year — the clone market"],
+          ["~85%", "gross margin on the recurring automation layer"],
+          ["£3.5–6k", "target MRR by day 90 (15–25 retainer clients)"],
+        ].map(([n, l]) => (
+          <div
+            key={l}
+            style={{
+              background: "var(--k-surface)",
+              borderRight: "1px solid var(--k-border)",
+              borderBottom: "1px solid var(--k-border)",
+              padding: "16px 18px",
+            }}
+          >
             <div
-              key={l}
               style={{
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: T.r.lg,
-                padding: "16px 18px",
+                fontFamily: T.display,
+                fontWeight: 800,
+                fontSize: "1.6rem",
+                letterSpacing: "-0.03em",
+                color: "var(--k-accent)",
               }}
             >
-              <div
-                style={{
-                  fontFamily: T.display,
-                  fontWeight: 700,
-                  fontSize: "1.6rem",
-                  letterSpacing: "-0.02em",
-                  color: T.primary,
-                }}
-              >
-                {n}
-              </div>
-              <div
-                style={{
-                  fontFamily: T.sans,
-                  fontSize: "0.8rem",
-                  color: T.muted,
-                  marginTop: 4,
-                  lineHeight: 1.4,
-                }}
-              >
-                {l}
-              </div>
+              {n}
             </div>
-          ))}
-        </div>
+            <div
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.8rem",
+                color: "var(--k-muted)",
+                marginTop: 6,
+                lineHeight: 1.4,
+              }}
+            >
+              {l}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Tabs */}
       <div
-        className="flex gap-1.5 overflow-x-auto"
+        className="flex gap-1 overflow-x-auto"
         style={{
-          borderBottom: `1px solid ${T.border}`,
+          borderBottom: "1px solid var(--k-border)",
           marginBottom: 24,
           paddingBottom: 2,
         }}
@@ -286,16 +273,19 @@ export default function MarketingCommandCentre() {
             onClick={() => setTab(t)}
             style={{
               whiteSpace: "nowrap",
-              fontFamily: T.sans,
-              fontSize: "0.86rem",
+              fontFamily: T.mono,
+              fontSize: "0.72rem",
               fontWeight: 500,
-              padding: "9px 14px",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              padding: "10px 14px",
               borderRadius: 0,
               border: "none",
               cursor: "pointer",
-              color: tab === t ? T.primary : T.muted,
-              background: tab === t ? `${T.primary}12` : "transparent",
-              borderBottom: `2px solid ${tab === t ? T.primary : "transparent"}`,
+              transition: "color .15s ease, background .15s ease",
+              color: tab === t ? "var(--k-accent)" : "var(--k-muted)",
+              background: tab === t ? "rgba(16,185,129,0.1)" : "transparent",
+              borderBottom: `2px solid ${tab === t ? "var(--k-accent)" : "transparent"}`,
             }}
           >
             {t}
@@ -406,14 +396,7 @@ export default function MarketingCommandCentre() {
             </Card>
           </div>
           <H2>The hole in the market</H2>
-          <div
-            style={{
-              background: T.surface,
-              border: `1px solid ${T.border}`,
-              borderRadius: T.r.lg,
-              padding: 18,
-            }}
-          >
+          <div className="k-kard" style={{ background: "var(--k-surface)", padding: 18 }}>
             {[
               [
                 "Traditional agencies",
@@ -820,21 +803,21 @@ function Roadmap() {
     <div>
       <H2>90-day execution roadmap</H2>
       <div
-        className="flex items-center gap-4"
+        className="k-kard flex items-center gap-4"
         style={{
-          background: T.surface,
-          border: `1px solid ${T.border}`,
-          borderRadius: T.r.lg,
+          background: "var(--k-surface)",
           padding: "14px 18px",
           marginBottom: 18,
         }}
       >
         <span
           style={{
-            fontFamily: T.sans,
-            fontSize: "0.85rem",
-            fontWeight: 600,
-            color: T.muted,
+            fontFamily: T.mono,
+            fontSize: "0.66rem",
+            fontWeight: 500,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "var(--k-muted)",
           }}
         >
           Progress
@@ -842,9 +825,9 @@ function Roadmap() {
         <div
           style={{
             flex: 1,
-            height: 10,
-            background: T.elevated,
-            borderRadius: 999,
+            height: 8,
+            background: "var(--k-bg)",
+            border: "1px solid var(--k-border)",
             overflow: "hidden",
           }}
         >
@@ -852,7 +835,7 @@ function Roadmap() {
             style={{
               height: "100%",
               width: `${pct}%`,
-              background: `linear-gradient(90deg, ${T.primary}, ${T.primaryHover})`,
+              background: "var(--k-accent)",
               transition: "width .3s",
             }}
           />
@@ -1087,13 +1070,8 @@ function AdvisorPlaybook() {
         {ADVISOR_PROMPTS.map((p) => (
           <div
             key={p}
-            className="flex items-center gap-3"
-            style={{
-              background: T.surface,
-              border: `1px solid ${T.border}`,
-              borderRadius: T.r.md,
-              padding: "11px 14px",
-            }}
+            className="k-kard flex items-center gap-3"
+            style={{ background: "var(--k-surface)", padding: "11px 14px" }}
           >
             <span style={{ fontFamily: T.mono, fontSize: "0.72rem", color: T.primary }}>
               /marketing-advisor
@@ -1174,30 +1152,29 @@ function MrrCalculator() {
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3">
           {[
-            ["MRR", gbp(mrr), T.primary],
-            ["ARR", gbp(mrr * 12), T.primary],
-            ["LTV / client", gbp(ltv), T.info],
+            ["MRR", gbp(mrr), "var(--k-accent)"],
+            ["ARR", gbp(mrr * 12), "var(--k-accent)"],
+            ["LTV / client", gbp(ltv), "var(--k-fg)"],
             [
               "LTV : CAC",
               ratio.toFixed(1) + ":1",
-              ratio >= 3 ? T.primary : ratio >= 2 ? T.warning : T.danger,
+              ratio >= 3 ? "var(--k-accent)" : ratio >= 2 ? T.warning : T.danger,
             ],
           ].map(([l, val, c]) => (
             <div
               key={l as string}
+              className="k-kard"
               style={{
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: T.r.md,
+                background: "var(--k-surface)",
                 padding: 16,
               }}
             >
               <div
                 style={{
                   fontFamily: T.display,
-                  fontWeight: 700,
+                  fontWeight: 800,
                   fontSize: "1.5rem",
-                  letterSpacing: "-0.02em",
+                  letterSpacing: "-0.03em",
                   color: c as string,
                 }}
               >
@@ -1216,14 +1193,7 @@ function MrrCalculator() {
             </div>
           ))}
         </div>
-        <div
-          style={{
-            background: T.surface,
-            border: `1px solid ${T.border}`,
-            borderRadius: T.r.md,
-            padding: 16,
-          }}
-        >
+        <div className="k-kard" style={{ background: "var(--k-surface)", padding: 16 }}>
           <div style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.muted }}>
             CAC payback incl. setup fee
           </div>

@@ -22,6 +22,8 @@ import {
 } from "@/lib/clientEmails";
 import { ProposalDocsForm } from "@/components/admin/ProposalDocsForm";
 import { dpaReadyToSend } from "@/lib/dpa";
+import { PageHeader } from "@/components/app/AppKit";
+import { Reveal } from "@/components/kyma";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
   /\/$/,
@@ -795,87 +797,97 @@ async function deleteClient(formData: FormData) {
   redirect("/admin/clients");
 }
 
-// ── UI helpers ─────────────────────────────────────────────────
+// ── UI helpers (KYMA app surface: hairline, square, mono, emerald accent) ──
+// Emerald (var(--k-accent)) is the only brand colour; the rest are signal/muted
+// tones. Status chips are square (no pills) per the design system.
 const tone: Record<string, string> = {
-  draft: T.muted,
+  draft: "var(--k-muted)",
   sent: T.warning,
-  accepted: T.primary,
+  accepted: "var(--k-accent)",
   declined: T.danger,
   submitted: T.info,
   triaged: T.info,
   scoped: T.warning,
   awaiting_approval: T.warning,
-  approved: T.primary,
-  in_progress: T.primary,
+  approved: "var(--k-accent)",
+  in_progress: "var(--k-accent)",
   review: T.warning,
   shipped: T.success,
   rejected: T.danger,
   paid: T.success,
   open: T.warning,
-  proposed: T.muted,
+  proposed: "var(--k-muted)",
   built: T.success,
   active: T.success,
   trialing: T.info,
   past_due: T.danger,
   incomplete: T.warning,
-  canceled: T.muted,
-  cancelled: T.muted,
-  confirmed: T.primary,
+  canceled: "var(--k-muted)",
+  cancelled: "var(--k-muted)",
+  confirmed: "var(--k-accent)",
 };
 function Badge({ s }: { s: string }) {
-  const c = tone[s] ?? T.muted;
+  const c = tone[s] ?? "var(--k-muted)";
   return (
     <span
       style={{
         fontFamily: T.mono,
         fontSize: "10px",
-        letterSpacing: "0.05em",
+        fontWeight: 500,
+        letterSpacing: "0.08em",
         textTransform: "uppercase",
         color: c,
-        background: `${c}14`,
-        border: `1px solid ${c}40`,
-        borderRadius: 999,
-        padding: "2px 8px",
+        background: `color-mix(in oklab, ${c} 12%, transparent)`,
+        border: `1px solid color-mix(in oklab, ${c} 32%, transparent)`,
+        borderRadius: 0,
+        padding: "3px 8px",
       }}
     >
       {s.replace(/_/g, " ")}
     </span>
   );
 }
+// Workhorse panel — mirrors AppKit Panel / .k-kard: hairline square card.
 const card = {
-  background: T.surface,
-  border: `1px solid ${T.border}`,
-  borderRadius: T.r.lg,
+  background: "var(--k-surface)",
+  border: "1px solid var(--k-border)",
+  borderRadius: 0,
   padding: "18px 20px",
   marginBottom: 16,
 } as const;
+// Section title — TASA Orbiter, uppercase (matches Panel header type).
 const h2 = {
-  fontFamily: T.display,
-  fontWeight: 600,
+  fontFamily: T.sans,
+  fontWeight: 700,
   fontSize: "1.05rem",
-  color: T.fg,
+  letterSpacing: "-0.01em",
+  textTransform: "uppercase" as const,
+  color: "var(--k-fg)",
   marginBottom: 12,
 } as const;
+// Square input — var(--k-surface) bg, hairline border, emerald focus ring.
 const inp = {
   fontFamily: T.sans,
   fontSize: "0.85rem",
   height: 32,
   padding: "0 10px",
-  background: T.bg,
-  color: T.fg,
-  border: `1px solid ${T.border}`,
+  background: "var(--k-surface)",
+  color: "var(--k-fg)",
+  border: "1px solid var(--k-border)",
   borderRadius: 0,
 } as const;
+// Square mono uppercase button. Accent (emerald) primary, outline ghost.
 const btn = (bg: string, fg: string) => ({
   fontFamily: T.mono,
   fontSize: "11px",
-  letterSpacing: "0.05em",
+  fontWeight: 500,
+  letterSpacing: "0.08em",
   textTransform: "uppercase" as const,
   height: 32,
   paddingInline: 12,
   background: bg,
   color: fg,
-  border: bg === "transparent" ? `1px solid ${T.border}` : "none",
+  border: bg === "transparent" ? "1px solid var(--k-border-strong)" : "none",
   borderRadius: 0,
   cursor: "pointer",
 });
@@ -1141,7 +1153,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
           fontSize: 11,
           letterSpacing: "0.06em",
           textTransform: "uppercase",
-          color: T.muted,
+          color: "var(--k-muted)",
           textDecoration: "none",
         }}
       >
@@ -1149,516 +1161,1137 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       </Link>
 
       {/* Header */}
-      <div
-        className="flex items-end justify-between flex-wrap gap-3"
-        style={{ marginTop: 12, marginBottom: 18 }}
-      >
-        <div>
-          <h1
-            style={{
-              fontFamily: T.display,
-              fontWeight: 600,
-              fontSize: "1.9rem",
-              color: T.fg,
-            }}
-          >
-            {t.name}{" "}
-            <span
-              title="Client reference"
-              style={{
-                fontFamily: T.mono,
-                fontSize: 11,
-                fontWeight: 400,
-                letterSpacing: "0.04em",
-                color: T.muted,
-                background: T.surface2,
-                border: `1px solid ${T.border}`,
-                borderRadius: 999,
-                padding: "2px 9px",
-                verticalAlign: "middle",
-              }}
-            >
-              {clientRef(tenantId)}
-            </span>
-          </h1>
-          <p
-            style={{
-              fontFamily: T.sans,
-              fontSize: "0.85rem",
-              color: T.muted,
-              marginTop: 2,
-            }}
-          >
-            {[t.contact_name, t.contact_email, t.contact_phone, t.vertical]
-              .filter(Boolean)
-              .join(" · ") || "No contact details yet"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {project && <Badge s={project.stage} />}
-          {project && <Badge s={project.proposal_status} />}
-          {project && (
-            <span
-              title="Whether the client has submitted their DPA details in the portal"
-              style={{
-                fontFamily: T.mono,
-                fontSize: 10,
-                letterSpacing: "0.05em",
-                textTransform: "uppercase",
-                color: clientDpaReady ? T.success : T.warning,
-                border: `1px solid ${clientDpaReady ? T.success : T.warning}40`,
-                borderRadius: 999,
-                padding: "2px 8px",
-              }}
-            >
-              {clientDpaReady ? "DPA details ✓" : "DPA details awaited"}
-            </span>
-          )}
-          <span
-            style={{
-              fontFamily: T.mono,
-              fontSize: 10,
-              letterSpacing: "0.05em",
-              textTransform: "uppercase",
-              color: dpaSigned ? T.success : T.danger,
-              border: `1px solid ${dpaSigned ? T.success : T.danger}40`,
-              borderRadius: 999,
-              padding: "2px 8px",
-            }}
-          >
-            {dpaSigned ? "DPA signed" : "DPA pending"}
-          </span>
-          {project && (
-            <form action={setStage} className="flex items-center gap-1">
-              {htid}
-              {hpid}
-              <select
-                name="stage"
-                defaultValue={project.stage}
-                style={{ ...inp, height: 28 }}
-              >
-                {STAGES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              <SubmitButton style={btn(T.surface2, T.fg)}>Set stage</SubmitButton>
-            </form>
-          )}
-        </div>
-      </div>
-
-      {/* Book Call */}
-      <section style={card}>
-        <h2 style={h2}>Discovery / project call</h2>
-        {theCall ? (
-          <div>
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>
-                {new Date(theCall.call_date).toLocaleDateString("en-GB", {
-                  weekday: "short",
-                  day: "numeric",
-                  month: "short",
-                })}{" "}
-                <span
-                  style={{ color: T.primary, fontFamily: T.mono, fontSize: "0.82rem" }}
-                >
-                  {theCall.call_time} · {theCall.duration_min} min
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge s={theCall.status} />
-                <form action={cancelCall}>
-                  {htid}
-                  <input type="hidden" name="id" value={theCall.id} />
-                  <SubmitButton style={btn("transparent", T.danger)}>Cancel</SubmitButton>
-                </form>
-              </div>
-            </div>
-            {theCall.meeting_link && (
-              <a
-                href={theCall.meeting_link}
-                target="_blank"
-                rel="noreferrer"
+      <div style={{ marginTop: 12, marginBottom: 18 }}>
+        <PageHeader
+          index="01"
+          label="Client hub"
+          title={
+            <span className="inline-flex items-center flex-wrap gap-2.5">
+              {t.name}
+              <span
+                title="Client reference"
                 style={{
                   fontFamily: T.mono,
                   fontSize: 11,
-                  color: T.primary,
-                  textDecoration: "none",
-                  display: "inline-block",
-                  marginTop: 8,
+                  fontWeight: 500,
+                  letterSpacing: "0.06em",
+                  textTransform: "none",
+                  color: "var(--k-muted)",
+                  background: "var(--k-surface)",
+                  border: "1px solid var(--k-border)",
+                  borderRadius: 0,
+                  padding: "3px 9px",
+                  verticalAlign: "middle",
                 }}
               >
-                Join meeting ↗
-              </a>
-            )}
-            <form
-              action={saveMeeting}
-              className="flex items-center gap-2 flex-wrap"
-              style={{
-                marginTop: 12,
-                paddingTop: 12,
-                borderTop: `1px solid ${T.border}`,
-              }}
-            >
-              {htid}
-              <input type="hidden" name="id" value={theCall.id} />
-              <input
-                name="meeting_link"
-                placeholder="Meeting link (Zoom/Meet)"
-                defaultValue={theCall.meeting_link ?? ""}
-                style={{ ...inp, flex: "1 1 240px" }}
-              />
-              <input
-                name="meeting_id"
-                placeholder="Meeting ID"
-                defaultValue={theCall.meeting_id ?? ""}
-                style={{ ...inp, width: 130 }}
-              />
-              <input
-                name="meeting_password"
-                placeholder="Passcode"
-                defaultValue={theCall.meeting_password ?? ""}
-                style={{ ...inp, width: 110 }}
-              />
-              <SubmitButton style={btn(T.surface2, T.fg)}>Save meeting</SubmitButton>
-            </form>
-          </div>
-        ) : (
-          <>
-            {preferredDate && (
-              <p
+                {clientRef(tenantId)}
+              </span>
+            </span>
+          }
+          lead={
+            [t.contact_name, t.contact_email, t.contact_phone, t.vertical]
+              .filter(Boolean)
+              .join(" · ") || "No contact details yet"
+          }
+          actions={
+            <>
+              {project && <Badge s={project.stage} />}
+              {project && <Badge s={project.proposal_status} />}
+              {project && (
+                <span
+                  title="Whether the client has submitted their DPA details in the portal"
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    fontWeight: 500,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: clientDpaReady ? T.success : T.warning,
+                    border: `1px solid color-mix(in oklab, ${clientDpaReady ? T.success : T.warning} 32%, transparent)`,
+                    borderRadius: 0,
+                    padding: "3px 8px",
+                  }}
+                >
+                  {clientDpaReady ? "DPA details ✓" : "DPA details awaited"}
+                </span>
+              )}
+              <span
                 style={{
-                  fontFamily: T.sans,
-                  fontSize: "0.85rem",
-                  color: T.muted,
-                  lineHeight: 1.5,
-                  marginBottom: 12,
+                  fontFamily: T.mono,
+                  fontSize: 10,
+                  fontWeight: 500,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: dpaSigned ? T.success : T.danger,
+                  border: `1px solid color-mix(in oklab, ${dpaSigned ? T.success : T.danger} 32%, transparent)`,
+                  borderRadius: 0,
+                  padding: "3px 8px",
                 }}
               >
-                Client&apos;s preferred slot:{" "}
-                <b style={{ color: T.fg }}>
-                  {new Date(preferredDate).toLocaleDateString("en-GB", {
+                {dpaSigned ? "DPA signed" : "DPA pending"}
+              </span>
+              {project && (
+                <form action={setStage} className="flex items-center gap-1">
+                  {htid}
+                  {hpid}
+                  <select
+                    name="stage"
+                    defaultValue={project.stage}
+                    style={{ ...inp, height: 28 }}
+                  >
+                    {STAGES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                  <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                    Set stage
+                  </SubmitButton>
+                </form>
+              )}
+            </>
+          }
+        />
+      </div>
+
+      {/* Book Call */}
+      <Reveal>
+        <section style={card}>
+          <h2 style={h2}>Discovery / project call</h2>
+          {theCall ? (
+            <div>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div
+                  style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-fg)" }}
+                >
+                  {new Date(theCall.call_date).toLocaleDateString("en-GB", {
                     weekday: "short",
                     day: "numeric",
                     month: "short",
-                  })}
-                </b>
-                {preferredTime
-                  ? ` · ${TIME_BUCKETS[preferredTime]?.label ?? preferredTime}`
-                  : ""}
-                . Reach out to confirm the exact date &amp; time, then set it below.
-              </p>
-            )}
-            <form action={bookCall} className="flex items-center gap-2 flex-wrap">
-              {htid}
-              {hpid}
-              <input
-                name="call_date"
-                type="date"
-                required
-                defaultValue={preferredDate ?? ""}
-                style={{ ...inp, colorScheme: "dark" }}
-              />
-              <input
-                name="call_time"
-                type="time"
-                required
-                defaultValue={
-                  preferredTime ? (TIME_BUCKETS[preferredTime]?.time ?? "10:00") : "10:00"
-                }
-                style={{ ...inp, colorScheme: "dark" }}
-              />
-              <SubmitButton style={btn(T.primary, T.primaryFg)}>Book call</SubmitButton>
-            </form>
-          </>
-        )}
-      </section>
+                  })}{" "}
+                  <span
+                    style={{
+                      color: "var(--k-accent)",
+                      fontFamily: T.mono,
+                      fontSize: "0.82rem",
+                    }}
+                  >
+                    {theCall.call_time} · {theCall.duration_min} min
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge s={theCall.status} />
+                  <form action={cancelCall}>
+                    {htid}
+                    <input type="hidden" name="id" value={theCall.id} />
+                    <SubmitButton style={btn("transparent", T.danger)}>
+                      Cancel
+                    </SubmitButton>
+                  </form>
+                </div>
+              </div>
+              {theCall.meeting_link && (
+                <a
+                  href={theCall.meeting_link}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    color: "var(--k-accent)",
+                    textDecoration: "none",
+                    display: "inline-block",
+                    marginTop: 8,
+                  }}
+                >
+                  Join meeting ↗
+                </a>
+              )}
+              <form
+                action={saveMeeting}
+                className="flex items-center gap-2 flex-wrap"
+                style={{
+                  marginTop: 12,
+                  paddingTop: 12,
+                  borderTop: "1px solid var(--k-border)",
+                }}
+              >
+                {htid}
+                <input type="hidden" name="id" value={theCall.id} />
+                <input
+                  name="meeting_link"
+                  placeholder="Meeting link (Zoom/Meet)"
+                  defaultValue={theCall.meeting_link ?? ""}
+                  style={{ ...inp, flex: "1 1 240px" }}
+                />
+                <input
+                  name="meeting_id"
+                  placeholder="Meeting ID"
+                  defaultValue={theCall.meeting_id ?? ""}
+                  style={{ ...inp, width: 130 }}
+                />
+                <input
+                  name="meeting_password"
+                  placeholder="Passcode"
+                  defaultValue={theCall.meeting_password ?? ""}
+                  style={{ ...inp, width: 110 }}
+                />
+                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                  Save meeting
+                </SubmitButton>
+              </form>
+            </div>
+          ) : (
+            <>
+              {preferredDate && (
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.85rem",
+                    color: "var(--k-muted)",
+                    lineHeight: 1.5,
+                    marginBottom: 12,
+                  }}
+                >
+                  Client&apos;s preferred slot:{" "}
+                  <b style={{ color: "var(--k-fg)" }}>
+                    {new Date(preferredDate).toLocaleDateString("en-GB", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </b>
+                  {preferredTime
+                    ? ` · ${TIME_BUCKETS[preferredTime]?.label ?? preferredTime}`
+                    : ""}
+                  . Reach out to confirm the exact date &amp; time, then set it below.
+                </p>
+              )}
+              <form action={bookCall} className="flex items-center gap-2 flex-wrap">
+                {htid}
+                {hpid}
+                <input
+                  name="call_date"
+                  type="date"
+                  required
+                  defaultValue={preferredDate ?? ""}
+                  style={{ ...inp, colorScheme: "dark" }}
+                />
+                <input
+                  name="call_time"
+                  type="time"
+                  required
+                  defaultValue={
+                    preferredTime
+                      ? (TIME_BUCKETS[preferredTime]?.time ?? "10:00")
+                      : "10:00"
+                  }
+                  style={{ ...inp, colorScheme: "dark" }}
+                />
+                <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
+                  Book call
+                </SubmitButton>
+              </form>
+            </>
+          )}
+        </section>
+      </Reveal>
 
       {/* No project yet → start one to unlock proposal/invoicing/etc. */}
       {!project && (
-        <section style={card}>
-          <h2 style={{ ...h2, marginBottom: 6 }}>Build project</h2>
-          <p
-            style={{
-              fontFamily: T.sans,
-              fontSize: "0.85rem",
-              color: T.faint,
-              marginBottom: 12,
-            }}
-          >
-            Start the build project to unlock the proposal, change requests, invoicing and
-            deliverables for this client.
-          </p>
-          <form action={ensureProject}>
-            {htid}
-            <input type="hidden" name="name" value={`${t.name} — build`} />
-            <SubmitButton style={btn(T.primary, T.primaryFg)}>
-              Start build project →
-            </SubmitButton>
-          </form>
-        </section>
+        <Reveal>
+          <section style={card}>
+            <h2 style={{ ...h2, marginBottom: 6 }}>Build project</h2>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.85rem",
+                color: "var(--k-faint)",
+                marginBottom: 12,
+              }}
+            >
+              Start the build project to unlock the proposal, change requests, invoicing
+              and deliverables for this client.
+            </p>
+            <form action={ensureProject}>
+              {htid}
+              <input type="hidden" name="name" value={`${t.name} — build`} />
+              <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
+                Start build project →
+              </SubmitButton>
+            </form>
+          </section>
+        </Reveal>
       )}
 
       {project && (
         <>
           {/* Proposal / build modules */}
-          <section style={card}>
-            <div className="flex items-center justify-between">
-              <h2 style={h2}>Proposal — build modules</h2>
-              <span
-                style={{
-                  fontFamily: T.display,
-                  fontWeight: 700,
-                  fontSize: "1.3rem",
-                  color: T.fg,
-                }}
-              >
-                {gbp(total)}
-              </span>
-            </div>
-            {itemList.length === 0 && (
-              <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>
-                No modules yet. Add what the client wants built.
-              </p>
-            )}
-            <div className="flex flex-col gap-1.5" style={{ marginBottom: 12 }}>
-              {itemList.map((it) => (
-                <div
-                  key={it.id}
-                  className="flex items-center justify-between"
-                  style={{ padding: "7px 0", borderTop: `1px solid ${T.border}` }}
+          <Reveal>
+            <section style={card}>
+              <div className="flex items-center justify-between">
+                <h2 style={h2}>Proposal — build modules</h2>
+                <span
+                  style={{
+                    fontFamily: T.display,
+                    fontWeight: 700,
+                    fontSize: "1.3rem",
+                    color: "var(--k-fg)",
+                  }}
                 >
-                  <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>
-                    {it.name}
-                  </span>
-                  <div className="flex items-center gap-3">
+                  {gbp(total)}
+                </span>
+              </div>
+              {itemList.length === 0 && (
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.85rem",
+                    color: "var(--k-faint)",
+                  }}
+                >
+                  No modules yet. Add what the client wants built.
+                </p>
+              )}
+              <div className="flex flex-col gap-1.5" style={{ marginBottom: 12 }}>
+                {itemList.map((it) => (
+                  <div
+                    key={it.id}
+                    className="flex items-center justify-between"
+                    style={{ padding: "7px 0", borderTop: "1px solid var(--k-border)" }}
+                  >
                     <span
-                      style={{ fontFamily: T.mono, fontSize: "0.85rem", color: T.muted }}
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.9rem",
+                        color: "var(--k-fg)",
+                      }}
                     >
-                      {gbp(Number(it.amount))}
+                      {it.name}
                     </span>
-                    <form action={removeItem}>
-                      {htid}
-                      <input type="hidden" name="id" value={it.id} />
-                      <SubmitButton
+                    <div className="flex items-center gap-3">
+                      <span
                         style={{
-                          ...btn("transparent", T.faint),
-                          height: 24,
-                          paddingInline: 8,
+                          fontFamily: T.mono,
+                          fontSize: "0.85rem",
+                          color: "var(--k-muted)",
                         }}
                       >
-                        ✕
-                      </SubmitButton>
-                    </form>
+                        {gbp(Number(it.amount))}
+                      </span>
+                      <form action={removeItem}>
+                        {htid}
+                        <input type="hidden" name="id" value={it.id} />
+                        <SubmitButton
+                          style={{
+                            ...btn("transparent", "var(--k-faint)"),
+                            height: 24,
+                            paddingInline: 8,
+                          }}
+                        >
+                          ✕
+                        </SubmitButton>
+                      </form>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <form
-              action={addItem}
-              className="flex items-center gap-2 flex-wrap"
-              style={{ paddingTop: 12, borderTop: `1px solid ${T.border}` }}
-            >
-              {htid}
-              {hpid}
-              <input
-                name="name"
-                placeholder="Module (e.g. Booking system)"
-                required
-                style={{ ...inp, width: 220 }}
-              />
-              <input
-                name="amount"
-                type="number"
-                step="1"
-                placeholder="£"
-                required
-                style={{ ...inp, width: 90 }}
-              />
-              <SubmitButton style={btn(T.surface2, T.fg)}>+ Add</SubmitButton>
-            </form>
-            <div className="flex flex-wrap gap-1.5" style={{ marginTop: 10 }}>
-              {CATALOG.map((m) => (
-                <form key={m.key} action={addItem}>
-                  {htid}
-                  {hpid}
-                  <input type="hidden" name="name" value={m.name} />
-                  <input type="hidden" name="amount" value={m.price} />
-                  <SubmitButton
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: 10,
-                      height: 24,
-                      paddingInline: 8,
-                      background: "transparent",
-                      color: T.muted,
-                      border: `1px solid ${T.border}`,
-                      borderRadius: 0,
-                      cursor: "pointer",
-                    }}
-                  >
-                    + {m.name} {gbp(m.price)}
-                  </SubmitButton>
-                </form>
-              ))}
-            </div>
-            {/* Ongoing care plan — part of the proposal the client accepts. */}
-            <div
-              className="flex items-center gap-2 flex-wrap"
-              style={{
-                marginTop: 14,
-                paddingTop: 14,
-                borderTop: `1px solid ${T.border}`,
-              }}
-            >
-              <span style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.fg }}>
-                Ongoing care plan
-              </span>
-              <form action={setProposedPlan} className="flex items-center gap-2">
+                ))}
+              </div>
+              <form
+                action={addItem}
+                className="flex items-center gap-2 flex-wrap"
+                style={{ paddingTop: 12, borderTop: "1px solid var(--k-border)" }}
+              >
                 {htid}
                 {hpid}
-                <select
-                  name="plan"
-                  defaultValue={project.proposed_plan ?? ""}
-                  style={{ ...inp, width: 180 }}
-                >
-                  <option value="">No care plan</option>
-                  {CARE_PLANS.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.label} — £{p.mrr}/mo
-                    </option>
-                  ))}
-                </select>
-                <SubmitButton style={btn(T.surface2, T.fg)}>Save plan</SubmitButton>
+                <input
+                  name="name"
+                  placeholder="Module (e.g. Booking system)"
+                  required
+                  style={{ ...inp, width: 220 }}
+                />
+                <input
+                  name="amount"
+                  type="number"
+                  step="1"
+                  placeholder="£"
+                  required
+                  style={{ ...inp, width: 90 }}
+                />
+                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                  + Add
+                </SubmitButton>
               </form>
-              {project.proposed_plan && (
-                <span style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}>
-                  {carePlan(project.proposed_plan)?.label} · activates on acceptance
+              <div className="flex flex-wrap gap-1.5" style={{ marginTop: 10 }}>
+                {CATALOG.map((m) => (
+                  <form key={m.key} action={addItem}>
+                    {htid}
+                    {hpid}
+                    <input type="hidden" name="name" value={m.name} />
+                    <input type="hidden" name="amount" value={m.price} />
+                    <SubmitButton
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: 10,
+                        height: 24,
+                        paddingInline: 8,
+                        background: "transparent",
+                        color: "var(--k-muted)",
+                        border: "1px solid var(--k-border)",
+                        borderRadius: 0,
+                        cursor: "pointer",
+                      }}
+                    >
+                      + {m.name} {gbp(m.price)}
+                    </SubmitButton>
+                  </form>
+                ))}
+              </div>
+              {/* Ongoing care plan — part of the proposal the client accepts. */}
+              <div
+                className="flex items-center gap-2 flex-wrap"
+                style={{
+                  marginTop: 14,
+                  paddingTop: 14,
+                  borderTop: "1px solid var(--k-border)",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.85rem",
+                    color: "var(--k-fg)",
+                  }}
+                >
+                  Ongoing care plan
                 </span>
+                <form action={setProposedPlan} className="flex items-center gap-2">
+                  {htid}
+                  {hpid}
+                  <select
+                    name="plan"
+                    defaultValue={project.proposed_plan ?? ""}
+                    style={{ ...inp, width: 180 }}
+                  >
+                    <option value="">No care plan</option>
+                    {CARE_PLANS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label} — £{p.mrr}/mo
+                      </option>
+                    ))}
+                  </select>
+                  <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                    Save plan
+                  </SubmitButton>
+                </form>
+                {project.proposed_plan && (
+                  <span
+                    style={{ fontFamily: T.mono, fontSize: 11, color: "var(--k-muted)" }}
+                  >
+                    {carePlan(project.proposed_plan)?.label} · activates on acceptance
+                  </span>
+                )}
+              </div>
+              {project.proposal_status === "draft" && (
+                <p
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    color: "var(--k-faint)",
+                    marginTop: 12,
+                  }}
+                >
+                  Add modules + a care plan here, then complete &amp; send the documents
+                  below.
+                </p>
               )}
-            </div>
-            {project.proposal_status === "draft" && (
-              <p
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: 11,
-                  color: T.faint,
-                  marginTop: 12,
-                }}
-              >
-                Add modules + a care plan here, then complete &amp; send the documents
-                below.
-              </p>
-            )}
-            {project.proposal_status === "sent" && (
-              <p
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: 11,
-                  color: T.warning,
-                  marginTop: 12,
-                }}
-              >
-                Sent — awaiting the client&apos;s acceptance + DPA in their portal.
-              </p>
-            )}
-            {project.proposal_status === "accepted" && (
-              <p
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: 11,
-                  color: T.primary,
-                  marginTop: 12,
-                }}
-              >
-                Accepted by the client ✓
-              </p>
-            )}
-          </section>
+              {project.proposal_status === "sent" && (
+                <p
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    color: T.warning,
+                    marginTop: 12,
+                  }}
+                >
+                  Sent — awaiting the client&apos;s acceptance + DPA in their portal.
+                </p>
+              )}
+              {project.proposal_status === "accepted" && (
+                <p
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    color: "var(--k-accent)",
+                    marginTop: 12,
+                  }}
+                >
+                  Accepted by the client ✓
+                </p>
+              )}
+            </section>
+          </Reveal>
 
           {/* Proposal document + DPA details (authoring) */}
-          <section style={card}>
-            <div
-              className="flex items-center justify-between flex-wrap gap-2"
-              style={{ marginBottom: 4 }}
-            >
-              <h2 style={{ ...h2, marginBottom: 0 }}>
-                Proposal document &amp; DPA details
-              </h2>
-              <Link
-                href={`/admin/clients/${tenantId}/documents`}
+          <Reveal>
+            <section style={card}>
+              <div
+                className="flex items-center justify-between flex-wrap gap-2"
+                style={{ marginBottom: 4 }}
+              >
+                <h2 style={{ ...h2, marginBottom: 0 }}>
+                  Proposal document &amp; DPA details
+                </h2>
+                <Link
+                  href={`/admin/clients/${tenantId}/documents`}
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "var(--k-accent)",
+                    textDecoration: "none",
+                  }}
+                >
+                  View / download documents →
+                </Link>
+              </div>
+              <p
                 style={{
-                  fontFamily: T.mono,
-                  fontSize: 11,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: T.primary,
-                  textDecoration: "none",
+                  fontFamily: T.sans,
+                  fontSize: "0.82rem",
+                  color: "var(--k-faint)",
+                  marginTop: -6,
+                  marginBottom: 14,
                 }}
               >
-                View / download documents →
-              </Link>
-            </div>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.82rem",
-                color: T.faint,
-                marginTop: -6,
-                marginBottom: 14,
-              }}
-            >
-              Author the proposal here. The DPA details are provided by the client in
-              their portal (status below) — the document ports them on automatically. You
-              can send once the modules, care plan, this doc and the client&apos;s DPA
-              details are all complete.
-            </p>
-            <ProposalDocsForm
-              action={saveDocsAndSend}
-              tenantId={tenantId}
-              projectId={project.id}
-              proposalStatus={project.proposal_status}
-              modulesComplete={modulesComplete}
-              planSelected={planSelected}
-              clientDpaReady={clientDpaReady}
-              clientSubmittedAt={project.dpa_client_submitted_at}
-              entityType={project.client_entity_type}
-              companyName={project.dpa_client_company_name}
-              companyNumber={project.dpa_client_company_number}
-              registeredAddress={project.dpa_client_registered_address}
-              personalData={project.dpa_personal_data}
-              specialCategory={project.dpa_special_category}
-              specialCategoryDetail={project.dpa_special_category_detail}
-              defaults={{
-                overview: project.overview ?? "",
-                paymentTerms: project.payment_terms ?? "",
-              }}
-            />
-          </section>
+                Author the proposal here. The DPA details are provided by the client in
+                their portal (status below) — the document ports them on automatically.
+                You can send once the modules, care plan, this doc and the client&apos;s
+                DPA details are all complete.
+              </p>
+              <ProposalDocsForm
+                action={saveDocsAndSend}
+                tenantId={tenantId}
+                projectId={project.id}
+                proposalStatus={project.proposal_status}
+                modulesComplete={modulesComplete}
+                planSelected={planSelected}
+                clientDpaReady={clientDpaReady}
+                clientSubmittedAt={project.dpa_client_submitted_at}
+                entityType={project.client_entity_type}
+                companyName={project.dpa_client_company_name}
+                companyNumber={project.dpa_client_company_number}
+                registeredAddress={project.dpa_client_registered_address}
+                personalData={project.dpa_personal_data}
+                specialCategory={project.dpa_special_category}
+                specialCategoryDetail={project.dpa_special_category_detail}
+                defaults={{
+                  overview: project.overview ?? "",
+                  paymentTerms: project.payment_terms ?? "",
+                }}
+              />
+            </section>
+          </Reveal>
 
           {/* Invoice */}
-          <section style={card}>
-            <div className="flex items-center justify-between">
-              <h2 style={{ ...h2, marginBottom: 0 }}>Invoice</h2>
-              {invoicePaid ? (
+          <Reveal>
+            <section style={card}>
+              <div className="flex items-center justify-between">
+                <h2 style={{ ...h2, marginBottom: 0 }}>Invoice</h2>
+                {invoicePaid ? (
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 11,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                      color: T.success,
+                      background:
+                        "color-mix(in oklab, " + T.success + " 12%, transparent)",
+                      border:
+                        "1px solid color-mix(in oklab, " +
+                        T.success +
+                        " 40%, transparent)",
+                      borderRadius: 0,
+                      padding: "7px 14px",
+                    }}
+                  >
+                    Paid ✓
+                  </span>
+                ) : invoiceSent ? (
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 11,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                      color: T.warning,
+                      background:
+                        "color-mix(in oklab, " + T.warning + " 12%, transparent)",
+                      border:
+                        "1px solid color-mix(in oklab, " +
+                        T.warning +
+                        " 40%, transparent)",
+                      borderRadius: 0,
+                      padding: "7px 14px",
+                    }}
+                  >
+                    Invoice sent — awaiting payment
+                  </span>
+                ) : (
+                  <form action={generateInvoice}>
+                    {htid}
+                    {hpid}
+                    <SubmitButton
+                      disabled={!isAccepted}
+                      style={{
+                        ...btn(
+                          isAccepted ? "var(--k-accent)" : "var(--k-surface)",
+                          isAccepted ? "var(--k-on-accent)" : "var(--k-faint)"
+                        ),
+                        border: isAccepted ? "none" : "1px solid var(--k-border)",
+                        cursor: isAccepted ? "pointer" : "not-allowed",
+                        opacity: isAccepted ? 1 : 0.7,
+                      }}
+                    >
+                      Generate &amp; send itemised invoice
+                    </SubmitButton>
+                  </form>
+                )}
+              </div>
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.8rem",
+                  color: "var(--k-faint)",
+                  margin: "6px 0 12px",
+                }}
+              >
+                {invoicePaid
+                  ? "The client has paid this invoice — it's recorded against their account below."
+                  : invoiceSent
+                    ? "Sent to the client — they've been emailed a Stripe payment link. This flips to Paid automatically once the payment goes through."
+                    : isAccepted
+                      ? "Compiles the build modules above into an itemised Stripe invoice and emails the client a payment link."
+                      : "Available once the client has signed the proposal. An invoice is drafted automatically on signing."}
+              </p>
+              {invoiceList.length > 0 && (
+                <div
+                  className="flex items-center justify-between flex-wrap gap-2"
+                  style={{
+                    marginBottom: 12,
+                    padding: "10px 12px",
+                    background: "var(--k-bg)",
+                    border: "1px solid var(--k-border)",
+                    borderRadius: 0,
+                  }}
+                >
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.85rem",
+                        color: "var(--k-muted)",
+                      }}
+                    >
+                      Invested{" "}
+                      <strong style={{ color: "var(--k-accent)", fontFamily: T.mono }}>
+                        {gbp(invested)}
+                      </strong>
+                    </span>
+                    {outstanding > 0 && (
+                      <span
+                        style={{
+                          fontFamily: T.sans,
+                          fontSize: "0.85rem",
+                          color: "var(--k-muted)",
+                        }}
+                      >
+                        Outstanding{" "}
+                        <strong style={{ color: T.warning, fontFamily: T.mono }}>
+                          {gbp(outstanding)}
+                        </strong>
+                      </span>
+                    )}
+                  </div>
+                  {hasStripeInvoice && (
+                    <form action={syncInvoiceStatus}>
+                      {htid}
+                      <SubmitButton
+                        title="Re-pull payment status from Stripe (fallback if a webhook was missed)"
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: 10,
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          color: "var(--k-muted)",
+                          background: "transparent",
+                          border: "1px solid var(--k-border)",
+                          borderRadius: 0,
+                          padding: "5px 10px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Sync from Stripe
+                      </SubmitButton>
+                    </form>
+                  )}
+                </div>
+              )}
+              {invoiceList.length === 0 ? (
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.85rem",
+                    color: "var(--k-faint)",
+                  }}
+                >
+                  No invoices yet.
+                </p>
+              ) : (
+                invoiceList.map((inv) => (
+                  <div
+                    key={inv.id}
+                    className="flex items-center justify-between"
+                    style={{ padding: "8px 0", borderTop: "1px solid var(--k-border)" }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.88rem",
+                        color: "var(--k-fg)",
+                      }}
+                    >
+                      {gbp(Number(inv.amount))}{" "}
+                      <span
+                        style={{
+                          color: "var(--k-faint)",
+                          fontFamily: T.mono,
+                          fontSize: 11,
+                        }}
+                      >
+                        · {inv.project_item_count ?? 0} items
+                      </span>
+                    </span>
+                    <div className="flex items-center gap-3">
+                      {inv.status === "paid" && inv.paid_at && (
+                        <span
+                          style={{ fontFamily: T.mono, fontSize: 10, color: T.success }}
+                        >
+                          paid {new Date(inv.paid_at).toLocaleDateString("en-GB")}
+                        </span>
+                      )}
+                      <Badge s={inv.status} />
+                      {inv.hosted_invoice_url && (
+                        <a
+                          href={inv.hosted_invoice_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            fontFamily: T.mono,
+                            fontSize: 10,
+                            color: "var(--k-accent)",
+                            textDecoration: "none",
+                          }}
+                        >
+                          payment link ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </section>
+          </Reveal>
+
+          {/* Change requests */}
+          <Reveal>
+            <section style={card}>
+              <h2 style={h2}>Build edits (change requests)</h2>
+              {crList.length === 0 && (
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.85rem",
+                    color: "var(--k-faint)",
+                  }}
+                >
+                  None — the client submits these from their portal.
+                </p>
+              )}
+              <div className="flex flex-col gap-2">
+                {crList.map((cr) => (
+                  <div
+                    key={cr.id}
+                    style={{
+                      background: "var(--k-bg)",
+                      border: "1px solid var(--k-border)",
+                      borderRadius: 0,
+                      padding: "10px 12px",
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p
+                        style={{
+                          fontFamily: T.sans,
+                          fontSize: "0.86rem",
+                          color: "var(--k-fg)",
+                        }}
+                      >
+                        {cr.description}
+                      </p>
+                      <Badge s={cr.status} />
+                    </div>
+                    {(cr.estimate_hours != null || cr.quoted_price != null) && (
+                      <div
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: 11,
+                          color: "var(--k-muted)",
+                          marginTop: 5,
+                        }}
+                      >
+                        {cr.estimate_hours != null && <>est {cr.estimate_hours}h</>}
+                        {cr.quoted_price != null && <> · £{cr.quoted_price}</>}
+                      </div>
+                    )}
+                    <div
+                      className="flex items-center gap-2 flex-wrap"
+                      style={{ marginTop: 8 }}
+                    >
+                      {cr.status === "submitted" && (
+                        <form action={advanceCr}>
+                          {htid}
+                          <input type="hidden" name="id" value={cr.id} />
+                          <input type="hidden" name="action" value="triage" />
+                          <button style={btn("var(--k-surface)", "var(--k-fg)")}>
+                            Triage
+                          </button>
+                        </form>
+                      )}
+                      {(cr.status === "triaged" || cr.status === "submitted") && (
+                        <form action={advanceCr} className="flex items-center gap-1.5">
+                          {htid}
+                          <input type="hidden" name="id" value={cr.id} />
+                          <input type="hidden" name="action" value="scope" />
+                          <input
+                            name="estimate_hours"
+                            type="number"
+                            step="0.5"
+                            placeholder="hrs"
+                            required
+                            style={{ ...inp, width: 64, height: 28 }}
+                          />
+                          <input
+                            name="quoted_price"
+                            type="number"
+                            step="1"
+                            placeholder="£"
+                            required
+                            style={{ ...inp, width: 70, height: 28 }}
+                          />
+                          <button style={btn(T.warning, "#1a1300")}>Scope →</button>
+                        </form>
+                      )}
+                      {CR_NEXT[cr.status] && (
+                        <form action={advanceCr}>
+                          {htid}
+                          <input type="hidden" name="id" value={cr.id} />
+                          <input type="hidden" name="action" value={cr.status} />
+                          <button style={btn("var(--k-accent)", "var(--k-on-accent)")}>
+                            Move to {CR_NEXT[cr.status].replace(/_/g, " ")}
+                          </button>
+                        </form>
+                      )}
+                      {cr.status === "awaiting_approval" && (
+                        <span
+                          style={{ fontFamily: T.mono, fontSize: 11, color: T.warning }}
+                        >
+                          waiting on client approval
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </Reveal>
+
+          {/* Deliverables */}
+          <Reveal>
+            <section style={card}>
+              <h2 style={h2}>Deliverables</h2>
+              {docList.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex items-center gap-2"
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    color: "var(--k-muted)",
+                    padding: "2px 0",
+                  }}
+                >
+                  <span style={{ color: "var(--k-accent)" }}>v{d.version}</span>
+                  <span style={{ color: "var(--k-faint)" }}>{d.kind}</span>
+                  <span>{d.storage_path.split("/").pop()}</span>
+                </div>
+              ))}
+              <form
+                action={uploadDoc}
+                className="flex items-center gap-2 flex-wrap"
+                style={{ marginTop: 10 }}
+              >
+                {htid}
+                {hpid}
+                <select name="kind" defaultValue="asset" style={{ ...inp, width: 110 }}>
+                  <option value="asset">asset</option>
+                  <option value="brief">brief</option>
+                  <option value="contract">contract</option>
+                  <option value="consent">consent</option>
+                </select>
+                <input
+                  type="file"
+                  name="file"
+                  required
+                  style={{ fontFamily: T.mono, fontSize: 11, color: "var(--k-muted)" }}
+                />
+                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                  Upload
+                </SubmitButton>
+              </form>
+            </section>
+          </Reveal>
+
+          {/* Notes */}
+          <Reveal>
+            <section style={card}>
+              <h2 style={h2}>Internal notes</h2>
+              <form
+                action={addNote}
+                className="flex items-center gap-2"
+                style={{ marginBottom: 12 }}
+              >
+                {htid}
+                {hpid}
+                <input
+                  name="body"
+                  placeholder="Add an internal note…"
+                  required
+                  style={{ ...inp, flex: 1, height: 36 }}
+                />
+                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                  Add note
+                </SubmitButton>
+              </form>
+              <div className="flex flex-col gap-2">
+                {noteList.map((n) => (
+                  <div
+                    key={n.id}
+                    style={{ padding: "8px 0", borderTop: "1px solid var(--k-border)" }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: 10,
+                        color: "var(--k-faint)",
+                        marginBottom: 3,
+                      }}
+                    >
+                      {new Date(n.created_at).toLocaleString("en-GB")}
+                    </div>
+                    <p
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.88rem",
+                        color: "var(--k-fg)",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {n.body}
+                    </p>
+                  </div>
+                ))}
+                {noteList.length === 0 && (
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.82rem",
+                      color: "var(--k-faint)",
+                    }}
+                  >
+                    No notes yet.
+                  </p>
+                )}
+              </div>
+            </section>
+          </Reveal>
+
+          {/* Live site + client-facing updates */}
+          <Reveal>
+            <section style={card}>
+              <h2 style={h2}>Live site &amp; client updates</h2>
+              <form
+                action={setLiveUrl}
+                className="flex items-center gap-2 flex-wrap"
+                style={{ marginBottom: 14 }}
+              >
+                {htid}
+                {hpid}
+                <input
+                  name="live_url"
+                  type="url"
+                  placeholder="https://their-live-site.co.uk"
+                  defaultValue={project.live_url ?? ""}
+                  style={{ ...inp, flex: "1 1 260px" }}
+                />
+                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                  Save live link
+                </SubmitButton>
+              </form>
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.8rem",
+                  color: "var(--k-faint)",
+                  marginBottom: 10,
+                }}
+              >
+                Post a progress update the client sees on their project page.
+              </p>
+              <form action={postUpdate} className="flex flex-col gap-2">
+                {htid}
+                {hpid}
+                <input
+                  name="title"
+                  required
+                  placeholder="Update title (e.g. Homepage design ready for review)"
+                  style={inp}
+                />
+                <textarea
+                  name="body"
+                  rows={2}
+                  placeholder="Details (optional)"
+                  style={{
+                    ...inp,
+                    height: "auto",
+                    padding: "8px 10px",
+                    resize: "vertical",
+                  }}
+                />
+                <SubmitButton
+                  className="self-start"
+                  style={btn("var(--k-surface)", "var(--k-fg)")}
+                >
+                  Post update
+                </SubmitButton>
+              </form>
+            </section>
+          </Reveal>
+        </>
+      )}
+
+      {/* DPA / compliance */}
+      <Reveal>
+        <section style={card}>
+          <h2 style={h2}>Data Processing Agreement</h2>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.85rem",
+              color: "var(--k-muted)",
+              lineHeight: 1.6,
+              marginBottom: 12,
+            }}
+          >
+            The client signs the DPA when they accept the proposal in their portal. Record
+            it here if it was signed offline — a project cannot go <b>live</b> until a DPA
+            is logged.
+          </p>
+          {dpaSigned ? (
+            <span style={{ fontFamily: T.mono, fontSize: 12, color: T.success }}>
+              ✓ DPA signed — logged for this client.
+            </span>
+          ) : (
+            <form action={recordDpa}>
+              {htid}
+              <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                Record DPA as signed
+              </SubmitButton>
+            </form>
+          )}
+        </section>
+      </Reveal>
+
+      {/* Care plan — recurring subscription via a Stripe Checkout sign-up the
+          client completes (mirrors the build invoice: send → awaiting → active). */}
+      <Reveal>
+        <section style={card}>
+          <div className="flex items-center justify-between">
+            <h2 style={{ ...h2, marginBottom: 0 }}>Care plan</h2>
+            {mrr > 0 && (
+              <span
+                style={{ fontFamily: T.mono, fontSize: 12, color: "var(--k-accent)" }}
+              >
+                {gbp(mrr)}/mo MRR
+              </span>
+            )}
+          </div>
+
+          {activeSub ? (
+            <div
+              className="flex items-center justify-between flex-wrap gap-2"
+              style={{ marginTop: 14 }}
+            >
+              <span
+                style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-fg)" }}
+              >
+                {carePlan(activeSub.plan)?.label ?? activeSub.plan}{" "}
+                <span
+                  style={{ color: "var(--k-muted)", fontFamily: T.mono, fontSize: 11 }}
+                >
+                  {gbp(Number(activeSub.mrr))}/mo
+                </span>
+              </span>
+              <div className="flex items-center gap-3">
                 <span
                   style={{
                     fontFamily: T.mono,
                     fontSize: 11,
                     letterSpacing: "0.04em",
                     textTransform: "uppercase",
-                    color: T.success,
-                    background: `${T.success}14`,
-                    border: `1px solid ${T.success}55`,
-                    borderRadius: 999,
-                    padding: "7px 14px",
+                    color: activeSub.status === "active" ? T.success : T.warning,
+                    background: `color-mix(in oklab, ${activeSub.status === "active" ? T.success : T.warning} 12%, transparent)`,
+                    border: `1px solid color-mix(in oklab, ${activeSub.status === "active" ? T.success : T.warning} 40%, transparent)`,
+                    borderRadius: 0,
+                    padding: "6px 12px",
                   }}
                 >
-                  Paid ✓
+                  {activeSub.status === "active"
+                    ? "Active ✓"
+                    : activeSub.status.replace("_", " ")}
                 </span>
-              ) : invoiceSent ? (
+                <form action={cancelSubscription}>
+                  {htid}
+                  <input type="hidden" name="id" value={activeSub.id} />
+                  <SubmitButton style={btn("transparent", T.danger)}>Cancel</SubmitButton>
+                </form>
+              </div>
+            </div>
+          ) : pendingSub ? (
+            <div style={{ marginTop: 14 }}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span
+                  style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-fg)" }}
+                >
+                  {carePlan(pendingSub.plan)?.label ?? pendingSub.plan}{" "}
+                  <span
+                    style={{ color: "var(--k-muted)", fontFamily: T.mono, fontSize: 11 }}
+                  >
+                    {gbp(Number(pendingSub.mrr))}/mo
+                  </span>
+                </span>
                 <span
                   style={{
                     fontFamily: T.mono,
@@ -1666,775 +2299,306 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     letterSpacing: "0.04em",
                     textTransform: "uppercase",
                     color: T.warning,
-                    background: `${T.warning}14`,
-                    border: `1px solid ${T.warning}55`,
-                    borderRadius: 999,
-                    padding: "7px 14px",
-                  }}
-                >
-                  Invoice sent — awaiting payment
-                </span>
-              ) : (
-                <form action={generateInvoice}>
-                  {htid}
-                  {hpid}
-                  <SubmitButton
-                    disabled={!isAccepted}
-                    style={{
-                      ...btn(
-                        isAccepted ? T.primary : T.surface2,
-                        isAccepted ? T.primaryFg : T.faint
-                      ),
-                      border: isAccepted ? "none" : `1px solid ${T.border}`,
-                      cursor: isAccepted ? "pointer" : "not-allowed",
-                      opacity: isAccepted ? 1 : 0.7,
-                    }}
-                  >
-                    Generate &amp; send itemised invoice
-                  </SubmitButton>
-                </form>
-              )}
-            </div>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.8rem",
-                color: T.faint,
-                margin: "6px 0 12px",
-              }}
-            >
-              {invoicePaid
-                ? "The client has paid this invoice — it's recorded against their account below."
-                : invoiceSent
-                  ? "Sent to the client — they've been emailed a Stripe payment link. This flips to Paid automatically once the payment goes through."
-                  : isAccepted
-                    ? "Compiles the build modules above into an itemised Stripe invoice and emails the client a payment link."
-                    : "Available once the client has signed the proposal. An invoice is drafted automatically on signing."}
-            </p>
-            {invoiceList.length > 0 && (
-              <div
-                className="flex items-center justify-between flex-wrap gap-2"
-                style={{
-                  marginBottom: 12,
-                  padding: "10px 12px",
-                  background: T.bg,
-                  border: `1px solid ${T.border}`,
-                  borderRadius: 0,
-                }}
-              >
-                <div className="flex items-center gap-4 flex-wrap">
-                  <span
-                    style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}
-                  >
-                    Invested{" "}
-                    <strong style={{ color: T.primary, fontFamily: T.mono }}>
-                      {gbp(invested)}
-                    </strong>
-                  </span>
-                  {outstanding > 0 && (
-                    <span
-                      style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.muted }}
-                    >
-                      Outstanding{" "}
-                      <strong style={{ color: T.warning, fontFamily: T.mono }}>
-                        {gbp(outstanding)}
-                      </strong>
-                    </span>
-                  )}
-                </div>
-                {hasStripeInvoice && (
-                  <form action={syncInvoiceStatus}>
-                    {htid}
-                    <SubmitButton
-                      title="Re-pull payment status from Stripe (fallback if a webhook was missed)"
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: 10,
-                        letterSpacing: "0.06em",
-                        textTransform: "uppercase",
-                        color: T.muted,
-                        background: "transparent",
-                        border: `1px solid ${T.border}`,
-                        borderRadius: 0,
-                        padding: "5px 10px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Sync from Stripe
-                    </SubmitButton>
-                  </form>
-                )}
-              </div>
-            )}
-            {invoiceList.length === 0 ? (
-              <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>
-                No invoices yet.
-              </p>
-            ) : (
-              invoiceList.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="flex items-center justify-between"
-                  style={{ padding: "8px 0", borderTop: `1px solid ${T.border}` }}
-                >
-                  <span style={{ fontFamily: T.sans, fontSize: "0.88rem", color: T.fg }}>
-                    {gbp(Number(inv.amount))}{" "}
-                    <span style={{ color: T.faint, fontFamily: T.mono, fontSize: 11 }}>
-                      · {inv.project_item_count ?? 0} items
-                    </span>
-                  </span>
-                  <div className="flex items-center gap-3">
-                    {inv.status === "paid" && inv.paid_at && (
-                      <span
-                        style={{ fontFamily: T.mono, fontSize: 10, color: T.success }}
-                      >
-                        paid {new Date(inv.paid_at).toLocaleDateString("en-GB")}
-                      </span>
-                    )}
-                    <Badge s={inv.status} />
-                    {inv.hosted_invoice_url && (
-                      <a
-                        href={inv.hosted_invoice_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          fontFamily: T.mono,
-                          fontSize: 10,
-                          color: T.primary,
-                          textDecoration: "none",
-                        }}
-                      >
-                        payment link ↗
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </section>
-
-          {/* Change requests */}
-          <section style={card}>
-            <h2 style={h2}>Build edits (change requests)</h2>
-            {crList.length === 0 && (
-              <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>
-                None — the client submits these from their portal.
-              </p>
-            )}
-            <div className="flex flex-col gap-2">
-              {crList.map((cr) => (
-                <div
-                  key={cr.id}
-                  style={{
-                    background: T.bg,
-                    border: `1px solid ${T.border}`,
+                    background: "color-mix(in oklab, " + T.warning + " 12%, transparent)",
+                    border:
+                      "1px solid color-mix(in oklab, " + T.warning + " 40%, transparent)",
                     borderRadius: 0,
-                    padding: "10px 12px",
+                    padding: "6px 12px",
                   }}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <p style={{ fontFamily: T.sans, fontSize: "0.86rem", color: T.fg }}>
-                      {cr.description}
-                    </p>
-                    <Badge s={cr.status} />
-                  </div>
-                  {(cr.estimate_hours != null || cr.quoted_price != null) && (
-                    <div
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: 11,
-                        color: T.muted,
-                        marginTop: 5,
-                      }}
-                    >
-                      {cr.estimate_hours != null && <>est {cr.estimate_hours}h</>}
-                      {cr.quoted_price != null && <> · £{cr.quoted_price}</>}
-                    </div>
-                  )}
-                  <div
-                    className="flex items-center gap-2 flex-wrap"
-                    style={{ marginTop: 8 }}
-                  >
-                    {cr.status === "submitted" && (
-                      <form action={advanceCr}>
-                        {htid}
-                        <input type="hidden" name="id" value={cr.id} />
-                        <input type="hidden" name="action" value="triage" />
-                        <button style={btn(T.surface2, T.fg)}>Triage</button>
-                      </form>
-                    )}
-                    {(cr.status === "triaged" || cr.status === "submitted") && (
-                      <form action={advanceCr} className="flex items-center gap-1.5">
-                        {htid}
-                        <input type="hidden" name="id" value={cr.id} />
-                        <input type="hidden" name="action" value="scope" />
-                        <input
-                          name="estimate_hours"
-                          type="number"
-                          step="0.5"
-                          placeholder="hrs"
-                          required
-                          style={{ ...inp, width: 64, height: 28 }}
-                        />
-                        <input
-                          name="quoted_price"
-                          type="number"
-                          step="1"
-                          placeholder="£"
-                          required
-                          style={{ ...inp, width: 70, height: 28 }}
-                        />
-                        <button style={btn(T.warning, "#1a1300")}>Scope →</button>
-                      </form>
-                    )}
-                    {CR_NEXT[cr.status] && (
-                      <form action={advanceCr}>
-                        {htid}
-                        <input type="hidden" name="id" value={cr.id} />
-                        <input type="hidden" name="action" value={cr.status} />
-                        <button style={btn(T.primary, T.primaryFg)}>
-                          Move to {CR_NEXT[cr.status].replace(/_/g, " ")}
-                        </button>
-                      </form>
-                    )}
-                    {cr.status === "awaiting_approval" && (
-                      <span
-                        style={{ fontFamily: T.mono, fontSize: 11, color: T.warning }}
-                      >
-                        waiting on client approval
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Deliverables */}
-          <section style={card}>
-            <h2 style={h2}>Deliverables</h2>
-            {docList.map((d) => (
-              <div
-                key={d.id}
-                className="flex items-center gap-2"
+                  Sign-up sent — awaiting completion
+                </span>
+              </div>
+              <p
                 style={{
-                  fontFamily: T.mono,
-                  fontSize: 11,
-                  color: T.muted,
-                  padding: "2px 0",
+                  fontFamily: T.sans,
+                  fontSize: "0.8rem",
+                  color: "var(--k-faint)",
+                  margin: "8px 0 12px",
                 }}
               >
-                <span style={{ color: T.primary }}>v{d.version}</span>
-                <span style={{ color: T.faint }}>{d.kind}</span>
-                <span>{d.storage_path.split("/").pop()}</span>
-              </div>
-            ))}
-            <form
-              action={uploadDoc}
-              className="flex items-center gap-2 flex-wrap"
-              style={{ marginTop: 10 }}
-            >
-              {htid}
-              {hpid}
-              <select name="kind" defaultValue="asset" style={{ ...inp, width: 110 }}>
-                <option value="asset">asset</option>
-                <option value="brief">brief</option>
-                <option value="contract">contract</option>
-                <option value="consent">consent</option>
-              </select>
-              <input
-                type="file"
-                name="file"
-                required
-                style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}
-              />
-              <SubmitButton style={btn(T.surface2, T.fg)}>Upload</SubmitButton>
-            </form>
-          </section>
-
-          {/* Notes */}
-          <section style={card}>
-            <h2 style={h2}>Internal notes</h2>
-            <form
-              action={addNote}
-              className="flex items-center gap-2"
-              style={{ marginBottom: 12 }}
-            >
-              {htid}
-              {hpid}
-              <input
-                name="body"
-                placeholder="Add an internal note…"
-                required
-                style={{ ...inp, flex: 1, height: 36 }}
-              />
-              <SubmitButton style={btn(T.surface2, T.fg)}>Add note</SubmitButton>
-            </form>
-            <div className="flex flex-col gap-2">
-              {noteList.map((n) => (
-                <div
-                  key={n.id}
-                  style={{ padding: "8px 0", borderTop: `1px solid ${T.border}` }}
+                The client&apos;s been emailed a secure card sign-up. This flips to Active
+                automatically once they complete it.
+              </p>
+              <form action={sendSubscriptionSignup}>
+                {htid}
+                <input type="hidden" name="plan" value={pendingSub.plan} />
+                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                  Resend sign-up
+                </SubmitButton>
+              </form>
+            </div>
+          ) : (
+            <div style={{ marginTop: 14 }}>
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.82rem",
+                  color: "var(--k-faint)",
+                  marginBottom: 10,
+                }}
+              >
+                {project?.proposed_plan
+                  ? `${carePlan(project.proposed_plan)?.label} · ${gbp(
+                      carePlan(project.proposed_plan)?.mrr ?? 0
+                    )}/mo — not set up yet. Email the client a sign-up to start it.`
+                  : "No care plan yet. Pick one and email the client a sign-up to start it."}
+              </p>
+              <form
+                action={sendSubscriptionSignup}
+                className="flex items-center gap-2 flex-wrap"
+              >
+                {htid}
+                <select
+                  name="plan"
+                  defaultValue={project?.proposed_plan ?? "care_basic"}
+                  style={{ ...inp, width: 170 }}
                 >
-                  <div
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: 10,
-                      color: T.faint,
-                      marginBottom: 3,
-                    }}
-                  >
-                    {new Date(n.created_at).toLocaleString("en-GB")}
-                  </div>
-                  <p
-                    style={{
-                      fontFamily: T.sans,
-                      fontSize: "0.88rem",
-                      color: T.fg,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {n.body}
-                  </p>
-                </div>
-              ))}
-              {noteList.length === 0 && (
-                <p style={{ fontFamily: T.sans, fontSize: "0.82rem", color: T.faint }}>
-                  No notes yet.
+                  {CARE_PLANS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label} — £{p.mrr}/mo
+                    </option>
+                  ))}
+                </select>
+                <SubmitButton
+                  disabled={!isAccepted}
+                  style={{
+                    ...btn(
+                      isAccepted ? "var(--k-accent)" : "var(--k-surface)",
+                      isAccepted ? "var(--k-on-accent)" : "var(--k-faint)"
+                    ),
+                    cursor: isAccepted ? "pointer" : "not-allowed",
+                    opacity: isAccepted ? 1 : 0.7,
+                  }}
+                >
+                  Send care-plan sign-up
+                </SubmitButton>
+              </form>
+              {!isAccepted && (
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.78rem",
+                    color: "var(--k-faint)",
+                    marginTop: 8,
+                  }}
+                >
+                  Available once the client has signed the proposal.
                 </p>
               )}
             </div>
-          </section>
-
-          {/* Live site + client-facing updates */}
-          <section style={card}>
-            <h2 style={h2}>Live site &amp; client updates</h2>
-            <form
-              action={setLiveUrl}
-              className="flex items-center gap-2 flex-wrap"
-              style={{ marginBottom: 14 }}
-            >
-              {htid}
-              {hpid}
-              <input
-                name="live_url"
-                type="url"
-                placeholder="https://their-live-site.co.uk"
-                defaultValue={project.live_url ?? ""}
-                style={{ ...inp, flex: "1 1 260px" }}
-              />
-              <SubmitButton style={btn(T.surface2, T.fg)}>Save live link</SubmitButton>
-            </form>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.8rem",
-                color: T.faint,
-                marginBottom: 10,
-              }}
-            >
-              Post a progress update the client sees on their project page.
-            </p>
-            <form action={postUpdate} className="flex flex-col gap-2">
-              {htid}
-              {hpid}
-              <input
-                name="title"
-                required
-                placeholder="Update title (e.g. Homepage design ready for review)"
-                style={inp}
-              />
-              <textarea
-                name="body"
-                rows={2}
-                placeholder="Details (optional)"
-                style={{
-                  ...inp,
-                  height: "auto",
-                  padding: "8px 10px",
-                  resize: "vertical",
-                }}
-              />
-              <SubmitButton className="self-start" style={btn(T.surface2, T.fg)}>
-                Post update
-              </SubmitButton>
-            </form>
-          </section>
-        </>
-      )}
-
-      {/* DPA / compliance */}
-      <section style={card}>
-        <h2 style={h2}>Data Processing Agreement</h2>
-        <p
-          style={{
-            fontFamily: T.sans,
-            fontSize: "0.85rem",
-            color: T.muted,
-            lineHeight: 1.6,
-            marginBottom: 12,
-          }}
-        >
-          The client signs the DPA when they accept the proposal in their portal. Record
-          it here if it was signed offline — a project cannot go <b>live</b> until a DPA
-          is logged.
-        </p>
-        {dpaSigned ? (
-          <span style={{ fontFamily: T.mono, fontSize: 12, color: T.success }}>
-            ✓ DPA signed — logged for this client.
-          </span>
-        ) : (
-          <form action={recordDpa}>
-            {htid}
-            <SubmitButton style={btn(T.surface2, T.fg)}>
-              Record DPA as signed
-            </SubmitButton>
-          </form>
-        )}
-      </section>
-
-      {/* Care plan — recurring subscription via a Stripe Checkout sign-up the
-          client completes (mirrors the build invoice: send → awaiting → active). */}
-      <section style={card}>
-        <div className="flex items-center justify-between">
-          <h2 style={{ ...h2, marginBottom: 0 }}>Care plan</h2>
-          {mrr > 0 && (
-            <span style={{ fontFamily: T.mono, fontSize: 12, color: T.primary }}>
-              {gbp(mrr)}/mo MRR
-            </span>
           )}
-        </div>
+        </section>
+      </Reveal>
 
-        {activeSub ? (
-          <div
-            className="flex items-center justify-between flex-wrap gap-2"
-            style={{ marginTop: 14 }}
-          >
-            <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>
-              {carePlan(activeSub.plan)?.label ?? activeSub.plan}{" "}
-              <span style={{ color: T.muted, fontFamily: T.mono, fontSize: 11 }}>
-                {gbp(Number(activeSub.mrr))}/mo
-              </span>
-            </span>
-            <div className="flex items-center gap-3">
-              <span
+      {/* Portal access */}
+      <Reveal>
+        <section style={card}>
+          <h2 style={h2}>Client portal access</h2>
+          {portalLoggedIn ? (
+            <>
+              <p
                 style={{
                   fontFamily: T.mono,
-                  fontSize: 11,
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                  color: activeSub.status === "active" ? T.success : T.warning,
-                  background: `${activeSub.status === "active" ? T.success : T.warning}14`,
-                  border: `1px solid ${activeSub.status === "active" ? T.success : T.warning}55`,
-                  borderRadius: 999,
-                  padding: "6px 12px",
+                  fontSize: 12,
+                  color: T.success,
+                  marginBottom: 4,
                 }}
               >
-                {activeSub.status === "active"
-                  ? "Active ✓"
-                  : activeSub.status.replace("_", " ")}
-              </span>
-              <form action={cancelSubscription}>
+                ✓ Portal active — the client has set their own password
+                {portalUser?.lastSignInAt
+                  ? ` (last signed in ${new Date(
+                      portalUser.lastSignInAt
+                    ).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })})`
+                  : ""}
+                .
+              </p>
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.82rem",
+                  color: "var(--k-muted)",
+                  lineHeight: 1.6,
+                  marginBottom: 12,
+                }}
+              >
+                They sign in with their own password — we never reset or display it.
+                {!hasPortal
+                  ? " Grant them access to this client's project below."
+                  : ""}{" "}
+                If they&apos;ve forgotten it, send a branded reset link.
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {!hasPortal && (
+                  <form action={createPortalAccount}>
+                    {htid}
+                    <input type="hidden" name="name" value={t.contact_name ?? t.name} />
+                    <input type="hidden" name="email" value={portalEmail} />
+                    <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
+                      Grant portal access
+                    </SubmitButton>
+                  </form>
+                )}
+                <form action={sendPasswordReset}>
+                  {htid}
+                  <input type="hidden" name="name" value={t.contact_name ?? t.name} />
+                  <input type="hidden" name="email" value={portalEmail} />
+                  <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                    Send password reset link
+                  </SubmitButton>
+                </form>
+              </div>
+            </>
+          ) : (
+            <>
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.85rem",
+                  color: "var(--k-muted)",
+                  lineHeight: 1.6,
+                  marginBottom: 12,
+                }}
+              >
+                {hasPortal
+                  ? "A login was issued but the client hasn't signed in yet. You can re-issue and re-email their reference password below."
+                  : "Create the client's portal login. They'll be able to sign in at /portal to fill in their company details, review & sign the proposal + DPA, and submit change requests."}
+              </p>
+              <form
+                action={createPortalAccount}
+                className="flex items-center gap-2 flex-wrap"
+              >
                 {htid}
-                <input type="hidden" name="id" value={activeSub.id} />
-                <SubmitButton style={btn("transparent", T.danger)}>Cancel</SubmitButton>
+                <input type="hidden" name="name" value={t.contact_name ?? t.name} />
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="client@email.com"
+                  defaultValue={portalEmail || (t.contact_email ?? "")}
+                  style={{ ...inp, width: 230 }}
+                />
+                <input
+                  name="password"
+                  type="text"
+                  required
+                  minLength={8}
+                  placeholder="Password (8+ chars)"
+                  defaultValue={clientRef(tenantId)}
+                  style={{ ...inp, width: 200 }}
+                />
+                <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
+                  {hasPortal
+                    ? "Re-issue & resend login email"
+                    : "Create portal login & email it"}
+                </SubmitButton>
               </form>
-            </div>
-          </div>
-        ) : pendingSub ? (
-          <div style={{ marginTop: 14 }}>
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: T.fg }}>
-                {carePlan(pendingSub.plan)?.label ?? pendingSub.plan}{" "}
-                <span style={{ color: T.muted, fontFamily: T.mono, fontSize: 11 }}>
-                  {gbp(Number(pendingSub.mrr))}/mo
-                </span>
-              </span>
-              <span
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: 11,
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                  color: T.warning,
-                  background: `${T.warning}14`,
-                  border: `1px solid ${T.warning}55`,
-                  borderRadius: 999,
-                  padding: "6px 12px",
-                }}
-              >
-                Sign-up sent — awaiting completion
-              </span>
-            </div>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.8rem",
-                color: T.faint,
-                margin: "8px 0 12px",
-              }}
-            >
-              The client&apos;s been emailed a secure card sign-up. This flips to Active
-              automatically once they complete it.
-            </p>
-            <form action={sendSubscriptionSignup}>
-              {htid}
-              <input type="hidden" name="plan" value={pendingSub.plan} />
-              <SubmitButton style={btn(T.surface2, T.fg)}>Resend sign-up</SubmitButton>
-            </form>
-          </div>
-        ) : (
-          <div style={{ marginTop: 14 }}>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.82rem",
-                color: T.faint,
-                marginBottom: 10,
-              }}
-            >
-              {project?.proposed_plan
-                ? `${carePlan(project.proposed_plan)?.label} · ${gbp(
-                    carePlan(project.proposed_plan)?.mrr ?? 0
-                  )}/mo — not set up yet. Email the client a sign-up to start it.`
-                : "No care plan yet. Pick one and email the client a sign-up to start it."}
-            </p>
-            <form
-              action={sendSubscriptionSignup}
-              className="flex items-center gap-2 flex-wrap"
-            >
-              {htid}
-              <select
-                name="plan"
-                defaultValue={project?.proposed_plan ?? "care_basic"}
-                style={{ ...inp, width: 170 }}
-              >
-                {CARE_PLANS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label} — £{p.mrr}/mo
-                  </option>
-                ))}
-              </select>
-              <SubmitButton
-                disabled={!isAccepted}
-                style={{
-                  ...btn(
-                    isAccepted ? T.primary : T.surface2,
-                    isAccepted ? T.primaryFg : T.faint
-                  ),
-                  cursor: isAccepted ? "pointer" : "not-allowed",
-                  opacity: isAccepted ? 1 : 0.7,
-                }}
-              >
-                Send care-plan sign-up
-              </SubmitButton>
-            </form>
-            {!isAccepted && (
               <p
                 style={{
                   fontFamily: T.sans,
                   fontSize: "0.78rem",
-                  color: T.faint,
+                  color: "var(--k-faint)",
                   marginTop: 8,
                 }}
               >
-                Available once the client has signed the proposal.
+                The password defaults to their reference (shown only because they
+                haven&apos;t set their own yet). On submit we email the client their login
+                (username = email, password as shown).
               </p>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* Portal access */}
-      <section style={card}>
-        <h2 style={h2}>Client portal access</h2>
-        {portalLoggedIn ? (
-          <>
-            <p
-              style={{
-                fontFamily: T.mono,
-                fontSize: 12,
-                color: T.success,
-                marginBottom: 4,
-              }}
-            >
-              ✓ Portal active — the client has set their own password
-              {portalUser?.lastSignInAt
-                ? ` (last signed in ${new Date(
-                    portalUser.lastSignInAt
-                  ).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })})`
-                : ""}
-              .
-            </p>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.82rem",
-                color: T.muted,
-                lineHeight: 1.6,
-                marginBottom: 12,
-              }}
-            >
-              They sign in with their own password — we never reset or display it.
-              {!hasPortal ? " Grant them access to this client's project below." : ""} If
-              they&apos;ve forgotten it, send a branded reset link.
-            </p>
-            <div className="flex items-center gap-2 flex-wrap">
-              {!hasPortal && (
-                <form action={createPortalAccount}>
-                  {htid}
-                  <input type="hidden" name="name" value={t.contact_name ?? t.name} />
-                  <input type="hidden" name="email" value={portalEmail} />
-                  <SubmitButton style={btn(T.primary, T.primaryFg)}>
-                    Grant portal access
-                  </SubmitButton>
-                </form>
-              )}
-              <form action={sendPasswordReset}>
-                {htid}
-                <input type="hidden" name="name" value={t.contact_name ?? t.name} />
-                <input type="hidden" name="email" value={portalEmail} />
-                <SubmitButton style={btn(T.surface2, T.fg)}>
-                  Send password reset link
-                </SubmitButton>
-              </form>
-            </div>
-          </>
-        ) : (
-          <>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.85rem",
-                color: T.muted,
-                lineHeight: 1.6,
-                marginBottom: 12,
-              }}
-            >
-              {hasPortal
-                ? "A login was issued but the client hasn't signed in yet. You can re-issue and re-email their reference password below."
-                : "Create the client's portal login. They'll be able to sign in at /portal to fill in their company details, review & sign the proposal + DPA, and submit change requests."}
-            </p>
-            <form
-              action={createPortalAccount}
-              className="flex items-center gap-2 flex-wrap"
-            >
-              {htid}
-              <input type="hidden" name="name" value={t.contact_name ?? t.name} />
-              <input
-                name="email"
-                type="email"
-                required
-                placeholder="client@email.com"
-                defaultValue={portalEmail || (t.contact_email ?? "")}
-                style={{ ...inp, width: 230 }}
-              />
-              <input
-                name="password"
-                type="text"
-                required
-                minLength={8}
-                placeholder="Password (8+ chars)"
-                defaultValue={clientRef(tenantId)}
-                style={{ ...inp, width: 200 }}
-              />
-              <SubmitButton style={btn(T.primary, T.primaryFg)}>
-                {hasPortal
-                  ? "Re-issue & resend login email"
-                  : "Create portal login & email it"}
-              </SubmitButton>
-            </form>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.78rem",
-                color: T.faint,
-                marginTop: 8,
-              }}
-            >
-              The password defaults to their reference (shown only because they
-              haven&apos;t set their own yet). On submit we email the client their login
-              (username = email, password as shown).
-            </p>
-          </>
-        )}
-      </section>
+            </>
+          )}
+        </section>
+      </Reveal>
 
       {t.notes && (
-        <section style={card}>
-          <h2 style={h2}>Lead context</h2>
-          <p
-            style={{
-              fontFamily: T.sans,
-              fontSize: "0.86rem",
-              color: T.muted,
-              lineHeight: 1.6,
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            {t.notes}
-          </p>
-        </section>
+        <Reveal>
+          <section style={card}>
+            <h2 style={h2}>Lead context</h2>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.86rem",
+                color: "var(--k-muted)",
+                lineHeight: 1.6,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {t.notes}
+            </p>
+          </section>
+        </Reveal>
       )}
 
       {/* Danger zone — permanent deletion */}
-      <section style={{ ...card, borderColor: `${T.danger}55` }}>
-        <h2 style={{ ...h2, color: T.danger }}>Delete client</h2>
-        <p
+      <Reveal>
+        <section
           style={{
-            fontFamily: T.sans,
-            fontSize: "0.85rem",
-            color: T.muted,
-            lineHeight: 1.6,
-            marginBottom: 12,
+            ...card,
+            borderColor: "color-mix(in oklab, " + T.danger + " 40%, transparent)",
           }}
         >
-          Permanently erases this client and <b>all</b> their data — projects, proposals,
-          invoices, documents, updates and portal login. This cannot be undone.
+          <h2 style={{ ...h2, color: T.danger }}>Delete client</h2>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.85rem",
+              color: "var(--k-muted)",
+              lineHeight: 1.6,
+              marginBottom: 12,
+            }}
+          >
+            Permanently erases this client and <b>all</b> their data — projects,
+            proposals, invoices, documents, updates and portal login. This cannot be
+            undone.
+            {hasEmail ? (
+              <>
+                {" "}
+                To confirm, type the client&apos;s email
+                {t.contact_email ? (
+                  <>
+                    {" "}
+                    (
+                    <span style={{ fontFamily: T.mono, color: "var(--k-fg)" }}>
+                      {t.contact_email}
+                    </span>
+                    )
+                  </>
+                ) : null}
+                .
+              </>
+            ) : (
+              <> This client has no email on record, so just press delete.</>
+            )}
+          </p>
           {hasEmail ? (
-            <>
-              {" "}
-              To confirm, type the client&apos;s email
-              {t.contact_email ? (
-                <>
-                  {" "}
-                  (
-                  <span style={{ fontFamily: T.mono, color: T.fg }}>
-                    {t.contact_email}
-                  </span>
-                  )
-                </>
-              ) : null}
-              .
-            </>
+            <form action={deleteClient} className="flex items-center gap-2 flex-wrap">
+              {htid}
+              <input
+                name="confirm_email"
+                type="email"
+                required
+                placeholder="Type the client's email to confirm"
+                autoComplete="off"
+                style={{ ...inp, flex: "1 1 260px" }}
+              />
+              <SubmitButton style={btn(T.danger, "#fff")}>
+                Delete permanently
+              </SubmitButton>
+            </form>
           ) : (
-            <> This client has no email on record, so just press delete.</>
+            <form action={deleteClient}>
+              {htid}
+              <SubmitButton style={btn(T.danger, "#fff")}>
+                Delete permanently
+              </SubmitButton>
+            </form>
           )}
-        </p>
-        {hasEmail ? (
-          <form action={deleteClient} className="flex items-center gap-2 flex-wrap">
-            {htid}
-            <input
-              name="confirm_email"
-              type="email"
-              required
-              placeholder="Type the client's email to confirm"
-              autoComplete="off"
-              style={{ ...inp, flex: "1 1 260px" }}
-            />
-            <SubmitButton style={btn(T.danger, "#fff")}>Delete permanently</SubmitButton>
-          </form>
-        ) : (
-          <form action={deleteClient}>
-            {htid}
-            <SubmitButton style={btn(T.danger, "#fff")}>Delete permanently</SubmitButton>
-          </form>
-        )}
-      </section>
+        </section>
+      </Reveal>
     </div>
   );
 }

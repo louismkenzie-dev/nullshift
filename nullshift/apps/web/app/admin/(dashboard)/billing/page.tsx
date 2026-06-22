@@ -4,6 +4,8 @@ import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { getMrrSummary } from "@nullshift/billing/mrr";
 import { T } from "@nullshift/ui/tokens";
+import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
+import { Reveal } from "@/components/kyma";
 
 /**
  * Billing — the MRR-to-£8k tracker (brief §5: the number the business steers by)
@@ -146,296 +148,296 @@ export default async function BillingPage() {
 
   return (
     <div>
-      <div
-        style={{
-          fontFamily: T.mono,
-          fontSize: "10px",
-          letterSpacing: "0.2em",
-          textTransform: "uppercase",
-          color: T.primary,
-          marginBottom: 8,
-        }}
-      >
-        {"// Billing"}
-      </div>
-      <h1
-        style={{
-          fontFamily: T.display,
-          fontWeight: 600,
-          fontSize: "1.9rem",
-          color: T.fg,
-          marginBottom: 20,
-        }}
-      >
-        MRR to £8,000
-      </h1>
+      <PageHeader
+        index="06"
+        label="Billing"
+        title="MRR to £8,000"
+        lead="The number the business steers by — care subscriptions, build invoices and the cost guardrail."
+      />
 
       {/* ── The £8k tracker ─────────────────────────────────── */}
-      <section
-        style={{
-          background: T.surface,
-          border: `1px solid ${T.border}`,
-          borderRadius: T.r.xl,
-          padding: "26px 28px",
-          marginBottom: 28,
-        }}
-      >
-        <div className="flex items-end justify-between flex-wrap gap-3">
-          <div>
-            <div
-              style={{
-                fontFamily: T.display,
-                fontWeight: 700,
-                fontSize: "clamp(2.4rem, 6vw, 3.6rem)",
-                letterSpacing: "-0.03em",
-                color: T.primary,
-                lineHeight: 1,
-              }}
-              className="hero-glow"
-            >
-              {gbp(summary.mrr)}
-              <span
-                style={{
-                  fontFamily: T.sans,
-                  fontSize: "1rem",
-                  color: T.muted,
-                  fontWeight: 500,
-                }}
-              >
-                {" "}
-                /mo MRR
-              </span>
-            </div>
-            <div
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.9rem",
-                color: T.muted,
-                marginTop: 6,
-              }}
-            >
-              {gbp(summary.gap)} to go · {summary.pctToTarget}% of the £8,000 target
-            </div>
-          </div>
-          <div className="flex gap-6">
-            <Stat label="Active clients" value={String(summary.activeClients)} />
-            <Stat label="Avg build fee (mo)" value={gbp(summary.avgBuildFeeThisMonth)} />
-          </div>
-        </div>
-        <div
-          style={{
-            height: 10,
-            background: T.bg,
-            border: `1px solid ${T.border}`,
-            borderRadius: 999,
-            marginTop: 20,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              width: `${summary.pctToTarget}%`,
-              height: "100%",
-              background: T.primary,
-              boxShadow: `0 0 16px ${T.primary}`,
-              transition: "width .4s",
-            }}
-          />
-        </div>
-      </section>
-
-      {/* ── Subscriptions ───────────────────────────────────── */}
-      <section style={{ marginBottom: 28 }}>
-        <h2 style={sectionH}>Care subscriptions (MRR)</h2>
-        <form
-          action={addSubscription}
-          className="flex items-center gap-2"
-          style={{ margin: "10px 0 14px" }}
-        >
-          <select name="tenant_id" style={inp} required defaultValue="">
-            <option value="" disabled>
-              Client…
-            </option>
-            {tenantList.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <select name="plan" style={inp} defaultValue="care_basic">
-            <option value="care_basic">Care Basic · £49</option>
-            <option value="care_pro">Care Pro · £149</option>
-            <option value="transaction">Transaction · £39 floor</option>
-          </select>
-          <SubmitButton style={btn(T.surface2, T.fg)}>+ Subscription</SubmitButton>
-        </form>
-        <Table
-          rows={subList.map((s) => ({
-            key: s.id,
-            cells: [
-              nameOf(s.tenant_id),
-              s.plan.replace(/_/g, " "),
-              gbp(s.mrr) + "/mo",
-              s.status,
-            ],
-            action:
-              s.status === "active" ? (
-                <form action={cancelSubscription}>
-                  <input type="hidden" name="id" value={s.id} />
-                  <input type="hidden" name="tenant_id" value={s.tenant_id} />
-                  <SubmitButton style={btn("transparent", T.muted)}>Cancel</SubmitButton>
-                </form>
-              ) : null,
-          }))}
-          empty="No subscriptions yet."
-        />
-      </section>
-
-      {/* ── Invoices ────────────────────────────────────────── */}
-      <section>
-        <h2 style={sectionH}>Build &amp; one-off invoices</h2>
-        <form
-          action={issueInvoice}
-          className="flex items-center gap-2"
-          style={{ margin: "10px 0 14px" }}
-        >
-          <select name="tenant_id" style={inp} required defaultValue="">
-            <option value="" disabled>
-              Client…
-            </option>
-            {tenantList.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <select name="type" style={inp} defaultValue="build_milestone">
-            <option value="build_milestone">Build milestone</option>
-            <option value="one_off">One-off</option>
-          </select>
-          <input
-            name="amount"
-            type="number"
-            step="1"
-            placeholder="£ amount"
-            style={{ ...inp, width: 110 }}
-            required
-          />
-          <SubmitButton style={btn(T.surface2, T.fg)}>Issue invoice</SubmitButton>
-        </form>
-        <Table
-          rows={invoiceList.map((i) => ({
-            key: i.id,
-            cells: [
-              nameOf(i.tenant_id),
-              i.type.replace(/_/g, " "),
-              gbp(i.amount),
-              i.status,
-            ],
-            action:
-              i.status !== "paid" ? (
-                <form action={markInvoicePaid}>
-                  <input type="hidden" name="id" value={i.id} />
-                  <input type="hidden" name="tenant_id" value={i.tenant_id} />
-                  <SubmitButton style={btn(T.primary, T.primaryFg)}>
-                    Mark paid
-                  </SubmitButton>
-                </form>
-              ) : (
-                <span style={{ fontFamily: T.mono, fontSize: "10px", color: T.success }}>
-                  ✓ paid
-                </span>
-              ),
-          }))}
-          empty="No invoices yet."
-        />
-      </section>
-
-      {/* ── Usage footprint / cost guardrail ────────────────── */}
-      <section style={{ marginTop: 28 }}>
-        <h2 style={sectionH}>Usage footprint (cost guardrail)</h2>
-        <p
-          style={{
-            fontFamily: T.sans,
-            fontSize: "0.82rem",
-            color: T.muted,
-            margin: "6px 0 14px",
-            maxWidth: "64ch",
-          }}
-        >
-          A proxy for each client&apos;s resource footprint vs its recurring fee. A flag
-          is a pricing trigger — raise the plan, never absorb the cost.
-        </p>
-        {footprint.length === 0 ? (
-          <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>
-            No client tenants yet.
-          </p>
-        ) : (
-          <div
-            style={{
-              background: T.surface,
-              border: `1px solid ${T.border}`,
-              borderRadius: T.r.lg,
-              overflow: "hidden",
-            }}
-          >
-            {footprint.map((f, idx) => (
-              <div
-                key={f.tenant_id}
-                className="flex items-center justify-between gap-3"
-                style={{
-                  padding: "12px 16px",
-                  borderTop: idx ? `1px solid ${T.border}` : "none",
-                }}
-              >
+      <Reveal className="block" delay={0.05}>
+        <div className="k-kard" style={{ background: "var(--k-surface)", marginTop: 28 }}>
+          <div style={{ padding: "26px 28px" }}>
+            <div className="flex items-end justify-between flex-wrap gap-3">
+              <div>
                 <div
-                  className="flex items-center gap-4 flex-wrap"
-                  style={{ fontFamily: T.mono, fontSize: "0.74rem", color: T.muted }}
+                  style={{
+                    fontFamily: T.display,
+                    fontWeight: 800,
+                    fontSize: "clamp(2.4rem, 6vw, 3.6rem)",
+                    letterSpacing: "-0.03em",
+                    color: "var(--k-accent)",
+                    lineHeight: 1,
+                  }}
                 >
-                  <span
-                    style={{
-                      fontFamily: T.sans,
-                      fontSize: "0.86rem",
-                      color: T.fg,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {f.name}
-                  </span>
-                  <span>docs {f.documents}</span>
-                  <span>reqs {f.change_requests}</span>
-                  <span>tasks {f.tasks}</span>
-                  <span>audit {f.audit_rows}</span>
-                  <span>{gbp(Number(f.mrr))}/mo</span>
-                </div>
-                {f.flag ? (
+                  {gbp(summary.mrr)}
                   <span
                     style={{
                       fontFamily: T.mono,
-                      fontSize: "10px",
-                      letterSpacing: "0.05em",
+                      fontSize: "0.78rem",
+                      letterSpacing: "0.08em",
                       textTransform: "uppercase",
-                      color: T.warning,
-                      background: `${T.warning}14`,
-                      border: `1px solid ${T.warning}40`,
-                      borderRadius: 999,
-                      padding: "2px 9px",
+                      color: "var(--k-muted)",
+                      fontWeight: 500,
                     }}
                   >
-                    ⚠ review pricing
+                    {" "}
+                    /mo MRR
                   </span>
-                ) : (
-                  <span
-                    style={{ fontFamily: T.mono, fontSize: "10px", color: T.success }}
-                  >
-                    ✓ healthy
-                  </span>
-                )}
+                </div>
+                <div
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "0.74rem",
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "var(--k-muted)",
+                    marginTop: 10,
+                  }}
+                >
+                  {gbp(summary.gap)} to go · {summary.pctToTarget}% of the £8,000 target
+                </div>
               </div>
-            ))}
+              <div className="flex gap-8">
+                <Stat label="Active clients" value={String(summary.activeClients)} />
+                <Stat
+                  label="Avg build fee (mo)"
+                  value={gbp(summary.avgBuildFeeThisMonth)}
+                />
+              </div>
+            </div>
+            <div
+              style={{
+                height: 8,
+                background: "var(--k-bg)",
+                border: "1px solid var(--k-border)",
+                marginTop: 20,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${summary.pctToTarget}%`,
+                  height: "100%",
+                  background: "var(--k-accent)",
+                  transition: "width .4s",
+                }}
+              />
+            </div>
           </div>
-        )}
-      </section>
+        </div>
+      </Reveal>
+
+      {/* ── Subscriptions ───────────────────────────────────── */}
+      <Reveal className="block" delay={0.1}>
+        <Panel
+          label="Recurring"
+          title="Care subscriptions (MRR)"
+          pad={false}
+          className="mt-7"
+        >
+          <form
+            action={addSubscription}
+            className="flex items-center gap-2 flex-wrap"
+            style={{ padding: "16px 18px", borderBottom: "1px solid var(--k-border)" }}
+          >
+            <select name="tenant_id" style={inp} required defaultValue="">
+              <option value="" disabled>
+                Client…
+              </option>
+              {tenantList.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <select name="plan" style={inp} defaultValue="care_basic">
+              <option value="care_basic">Care Basic · £49</option>
+              <option value="care_pro">Care Pro · £149</option>
+              <option value="transaction">Transaction · £39 floor</option>
+            </select>
+            <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
+              + Subscription
+            </SubmitButton>
+          </form>
+          <Table
+            head={["Client", "Plan", "MRR", "Status"]}
+            rows={subList.map((s) => ({
+              key: s.id,
+              cells: [
+                nameOf(s.tenant_id),
+                s.plan.replace(/_/g, " "),
+                gbp(s.mrr) + "/mo",
+                <StatusChip key="st" tone={s.status === "active" ? "success" : "muted"}>
+                  {s.status}
+                </StatusChip>,
+              ],
+              action:
+                s.status === "active" ? (
+                  <form action={cancelSubscription}>
+                    <input type="hidden" name="id" value={s.id} />
+                    <input type="hidden" name="tenant_id" value={s.tenant_id} />
+                    <SubmitButton style={btn("transparent", "var(--k-muted)", true)}>
+                      Cancel
+                    </SubmitButton>
+                  </form>
+                ) : null,
+            }))}
+            empty="No subscriptions yet."
+          />
+        </Panel>
+      </Reveal>
+
+      {/* ── Invoices ────────────────────────────────────────── */}
+      <Reveal className="block" delay={0.1}>
+        <Panel
+          label="One-off"
+          title="Build & one-off invoices"
+          pad={false}
+          className="mt-7"
+        >
+          <form
+            action={issueInvoice}
+            className="flex items-center gap-2 flex-wrap"
+            style={{ padding: "16px 18px", borderBottom: "1px solid var(--k-border)" }}
+          >
+            <select name="tenant_id" style={inp} required defaultValue="">
+              <option value="" disabled>
+                Client…
+              </option>
+              {tenantList.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <select name="type" style={inp} defaultValue="build_milestone">
+              <option value="build_milestone">Build milestone</option>
+              <option value="one_off">One-off</option>
+            </select>
+            <input
+              name="amount"
+              type="number"
+              step="1"
+              placeholder="£ amount"
+              style={{ ...inp, width: 110 }}
+              required
+            />
+            <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
+              Issue invoice
+            </SubmitButton>
+          </form>
+          <Table
+            head={["Client", "Type", "Amount", "Status"]}
+            rows={invoiceList.map((i) => ({
+              key: i.id,
+              cells: [
+                nameOf(i.tenant_id),
+                i.type.replace(/_/g, " "),
+                gbp(i.amount),
+                <StatusChip key="st" tone={i.status === "paid" ? "success" : "warning"}>
+                  {i.status}
+                </StatusChip>,
+              ],
+              action:
+                i.status !== "paid" ? (
+                  <form action={markInvoicePaid}>
+                    <input type="hidden" name="id" value={i.id} />
+                    <input type="hidden" name="tenant_id" value={i.tenant_id} />
+                    <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
+                      Mark paid
+                    </SubmitButton>
+                  </form>
+                ) : (
+                  <StatusChip tone="success">✓ paid</StatusChip>
+                ),
+            }))}
+            empty="No invoices yet."
+          />
+        </Panel>
+      </Reveal>
+
+      {/* ── Usage footprint / cost guardrail ────────────────── */}
+      <Reveal className="block" delay={0.1}>
+        <Panel
+          label="Cost guardrail"
+          title="Usage footprint"
+          pad={false}
+          className="mt-7"
+        >
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.84rem",
+              lineHeight: 1.5,
+              color: "var(--k-muted)",
+              padding: "14px 18px",
+              borderBottom: "1px solid var(--k-border)",
+              maxWidth: "64ch",
+            }}
+          >
+            A proxy for each client&apos;s resource footprint vs its recurring fee. A flag
+            is a pricing trigger — raise the plan, never absorb the cost.
+          </p>
+          {footprint.length === 0 ? (
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.85rem",
+                color: "var(--k-faint)",
+                padding: "14px 18px",
+              }}
+            >
+              No client tenants yet.
+            </p>
+          ) : (
+            <div>
+              {footprint.map((f, idx) => (
+                <div
+                  key={f.tenant_id}
+                  className="flex items-center justify-between gap-3 k-kard-h"
+                  style={{
+                    padding: "12px 18px",
+                    borderTop: idx ? "1px solid var(--k-border)" : "none",
+                  }}
+                >
+                  <div
+                    className="flex items-center gap-4 flex-wrap"
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.72rem",
+                      letterSpacing: "0.04em",
+                      color: "var(--k-muted)",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.86rem",
+                        color: "var(--k-fg)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {f.name}
+                    </span>
+                    <span>docs {f.documents}</span>
+                    <span>reqs {f.change_requests}</span>
+                    <span>tasks {f.tasks}</span>
+                    <span>audit {f.audit_rows}</span>
+                    <span>{gbp(Number(f.mrr))}/mo</span>
+                  </div>
+                  {f.flag ? (
+                    <StatusChip tone="warning">⚠ review pricing</StatusChip>
+                  ) : (
+                    <StatusChip tone="success">✓ healthy</StatusChip>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </Reveal>
     </div>
   );
 }
@@ -446,9 +448,10 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div
         style={{
           fontFamily: T.display,
-          fontWeight: 700,
+          fontWeight: 800,
           fontSize: "1.5rem",
-          color: T.fg,
+          letterSpacing: "-0.02em",
+          color: "var(--k-fg)",
         }}
       >
         {value}
@@ -457,10 +460,10 @@ function Stat({ label, value }: { label: string; value: string }) {
         style={{
           fontFamily: T.mono,
           fontSize: "10px",
-          letterSpacing: "0.06em",
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
-          color: T.muted,
-          marginTop: 2,
+          color: "var(--k-muted)",
+          marginTop: 4,
         }}
       >
         {label}
@@ -470,45 +473,73 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function Table({
+  head,
   rows,
   empty,
 }: {
-  rows: { key: string; cells: string[]; action: React.ReactNode }[];
+  head: string[];
+  rows: { key: string; cells: React.ReactNode[]; action: React.ReactNode }[];
   empty: string;
 }) {
   if (rows.length === 0)
     return (
-      <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.faint }}>{empty}</p>
+      <p
+        style={{
+          fontFamily: T.sans,
+          fontSize: "0.85rem",
+          color: "var(--k-faint)",
+          padding: "14px 18px",
+        }}
+      >
+        {empty}
+      </p>
     );
   return (
-    <div
-      style={{
-        background: T.surface,
-        border: `1px solid ${T.border}`,
-        borderRadius: T.r.lg,
-        overflow: "hidden",
-      }}
-    >
+    <div>
+      {/* mono uppercase column header */}
+      <div
+        className="flex items-center justify-between gap-3"
+        style={{
+          padding: "10px 18px",
+          borderBottom: "1px solid var(--k-border)",
+        }}
+      >
+        <div className="flex items-center gap-4 flex-wrap">
+          {head.map((h) => (
+            <span
+              key={h}
+              style={{
+                fontFamily: T.mono,
+                fontSize: "0.6rem",
+                fontWeight: 500,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--k-faint)",
+              }}
+            >
+              {h}
+            </span>
+          ))}
+        </div>
+      </div>
       {rows.map((r, idx) => (
         <div
           key={r.key}
-          className="flex items-center justify-between gap-3"
+          className="flex items-center justify-between gap-3 k-kard-h"
           style={{
-            padding: "12px 16px",
-            borderTop: idx ? `1px solid ${T.border}` : "none",
+            padding: "12px 18px",
+            borderTop: idx ? "1px solid var(--k-border)" : "none",
           }}
         >
-          <div
-            className="flex items-center gap-4 flex-wrap"
-            style={{ fontFamily: T.sans, fontSize: "0.86rem", color: T.fg }}
-          >
+          <div className="flex items-center gap-4 flex-wrap">
             {r.cells.map((c, i) => (
               <span
                 key={i}
                 style={{
-                  color: i === 0 ? T.fg : T.muted,
+                  color: i === 0 ? "var(--k-fg)" : "var(--k-muted)",
                   fontFamily: i === 0 ? T.sans : T.mono,
-                  fontSize: i === 0 ? "0.86rem" : "0.78rem",
+                  fontSize: i === 0 ? "0.86rem" : "0.74rem",
+                  letterSpacing: i === 0 ? undefined : "0.04em",
                 }}
               >
                 {c}
@@ -522,32 +553,27 @@ function Table({
   );
 }
 
-const sectionH = {
-  fontFamily: T.display,
-  fontWeight: 600,
-  fontSize: "1.1rem",
-  color: T.fg,
-} as const;
 const inp = {
   fontFamily: T.sans,
   fontSize: "0.85rem",
-  height: 34,
-  padding: "0 10px",
-  background: T.bg,
-  color: T.fg,
-  border: `1px solid ${T.border}`,
+  height: 36,
+  padding: "0 11px",
+  background: "var(--k-surface)",
+  color: "var(--k-fg)",
+  border: "1px solid var(--k-border)",
   borderRadius: 0,
 } as const;
-const btn = (bg: string, fg: string) => ({
+const btn = (bg: string, fg: string, outline = false) => ({
   fontFamily: T.mono,
   fontSize: "11px",
-  letterSpacing: "0.05em",
+  fontWeight: 500,
+  letterSpacing: "0.08em",
   textTransform: "uppercase" as const,
-  height: 34,
-  paddingInline: 12,
+  height: 36,
+  paddingInline: 14,
   background: bg,
   color: fg,
-  border: bg === "transparent" ? `1px solid ${T.border}` : "none",
+  border: outline ? "1px solid var(--k-border)" : "1px solid transparent",
   borderRadius: 0,
   cursor: "pointer",
 });

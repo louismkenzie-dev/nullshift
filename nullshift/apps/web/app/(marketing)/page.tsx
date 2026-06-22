@@ -9,6 +9,8 @@ import { ScrollStory, ScrollFX, PinnedReveal } from "@/components/ScrollFX";
 import { DesktopOnly } from "@/components/DesktopOnly";
 import { RevenueCalculator } from "@nullshift/ui/components/RevenueCalculator";
 import { CLINIC } from "@nullshift/content/marketing";
+import { ClipReveal } from "@/components/anim/ClipReveal";
+import { SplineShowcase } from "@/components/SplineShowcase";
 import {
   Reveal,
   Section,
@@ -23,14 +25,15 @@ import {
   TextLink,
   MonoTag,
   StatBig,
-  ServiceGrid,
   Marquee,
+  BrandStrip,
   Watermark,
   CTABand,
   Accordion,
   type ServiceItem,
   type FAQItem,
 } from "@/components/kyma";
+import { ServiceAccordion } from "@/components/kyma/ServiceAccordion";
 import { T } from "@nullshift/ui/tokens";
 
 export const metadata: Metadata = {
@@ -257,6 +260,18 @@ function Stars() {
   );
 }
 
+// Hero headline line — matches Display size="hero", as its own clip-reveal block.
+const heroLine: React.CSSProperties = {
+  display: "block",
+  fontFamily: T.sans,
+  fontWeight: 700,
+  fontSize: "clamp(2.5rem,6.4vw,4.7rem)",
+  lineHeight: 1.0,
+  letterSpacing: "-0.03em",
+  textTransform: "uppercase",
+  color: "var(--k-fg)",
+};
+
 /* ════════════════════════════════════════════════════════════════ */
 export default function Page() {
   return (
@@ -310,13 +325,17 @@ export default function Page() {
 
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1.25fr_0.75fr] gap-10 lg:gap-12 items-start">
               <div>
-                <Reveal delay={0.05}>
-                  <Display as="h1" size="hero" style={{ maxWidth: "16ch" }}>
-                    Any idea. Any pain point.{" "}
-                    <span style={{ color: "var(--k-accent)" }}>[automated]</span> by AI
-                    you <span style={{ color: "var(--k-accent)" }}>[own]</span>.
-                  </Display>
-                </Reveal>
+                <h1 style={{ margin: 0 }}>
+                  <ClipReveal delay={0.05}>
+                    <span style={heroLine}>Any idea. Any pain point.</span>
+                  </ClipReveal>
+                  <ClipReveal delay={0.2}>
+                    <span style={heroLine}>
+                      <span style={{ color: "var(--k-accent)" }}>[automated]</span> by AI
+                      you <span style={{ color: "var(--k-accent)" }}>[own]</span>.
+                    </span>
+                  </ClipReveal>
+                </h1>
                 <Reveal delay={0.1}>
                   <Lead
                     className="mt-7"
@@ -399,6 +418,9 @@ export default function Page() {
           </Container>
         </section>
 
+        {/* ═══════════════ BRAND STRIP (emerald, ANIM 16) ═══════════════ */}
+        <BrandStrip />
+
         {/* ═══════════════ MARQUEE (cream strip) ═══════════════ */}
         <Section theme="cream" pad="none" topBorder>
           <div style={{ paddingBlock: 22 }}>
@@ -455,6 +477,39 @@ export default function Page() {
           </Reveal>
         </Section>
 
+        {/* ═══════════════ AGENTIC BRAIN (dark · Spline showcase) ═══════════════ */}
+        <SplineShowcase
+          scene="/spline/ai-brain.splinecode"
+          objectName="Particles"
+          side="right"
+          rotate={0.6}
+          label="Agentic AI"
+          heading={
+            <>
+              The brain that{" "}
+              <span style={{ color: "var(--k-accent)" }}>runs your operations.</span>
+            </>
+          }
+          lead="Bring a pain point. We design agentic AI that takes on the multi-step work end to end — deciding, acting and reporting back."
+          items={[
+            {
+              n: "01",
+              title: "It decides",
+              desc: "Agents reason over your tools, data and rules — choosing the next action, not just answering questions.",
+            },
+            {
+              n: "02",
+              title: "It acts",
+              desc: "They run the admin, the ops and the hand-offs your team does by hand — around the clock, without dropping a ball.",
+            },
+            {
+              n: "03",
+              title: "It learns",
+              desc: "We keep the agents optimised as your business changes, so the system gets sharper the longer it runs.",
+            },
+          ]}
+        />
+
         {/* ═══════════════ 03 — THE COST OF DOING IT BY HAND (dark · pinned reveal) ═══════════════ */}
         <Section theme="dark" id="problem" pad="lg" topBorder>
           <PinnedReveal
@@ -501,11 +556,9 @@ export default function Page() {
               lead="From a single agent to a whole connected system — we build, integrate and run the automation your operation needs, whatever it is."
             />
           </Reveal>
-          <Reveal delay={0.08}>
-            <div className="mt-12">
-              <ServiceGrid items={SERVICES} cols={3} />
-            </div>
-          </Reveal>
+          <div className="mt-12">
+            <ServiceAccordion items={SERVICES} />
+          </div>
           <div className="mt-8">
             <TextLink href="/systems-lab">See it live in the Systems Lab</TextLink>
           </div>
@@ -598,6 +651,39 @@ export default function Page() {
             </Reveal>
           </div>
         </Section>
+
+        {/* ═══════════════ CUBES — DESIGN & BUILD (dark · Spline showcase) ═══════════════ */}
+        <SplineShowcase
+          scene="/spline/cubic-scroll.splinecode"
+          objectName="Cubes"
+          side="left"
+          rotate={1.4}
+          label="Design & build"
+          heading={
+            <>
+              Systems and websites,{" "}
+              <span style={{ color: "var(--k-accent)" }}>built from scratch.</span>
+            </>
+          }
+          lead="The custom software your operation runs on — and the fast website and portals your customers actually use. Designed, built and wired together."
+          items={[
+            {
+              n: "01",
+              title: "Designed to fit",
+              desc: "Built around exactly how you work — not bent around someone else's off-the-shelf tool.",
+            },
+            {
+              n: "02",
+              title: "Built to own",
+              desc: "Cutting-edge AI builds it fast. When it's done, the code, data and accounts are yours outright.",
+            },
+            {
+              n: "03",
+              title: "Wired together",
+              desc: "Front end, systems and agents connected into one — nothing siloed, nothing re-keyed by hand.",
+            },
+          ]}
+        />
 
         {/* ═══════════════ 08 — WHY US / GUARANTEES (dark · pinned reveal) ═══════════════ */}
         <Section theme="dark" id="why" pad="lg" topBorder>
