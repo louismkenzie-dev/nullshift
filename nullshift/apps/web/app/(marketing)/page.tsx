@@ -4,6 +4,9 @@ import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { SplineScene } from "@/components/SplineScene";
 import { Parallax } from "@/components/Parallax";
+import { NeuralField } from "@/components/NeuralField";
+import { ScrollStory, ScrollFX, PinnedReveal } from "@/components/ScrollFX";
+import { DesktopOnly } from "@/components/DesktopOnly";
 import { RevenueCalculator } from "@nullshift/ui/components/RevenueCalculator";
 import { CLINIC } from "@nullshift/content/marketing";
 import {
@@ -21,8 +24,6 @@ import {
   MonoTag,
   StatBig,
   ServiceGrid,
-  CellGrid,
-  Cell,
   Marquee,
   Watermark,
   CTABand,
@@ -263,13 +264,36 @@ export default function Page() {
       <Nav />
 
       <main>
-        {/* ═══════════════ HERO (dark) ═══════════════ */}
-        <Section theme="dark" pad="none" grid className="overflow-hidden">
+        {/* ═══════════════ HERO (dark · layered WebGL depth) ═══════════════ */}
+        <section
+          className="k-dark relative overflow-hidden"
+          style={{ background: "var(--k-bg)", color: "var(--k-fg)" }}
+        >
+          {/* deep layer — agentic node-network, routes data pulses + parallax */}
+          <NeuralField className="absolute inset-0" style={{ zIndex: 0 }} />
+          {/* mid layer — parallaxing hairline grid */}
+          <Parallax
+            distance={-28}
+            className="pointer-events-none absolute inset-0"
+            style={{ zIndex: 1 }}
+          >
+            <div
+              className="k-vgrid absolute inset-0"
+              style={{
+                opacity: 0.4,
+                WebkitMaskImage: "linear-gradient(180deg,#000,transparent 82%)",
+                maskImage: "linear-gradient(180deg,#000,transparent 82%)",
+              }}
+            />
+          </Parallax>
+          {/* keep the field from ever fighting the headline */}
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0"
             style={{
-              background: `radial-gradient(70% 50% at 18% 8%, ${T.primary}1a 0%, transparent 60%)`,
+              zIndex: 1,
+              background:
+                "radial-gradient(125% 95% at 50% 0%, transparent 28%, var(--k-bg) 94%)",
             }}
           />
           <Container
@@ -277,7 +301,7 @@ export default function Page() {
               paddingTop: "clamp(116px,15vh,168px)",
               paddingBottom: "clamp(40px,6vw,72px)",
               position: "relative",
-              zIndex: 1,
+              zIndex: 2,
             }}
           >
             <Reveal>
@@ -320,7 +344,8 @@ export default function Page() {
               </div>
 
               {/* Right — interactive 3D Spline scene (desktop only, never stacks) */}
-              <div
+              <Parallax
+                distance={-26}
                 className="hidden lg:block relative self-stretch"
                 style={{ minHeight: "clamp(440px,40vw,560px)" }}
               >
@@ -341,12 +366,14 @@ export default function Page() {
                       "radial-gradient(58% 58% at 56% 46%, #000 46%, rgba(0,0,0,0) 100%)",
                   }}
                 >
-                  <SplineScene
-                    scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
-                    className="!w-full !h-full"
-                  />
+                  <DesktopOnly>
+                    <SplineScene
+                      scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
+                      className="!w-full !h-full"
+                    />
+                  </DesktopOnly>
                 </div>
-              </div>
+              </Parallax>
             </div>
 
             {/* trust */}
@@ -370,7 +397,7 @@ export default function Page() {
               <Watermark>Nullshift</Watermark>
             </Parallax>
           </Container>
-        </Section>
+        </section>
 
         {/* ═══════════════ MARQUEE (cream strip) ═══════════════ */}
         <Section theme="cream" pad="none" topBorder>
@@ -428,27 +455,20 @@ export default function Page() {
           </Reveal>
         </Section>
 
-        {/* ═══════════════ 03 — THE COST OF DOING IT BY HAND (dark) ═══════════════ */}
+        {/* ═══════════════ 03 — THE COST OF DOING IT BY HAND (dark · pinned reveal) ═══════════════ */}
         <Section theme="dark" id="problem" pad="lg" topBorder>
-          <Reveal>
-            <SectionHeader
-              index="03"
-              label="The cost of doing it by hand"
-              tone="danger"
-              title={
-                <>
-                  Manual work is{" "}
-                  <span style={{ color: "var(--k-muted)" }}>leaking money.</span>
-                </>
-              }
-              lead="The repetitive operational work your staff do by hand is quietly costing you — in salary, in hours, and in the deals that slip through the cracks."
-            />
-          </Reveal>
-          <Reveal delay={0.08}>
-            <div className="mt-12">
-              <ServiceGrid items={PAIN} cols={2} />
-            </div>
-          </Reveal>
+          <PinnedReveal
+            index="03"
+            label="The cost of doing it by hand"
+            heading={
+              <>
+                Manual work is{" "}
+                <span style={{ color: "var(--k-muted)" }}>leaking money.</span>
+              </>
+            }
+            lead="The repetitive operational work your staff do by hand is quietly costing you — in salary, in hours, and in the deals that slip through the cracks."
+            items={PAIN.map((p) => ({ n: p.n, title: p.label, desc: p.desc }))}
+          />
         </Section>
 
         {/* ═══════════════ 04 — THE CUTTABLE BILL (dark calculator) ═══════════════ */}
@@ -461,11 +481,14 @@ export default function Page() {
               lead="Every seat of rented software is a bill that grows as you hire. Own the system that does the work instead — and watch what stops the day it's yours."
             />
           </Reveal>
-          <Reveal delay={0.08}>
-            <div className="mt-12">
-              <RevenueCalculator calc={CLINIC.calc} ctaHref="/start" />
-            </div>
-          </Reveal>
+          <ScrollFX
+            scale={[0.965, 1]}
+            opacity={[0.5, 1]}
+            offset={["start end", "start center"]}
+            className="mt-12"
+          >
+            <RevenueCalculator calc={CLINIC.calc} ctaHref="/start" />
+          </ScrollFX>
         </Section>
 
         {/* ═══════════════ 05 — WHAT WE BUILD (cream services) ═══════════════ */}
@@ -488,63 +511,23 @@ export default function Page() {
           </div>
         </Section>
 
-        {/* ═══════════════ 06 — HOW IT WORKS (dark timeline) ═══════════════ */}
+        {/* ═══════════════ 06 — HOW IT WORKS (dark · pinned story beats) ═══════════════ */}
         <Section theme="dark" id="process" pad="lg" topBorder>
-          <Reveal>
-            <SectionHeader
-              index="06"
-              label="How it works"
-              title="From a pain point to a system that runs itself"
-              lead="A clear path from first conversation to autonomous systems you own. We do the finding, the building and the running."
-            />
-          </Reveal>
-          <Reveal delay={0.08}>
-            <div className="mt-12">
-              <CellGrid cols={4}>
-                {PROCESS.map((step) => (
-                  <Cell key={step.num} className="gap-4">
-                    <span
-                      style={{
-                        fontFamily: T.mono,
-                        fontWeight: 500,
-                        fontSize: "1.6rem",
-                        lineHeight: 1,
-                        color: "var(--k-accent)",
-                      }}
-                    >
-                      {step.num}
-                    </span>
-                    <h3
-                      style={{
-                        fontFamily: T.sans,
-                        fontWeight: 700,
-                        fontSize: "clamp(1.1rem,1.6vw,1.4rem)",
-                        letterSpacing: "-0.02em",
-                        textTransform: "uppercase",
-                        color: "var(--k-fg)",
-                      }}
-                    >
-                      {step.title}
-                    </h3>
-                    <div
-                      className="h-px w-5"
-                      style={{ background: "var(--k-border-strong)" }}
-                    />
-                    <p
-                      style={{
-                        fontFamily: T.sans,
-                        fontSize: "0.88rem",
-                        lineHeight: 1.5,
-                        color: "var(--k-muted)",
-                      }}
-                    >
-                      {step.desc}
-                    </p>
-                  </Cell>
-                ))}
-              </CellGrid>
-            </div>
-          </Reveal>
+          <ScrollStory
+            index="06"
+            label="How it works"
+            heading={
+              <>
+                From a pain point to a system that{" "}
+                <span style={{ color: "var(--k-accent)" }}>runs itself.</span>
+              </>
+            }
+            beats={PROCESS.map((step, i) => ({
+              n: String(i + 1).padStart(2, "0"),
+              title: step.title,
+              desc: step.desc,
+            }))}
+          />
           <div className="mt-7">
             <MonoTag>You bring the problem · we bring the system</MonoTag>
           </div>
@@ -616,26 +599,20 @@ export default function Page() {
           </div>
         </Section>
 
-        {/* ═══════════════ 08 — WHY US / GUARANTEES (dark) ═══════════════ */}
+        {/* ═══════════════ 08 — WHY US / GUARANTEES (dark · pinned reveal) ═══════════════ */}
         <Section theme="dark" id="why" pad="lg" topBorder>
-          <Reveal>
-            <SectionHeader
-              index="08"
-              label="Why Nullshift"
-              title={
-                <>
-                  Built fast. Built watertight.{" "}
-                  <span style={{ color: "var(--k-accent)" }}>Built yours.</span>
-                </>
-              }
-              lead="Not testimonials — commitments. This is what you get in writing, every time."
-            />
-          </Reveal>
-          <Reveal delay={0.08}>
-            <div className="mt-12">
-              <ServiceGrid items={GUARANTEES} cols={3} />
-            </div>
-          </Reveal>
+          <PinnedReveal
+            index="08"
+            label="Why Nullshift"
+            heading={
+              <>
+                Built fast. Built watertight.{" "}
+                <span style={{ color: "var(--k-accent)" }}>Built yours.</span>
+              </>
+            }
+            lead="Not testimonials — commitments. This is what you get in writing, every time."
+            items={GUARANTEES.map((g) => ({ n: g.n, title: g.title, desc: g.desc }))}
+          />
         </Section>
 
         {/* ═══════════════ 09 — PRICING (cream) ═══════════════ */}

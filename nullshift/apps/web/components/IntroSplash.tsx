@@ -1,226 +1,170 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { T } from "@nullshift/ui/tokens";
-import { Logo } from "@nullshift/ui/components/Logo";
 
 /* ════════════════════════════════════════════════════════════════
-   Intro splash — an on-brand "systems boot" screen.
-   • FULL version plays once per session on first landing (no buttons,
-     auto-dismisses, then wipes up to reveal the site).
-   • SHORT version flashes when the user returns to the tab.
-   Client-side navigation does not replay it (the layout stays mounted).
+   Intro splash — a minimalistic node-network that wires up a couple
+   of connections (at the static-mark's scale) and then resolves into
+   the NULLSHIFT wordmark. Plays on every landing, refresh and page
+   change (no once-per-session gating). Click anywhere to skip.
    ════════════════════════════════════════════════════════════════ */
 
-const GRID_COLS = 14;
-const GRID_ROWS = 7;
-const CELLS = GRID_COLS * GRID_ROWS;
+const WORD = "NULLSHIFT";
 
-const STATUS = [
-  "Initialising systems",
-  "Wiring automations",
-  "Connecting the build",
-  "Ready",
+// Small node cluster (viewBox 0 0 140 140) — the size of the static mark.
+const NODES: { x: number; y: number; accent?: boolean }[] = [
+  { x: 70, y: 70, accent: true }, // 0 — hub
+  { x: 26, y: 40 }, //               1
+  { x: 112, y: 30 }, //              2
+  { x: 116, y: 98 }, //              3
+  { x: 40, y: 110 }, //              4
+  { x: 100, y: 74, accent: true }, // 5
 ];
+// A couple of connections — kept sparse.
+const LINKS: [number, number][] = [
+  [0, 1],
+  [0, 2],
+  [0, 5],
+  [5, 3],
+  [1, 4],
+];
+const PULSE: [number, number] = [0, 5]; // edge the data-pulse routes along
+
+const BONE = "#f4f4e8";
+const HIDE_MS = 1550;
 
 export function IntroSplash() {
+  const pathname = usePathname();
+  const reduce = useReducedMotion();
   const [show, setShow] = useState(true);
-  const [mode, setMode] = useState<"full" | "short">("full");
-  const [leaving, setLeaving] = useState(false);
-  const [step, setStep] = useState(0);
-  const busy = useRef(false);
+  const [run, setRun] = useState(0);
+  const first = useRef(true);
 
-  // Decide on first mount: full once per session, else skip.
+  // Trigger on mount (land / refresh) and on every pathname change.
   useEffect(() => {
-    let seen = false;
-    try {
-      seen = sessionStorage.getItem("ns-intro") === "1";
-    } catch {
-      /* ignore */
-    }
-    if (seen && !location.search.includes("introforce")) {
-      setShow(false);
-      return;
-    }
-    busy.current = true;
-    const dur = 2500;
-    const stepTimers = STATUS.map((_, i) =>
-      setTimeout(() => setStep(i), (dur / STATUS.length) * i)
-    );
-    const leave = setTimeout(() => setLeaving(true), dur);
-    const done = setTimeout(() => {
-      setShow(false);
-      busy.current = false;
-      try {
-        sessionStorage.setItem("ns-intro", "1");
-      } catch {
-        /* ignore */
-      }
-    }, dur + 620);
-    return () => {
-      stepTimers.forEach(clearTimeout);
-      clearTimeout(leave);
-      clearTimeout(done);
-    };
-  }, []);
-
-  // Short flash when returning to the tab.
-  useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState !== "visible" || busy.current) return;
-      busy.current = true;
-      setMode("short");
-      setLeaving(false);
+    if (!first.current) {
       setShow(true);
-      setTimeout(() => setLeaving(true), 850);
-      setTimeout(() => {
-        setShow(false);
-        busy.current = false;
-      }, 1300);
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, []);
+      setRun((r) => r + 1);
+    }
+    first.current = false;
+    const t = setTimeout(() => setShow(false), reduce ? 750 : HIDE_MS);
+    return () => clearTimeout(t);
+  }, [pathname, reduce]);
 
-  if (!show) return null;
-
-  const isFull = mode === "full";
+  const t = (delay: number, duration: number) =>
+    reduce
+      ? { duration: 0.001, delay: 0 }
+      : { delay, duration, ease: [0.16, 1, 0.3, 1] as const };
 
   return (
-    <div
-      aria-hidden
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 200,
-        background: "#0a0a0a",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "hidden",
-        transform: leaving ? "translateY(-100%)" : "translateY(0)",
-        transition: "transform 0.6s cubic-bezier(0.76,0,0.24,1)",
-      }}
-    >
-      {/* systems dot-grid backdrop */}
-      {isFull && (
-        <div
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          key={run}
           aria-hidden
+          onClick={() => setShow(false)}
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.45, ease: [0.76, 0, 0.24, 1] }}
           style={{
-            position: "absolute",
+            position: "fixed",
             inset: 0,
-            display: "grid",
-            gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
-            gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
-            opacity: 0.5,
-            maskImage: "radial-gradient(60% 60% at 50% 50%, transparent 22%, #000 80%)",
-            WebkitMaskImage:
-              "radial-gradient(60% 60% at 50% 50%, transparent 22%, #000 80%)",
+            zIndex: 9999,
+            background: "#0a0a0a",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 30,
+            overflow: "hidden",
           }}
         >
-          {Array.from({ length: CELLS }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                borderRight: "1px solid rgba(244,244,232,0.05)",
-                borderBottom: "1px solid rgba(244,244,232,0.05)",
-                position: "relative",
-              }}
-            >
-              <span
-                className="ns-intro-cell"
-                style={{
-                  position: "absolute",
-                  inset: "30%",
-                  background: T.primary,
-                  animation: `ns-intro-cell 2.4s ease-in-out ${(i % GRID_COLS) * 0.09 + Math.floor(i / GRID_COLS) * 0.05}s infinite`,
-                }}
+          {/* node-network */}
+          <svg
+            viewBox="0 0 140 140"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{
+              width: "clamp(118px,22vw,168px)",
+              height: "auto",
+              overflow: "visible",
+            }}
+          >
+            {/* connections draw in */}
+            {LINKS.map(([a, b], i) => (
+              <motion.line
+                key={i}
+                x1={NODES[a].x}
+                y1={NODES[a].y}
+                x2={NODES[b].x}
+                y2={NODES[b].y}
+                stroke={BONE}
+                strokeOpacity={0.32}
+                strokeWidth={1.2}
+                initial={{ pathLength: reduce ? 1 : 0 }}
+                animate={{ pathLength: 1 }}
+                transition={t(0.28 + i * 0.1, 0.5)}
               />
-            </div>
-          ))}
-        </div>
+            ))}
+            {/* nodes pop in */}
+            {NODES.map((n, i) => (
+              <motion.circle
+                key={i}
+                cx={n.x}
+                cy={n.y}
+                r={i === 0 ? 5.5 : 3.4}
+                fill={n.accent ? T.primary : BONE}
+                initial={{ scale: reduce ? 1 : 0, opacity: reduce ? 1 : 0 }}
+                animate={{ scale: 1, opacity: n.accent ? 1 : 0.85 }}
+                transition={t(i * 0.08, 0.4)}
+                style={{ transformOrigin: `${n.x}px ${n.y}px` }}
+              />
+            ))}
+            {/* one emerald data-pulse routes an edge */}
+            {!reduce && (
+              <motion.circle
+                r={3}
+                fill={T.primaryHover}
+                initial={{ cx: NODES[PULSE[0]].x, cy: NODES[PULSE[0]].y, opacity: 0 }}
+                animate={{
+                  cx: [NODES[PULSE[0]].x, NODES[PULSE[1]].x],
+                  cy: [NODES[PULSE[0]].y, NODES[PULSE[1]].y],
+                  opacity: [0, 1, 1, 0],
+                }}
+                transition={{ delay: 0.8, duration: 0.7, ease: "easeInOut" }}
+              />
+            )}
+          </svg>
+
+          {/* NULLSHIFT forms */}
+          <div
+            style={{
+              display: "flex",
+              fontFamily: T.sans,
+              fontWeight: 800,
+              fontSize: "clamp(1.9rem,7vw,3.4rem)",
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: BONE,
+              lineHeight: 1,
+            }}
+          >
+            {WORD.split("").map((ch, i) => (
+              <motion.span
+                key={i}
+                initial={{ opacity: reduce ? 1 : 0, y: reduce ? 0 : 9 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={t(0.72 + i * 0.045, 0.4)}
+              >
+                {ch}
+              </motion.span>
+            ))}
+          </div>
+        </motion.div>
       )}
-
-      {/* center lockup */}
-      <div
-        style={{
-          position: "relative",
-          zIndex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 22,
-          animation: "ns-intro-pop 0.6s cubic-bezier(0.16,1,0.3,1) both",
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <Logo markSize={isFull ? 40 : 30} />
-        </div>
-        <div
-          style={{
-            fontFamily: T.sans,
-            fontWeight: 800,
-            fontSize: isFull ? "clamp(2.2rem,7vw,4rem)" : "clamp(1.6rem,6vw,2.4rem)",
-            letterSpacing: "-0.03em",
-            textTransform: "uppercase",
-            color: "#f4f4e8",
-            lineHeight: 1,
-          }}
-        >
-          Nullshift
-        </div>
-
-        {isFull && (
-          <>
-            {/* progress bar */}
-            <div
-              style={{
-                width: "min(280px, 60vw)",
-                height: 2,
-                background: "rgba(244,244,232,0.12)",
-                overflow: "hidden",
-                marginTop: 4,
-              }}
-            >
-              <div
-                style={{
-                  height: "100%",
-                  width: "100%",
-                  background: T.primary,
-                  transformOrigin: "left",
-                  animation: "ns-intro-bar 2.5s cubic-bezier(0.4,0,0.2,1) both",
-                }}
-              />
-            </div>
-            {/* status line */}
-            <div
-              key={step}
-              className="inline-flex items-center gap-2.5"
-              style={{
-                fontFamily: T.mono,
-                fontSize: "0.72rem",
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: "#9a9a90",
-                animation: "ns-intro-line 0.4s ease both",
-                minHeight: 16,
-              }}
-            >
-              <span
-                className="ns-intro-blink"
-                style={{
-                  width: 7,
-                  height: 7,
-                  background: T.primary,
-                  animation: "ns-intro-blink 0.9s ease-in-out infinite",
-                }}
-              />
-              {STATUS[step]}
-              {step === STATUS.length - 1 && <span style={{ color: T.primary }}>✓</span>}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+    </AnimatePresence>
   );
 }

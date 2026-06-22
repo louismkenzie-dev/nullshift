@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { Parallax } from "@/components/Parallax";
+import { NeuralField } from "@/components/NeuralField";
 import { T } from "@nullshift/ui/tokens";
 import { PROOF_PILLARS, BRAND_LINE, CLINIC } from "@nullshift/content/marketing";
 import {
@@ -15,6 +17,7 @@ import {
   Accordion,
   CTABand,
   Tag,
+  Watermark,
   type FAQItem,
 } from "@/components/kyma";
 
@@ -150,14 +153,44 @@ export default function PricingPage() {
     <>
       <Nav />
       <main>
-        {/* ═══════════════ HERO (dark) ═══════════════ */}
-        <Section theme="dark" pad="none" grid className="overflow-hidden">
+        {/* ═══════════════ HERO (dark · layered WebGL depth) ═══════════════ */}
+        <section
+          className="k-dark relative overflow-hidden"
+          style={{ background: "var(--k-bg)", color: "var(--k-fg)" }}
+        >
+          {/* deep layer — raw-WebGL emerald field, drifts with scroll + cursor */}
+          <NeuralField className="absolute inset-0" style={{ zIndex: 0 }} />
+          {/* mid layer — parallaxing hairline grid */}
+          <Parallax
+            distance={-28}
+            className="pointer-events-none absolute inset-0"
+            style={{ zIndex: 1 }}
+          >
+            <div
+              className="k-vgrid absolute inset-0"
+              style={{
+                opacity: 0.4,
+                WebkitMaskImage: "linear-gradient(180deg,#000,transparent 82%)",
+                maskImage: "linear-gradient(180deg,#000,transparent 82%)",
+              }}
+            />
+          </Parallax>
+          {/* keep the field from ever fighting the headline */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              zIndex: 1,
+              background:
+                "radial-gradient(125% 95% at 50% 0%, transparent 28%, var(--k-bg) 94%)",
+            }}
+          />
           <Container
             style={{
               paddingTop: "clamp(116px,15vh,168px)",
               paddingBottom: "clamp(40px,6vw,72px)",
               position: "relative",
-              zIndex: 1,
+              zIndex: 2,
             }}
           >
             <Reveal>
@@ -218,8 +251,12 @@ export default function PricingPage() {
                 </span>
               </Link>
             </Reveal>
+
+            <Parallax distance={42} className="mt-8 overflow-hidden">
+              <Watermark>Pricing</Watermark>
+            </Parallax>
           </Container>
-        </Section>
+        </section>
 
         {/* ═══════════════ PROOF PILLARS (cream) ═══════════════ */}
         <Section theme="cream" pad="none" topBorder bare>

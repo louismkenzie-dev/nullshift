@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
+import { Parallax } from "@/components/Parallax";
+import { NeuralField } from "@/components/NeuralField";
 import {
   Reveal,
   Section,
@@ -15,7 +17,6 @@ import {
   Watermark,
   type FAQItem,
 } from "@/components/kyma";
-import { T } from "@nullshift/ui/tokens";
 
 export const metadata: Metadata = {
   title: "FAQ — Nullshift",
@@ -77,13 +78,36 @@ export default function FaqPage() {
     <>
       <Nav />
       <main>
-        {/* ═══════════════ HERO (dark) ═══════════════ */}
-        <Section theme="dark" pad="none" grid className="overflow-hidden">
+        {/* ═══════════════ HERO (dark · layered WebGL depth) ═══════════════ */}
+        <section
+          className="k-dark relative overflow-hidden"
+          style={{ background: "var(--k-bg)", color: "var(--k-fg)" }}
+        >
+          {/* deep layer — raw-WebGL emerald field, drifts with scroll + cursor */}
+          <NeuralField className="absolute inset-0" style={{ zIndex: 0 }} />
+          {/* mid layer — parallaxing hairline grid */}
+          <Parallax
+            distance={-28}
+            className="pointer-events-none absolute inset-0"
+            style={{ zIndex: 1 }}
+          >
+            <div
+              className="k-vgrid absolute inset-0"
+              style={{
+                opacity: 0.4,
+                WebkitMaskImage: "linear-gradient(180deg,#000,transparent 82%)",
+                maskImage: "linear-gradient(180deg,#000,transparent 82%)",
+              }}
+            />
+          </Parallax>
+          {/* keep the field from ever fighting the headline */}
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0"
             style={{
-              background: `radial-gradient(70% 50% at 18% 8%, ${T.primary}1a 0%, transparent 60%)`,
+              zIndex: 1,
+              background:
+                "radial-gradient(125% 95% at 50% 0%, transparent 28%, var(--k-bg) 94%)",
             }}
           />
           <Container
@@ -91,7 +115,7 @@ export default function FaqPage() {
               paddingTop: "clamp(116px,15vh,168px)",
               paddingBottom: "clamp(40px,6vw,72px)",
               position: "relative",
-              zIndex: 1,
+              zIndex: 2,
             }}
           >
             <Reveal>
@@ -118,11 +142,11 @@ export default function FaqPage() {
                 </div>
               </Reveal>
             </div>
-            <div className="mt-12 overflow-hidden">
+            <Parallax distance={42} className="mt-12 overflow-hidden">
               <Watermark>Questions</Watermark>
-            </div>
+            </Parallax>
           </Container>
-        </Section>
+        </section>
 
         {/* ═══════════════ FAQ ACCORDION (cream) ═══════════════ */}
         <Section theme="cream" pad="lg" topBorder>
