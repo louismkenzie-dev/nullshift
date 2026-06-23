@@ -169,7 +169,7 @@ export function Footer() {
               color: "var(--k-faint)",
             }}
           >
-            © 2026 Nullshift · Newcastle upon Tyne, UK
+            © 2026 Nullshift · London, UK
           </span>
           <div className="flex items-center gap-5">
             <Link href="/portal" className="k-flink" style={monoLink}>

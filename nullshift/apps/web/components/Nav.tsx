@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
 import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
+import { ScrambleHover } from "@/components/anim/ScrambleHover";
 
 const LINKS = [
   { n: "01", label: "What we build", href: "/#capabilities" },
@@ -22,7 +23,7 @@ const SOCIALS = [
   { n: "1.3", label: "GitHub" },
 ];
 
-const EMAIL = "hello@nullshift.co.uk";
+const EMAIL = "louis@nullshift.co.uk";
 
 const mono: React.CSSProperties = {
   fontFamily: T.mono,
@@ -175,7 +176,7 @@ export function Nav() {
             }}
             aria-label="Open menu"
           >
-            Menu
+            <ScrambleHover text="Menu" hoverText="View" />
             <span
               aria-hidden
               style={{ display: "inline-flex", flexDirection: "column", gap: 3 }}
@@ -254,7 +255,7 @@ export function Nav() {
               />
               {time && (
                 <span suppressHydrationWarning style={{ color: "#f4f4e8" }}>
-                  Newcastle · {time.h}
+                  London · {time.h}
                   <span className="k-clock-colon">:</span>
                   {time.m}
                 </span>
@@ -286,7 +287,7 @@ export function Nav() {
               }}
               aria-label="Close menu"
             >
-              Close
+              <ScrambleHover text="Close" hoverText="Exit" />
               <span aria-hidden style={{ fontSize: 15, lineHeight: 1 }}>
                 ✕
               </span>
@@ -294,7 +295,10 @@ export function Nav() {
           </div>
 
           {/* links */}
-          <nav className="k-menu-links flex-1 overflow-y-auto px-5 sm:px-10">
+          <nav
+            className="k-menu-links flex-1 overflow-y-auto px-5 sm:px-10"
+            style={{ minHeight: 0 }}
+          >
             {LINKS.map((l) => {
               const active =
                 pathname === l.href ||
@@ -309,7 +313,7 @@ export function Nav() {
                   className="flex items-baseline gap-5 border-b"
                   style={{
                     borderColor: "rgba(10,10,10,0.12)",
-                    paddingBlock: "clamp(10px,2vw,20px)",
+                    paddingBlock: "clamp(8px,1.5vw,15px)",
                     textDecoration: "none",
                   }}
                 >
@@ -320,7 +324,7 @@ export function Nav() {
                     style={{
                       fontFamily: T.sans,
                       fontWeight: 700,
-                      fontSize: "clamp(2rem,7vw,4.6rem)",
+                      fontSize: "clamp(1.7rem,5.2vw,3.5rem)",
                       letterSpacing: "-0.03em",
                       lineHeight: 1,
                       textTransform: "uppercase",
@@ -335,7 +339,7 @@ export function Nav() {
           </nav>
 
           {/* contact + socials */}
-          <div className="px-5 sm:px-10 pt-6" style={{ paddingBottom: 100 }}>
+          <div className="px-5 sm:px-10 pt-5" style={{ paddingBottom: 78 }}>
             <div style={{ ...mono, color: "#55554c", marginBottom: 10 }}>
               <a
                 href={`mailto:${EMAIL}`}
@@ -374,14 +378,14 @@ export function Nav() {
                 onClick={() => setOpen(false)}
                 className="kb kb-outline k-cream"
               >
-                Client login
+                <ScrambleHover text="Client login" hoverText="Sign in" />
               </Link>
               <Link
                 href="/start"
                 onClick={() => setOpen(false)}
                 className="kb kb-primary k-cream"
               >
-                Get my free plan
+                <ScrambleHover text="Get my free plan" hoverText="Let's go" />
                 <span className="k-arrow" aria-hidden>
                   →
                 </span>

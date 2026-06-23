@@ -43,11 +43,11 @@ const jsonLd = {
   name: "Nullshift",
   description: DESCRIPTION,
   url: SITE_URL,
-  areaServed: ["Newcastle upon Tyne", "North East England", "United Kingdom"],
+  areaServed: ["London", "United Kingdom", "Worldwide"],
   address: {
     "@type": "PostalAddress",
     // TODO: add your registered streetAddress here.
-    addressLocality: "Newcastle upon Tyne",
+    addressLocality: "London",
     addressCountry: "GB",
   },
   priceRange: "££",
