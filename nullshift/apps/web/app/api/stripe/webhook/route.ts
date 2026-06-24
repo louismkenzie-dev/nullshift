@@ -146,6 +146,10 @@ export async function POST(req: Request) {
           .eq("stripe_subscription_id", sub.id);
         break;
       }
+      // TODO(connect): when the clinic Stripe Connect 2% skim goes live, handle
+      // `payment_intent.succeeded` (with application_fee_amount) here to log the
+      // fee to audit_log — it was previously done by the now-retired
+      // supabase/functions/stripe-webhook edge function.
       default:
         // Acknowledge unhandled types (200) so Stripe doesn't keep retrying.
         break;

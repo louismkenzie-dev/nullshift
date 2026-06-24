@@ -20,8 +20,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid plan selected." }, { status: 400 });
     }
 
-    const origin = req.headers.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-    const successUrl = `${origin}/learn?session_id={CHECKOUT_SESSION_ID}`;
+    const origin =
+      req.headers.get("origin") ??
+      process.env.NEXT_PUBLIC_SITE_URL ??
+      "http://localhost:3000";
+    // Land successful sign-ups in the client portal. (`/learn` was removed; the
+    // webhook reconciles the subscription, so no session_id handling is needed here.)
+    const successUrl = `${origin}/portal?welcome=1`;
     const cancelUrl = `${origin}/onboard?plan=${plan}&canceled=true`;
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -46,6 +51,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
     console.error("Error creating checkout session:", error);
-    return NextResponse.json({ error: "Failed to create checkout session." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create checkout session." },
+      { status: 500 }
+    );
   }
 }
