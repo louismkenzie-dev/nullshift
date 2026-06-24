@@ -16,7 +16,7 @@ export default function SignOutPage() {
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.signOut().then(() => {
-      router.replace("/portal/login");
+      router.replace("/");
     });
   }, [router]);
 

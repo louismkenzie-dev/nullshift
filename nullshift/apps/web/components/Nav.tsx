@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
 import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
+import { createClient } from "@nullshift/db/client";
 import { ScrambleHover } from "@/components/anim/ScrambleHover";
 
 const LINKS = [
@@ -40,8 +41,33 @@ export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [time, setTime] = useState<{ h: string; m: string } | null>(null);
   const [ready, setReady] = useState(false);
+  // null = unknown (don't render the chip yet, avoids a flash); true/false once resolved.
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => setOpen(false), [pathname]);
+
+  // Eyebrow auth chip: reflect the client-portal session and live-update on
+  // sign in/out. Degrades silently if Supabase isn't configured.
+  useEffect(() => {
+    let active = true;
+    let unsub: (() => void) | undefined;
+    try {
+      const supabase = createClient();
+      supabase.auth.getSession().then(({ data }) => {
+        if (active) setSignedIn(!!data.session);
+      });
+      const { data } = supabase.auth.onAuthStateChange((_e, session) => {
+        if (active) setSignedIn(!!session);
+      });
+      unsub = () => data.subscription.unsubscribe();
+    } catch {
+      if (active) setSignedIn(false);
+    }
+    return () => {
+      active = false;
+      unsub?.();
+    };
+  }, []);
 
   // Navbar load (ANIM 15): wait for the intro splash to lift on first load,
   // otherwise (route changes) clip in immediately.
@@ -159,32 +185,62 @@ export function Nav() {
             )}
           </div>
 
-          {/* MENU button */}
-          <button
-            onClick={() => setOpen(true)}
-            className="inline-flex items-center gap-2.5"
-            style={{
-              ...mono,
-              color: "#0a0a0a",
-              background: "#f4f4e8",
-              height: 38,
-              paddingInline: 16,
-              borderRadius: 0,
-              border: "none",
-              cursor: "pointer",
-              ...enter(0.16),
-            }}
-            aria-label="Open menu"
-          >
-            <ScrambleHover text="Menu" hoverText="View" />
-            <span
-              aria-hidden
-              style={{ display: "inline-flex", flexDirection: "column", gap: 3 }}
+          {/* Right cluster — auth status chip + MENU */}
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0" style={enter(0.16)}>
+            {/* Signed-in / signed-out indicator (links into the client portal) */}
+            {signedIn !== null && (
+              <Link
+                href={signedIn ? "/portal" : "/portal/login"}
+                className="hidden sm:inline-flex items-center gap-2"
+                style={{
+                  ...mono,
+                  color: signedIn ? "#f4f4e8" : "#9a9a90",
+                  textDecoration: "none",
+                }}
+                aria-label={
+                  signedIn ? "Signed in — open client portal" : "Sign in to client portal"
+                }
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 999,
+                    background: signedIn ? T.primary : "#5c5c54",
+                    boxShadow: signedIn ? `0 0 0 3px ${T.primary}22` : "none",
+                  }}
+                />
+                {signedIn ? "Signed in" : "Sign in"}
+              </Link>
+            )}
+
+            {/* MENU button */}
+            <button
+              onClick={() => setOpen(true)}
+              className="inline-flex items-center gap-2.5"
+              style={{
+                ...mono,
+                color: "#0a0a0a",
+                background: "#f4f4e8",
+                height: 38,
+                paddingInline: 16,
+                borderRadius: 0,
+                border: "none",
+                cursor: "pointer",
+              }}
+              aria-label="Open menu"
             >
-              <span style={{ width: 14, height: 1.5, background: "#0a0a0a" }} />
-              <span style={{ width: 14, height: 1.5, background: "#0a0a0a" }} />
-            </span>
-          </button>
+              <ScrambleHover text="Menu" hoverText="View" />
+              <span
+                aria-hidden
+                style={{ display: "inline-flex", flexDirection: "column", gap: 3 }}
+              >
+                <span style={{ width: 14, height: 1.5, background: "#0a0a0a" }} />
+                <span style={{ width: 14, height: 1.5, background: "#0a0a0a" }} />
+              </span>
+            </button>
+          </div>
         </nav>
       </header>
 

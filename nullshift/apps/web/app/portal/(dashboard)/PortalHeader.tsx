@@ -36,17 +36,30 @@ export function PortalHeader({ email }: { email: string }) {
         className="flex items-center justify-between gap-3"
         style={{ maxWidth: 880, margin: "0 auto", height: 56, padding: "0 16px" }}
       >
-        <Link
-          href="/portal"
-          aria-label="Nullshift client portal"
-          className="flex items-center gap-1.5 shrink-0 min-w-0"
-          style={{ textDecoration: "none" }}
-        >
-          <Logo markSize={20} />
-          <span style={{ ...mono, color: "var(--k-faint)", fontSize: "0.66rem" }}>
+        <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+          {/* Logo → main marketing homepage */}
+          <Link
+            href="/"
+            aria-label="Nullshift — back to homepage"
+            className="flex items-center"
+            style={{ textDecoration: "none" }}
+          >
+            <Logo markSize={20} />
+          </Link>
+          {/* Label → portal home */}
+          <Link
+            href="/portal"
+            aria-label="Client portal home"
+            style={{
+              ...mono,
+              color: "var(--k-faint)",
+              fontSize: "0.66rem",
+              textDecoration: "none",
+            }}
+          >
             / Portal
-          </span>
-        </Link>
+          </Link>
+        </div>
 
         {/* Live status — Roboto Mono + emerald live dot (KYMA marketing nav cue) */}
         <span
