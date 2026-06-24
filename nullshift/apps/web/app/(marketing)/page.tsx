@@ -11,6 +11,7 @@ import { RevenueCalculator } from "@nullshift/ui/components/RevenueCalculator";
 import { CLINIC } from "@nullshift/content/marketing";
 import { ClipReveal } from "@/components/anim/ClipReveal";
 import { SplineShowcase } from "@/components/SplineShowcase";
+import { ClaudePartnerBadge } from "@/components/ClaudePartnerBadge";
 import {
   Reveal,
   Section,
@@ -336,6 +337,11 @@ export default function Page() {
                     </span>
                   </ClipReveal>
                 </h1>
+                <Reveal delay={0.26}>
+                  <div className="mt-6 mb-5">
+                    <ClaudePartnerBadge />
+                  </div>
+                </Reveal>
                 <Reveal delay={0.1}>
                   <Lead
                     className="mt-7"
@@ -477,36 +483,38 @@ export default function Page() {
           </Reveal>
         </Section>
 
-        {/* ═══════════════ AGENTIC BRAIN (dark · Spline showcase) ═══════════════ */}
+        {/* ═══════════════ INTERCONNECTED SYSTEMS (dark · Spline showcase) ═══════════════ */}
         <SplineShowcase
-          scene="/spline/ai-brain.splinecode"
-          objectName="Particles"
+          scene="/spline/interconnect.splinecode"
+          objectName="Group"
           side="right"
           axis="y"
-          spin={0.28}
-          label="Agentic AI"
+          spin={0.05}
+          rotate={0}
+          scrollSpin={0.006}
+          label="Connected systems"
           heading={
             <>
-              The brain that{" "}
-              <span style={{ color: "var(--k-accent)" }}>runs your operations.</span>
+              Your whole operation,{" "}
+              <span style={{ color: "var(--k-accent)" }}>woven into one.</span>
             </>
           }
-          lead="Bring a pain point. We design agentic AI that takes on the multi-step work end to end — deciding, acting and reporting back."
+          lead="We don't bolt on another point tool. We wire your data, apps and workflows into a single connected system — where every part talks to every other and the work moves on its own."
           items={[
             {
               n: "01",
-              title: "It decides",
-              desc: "Agents reason over your tools, data and rules — choosing the next action, not just answering questions.",
+              title: "Everything connects",
+              desc: "Your tools, data and teams join one fabric, so information moves the moment it's needed — no copy-paste, no silos, no re-keying.",
             },
             {
               n: "02",
-              title: "It acts",
-              desc: "They run the admin, the ops and the hand-offs your team does by hand — around the clock, without dropping a ball.",
+              title: "Work flows end to end",
+              desc: "Hand-offs disappear. A trigger in one place cascades through the whole system, start to finish, with nothing left to chase by hand.",
             },
             {
               n: "03",
-              title: "It learns",
-              desc: "We keep the agents optimised as your business changes, so the system gets sharper the longer it runs.",
+              title: "It scales as one network",
+              desc: "Add a tool, a channel or a team and it plugs into the same web — the system grows with you instead of fragmenting into more silos.",
             },
           ]}
         />

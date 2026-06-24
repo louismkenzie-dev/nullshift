@@ -35,6 +35,7 @@ export function SplineShowcase({
   axis = "y",
   rotate = 1.0,
   spin = 0,
+  scrollSpin = 0,
 }: {
   scene: string;
   objectName: string;
@@ -45,8 +46,9 @@ export function SplineShowcase({
   items: ShowcaseItem[];
   side?: "left" | "right";
   axis?: "x" | "y" | "z";
-  rotate?: number; // signed radians swept across the scroll (when spin === 0)
-  spin?: number; // radians/sec continuous spin (a slow turntable)
+  rotate?: number; // radians mapped across the section's scroll progress (0→1)
+  spin?: number; // radians/sec gentle idle spin, so it's alive when still
+  scrollSpin?: number; // radians per PIXEL scrolled — window-size-independent scroll spin
 }) {
   const sectionRef = useRef<HTMLDivElement>(null);
   const sceneWrapRef = useRef<HTMLDivElement>(null);
@@ -74,7 +76,17 @@ export function SplineShowcase({
     if (objRef.current) return objRef.current;
     const a = appRef.current;
     if (!a) return null;
-    for (const name of [objectName, "Particles", "Cubes", "Scene 1", "Group"]) {
+    for (const name of [
+      objectName,
+      "Group",
+      "Empty",
+      "Mesh",
+      "Particles",
+      "particles",
+      "Cubes",
+      "Scene 1",
+      "Scene",
+    ]) {
       try {
         const o = a.findObjectByName(name) as unknown as Rotatable | undefined;
         if (o) {
@@ -89,30 +101,48 @@ export function SplineShowcase({
     return null;
   }, [objectName]);
 
-  // Continuous slow spin (time-based) — guarantees movement / new perspectives.
+  // Single rotation driver. Reads scroll the Lenis-proof way (the section's own
+  // getBoundingClientRect — never window.scrollY) and applies three layers:
+  //   • spin       — gentle idle so it's alive when still
+  //   • scrollSpin — radians per PIXEL scrolled: identical feel at every window
+  //                  size, and what makes it spin faster the faster you scroll
+  //                  (normalized `progress * rotate` looks frozen on big windows
+  //                  because the section spans far more pixels there)
+  //   • rotate     — radians mapped across the section's scroll progress (0→1)
+  // The scene's own timeline is stopped on load (see onReady) so it can't fight us.
   useEffect(() => {
-    if (reduce || spin === 0) return;
+    if (reduce || (spin === 0 && scrollSpin === 0 && rotate === 0)) return;
     let raf = 0;
     let last = 0;
+    let idle = 0; // accumulated idle radians
+    let scrolled = 0; // accumulated scroll-spin radians (pixel-based)
+    let lastTop: number | null = null;
     const loop = (t: number) => {
       raf = requestAnimationFrame(loop);
       const o = ensureObj();
       const sec = sectionRef.current;
       if (!o || !sec) {
         last = t;
+        lastTop = null;
         return;
       }
-      // only spin while the section is near the viewport
       const r = sec.getBoundingClientRect();
       if (r.bottom < -200 || r.top > window.innerHeight + 200) {
         last = t;
+        lastTop = r.top;
         return;
       }
       if (!last) last = t;
       const dt = Math.min(0.05, (t - last) / 1000);
       last = t;
+      if (lastTop === null) lastTop = r.top;
+      const dy = lastTop - r.top; // px scrolled since last frame (window-size independent)
+      lastTop = r.top;
+      idle += dt * spin;
+      scrolled += dy * scrollSpin;
       try {
-        o.rotation[axis] += dt * spin;
+        o.rotation[axis] =
+          baseRot.current[axis] + idle + scrolled + progress.get() * rotate;
         appRef.current?.requestRender?.();
       } catch {
         /* runtime hiccup — ignore */
@@ -120,7 +150,7 @@ export function SplineShowcase({
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [reduce, spin, axis, ensureObj]);
+  }, [reduce, spin, scrollSpin, rotate, axis, ensureObj, progress]);
 
   // Scroll-driven: scene fade/scale, optional scroll-rotation, copy reveal.
   useEffect(() => {
@@ -130,15 +160,8 @@ export function SplineShowcase({
       return;
     }
     const unsub = progress.on("change", (v) => {
-      const o = spin === 0 ? ensureObj() : null;
-      if (o && spin === 0) {
-        try {
-          o.rotation[axis] = baseRot.current[axis] + v * rotate;
-          appRef.current?.requestRender?.();
-        } catch {
-          /* ignore */
-        }
-      }
+      // Rotation is owned by the rotation driver above. Here: scene fade/scale,
+      // the legibility scrim, and the staggered copy reveal.
       const enter = clamp(v / 0.14);
       const w = sceneWrapRef.current;
       if (w) {
@@ -146,23 +169,36 @@ export function SplineShowcase({
         w.style.transform = `translateX(${baseTx}vw) scale(${1.07 - enter * 0.07})`;
       }
       if (scrimRef.current)
-        scrimRef.current.style.opacity = String(clamp((v - 0.24) / 0.22));
+        // Strong legibility floor while pinned (the bright knot must never wash
+        // out the copy on small windows), then ramp to full.
+        scrimRef.current.style.opacity = String(Math.max(0.72, clamp((v - 0.04) / 0.18)));
       setHeadingOn(v > 0.08);
       const r = (v - 0.34) / 0.56;
       setRevealed(r <= 0 ? 0 : Math.min(items.length, Math.floor(r * items.length) + 1));
     });
     return () => unsub();
-  }, [progress, reduce, rotate, spin, axis, baseTx, items.length, ensureObj]);
+  }, [progress, reduce, baseTx, items.length]);
 
   const onReady = (app: Application) => {
     appRef.current = app;
     ensureObj();
+    // Take manual control: stop the scene's built-in timeline/controls so they
+    // can't keep re-writing the object's rotation (which otherwise overrode our
+    // scroll-spin for the first ~20s until the intro animation finished). We
+    // drive rotation ourselves and call requestRender() each frame.
+    if (!reduce) {
+      try {
+        app.stop();
+      } catch {
+        /* older runtime without stop() — fine, we still drive rotation */
+      }
+    }
   };
 
   const dirScrim =
     side === "left"
-      ? "linear-gradient(90deg, var(--k-bg) 0%, rgba(10,10,10,0.7) 26%, rgba(10,10,10,0) 60%)"
-      : "linear-gradient(270deg, var(--k-bg) 0%, rgba(10,10,10,0.7) 26%, rgba(10,10,10,0) 60%)";
+      ? "linear-gradient(90deg, var(--k-bg) 0%, rgba(10,10,10,0.92) 34%, rgba(10,10,10,0) 66%)"
+      : "linear-gradient(270deg, var(--k-bg) 0%, rgba(10,10,10,0.92) 34%, rgba(10,10,10,0) 66%)";
 
   const Backdrop = (
     <>
@@ -199,7 +235,7 @@ export function SplineShowcase({
         ref={scrimRef}
         aria-hidden
         className="absolute inset-0 pointer-events-none"
-        style={{ zIndex: 1, opacity: reduce ? 1 : 0, background: dirScrim }}
+        style={{ zIndex: 1, opacity: reduce ? 1 : 0.72, background: dirScrim }}
       />
     </>
   );
@@ -222,20 +258,25 @@ export function SplineShowcase({
           <div style={{ marginBottom: 16 }}>
             <Eyebrow index={index} label={label} />
           </div>
-          <Display size="lg">{heading}</Display>
+          <Display
+            size="lg"
+            style={{ fontSize: "clamp(1.6rem,3.45vw,2.45rem)", lineHeight: 1.05 }}
+          >
+            {heading}
+          </Display>
           {lead && (
-            <Lead className="mt-5" style={{ maxWidth: "42ch" }}>
+            <Lead className="mt-4" style={{ maxWidth: "42ch" }}>
               {lead}
             </Lead>
           )}
         </div>
-        <div className="mt-7 flex flex-col gap-2.5">
+        <div className="mt-5 flex flex-col gap-2">
           {items.map((it, i) => {
             const on = i < revealed;
             return (
               <div
                 key={it.n}
-                className="flex items-start gap-4 p-4 md:p-5"
+                className="flex items-start gap-4 p-3 md:p-4"
                 style={{
                   borderLeft: `2px solid ${on ? "var(--k-accent)" : "transparent"}`,
                   background: on ? "rgba(10,10,10,0.45)" : "transparent",
@@ -337,7 +378,18 @@ export function SplineShowcase({
       <div className="sticky overflow-hidden" style={{ top: 0, height: "100vh" }}>
         {Backdrop}
         <Container className="relative h-full" style={{ zIndex: 2 }}>
-          <div className="h-full flex items-center">{Copy}</div>
+          {/* Reserve space for the fixed nav up top + breathing room below, so the
+              copy never crams against the navbar on shorter viewports. */}
+          <div
+            className="h-full flex items-center"
+            style={{
+              paddingTop: "clamp(80px, 11vh, 124px)",
+              paddingBottom: "clamp(28px, 5vh, 56px)",
+              boxSizing: "border-box",
+            }}
+          >
+            {Copy}
+          </div>
         </Container>
       </div>
     </section>
