@@ -254,3 +254,71 @@ Nothing is charged until you confirm.
 — Nullshift`;
   return { subject, html, text };
 }
+
+/**
+ * Branded invoice email with a Stripe "Pay now" link — sent to the client when
+ * their itemised build invoice is generated. Complements Stripe's own invoice
+ * email; `payUrl` is the Stripe hosted_invoice_url.
+ */
+export function buildInvoiceReadyEmail(opts: {
+  name: string;
+  total: number;
+  payUrl: string;
+  items: { name: string; amount: number; quantity?: number }[];
+}): { subject: string; html: string; text: string } {
+  const { name, total, payUrl, items } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
+  const subject = `Your Nullshift invoice — ${gbp(total)}`;
+
+  const rows = items
+    .map(
+      (it) => `<tr>
+        <td style="padding:10px 0;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:14px;color:${C.muted};vertical-align:middle">${esc(it.name)}${(it.quantity ?? 1) > 1 ? ` ×${it.quantity}` : ""}</td>
+        <td style="padding:10px 0;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:14px;color:${C.fg};text-align:right;white-space:nowrap;vertical-align:middle">${gbp(Number(it.amount) * (it.quantity ?? 1))}</td>
+      </tr>`
+    )
+    .join("");
+
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Invoice ready</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Your invoice is ready to pay</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, here's your itemised invoice for the build. Pay securely below — your card is handled by Stripe and you'll get a receipt automatically.</p>
+    </td></tr>
+    <tr><td style="padding:18px 32px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        ${rows}
+        <tr>
+          <td style="padding:13px 0 0;font-family:${FONT};font-size:13px;letter-spacing:0.06em;text-transform:uppercase;color:${C.faint};vertical-align:middle">Total due</td>
+          <td style="padding:13px 0 0;font-family:${FONT};font-size:18px;font-weight:700;color:${C.fg};text-align:right;vertical-align:middle">${gbp(total)}</td>
+        </tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(payUrl, "Pay now →")}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">You can also pay any time from your Nullshift client portal. This link is personal to you.</p>
+    </td></tr>`;
+
+  const html = wrap(inner, `Your Nullshift invoice for ${gbp(total)} is ready to pay.`);
+  const text = `Hi ${first},
+
+Your itemised invoice for the build is ready — total due ${gbp(total)}.
+
+${items
+  .map(
+    (it) =>
+      `- ${it.name}${(it.quantity ?? 1) > 1 ? ` ×${it.quantity}` : ""}: ${gbp(Number(it.amount) * (it.quantity ?? 1))}`
+  )
+  .join("\n")}
+
+Total due: ${gbp(total)}
+
+Pay securely here:
+${payUrl}
+
+You can also pay any time from your client portal.
+
+— Nullshift`;
+  return { subject, html, text };
+}

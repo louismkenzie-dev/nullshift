@@ -3,6 +3,8 @@ import {
   findOrCreateCustomer,
 } from "@nullshift/billing/stripe";
 import { createServiceClient } from "@nullshift/db";
+import { sendEmail } from "./sendEmail";
+import { buildInvoiceReadyEmail } from "./clientEmails";
 
 type Service = ReturnType<typeof createServiceClient>;
 
@@ -85,7 +87,7 @@ export async function generateProjectInvoice(
   // tenant's stored Stripe customer (shared with the care subscription).
   const { data: tenantRow } = await service
     .from("tenants")
-    .select("name, stripe_customer_id")
+    .select("name, contact_name, stripe_customer_id")
     .eq("id", tenantId)
     .maybeSingle();
   const { data: membership } = await service
@@ -134,6 +136,21 @@ export async function generateProjectInvoice(
             hosted_invoice_url: stripeInv.url,
           })
           .eq("id", invoice.id);
+        // Branded "Pay now" email (best-effort; complements Stripe's own invoice email).
+        if (stripeInv.url) {
+          const mail = buildInvoiceReadyEmail({
+            name: tenantRow?.contact_name ?? tenantRow?.name ?? "",
+            total,
+            payUrl: stripeInv.url,
+            items: lines.map((l) => ({ name: l.name, amount: Number(l.amount) })),
+          });
+          await sendEmail({
+            to: email,
+            subject: mail.subject,
+            html: mail.html,
+            text: mail.text,
+          });
+        }
       } else {
         await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
       }

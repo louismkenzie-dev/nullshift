@@ -78,9 +78,10 @@ export function ProposalDocsForm({
   const draft = proposalStatus === "draft";
   const limited = entityType === "limited";
 
+  // The care plan is optional — it is intentionally NOT in `missing` so a
+  // proposal can be sent without one (shown as an optional note below).
   const missing: string[] = [];
   if (!modulesComplete) missing.push("at least one build module");
-  if (!planSelected) missing.push("a care plan");
   if (!overview.trim()) missing.push("an overview");
   if (!paymentTerms.trim()) missing.push("payment terms");
   if (!clientDpaReady) missing.push("the client's DPA details (they fill these in)");
@@ -208,6 +209,19 @@ export function ProposalDocsForm({
           </p>
         )}
       </div>
+
+      {draft && !planSelected && (
+        <p
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.8rem",
+            color: T.faint,
+            lineHeight: 1.5,
+          }}
+        >
+          No care plan selected — that&apos;s optional, you can send without one.
+        </p>
+      )}
 
       {draft && !complete && (
         <p

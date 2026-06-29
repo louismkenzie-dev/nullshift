@@ -15,6 +15,12 @@ import { Reveal } from "@/components/kyma";
  * lead — carrying the business name + their own description across — then jumps to
  * /admin/clients/[id]. The client record (not a "legacy" table) is the core of the
  * relationship; the pipeline is just the front door to it.
+ *
+ * Self sign-ups: a client who registers directly at /portal/signup never produces a
+ * `leads` row — they only get a client tenant (provisioned on first portal load).
+ * Those would otherwise be invisible here, so the "new" column also surfaces any
+ * client tenant with no originating lead, flagged "Self sign-up" with its DPA status,
+ * linking straight to the hub so admin can issue the DPA.
  */
 
 export const dynamic = "force-dynamic";
@@ -34,6 +40,16 @@ type Lead = {
     requested_time?: string | null;
   } | null;
   plan: { businessName?: string | null } | null;
+};
+
+/** A client who signed up directly (no funnel lead) — surfaced in the "new" lane. */
+type SignupClient = {
+  id: string;
+  name: string;
+  vertical: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  dpaSigned: boolean;
 };
 
 const TIME_SHORT: Record<string, string> = {
@@ -347,6 +363,95 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
   );
 }
 
+/**
+ * A self sign-up client card. Unlike a lead, this already has a tenant + project, so
+ * the whole card links straight to the client hub (where the DPA is issued). No
+ * lead-status / delete controls — it isn't a lead. The DPA status is shown up front
+ * so the "issue a DPA" action is obvious.
+ */
+function SignupCard({ client }: { client: SignupClient }) {
+  const display =
+    client.name && client.name !== "Client"
+      ? client.name
+      : client.contact_name || client.contact_email || "New client";
+  return (
+    <div
+      className="k-kard-h"
+      style={{
+        position: "relative",
+        background: "var(--k-bg)",
+        border: "1px solid var(--k-border)",
+        borderLeft: "2px solid var(--k-accent)",
+        borderRadius: 0,
+        padding: "11px 12px",
+      }}
+    >
+      <Link
+        href={`/admin/clients/${client.id}`}
+        aria-label={`Open ${display}'s client profile`}
+        title="Open client profile →"
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "block",
+          zIndex: 1,
+          cursor: "pointer",
+        }}
+      />
+      <div className="flex items-center justify-between gap-2">
+        <span
+          style={{
+            fontFamily: T.sans,
+            fontWeight: 700,
+            fontSize: "0.85rem",
+            letterSpacing: "-0.01em",
+            textTransform: "uppercase",
+            color: "var(--k-fg)",
+          }}
+        >
+          {display}
+        </span>
+      </div>
+      {client.contact_email && (
+        <div
+          style={{
+            fontFamily: T.mono,
+            fontSize: "10px",
+            color: "var(--k-muted)",
+            marginTop: 2,
+          }}
+        >
+          {client.contact_email}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-1" style={{ marginTop: 8 }}>
+        <Tag tone="accent">Self sign-up</Tag>
+        {client.vertical && <Tag>{client.vertical}</Tag>}
+        <Tag tone={client.dpaSigned ? "accent" : "warning"}>
+          {client.dpaSigned ? "DPA ✓" : "Needs DPA"}
+        </Tag>
+      </div>
+      <div
+        className="flex items-center justify-between"
+        style={{ marginTop: 10, position: "relative", zIndex: 2 }}
+      >
+        <span
+          style={{
+            fontFamily: T.mono,
+            fontSize: "9px",
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            color: "var(--k-accent)",
+            pointerEvents: "none",
+          }}
+        >
+          Open profile →
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /** Square mono chip (tone-based) for lead signals — emerald/amber/muted only. */
 function Tag({
   children,
@@ -400,24 +505,55 @@ const miniBtn = (fg: string) => ({
 
 export default async function PipelinePage() {
   const supabase = await createClient();
-  const [{ data }, { data: clientTenants }] = await Promise.all([
+  const [{ data }, { data: clientTenants }, { data: dpaRows }] = await Promise.all([
     supabase
       .from("leads")
       .select("id, name, email, vertical, status, lead_score, quiz_answers, plan")
       .order("lead_score", { ascending: false, nullsFirst: false }),
-    supabase.from("tenants").select("id, contact_email").eq("type", "client"),
+    supabase
+      .from("tenants")
+      .select("id, name, vertical, contact_name, contact_email, created_at")
+      .eq("type", "client")
+      .order("created_at", { ascending: false }),
+    supabase.from("compliance_records").select("tenant_id").eq("kind", "dpa_signed"),
   ]);
   const leads = (data ?? []) as Lead[];
+  const tenants = (clientTenants ?? []) as {
+    id: string;
+    name: string;
+    vertical: string | null;
+    contact_name: string | null;
+    contact_email: string | null;
+    created_at: string;
+  }[];
+
   // Map a client's contact email → tenant id, so a lead that's already been
   // opened (its tenant exists) links straight to the hub instead of re-running
   // the open server action.
   const tenantByEmail = new Map<string, string>();
-  for (const ct of (clientTenants ?? []) as {
-    id: string;
-    contact_email: string | null;
-  }[]) {
+  for (const ct of tenants) {
     if (ct.contact_email) tenantByEmail.set(ct.contact_email.trim().toLowerCase(), ct.id);
   }
+
+  // Self sign-ups: client tenants whose contact email matches no lead. These came
+  // straight through /portal/signup (not the funnel), so they have no lead card —
+  // surface them in the "new" lane with their DPA status.
+  const leadEmails = new Set(
+    leads.map((l) => (l.email || "").trim().toLowerCase()).filter(Boolean)
+  );
+  const dpaSet = new Set((dpaRows ?? []).map((d: { tenant_id: string }) => d.tenant_id));
+  const signupClients: SignupClient[] = tenants
+    .filter(
+      (t) => t.contact_email && !leadEmails.has(t.contact_email.trim().toLowerCase())
+    )
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+      vertical: t.vertical,
+      contact_name: t.contact_name,
+      contact_email: t.contact_email,
+      dpaSigned: dpaSet.has(t.id),
+    }));
 
   return (
     <div>
@@ -427,8 +563,16 @@ export default async function PipelinePage() {
         title="Lead pipeline"
         lead={
           <>
-            {leads.length} leads · click any card to open their client profile (booking,
-            brief, quote &amp; proposal).
+            {leads.length} leads
+            {signupClients.length > 0 && (
+              <>
+                {" "}
+                · {signupClients.length} self sign-up
+                {signupClients.length === 1 ? "" : "s"}
+              </>
+            )}{" "}
+            · click any card to open their client profile (booking, brief, quote &amp;
+            proposal).
           </>
         }
         className="mb-8"
@@ -444,7 +588,10 @@ export default async function PipelinePage() {
       >
         {COLUMNS.map((col, ci) => {
           const items = leads.filter((l) => l.status === col);
-          const live = col === "new" && items.length > 0;
+          // Self sign-ups land in the "new" lane alongside fresh funnel leads.
+          const signups = col === "new" ? signupClients : [];
+          const count = items.length + signups.length;
+          const live = col === "new" && count > 0;
           return (
             <Reveal key={col} delay={ci * 0.05}>
               <div
@@ -497,10 +644,13 @@ export default async function PipelinePage() {
                       color: "var(--k-faint)",
                     }}
                   >
-                    {items.length}
+                    {count}
                   </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {signups.map((c) => (
+                    <SignupCard key={c.id} client={c} />
+                  ))}
                   {items.map((l) => (
                     <Card
                       key={l.id}

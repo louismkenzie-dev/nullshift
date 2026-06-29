@@ -31,11 +31,21 @@ export default async function PortalHome() {
       .from("projects")
       .select("id, name, stage, proposal_status, live_url")
       .order("created_at"),
-    supabase.from("invoices").select("amount, status"),
+    supabase
+      .from("invoices")
+      .select("id, amount, status, hosted_invoice_url")
+      .order("created_at", { ascending: false }),
     supabase.from("subscriptions").select("plan, mrr, status").eq("status", "active"),
   ]);
   const projectList = (projects ?? []) as Project[];
-  const invList = (invoices ?? []) as { amount: number; status: string }[];
+  const invList = (invoices ?? []) as {
+    id: string;
+    amount: number;
+    status: string;
+    hosted_invoice_url: string | null;
+  }[];
+  // Invoices to surface for payment: sent/open/paid (skip drafts + voided).
+  const billed = invList.filter((i) => i.status !== "void" && i.status !== "draft");
   const invested = invList
     .filter((i) => i.status === "paid")
     .reduce((s, i) => s + Number(i.amount), 0);
@@ -110,6 +120,89 @@ export default async function PortalHome() {
           />
         </Reveal>
       </div>
+
+      {/* Payments — pay outstanding invoices; flips to Paid automatically once
+          the Stripe payment goes through (invoice.paid webhook). */}
+      {billed.length > 0 && (
+        <Reveal delay={0.08}>
+          <Panel label="Payments" style={{ margin: "0 0 20px" }}>
+            <div className="flex flex-col gap-2.5">
+              {billed.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex items-center justify-between gap-3"
+                  style={{
+                    padding: "12px 14px",
+                    background: "var(--k-bg)",
+                    border: "1px solid var(--k-border)",
+                  }}
+                >
+                  <div className="flex flex-col">
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontWeight: 700,
+                        fontSize: "1rem",
+                        color: "var(--k-fg)",
+                      }}
+                    >
+                      {gbp(Number(inv.amount))}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "0.62rem",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "var(--k-faint)",
+                      }}
+                    >
+                      Build invoice
+                    </span>
+                  </div>
+                  {inv.status === "paid" ? (
+                    <span
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "0.7rem",
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        color: T.success,
+                      }}
+                    >
+                      Paid ✓
+                    </span>
+                  ) : inv.hosted_invoice_url ? (
+                    <a
+                      href={inv.hosted_invoice_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="kb kb-primary kb-sm"
+                    >
+                      Pay now
+                      <span className="k-arrow" aria-hidden>
+                        →
+                      </span>
+                    </a>
+                  ) : (
+                    <span
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "0.7rem",
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        color: "var(--k-faint)",
+                      }}
+                    >
+                      Awaiting invoice
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </Reveal>
+      )}
 
       {/* Project cards */}
       {projectList.length === 0 ? (

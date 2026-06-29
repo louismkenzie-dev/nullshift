@@ -117,6 +117,23 @@ export async function createItemisedStripeInvoice(params: {
   return { id: invoice.id, url: fresh.hosted_invoice_url ?? null };
 }
 
+/**
+ * Void a finalized Stripe invoice (e.g. a stale test-mode invoice we're about to
+ * regenerate as live). No-op-safe: returns false when Stripe is unconfigured or
+ * the invoice can't be voided (already paid/void). The webhook also flips the DB
+ * row to 'void' on invoice.voided, but callers should set it directly too.
+ */
+export async function voidStripeInvoice(invoiceId: string): Promise<boolean> {
+  const stripe = getStripe();
+  if (!stripe || !invoiceId) return false;
+  try {
+    await stripe.invoices.voidInvoice(invoiceId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Create a care subscription (recurring MRR) for a customer on a price. */
 export async function createCareSubscription(params: {
   customerId: string;

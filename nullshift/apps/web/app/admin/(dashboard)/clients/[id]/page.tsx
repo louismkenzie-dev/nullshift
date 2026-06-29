@@ -12,7 +12,7 @@ import { clientRef } from "@nullshift/ui/format";
 import { CARE_PLANS, CARE_PLAN_MRR, carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { sendCareSubscriptionSignup } from "@/lib/careSubscription";
-import { getStripe } from "@nullshift/billing/stripe";
+import { getStripe, voidStripeInvoice } from "@nullshift/billing/stripe";
 import { sendEmail } from "@/lib/sendEmail";
 import {
   portalReadyEmail,
@@ -183,10 +183,10 @@ async function saveDocsAndSend(formData: FormData) {
       .maybeSingle(),
     supabase.from("project_items").select("id").eq("project_id", projectId).limit(1),
   ]);
+  // The care plan is OPTIONAL — a proposal can be sent with or without one.
   const complete =
     !!project &&
     (items?.length ?? 0) > 0 &&
-    !!project.proposed_plan &&
     !!project.overview &&
     !!project.payment_terms &&
     dpaReadyToSend(project);
@@ -398,6 +398,40 @@ async function generateInvoice(formData: FormData) {
       target: `project:${projectId}`,
       tenantId,
       metadata: { total: res.total },
+    });
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/**
+ * Void the current build invoice and regenerate it as a LIVE invoice — used to
+ * replace a stale test-mode invoice (whose "Pay now" link points at the Stripe
+ * sandbox) now that live keys are in place. Voids in Stripe + locally so the
+ * build-invoice dedup lets generateProjectInvoice mint a fresh live one (which
+ * re-emails the client a live payment link). Never touches a paid invoice.
+ */
+async function regenerateInvoiceLive(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  const invoiceId = String(formData.get("invoice_id") || "");
+  if (!tenantId || !projectId || !invoiceId) return;
+  const service = createServiceClient();
+  const { data: existing } = await service
+    .from("invoices")
+    .select("stripe_invoice_id, status")
+    .eq("id", invoiceId)
+    .maybeSingle();
+  if (existing?.status === "paid") return; // never void a paid invoice
+  if (existing?.stripe_invoice_id) await voidStripeInvoice(existing.stripe_invoice_id);
+  await service.from("invoices").update({ status: "void" }).eq("id", invoiceId);
+  const res = await generateProjectInvoice(service, { tenantId, projectId });
+  if (res.ok)
+    await logAudit({
+      action: "invoice.regenerated_live",
+      target: `project:${projectId}`,
+      tenantId,
+      metadata: { voided: invoiceId, newInvoice: res.invoiceId },
     });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
@@ -1601,8 +1635,8 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     marginTop: 12,
                   }}
                 >
-                  Add modules + a care plan here, then complete &amp; send the documents
-                  below.
+                  Add modules (and optionally a care plan) here, then complete &amp; send
+                  the documents below.
                 </p>
               )}
               {project.proposal_status === "sent" && (
@@ -1667,8 +1701,8 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               >
                 Author the proposal here. The DPA details are provided by the client in
                 their portal (status below) — the document ports them on automatically.
-                You can send once the modules, care plan, this doc and the client&apos;s
-                DPA details are all complete.
+                You can send once the modules, this doc and the client&apos;s DPA details
+                are complete. A care plan is optional.
               </p>
               <ProposalDocsForm
                 action={saveDocsAndSend}
@@ -1897,6 +1931,46 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                         >
                           payment link ↗
                         </a>
+                      )}
+                      {inv.status !== "paid" &&
+                        (inv.hosted_invoice_url ?? "").includes("/test") && (
+                          <span
+                            style={{
+                              fontFamily: T.mono,
+                              fontSize: 10,
+                              letterSpacing: "0.04em",
+                              textTransform: "uppercase",
+                              color: T.warning,
+                            }}
+                            title="This Pay-now link is a Stripe TEST link — regenerate it as live."
+                          >
+                            ⚠ test link
+                          </span>
+                        )}
+                      {inv.status !== "paid" && (
+                        <form action={regenerateInvoiceLive}>
+                          {htid}
+                          {hpid}
+                          <input type="hidden" name="invoice_id" value={inv.id} />
+                          <SubmitButton
+                            pendingLabel="Regenerating…"
+                            style={{
+                              fontFamily: T.mono,
+                              fontSize: 10,
+                              letterSpacing: "0.04em",
+                              textTransform: "uppercase",
+                              color: "var(--k-fg)",
+                              background: "transparent",
+                              border: "1px solid var(--k-border)",
+                              borderRadius: 0,
+                              padding: "5px 9px",
+                              cursor: "pointer",
+                            }}
+                            title="Void this invoice and create a fresh LIVE one (new Pay-now link), then re-email the client"
+                          >
+                            Regenerate live
+                          </SubmitButton>
+                        </form>
                       )}
                     </div>
                   </div>
