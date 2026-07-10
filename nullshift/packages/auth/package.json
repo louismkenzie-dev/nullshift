@@ -15,8 +15,8 @@
   },
   "dependencies": {
     "@nullshift/db": "workspace:*",
-    "@supabase/supabase-js": "^2.107.0",
-    "resend": "^6.12.4"
+    "@supabase/supabase-js": "^2.110.2",
+    "resend": "^6.17.2"
   },
   "peerDependencies": {
     "next": ">=15"

@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@nullshift/db": "workspace:*",
-    "@stripe/stripe-js": "^9.8.0",
-    "stripe": "^22.2.0"
+    "@stripe/stripe-js": "^9.9.0",
+    "stripe": "^22.3.1"
   },
   "devDependencies": {
     "typescript": "^5"
