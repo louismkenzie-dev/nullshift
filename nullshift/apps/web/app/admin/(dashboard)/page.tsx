@@ -194,7 +194,7 @@ export default async function MissionControlPage() {
                     <Reveal key={iss.id} delay={Math.min(i, 8) * 0.04}>
                       <Link
                         href="/admin/issues"
-                        className="flex items-center justify-between gap-4 py-3 px-4 hover:bg-[var(--k-bg)]"
+                        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 px-4 hover:bg-[var(--k-bg)]"
                         style={{
                           borderTop: i ? "1px solid var(--k-border)" : "none",
                           transition: "background-color 0.15s ease",
@@ -218,7 +218,7 @@ export default async function MissionControlPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
                           {overdue && <StatusChip tone="danger">Overdue</StatusChip>}
                           <StatusChip tone={SEVERITY_META[iss.severity].tone}>
                             {SEVERITY_META[iss.severity].label}
@@ -250,7 +250,7 @@ export default async function MissionControlPage() {
                   <Reveal key={b.id} delay={Math.min(i, 8) * 0.04}>
                     <Link
                       href={`/admin/batches/${b.id}`}
-                      className="flex items-center justify-between gap-4 py-3 px-4 hover:bg-[var(--k-bg)]"
+                      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 px-4 hover:bg-[var(--k-bg)]"
                       style={{
                         borderTop: i ? "1px solid var(--k-border)" : "none",
                         transition: "background-color 0.15s ease",

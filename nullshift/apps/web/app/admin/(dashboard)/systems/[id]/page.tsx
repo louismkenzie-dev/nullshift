@@ -327,6 +327,7 @@ export default async function SystemPassportPage({
                       href={`https://github.com/${profile.repo_full_name}`}
                       target="_blank"
                       rel="noreferrer"
+                      className="min-w-0 break-all"
                       style={{ ...mono, fontSize: 11, color: "var(--k-accent)" }}
                     >
                       {profile.repo_full_name} ↗
@@ -557,7 +558,7 @@ export default async function SystemPassportPage({
                     <div className="flex flex-col gap-1.5">
                       {items.map((f) => (
                         <div key={f.idx} className="flex items-start gap-2.5">
-                          <form action={toggleFeature}>
+                          <form action={toggleFeature} className="shrink-0">
                             <input type="hidden" name="project_id" value={project.id} />
                             <input
                               type="hidden"
@@ -584,7 +585,7 @@ export default async function SystemPassportPage({
                               {g.mark}
                             </SubmitButton>
                           </form>
-                          <div className="min-w-0" style={{ paddingTop: 3 }}>
+                          <div className="min-w-0 break-words" style={{ paddingTop: 3 }}>
                             <span
                               style={{
                                 fontFamily: T.sans,
@@ -647,7 +648,7 @@ export default async function SystemPassportPage({
                     const done = !!item.done;
                     return (
                       <div key={i} className="flex items-center gap-2.5">
-                        <form action={toggleEnvItem}>
+                        <form action={toggleEnvItem} className="shrink-0">
                           <input type="hidden" name="project_id" value={project.id} />
                           <input type="hidden" name="tenant_id" value={project.tenant_id} />
                           <input type="hidden" name="index" value={i} />
@@ -670,6 +671,7 @@ export default async function SystemPassportPage({
                           </SubmitButton>
                         </form>
                         <span
+                          className="min-w-0 break-words"
                           style={{
                             fontFamily: T.sans,
                             fontSize: "0.85rem",
@@ -709,7 +711,7 @@ export default async function SystemPassportPage({
                   <Reveal key={iss.id} delay={Math.min(i, 8) * 0.04}>
                     <Link
                       href="/admin/issues"
-                      className="flex items-center justify-between gap-4 py-3 px-4 hover:bg-[var(--k-bg)]"
+                      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 px-4 hover:bg-[var(--k-bg)]"
                       style={{
                         borderTop: i ? "1px solid var(--k-border)" : "none",
                         transition: "background-color 0.15s ease",
@@ -726,7 +728,7 @@ export default async function SystemPassportPage({
                       >
                         {iss.title}
                       </span>
-                      <span className="flex items-center gap-2 shrink-0">
+                      <span className="flex flex-wrap items-center gap-2 shrink-0">
                         <StatusChip tone={SEVERITY_META[iss.severity].tone}>
                           {SEVERITY_META[iss.severity].label}
                         </StatusChip>
@@ -751,7 +753,7 @@ export default async function SystemPassportPage({
                   <Reveal key={b.id} delay={Math.min(i, 8) * 0.04}>
                     <Link
                       href={`/admin/batches/${b.id}`}
-                      className="flex items-center justify-between gap-4 py-3 px-4 hover:bg-[var(--k-bg)]"
+                      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 px-4 hover:bg-[var(--k-bg)]"
                       style={{
                         borderTop: i ? "1px solid var(--k-border)" : "none",
                         transition: "background-color 0.15s ease",

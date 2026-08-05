@@ -125,9 +125,9 @@ export default async function SystemsPage() {
           className="overflow-hidden"
           style={{ border: "1px solid var(--k-border)", marginTop: 24 }}
         >
-          {/* Mono uppercase column headers */}
+          {/* Mono uppercase column headers — desktop only; rows stack as cards on mobile */}
           <div
-            className="grid items-center gap-4 px-5 py-3"
+            className="max-md:hidden grid items-center gap-4 px-5 py-3"
             style={{
               gridTemplateColumns: GRID,
               background: "var(--k-surface)",
@@ -151,7 +151,7 @@ export default async function SystemsPage() {
               <Reveal key={p.id} delay={Math.min(i, 8) * 0.04}>
                 <Link
                   href={`/admin/systems/${p.id}`}
-                  className="grid items-center gap-4 px-5 py-3.5 hover:bg-[var(--k-surface)]"
+                  className="max-md:flex max-md:flex-col max-md:gap-1.5 md:grid md:items-center gap-4 px-5 py-3.5 hover:bg-[var(--k-surface)]"
                   style={{
                     gridTemplateColumns: GRID,
                     borderTop: i ? "1px solid var(--k-border)" : "none",
@@ -159,7 +159,7 @@ export default async function SystemsPage() {
                     transition: "background-color 0.15s ease",
                   }}
                 >
-                  <span style={{ minWidth: 0 }}>
+                  <span className="min-w-0" style={{ minWidth: 0 }}>
                     <span
                       style={{
                         fontFamily: T.sans,
@@ -171,52 +171,56 @@ export default async function SystemsPage() {
                     >
                       {p.name}
                     </span>
-                    <span style={{ ...mono, color: "var(--k-faint)" }}>
+                    {/* Tenant subtitle repeats the card title on phones — desktop only */}
+                    <span className="max-md:hidden" style={{ ...mono, color: "var(--k-faint)" }}>
                       {tenantName.get(p.tenant_id) ?? "—"}
                     </span>
                   </span>
-                  <span
-                    className="inline-flex items-center gap-1.5"
-                    style={{ ...mono, color: STAGE_TONE[p.stage] ?? "var(--k-muted)" }}
-                  >
+                  {/* Signals — one wrapping line on mobile, grid cells at md+ */}
+                  <div className="max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-2 md:contents">
                     <span
-                      className="k-livedot"
+                      className="inline-flex items-center gap-1.5"
+                      style={{ ...mono, color: STAGE_TONE[p.stage] ?? "var(--k-muted)" }}
+                    >
+                      <span
+                        className="k-livedot"
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: 999,
+                          background: STAGE_TONE[p.stage] ?? "var(--k-muted)",
+                          display: "inline-block",
+                        }}
+                      />
+                      {p.stage}
+                    </span>
+                    <span>
+                      <StatusChip tone={plan ? "accent" : "muted"}>
+                        {plan?.label ?? "No plan"}
+                      </StatusChip>
+                    </span>
+                    <span
+                      className={open === 0 ? "max-md:hidden" : undefined}
                       style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: 999,
-                        background: STAGE_TONE[p.stage] ?? "var(--k-muted)",
-                        display: "inline-block",
+                        ...mono,
+                        fontSize: 12,
+                        color: open > 0 ? T.warning : "var(--k-faint)",
                       }}
-                    />
-                    {p.stage}
-                  </span>
-                  <span>
-                    <StatusChip tone={plan ? "accent" : "muted"}>
-                      {plan?.label ?? "No plan"}
-                    </StatusChip>
-                  </span>
+                    >
+                      {open > 0 ? open : "—"}
+                      <span className="md:hidden">&nbsp;issue{open === 1 ? "" : "s"}</span>
+                    </span>
+                    <span>
+                      <StatusChip tone={HEALTH_TONE[health] ?? "muted"}>{health}</StatusChip>
+                    </span>
+                  </div>
                   <span
-                    style={{
-                      ...mono,
-                      fontSize: 12,
-                      color: open > 0 ? T.warning : "var(--k-faint)",
-                    }}
-                  >
-                    {open > 0 ? open : "—"}
-                  </span>
-                  <span>
-                    <StatusChip tone={HEALTH_TONE[health] ?? "muted"}>{health}</StatusChip>
-                  </span>
-                  <span
+                    className="min-w-0 md:truncate max-md:break-all"
                     style={{
                       fontFamily: T.mono,
                       fontSize: 11,
                       letterSpacing: "0.02em",
                       color: repoShort ? "var(--k-muted)" : "var(--k-faint)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
                     }}
                   >
                     {repoShort ?? "no repo"}

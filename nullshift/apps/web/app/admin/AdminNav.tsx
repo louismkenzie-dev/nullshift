@@ -116,7 +116,7 @@ export function AdminNav({ email }: { email: string }) {
     <>
       {/* ── Top bar ────────────────────────────────────────── */}
       <nav
-        className="sticky top-0 z-50 flex items-center justify-between px-5 h-14"
+        className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-5 pt-[env(safe-area-inset-top)] h-[calc(3.5rem+env(safe-area-inset-top))]"
         style={{
           background: "rgba(10,10,10,0.72)",
           borderBottom: "1px solid var(--k-border)",
@@ -183,7 +183,7 @@ export function AdminNav({ email }: { email: string }) {
         {/* Hamburger — all screen sizes */}
         <button
           onClick={() => setOpen((v) => !v)}
-          className="flex flex-col justify-center items-center gap-[5px] w-9 h-9 transition-colors"
+          className="flex flex-col justify-center items-center gap-[5px] w-10 h-10 shrink-0 transition-colors"
           style={{ background: open ? "var(--k-surface)" : "transparent" }}
           aria-label="Open menu"
         >
@@ -238,7 +238,7 @@ export function AdminNav({ email }: { email: string }) {
 
       {/* Drawer panel */}
       <aside
-        className="fixed top-0 right-0 bottom-0 z-50 flex flex-col"
+        className="fixed top-0 right-0 bottom-0 z-50 flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
         style={{
           width: "min(320px, 85vw)",
           background: "var(--k-surface)",
@@ -278,6 +278,7 @@ export function AdminNav({ email }: { email: string }) {
           </div>
           <button
             onClick={() => setOpen(false)}
+            className="inline-flex items-center justify-center w-10 h-10 -mr-2 shrink-0"
             style={{
               color: "var(--k-muted)",
               fontFamily: T.mono,
@@ -315,7 +316,7 @@ export function AdminNav({ email }: { email: string }) {
                     key={l.href}
                     href={l.href}
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[var(--k-bg)]"
+                    className="flex items-center gap-3 px-3 py-3 min-h-10 transition-colors hover:bg-[var(--k-bg)]"
                     style={{
                       // No inline "transparent" here — it would beat the hover class.
                       background: active ? "rgba(16,185,129,0.10)" : undefined,
