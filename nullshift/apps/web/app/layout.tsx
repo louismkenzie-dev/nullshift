@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@nullshift/ui/styles/fonts.css";
 import "./globals.css";
 
@@ -16,6 +16,19 @@ export const metadata: Metadata = {
   },
   description:
     "Nullshift designs, builds and runs bespoke websites, custom systems and the automations behind them — owned outright by your business.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "NullShift",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0a0a0a",
+  // Edge-to-edge on notched iPhones when launched from the home screen.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
