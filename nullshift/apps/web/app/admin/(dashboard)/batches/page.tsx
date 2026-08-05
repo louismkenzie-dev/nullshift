@@ -199,7 +199,8 @@ export default async function BatchesPage({
               defaultValue={
                 preselect && projects.some((p) => p.id === preselect) ? preselect : ""
               }
-              style={inp}
+              className="max-md:w-full"
+              style={{ ...inp, maxWidth: "100%" }}
             >
               <option value="" disabled>
                 Client — project…
@@ -214,7 +215,8 @@ export default async function BatchesPage({
               name="title"
               required
               defaultValue={defaultTitle}
-              style={{ ...inp, width: 260 }}
+              className="w-full md:w-[260px]"
+              style={inp}
             />
             <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
               Compile
@@ -231,7 +233,7 @@ export default async function BatchesPage({
       {/* ── All batches ─────────────────────────────────────── */}
       <div className="mt-6" style={{ border: "1px solid var(--k-border)" }}>
         <div
-          className="grid gap-3 items-center px-4 py-2.5"
+          className="max-md:hidden md:grid gap-3 items-center px-4 py-2.5"
           style={{
             gridTemplateColumns: GRID,
             background: "var(--k-surface)",
@@ -262,14 +264,14 @@ export default async function BatchesPage({
           <Reveal key={b.id} delay={Math.min(i, 8) * 0.04}>
             <Link
               href={`/admin/batches/${b.id}`}
-              className="grid gap-3 items-center px-4 py-3 hover:bg-[var(--k-surface)] transition-colors"
+              className="max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-3 max-md:gap-y-1.5 md:grid md:gap-3 items-center px-4 py-3 hover:bg-[var(--k-surface)] transition-colors"
               style={{
                 gridTemplateColumns: GRID,
                 borderTop: i ? "1px solid var(--k-border)" : "none",
               }}
             >
               <span
-                className="truncate"
+                className="truncate min-w-0 max-md:w-full"
                 style={{
                   fontFamily: T.sans,
                   fontWeight: 600,
@@ -280,7 +282,7 @@ export default async function BatchesPage({
                 {b.title}
               </span>
               <span
-                className="truncate"
+                className="truncate min-w-0 max-md:w-full"
                 style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}
               >
                 {tenantName(b.tenant_id)}
