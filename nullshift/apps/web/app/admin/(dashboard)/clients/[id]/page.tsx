@@ -2425,7 +2425,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 {htid}
                 <select
                   name="plan"
-                  defaultValue={project?.proposed_plan ?? "care_basic"}
+                  defaultValue={project?.proposed_plan ?? "hosting"}
                   style={{ ...inp, width: 170 }}
                 >
                   {CARE_PLANS.map((p) => (

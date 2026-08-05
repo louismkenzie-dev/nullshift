@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
+import { requireStaff } from "@nullshift/auth/guards";
 
 /**
  * POST /api/admin/create-client-account
@@ -17,6 +18,8 @@ import { createServiceClient } from "@nullshift/db";
  *   500 Supabase / DB error
  */
 export async function POST(req: Request) {
+  if (!(await requireStaff()).ok)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     const { clientId, email, password } = await req.json();
 

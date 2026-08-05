@@ -74,7 +74,11 @@ export default async function DashboardLayout({
   if (aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2") {
     redirect("/admin/security");
   }
-  if (!isAdminEmail(user.email)) {
+  // Team access: a real staff membership (is_internal_staff via memberships)
+  // OR the transitional ADMIN_EMAILS allowlist. New team members get a
+  // 'staff' membership on the internal tenant instead of an env change.
+  const { data: isStaff } = await supabase.rpc("is_internal_staff");
+  if (!isStaff && !isAdminEmail(user.email)) {
     return (
       <main
         className="min-h-screen flex items-center justify-center px-6"
@@ -107,9 +111,9 @@ export default async function DashboardLayout({
             NOT AUTHORISED
           </h1>
           <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-muted)" }}>
-            The account <span style={{ color: "var(--k-fg)" }}>{user.email}</span> is not
-            on the admin allowlist. Add it to <code>ADMIN_EMAILS</code> in your
-            environment.
+            The account <span style={{ color: "var(--k-fg)" }}>{user.email}</span> has no
+            staff membership. Give it a <code>staff</code> membership on the internal
+            tenant (or add it to <code>ADMIN_EMAILS</code>).
           </p>
         </div>
       </main>

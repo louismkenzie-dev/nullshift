@@ -31,6 +31,8 @@ const serverSchema = clientSchema.extend({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_CONNECT_CLIENT_ID: z.string().optional(),
+  GITHUB_DISPATCH_TOKEN: z.string().optional(),
+  CRON_SECRET: z.string().optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientSchema>;

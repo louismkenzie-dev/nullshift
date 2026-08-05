@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
     "@base-ui/react": "^1.5.0",
     "@nullshift/auth": "workspace:*",
     "@nullshift/billing": "workspace:*",

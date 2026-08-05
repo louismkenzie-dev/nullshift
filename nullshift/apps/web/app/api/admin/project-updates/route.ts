@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
+import { requireStaff } from "@nullshift/auth/guards";
 
 /**
  * GET /api/admin/project-updates?client_id=<id>
- * Returns all updates for a client, newest first.
+ * Returns all updates for a client, newest first. Staff only.
  */
 export async function GET(request: Request) {
+  if (!(await requireStaff()).ok)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { searchParams } = new URL(request.url);
   const clientId = searchParams.get("client_id");
   if (!clientId)
@@ -35,6 +38,8 @@ export async function GET(request: Request) {
  *   images         File (repeatable) — uploaded to Supabase Storage "project-updates" bucket
  */
 export async function POST(request: Request) {
+  if (!(await requireStaff()).ok)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   let formData: FormData;
   try {
     formData = await request.formData();

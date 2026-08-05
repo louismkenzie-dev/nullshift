@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
+import { requireStaff } from "@nullshift/auth/guards";
 
 /**
  * PATCH /api/admin/project-updates/[updateId]
  * Partial update — accepts any subset of: { action_resolved, client_choice, title, body }
+ * Staff only.
  */
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ updateId: string }> }
 ) {
+  if (!(await requireStaff()).ok)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { updateId } = await params;
   let body: Record<string, unknown>;
   try {
@@ -57,6 +61,8 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ updateId: string }> }
 ) {
+  if (!(await requireStaff()).ok)
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { updateId } = await params;
 
   const supabase = (() => {
