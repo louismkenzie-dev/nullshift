@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@nullshift/db";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
-import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel } from "@/components/app/AppKit";
 import { PortalHeader } from "./PortalHeader";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
@@ -70,7 +69,7 @@ export default async function PortalLayout({ children }: { children: React.React
       className="relative"
       style={{
         minHeight: "100vh",
-        background: T.bg,
+        background: "var(--k-bg)",
         display: "flex",
         flexDirection: "column",
         zIndex: 1,
@@ -82,6 +81,13 @@ export default async function PortalLayout({ children }: { children: React.React
       <div className="fixed inset-0 pointer-events-none" style={{ zIndex: -1 }}>
         <Atmosphere />
       </div>
+      {/* Hairline vertical grid — the same gridded canvas that frames the
+          marketing sections (KYMA .k-vgrid). Above the atmosphere, below content. */}
+      <div
+        aria-hidden
+        className="k-vgrid fixed inset-0 pointer-events-none"
+        style={{ zIndex: -1, opacity: 0.35 }}
+      />
       <PortalHeader email={user.email!} />
       {needsDpa && project ? (
         <main

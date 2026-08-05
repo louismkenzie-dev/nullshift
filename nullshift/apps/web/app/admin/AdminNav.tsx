@@ -21,6 +21,7 @@ import {
 import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { LogoMark } from "@nullshift/ui/components/Logo";
+import { ScrambleHover } from "@/components/anim/ScrambleHover";
 
 type NavItem = { label: string; href: string; Icon: LucideIcon };
 type NavGroup = { section: string; items: NavItem[] };
@@ -314,9 +315,10 @@ export function AdminNav({ email }: { email: string }) {
                     key={l.href}
                     href={l.href}
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 transition-colors"
+                    className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[var(--k-bg)]"
                     style={{
-                      background: active ? "rgba(16,185,129,0.10)" : "transparent",
+                      // No inline "transparent" here — it would beat the hover class.
+                      background: active ? "rgba(16,185,129,0.10)" : undefined,
                       borderLeft: `2px solid ${active ? "var(--k-accent)" : "transparent"}`,
                     }}
                   >
@@ -336,7 +338,8 @@ export function AdminNav({ email }: { email: string }) {
                         color: active ? "var(--k-accent)" : "var(--k-fg)",
                       }}
                     >
-                      {l.label}
+                      {/* Hover-scramble (uppercase target = same glyphs, pure decode) */}
+                      <ScrambleHover text={l.label} hoverText={l.label.toUpperCase()} />
                     </span>
                     {active && (
                       <span

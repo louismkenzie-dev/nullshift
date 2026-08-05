@@ -411,6 +411,7 @@ export default async function BatchDetailPage({
   return (
     <div>
       <PageHeader
+        index="10"
         label="Fix batch"
         title={batch.title}
         lead={

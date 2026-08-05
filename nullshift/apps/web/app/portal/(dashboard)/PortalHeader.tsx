@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
+import { ScrambleHover } from "@/components/anim/ScrambleHover";
 
 const mono: React.CSSProperties = {
   fontFamily: T.mono,
@@ -15,11 +16,11 @@ const mono: React.CSSProperties = {
 
 /** Portal navigation — the client's five places, in plain words. */
 const NAV = [
-  { href: "/portal", label: "Home" },
-  { href: "/portal/requests", label: "Requests" },
-  { href: "/portal/updates", label: "Updates" },
-  { href: "/portal/plan", label: "Plan" },
-  { href: "/portal/deliverables", label: "Documents" },
+  { n: "01", href: "/portal", label: "Home" },
+  { n: "02", href: "/portal/requests", label: "Requests" },
+  { n: "03", href: "/portal/updates", label: "Updates" },
+  { n: "04", href: "/portal/plan", label: "Plan" },
+  { n: "05", href: "/portal/deliverables", label: "Documents" },
 ];
 
 /**
@@ -36,7 +37,7 @@ export function PortalHeader({ email }: { email: string }) {
     <header
       style={{
         borderBottom: `1px solid var(--k-border)`,
-        background: "rgba(10,11,15,0.72)",
+        background: "rgba(10,10,10,0.72)",
         flexShrink: 0,
         position: "sticky",
         top: 0,
@@ -109,7 +110,7 @@ export function PortalHeader({ email }: { email: string }) {
           </span>
           <form action="/api/auth/signout" method="post">
             <button type="submit" className="kb kb-outline kb-sm">
-              Sign out
+              <ScrambleHover text="Sign out" hoverText="SIGN OUT" />
             </button>
           </form>
         </div>
@@ -134,6 +135,7 @@ export function PortalHeader({ email }: { email: string }) {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
+                className="inline-flex items-baseline gap-1.5"
                 style={{
                   fontFamily: T.mono,
                   fontSize: 11,
@@ -150,7 +152,18 @@ export function PortalHeader({ email }: { email: string }) {
                   flexShrink: 0,
                 }}
               >
-                {item.label}
+                {/* [NN] marker — the KYMA eyebrow signature, emerald like the front page */}
+                <span
+                  aria-hidden
+                  style={{
+                    color: active ? "var(--k-accent)" : "var(--k-faint)",
+                    fontSize: 10,
+                  }}
+                >
+                  [{item.n}]
+                </span>
+                {/* Hover-scramble (uppercase target = same glyphs, pure decode effect) */}
+                <ScrambleHover text={item.label} hoverText={item.label.toUpperCase()} />
               </Link>
             );
           })}

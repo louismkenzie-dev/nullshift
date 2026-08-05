@@ -228,7 +228,7 @@ export default async function TemplatesPage() {
   return (
     <div>
       <PageHeader
-        index="11"
+        index="12"
         label="Templates"
         title="Template bank"
         lead="Reusable system blueprints — stamp a proven system onto a new client in one click."

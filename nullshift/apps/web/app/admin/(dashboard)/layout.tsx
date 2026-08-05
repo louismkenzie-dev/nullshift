@@ -150,6 +150,13 @@ export default async function DashboardLayout({
       <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
         <Atmosphere />
       </div>
+      {/* Hairline vertical grid — the same gridded canvas that frames the
+          marketing sections (KYMA .k-vgrid). Above the atmosphere, below content. */}
+      <div
+        aria-hidden
+        className="k-vgrid fixed inset-0 pointer-events-none"
+        style={{ zIndex: 0, opacity: 0.35 }}
+      />
       <div className="relative" style={{ zIndex: 1 }}>
         <AdminNav email={user.email ?? ""} />
         <main className="max-w-7xl mx-auto px-6 py-8">{children}</main>
