@@ -26,6 +26,8 @@ import {
  */
 
 export const dynamic = "force-dynamic";
+// AI parsing of long transcripts can exceed default serverless limits.
+export const maxDuration = 120;
 
 type Tenant = { id: string; name: string };
 type Project = { id: string; tenant_id: string; name: string };
@@ -82,6 +84,7 @@ async function ingestSource(formData: FormData) {
       description: text,
       status: "new",
       client_visible: false,
+      ai: { from: "ingest" },
     });
     count = 1;
   } else if (drafts.length > 0) {
@@ -167,6 +170,9 @@ export default async function InboxPage() {
         .select("*")
         .eq("client_visible", false)
         .eq("status", "new")
+        // Only genuine ingest drafts — deliberately-hidden issues logged
+        // elsewhere must not be discardable from the inbox.
+        .contains("ai", { from: "ingest" })
         .order("created_at", { ascending: false }),
     ]);
   const tenants = (tenantRows ?? []) as Tenant[];

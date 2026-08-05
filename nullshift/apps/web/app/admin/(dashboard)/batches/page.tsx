@@ -68,7 +68,11 @@ async function compileBatch(formData: FormData) {
     .select("*")
     .eq("project_id", projectId)
     .in("status", QUEUEABLE_STATUSES);
-  const issues = ((issueRows ?? []) as IssueRow[]).sort(
+  // Unreviewed inbox drafts (hidden + still 'new') stay out of work orders
+  // until they're confirmed on /admin/inbox.
+  const issues = ((issueRows ?? []) as IssueRow[])
+    .filter((i) => !(i.status === "new" && !i.client_visible))
+    .sort(
     (a, b) =>
       SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
       a.created_at.localeCompare(b.created_at)

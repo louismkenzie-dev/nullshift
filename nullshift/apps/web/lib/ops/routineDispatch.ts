@@ -23,13 +23,35 @@ export type RoutineFireResult = {
   sessionUrl: string | null;
 };
 
+/** The fire endpoint lives on Anthropic's API host only — never send the
+ *  bearer token anywhere else, whatever ends up in the passport field. */
+export function isValidFireUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && u.hostname === "api.anthropic.com";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns null when the routine was definitely NOT fired (bad URL, network
+ * error, non-2xx) — safe to release the batch for another attempt. A 2xx
+ * always returns a result, even if the response body couldn't be parsed:
+ * the run has started, so the batch must stay dispatched.
+ */
 export async function fireRoutine(opts: {
   fireUrl: string;
   token: string;
   text: string;
 }): Promise<RoutineFireResult | null> {
+  if (!isValidFireUrl(opts.fireUrl)) {
+    console.error("[ops/routineDispatch] refusing non-Anthropic fire URL");
+    return null;
+  }
+  let res: Response;
   try {
-    const res = await fetch(opts.fireUrl, {
+    res = await fetch(opts.fireUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${opts.token}`,
@@ -38,21 +60,29 @@ export async function fireRoutine(opts: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ text: opts.text }),
+      signal: AbortSignal.timeout(60_000),
     });
-    if (!res.ok) {
-      console.error("[ops/routineDispatch] fire failed", res.status, await res.text());
-      return null;
-    }
+  } catch (err) {
+    console.error("[ops/routineDispatch] request failed", err);
+    return null;
+  }
+  if (!res.ok) {
+    console.error("[ops/routineDispatch] fire failed", res.status, await res.text());
+    return null;
+  }
+  try {
     const json = (await res.json()) as {
       claude_code_session_id?: string;
       claude_code_session_url?: string;
     };
+    const sessionUrl = json.claude_code_session_url ?? null;
     return {
       sessionId: json.claude_code_session_id ?? null,
-      sessionUrl: json.claude_code_session_url ?? null,
+      // Only ever link back to claude.ai — don't store whatever came back.
+      sessionUrl: sessionUrl?.startsWith("https://claude.ai/") ? sessionUrl : null,
     };
-  } catch (err) {
-    console.error("[ops/routineDispatch] request failed", err);
-    return null;
+  } catch {
+    // Fired (2xx) but unparseable body — report success without a link.
+    return { sessionId: null, sessionUrl: null };
   }
 }

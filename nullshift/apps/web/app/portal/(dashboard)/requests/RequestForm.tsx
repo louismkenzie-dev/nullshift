@@ -14,10 +14,11 @@ import { SubmitButton } from "@/components/admin/SubmitButton";
 export function RequestForm({
   action,
 }: {
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<{ ok: boolean; error?: string } | void>;
 }) {
   const [kind, setKind] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const inp = {
     fontFamily: T.sans,
@@ -43,9 +44,24 @@ export function RequestForm({
   return (
     <form
       action={async (formData: FormData) => {
-        await action(formData);
-        setKind(null);
-        setSent(true);
+        setError(null);
+        setSent(false);
+        const shot = formData.get("screenshot");
+        if (shot instanceof File && shot.size > 7 * 1024 * 1024) {
+          setError("That screenshot is a bit too big (over 7MB) — try a smaller one, or send without it.");
+          return;
+        }
+        try {
+          const result = await action(formData);
+          if (result && result.ok === false) {
+            setError(result.error ?? "That didn't go through — please try again.");
+            return;
+          }
+          setKind(null);
+          setSent(true);
+        } catch {
+          setError("That didn't go through — please try again, or email us directly.");
+        }
       }}
       className="flex flex-col gap-3"
     >
@@ -175,6 +191,13 @@ export function RequestForm({
           >
             <span aria-hidden>✓</span> Got it — thank you. It&apos;s with us now and
             appears below.
+          </span>
+        )}
+        {error && (
+          <span
+            style={{ fontFamily: T.sans, fontSize: "0.85rem", color: T.danger }}
+          >
+            {error}
           </span>
         )}
       </div>

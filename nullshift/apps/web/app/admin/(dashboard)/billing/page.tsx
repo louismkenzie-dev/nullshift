@@ -563,21 +563,23 @@ export default async function BillingPage() {
                           background: "var(--k-bg)",
                         }}
                       >
-                        <ActionGroup label="Send signup">
-                          <form action={sendSubscriptionSignup} className="flex items-center gap-2">
-                            <input type="hidden" name="tenant_id" value={t.id} />
-                            <select name="plan" style={inp} defaultValue={plan?.id ?? "hosting"}>
-                              {CARE_PLANS.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.label} · £{p.mrr}/mo
-                                </option>
-                              ))}
-                            </select>
-                            <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
-                              Send signup
-                            </SubmitButton>
-                          </form>
-                        </ActionGroup>
+                        {!live && (
+                          <ActionGroup label="Send signup">
+                            <form action={sendSubscriptionSignup} className="flex items-center gap-2">
+                              <input type="hidden" name="tenant_id" value={t.id} />
+                              <select name="plan" style={inp} defaultValue={plan?.id ?? "hosting"}>
+                                {CARE_PLANS.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.label} · £{p.mrr}/mo
+                                  </option>
+                                ))}
+                              </select>
+                              <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
+                                Send signup
+                              </SubmitButton>
+                            </form>
+                          </ActionGroup>
+                        )}
                         {!live && (
                           <ActionGroup label="Record manually (standing order)">
                             <form

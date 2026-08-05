@@ -84,6 +84,16 @@ async function dispatchBatch(formData: FormData) {
   const repoFullName = (profile?.repo_full_name as string | null) ?? null;
   if (!repoFullName) return;
 
+  // Atomically claim the batch before the slow external call — a second
+  // click / tab / admin finds it already dispatched and does nothing.
+  const { data: claimed } = await supabase
+    .from("fix_batches")
+    .update({ status: "dispatched", dispatched_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "compiled")
+    .select("id");
+  if (!claimed?.length) return;
+
   const result = await createGithubFixIssue({
     repoFullName,
     title: `Fix batch: ${batch.title}`,
@@ -92,11 +102,7 @@ async function dispatchBatch(formData: FormData) {
   if (result) {
     await supabase
       .from("fix_batches")
-      .update({
-        github_issue_url: result.url,
-        status: "dispatched",
-        dispatched_at: new Date().toISOString(),
-      })
+      .update({ github_issue_url: result.url })
       .eq("id", id);
     await logAudit({
       action: "batch.dispatched",
@@ -104,6 +110,13 @@ async function dispatchBatch(formData: FormData) {
       tenantId: batch.tenant_id,
       metadata: { repo: repoFullName, issue_url: result.url },
     });
+  } else {
+    // Definitely not dispatched — release the claim.
+    await supabase
+      .from("fix_batches")
+      .update({ status: "compiled", dispatched_at: null })
+      .eq("id", id)
+      .eq("status", "dispatched");
   }
   revalidatePath(`/admin/batches/${id}`);
   revalidatePath("/admin/batches");
@@ -128,15 +141,24 @@ async function fireRoutineAction(formData: FormData) {
   const token = (profile?.routine_token as string | null) ?? null;
   if (!fireUrl || !token) return;
 
+  // Atomic claim before firing (see dispatchBatch).
+  const { data: claimed } = await supabase
+    .from("fix_batches")
+    .update({ status: "dispatched", dispatched_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "compiled")
+    .select("id");
+  if (!claimed?.length) return;
+
   const result = await fireRoutine({ fireUrl, token, text: batch.prompt });
   if (result) {
+    // null result means definitely-not-fired; a result (even with a null
+    // session URL) means the run started — the batch stays dispatched.
     await supabase
       .from("fix_batches")
       .update({
         routine_session_url: result.sessionUrl,
         routine_fired_at: new Date().toISOString(),
-        status: "dispatched",
-        dispatched_at: new Date().toISOString(),
       })
       .eq("id", id);
     await logAudit({
@@ -145,6 +167,12 @@ async function fireRoutineAction(formData: FormData) {
       tenantId: batch.tenant_id,
       metadata: { session_url: result.sessionUrl },
     });
+  } else {
+    await supabase
+      .from("fix_batches")
+      .update({ status: "compiled", dispatched_at: null })
+      .eq("id", id)
+      .eq("status", "dispatched");
   }
   revalidatePath(`/admin/batches/${id}`);
   revalidatePath("/admin/batches");
@@ -168,6 +196,16 @@ async function runManagedAgent(formData: FormData) {
   const repoFullName = (profile?.repo_full_name as string | null) ?? null;
   if (!repoFullName) return;
 
+  // Atomic claim before spawning (see dispatchBatch) — also prevents two
+  // sessions racing on the same claude/fix-batch-* branch.
+  const { data: claimed } = await supabase
+    .from("fix_batches")
+    .update({ status: "dispatched", dispatched_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "compiled")
+    .select("id");
+  if (!claimed?.length) return;
+
   const result = await dispatchBatchToManagedAgent({
     repoFullName,
     defaultBranch: (profile?.default_branch as string | null) ?? "main",
@@ -180,8 +218,6 @@ async function runManagedAgent(formData: FormData) {
       .update({
         ma_session_id: result.sessionId,
         ma_session_url: result.sessionUrl,
-        status: "dispatched",
-        dispatched_at: new Date().toISOString(),
       })
       .eq("id", id);
     await logAudit({
@@ -190,6 +226,12 @@ async function runManagedAgent(formData: FormData) {
       tenantId: batch.tenant_id,
       metadata: { session_id: result.sessionId, repo: repoFullName },
     });
+  } else {
+    await supabase
+      .from("fix_batches")
+      .update({ status: "compiled", dispatched_at: null })
+      .eq("id", id)
+      .eq("status", "dispatched");
   }
   revalidatePath(`/admin/batches/${id}`);
   revalidatePath("/admin/batches");
@@ -225,7 +267,12 @@ async function markShipped(formData: FormData) {
   const batch = batchRow as BatchRow;
   if (batch.status === "shipped" || batch.status === "cancelled") return;
   const { data: issueRows } = await supabase.from("issues").select("*").eq("batch_id", id);
-  const issues = (issueRows ?? []) as IssueRow[];
+  // Only issues still on the batch's happy path get shipped — anything moved
+  // to awaiting_client/closed/etc. since batching is left alone rather than
+  // force-marked "Fixed" (and never burns a credit it didn't earn).
+  const issues = ((issueRows ?? []) as IssueRow[]).filter((i) =>
+    ["batched", "in_progress", "fixed"].includes(i.status)
+  );
   const now = new Date().toISOString();
 
   await supabase
@@ -253,6 +300,7 @@ async function markShipped(formData: FormData) {
         .from("build_credit_events")
         .select("id")
         .eq("issue_id", issue.id)
+        .lt("delta", 0)
         .limit(1);
       if (!prior?.length) {
         await supabase.from("build_credit_events").insert({
@@ -285,10 +333,21 @@ async function cancelBatch(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   if (!id) return;
   const supabase = await createClient();
+  const { data: batchRow } = await supabase
+    .from("fix_batches")
+    .select("status")
+    .eq("id", id)
+    .single();
+  const batchStatus = (batchRow?.status as BatchStatus | undefined) ?? null;
+  if (!batchStatus || batchStatus === "shipped" || batchStatus === "cancelled") return;
+  // Release only issues still riding the batch — shipped/closed ones keep
+  // their state (their ledger debits and client updates already happened).
   await supabase
     .from("issues")
     .update({ status: "queued", batch_id: null })
-    .eq("batch_id", id);
+    .eq("batch_id", id)
+    .in("status", ["batched", "in_progress"]);
+  await supabase.from("issues").update({ batch_id: null }).eq("batch_id", id);
   await supabase.from("fix_batches").update({ status: "cancelled" }).eq("id", id);
   await logAudit({ action: "batch.cancelled", target: `batch:${id}`, tenantId });
   revalidatePath(`/admin/batches/${id}`);
@@ -451,7 +510,7 @@ export default async function BatchDetailPage({
       <Reveal className="block" delay={0.08}>
         <Panel label="// ACTIONS" className="mt-5">
           <div className="flex flex-col gap-4">
-            {batch.status === "compiled" && profile?.repo_full_name && (
+            {batch.status === "compiled" && profile?.repo_full_name && dispatchConfigured && (
               <div className="flex items-center gap-3 flex-wrap">
                 <form action={dispatchBatch}>
                   <input type="hidden" name="id" value={batch.id} />

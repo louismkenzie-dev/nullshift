@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@nullshift/db";
+import { createClient, createServiceClient } from "@nullshift/db";
 import { isAdminEmail } from "@nullshift/auth/admin";
 import { AdminNav } from "../AdminNav";
 import { T } from "@nullshift/ui/tokens";
@@ -77,7 +77,31 @@ export default async function DashboardLayout({
   // Team access: a real staff membership (is_internal_staff via memberships)
   // OR the transitional ADMIN_EMAILS allowlist. New team members get a
   // 'staff' membership on the internal tenant instead of an env change.
-  const { data: isStaff } = await supabase.rpc("is_internal_staff");
+  let { data: isStaff } = await supabase.rpc("is_internal_staff");
+  if (!isStaff && isAdminEmail(user.email)) {
+    // Allowlisted but no membership yet: provision one, otherwise every
+    // staff-gated RLS policy would silently return nothing for this user.
+    try {
+      const service = createServiceClient();
+      const { data: internal } = await service
+        .from("tenants")
+        .select("id")
+        .eq("type", "internal")
+        .limit(1)
+        .maybeSingle();
+      if (internal) {
+        await service
+          .from("memberships")
+          .upsert(
+            { user_id: user.id, tenant_id: internal.id, role: "staff" },
+            { onConflict: "user_id,tenant_id", ignoreDuplicates: true }
+          );
+        isStaff = true;
+      }
+    } catch (e) {
+      console.error("staff membership provisioning failed:", e);
+    }
+  }
   if (!isStaff && !isAdminEmail(user.email)) {
     return (
       <main

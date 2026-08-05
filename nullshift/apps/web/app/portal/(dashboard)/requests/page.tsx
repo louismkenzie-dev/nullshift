@@ -41,7 +41,9 @@ const dateGB = (iso: string) =>
     year: "numeric",
   });
 
-async function submitRequest(formData: FormData) {
+async function submitRequest(
+  formData: FormData
+): Promise<{ ok: boolean; error?: string }> {
   "use server";
   const kindRaw = String(formData.get("kind") || "");
   const kind = PORTAL_KINDS.find((k) => k.id === kindRaw)?.id as IssueKind | undefined;
@@ -49,13 +51,13 @@ async function submitRequest(formData: FormData) {
     .trim()
     .slice(0, 200);
   const description = String(formData.get("description") || "").trim();
-  if (!kind || !title) return;
+  if (!kind || !title) return { ok: false, error: "Pick a type and give it a title." };
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return { ok: false, error: "Your session expired — sign in again." };
 
   // Their membership → tenant (RLS lets them read their own row).
   const { data: membership } = await supabase
@@ -64,7 +66,7 @@ async function submitRequest(formData: FormData) {
     .eq("user_id", user.id)
     .limit(1)
     .maybeSingle();
-  if (!membership) return;
+  if (!membership) return { ok: false, error: "We couldn't find your workspace — email us instead." };
   const tenantId = membership.tenant_id as string;
 
   // Attach to their newest project.
@@ -112,7 +114,7 @@ async function submitRequest(formData: FormData) {
     .single();
   if (error) {
     console.error("submitRequest failed:", error.message);
-    return;
+    return { ok: false };
   }
   await logAudit({
     action: "issue.submitted",
@@ -167,6 +169,7 @@ async function submitRequest(formData: FormData) {
   }
 
   revalidatePath("/portal/requests");
+  return { ok: true };
   revalidatePath("/portal");
 }
 

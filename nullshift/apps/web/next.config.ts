@@ -24,6 +24,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    serverActions: {
+      // Portal issue reports carry phone screenshots (1.5–4MB is normal);
+      // the 1MB default rejects them before the action runs.
+      bodySizeLimit: "8mb",
+    },
+  },
 };
 
 export default nextConfig;

@@ -65,9 +65,17 @@ async function createTemplate(formData: FormData) {
     .filter(Boolean)
     .map((n) => ({ name: n }));
   const stack: Record<string, string> = {};
-  for (const k of ["framework", "database", "payments", "email", "ai"] as const) {
-    const v = String(formData.get(k) || "").trim();
-    if (v) stack[k] = v;
+  // Keyed to match the passport's STACK_KEYS ("db", not "database"), so
+  // stamped systems render every stack value on /admin/systems/[id].
+  for (const [field, key] of [
+    ["framework", "framework"],
+    ["database", "db"],
+    ["payments", "payments"],
+    ["email", "email"],
+    ["ai", "ai"],
+  ] as const) {
+    const v = String(formData.get(field) || "").trim();
+    if (v) stack[key] = v;
   }
   const supabase = await createClient();
   const { data, error } = await supabase

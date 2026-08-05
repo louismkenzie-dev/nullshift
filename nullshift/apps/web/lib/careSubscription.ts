@@ -44,13 +44,15 @@ export async function sendCareSubscriptionSignup(
   const plan = carePlan(opts.planId);
   if (!plan) return { ok: false, emailed: false };
 
-  // Already actively subscribed? no-op (don't double-bill).
+  // Already actively subscribed? no-op (don't double-bill). Deliberately does
+  // NOT require a Stripe id: manually recorded standing-order retainers are
+  // live subscriptions too, and must never be hijacked as "pending" rows and
+  // demoted to incomplete by a later signup send.
   const { data: active } = await service
     .from("subscriptions")
     .select("id")
     .eq("tenant_id", opts.tenantId)
     .in("status", ["active", "trialing", "past_due"])
-    .not("stripe_subscription_id", "is", null)
     .limit(1);
   if (active?.length) return { ok: true, emailed: false, alreadyActive: true };
 

@@ -159,12 +159,17 @@ async function triageIssue(formData: FormData) {
   }
   await supabase.from("issues").update(update).eq("id", id);
 
-  // Shipping a build_item consumes a build credit — exactly once per issue.
-  if (billing === "build_item" && status === "shipped" && cur.status !== "shipped") {
+  // A shipped build_item consumes a build credit — exactly once per issue.
+  // Deliberately NOT gated on the transition into "shipped": billing is often
+  // classified after the fact, and the debit must still land. The partial
+  // unique index build_credit_events_one_debit_per_issue (migration 0016)
+  // makes the once-per-issue guarantee hold even under concurrent saves.
+  if (billing === "build_item" && (status === "shipped" || status === "fixed")) {
     const { data: prior } = await supabase
       .from("build_credit_events")
       .select("id")
       .eq("issue_id", id)
+      .lt("delta", 0)
       .limit(1);
     if (!prior?.length) {
       await supabase.from("build_credit_events").insert({

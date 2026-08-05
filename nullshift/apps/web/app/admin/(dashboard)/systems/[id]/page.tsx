@@ -87,7 +87,12 @@ async function saveProfile(formData: FormData) {
   if (formData.has("runbook")) patch.runbook = str("runbook");
   if (formData.has("quirks")) patch.quirks = str("quirks");
   if (formData.has("routine_fire_url")) patch.routine_fire_url = str("routine_fire_url");
-  if (formData.has("routine_token")) patch.routine_token = str("routine_token");
+  // Write-only secret: only overwrite when a new value is pasted — the stored
+  // token is never sent back to the browser, so an empty field means "keep".
+  if (formData.has("routine_token")) {
+    const v = str("routine_token");
+    if (v) patch.routine_token = v;
+  }
   // Stack facts arrive as individual inputs, folded into the stack jsonb.
   if (STACK_KEYS.some((k) => formData.has(`stack_${k}`))) {
     const stack: Record<string, string> = {};
@@ -410,8 +415,11 @@ export default async function SystemPassportPage({
                     <input
                       name="routine_token"
                       type="password"
-                      defaultValue={profile?.routine_token ?? ""}
-                      placeholder="sk-ant-oat01-…"
+                      placeholder={
+                        profile?.routine_token
+                          ? "•••• token saved — paste to replace"
+                          : "sk-ant-oat01-…"
+                      }
                       autoComplete="off"
                       style={monoInp}
                     />
