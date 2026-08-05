@@ -93,10 +93,48 @@ The "Dispatch to Claude" button posts the compiled work order as a GitHub issue 
 Without the token, the button hides and you copy-paste the work order into a Claude Code
 session instead — same prompt, manual transport.
 
-Alternative transports (verified available, not yet wired): Claude Code **Routines** expose a
-per-routine HTTP fire endpoint; the **Managed Agents API** (beta) can run Anthropic-hosted
-sessions against a mounted repo. Both can replace the GitHub hop later without changing the
-compiler.
+### Transport 2 — Routines (research preview): "Fire routine"
+
+Runs the batch as a Claude Code cloud session on Anthropic's infrastructure via a
+pre-configured routine's HTTP fire endpoint. Uses your Claude subscription (routines draw
+subscription usage + a daily run cap). Setup per system, once:
+
+1. At [claude.ai/code/routines](https://claude.ai/code/routines) create a routine with the
+   system's repo attached and an **API trigger**; copy the fire URL and generated token.
+2. Set the routine's saved prompt to opt in to the fire payload (fire text arrives wrapped
+   as untrusted data — the saved prompt is what authorises acting on it). Recommended:
+
+   > You are NullShift's fix-batch runner for this repository. Work through the fix batch
+   > described in the routine-fire-payload block: fix every issue with minimal
+   > production-quality changes, run the project's typecheck/build, push a branch and open
+   > a pull request whose description lists each issue with a one-line plain-English
+   > summary. If an issue can't be fixed, say so under a "Not fixed" heading.
+
+3. Paste the fire URL + token into the system passport (`/admin/systems/[id]` → Facts).
+
+"Fire routine" on a compiled batch then POSTs the work order as the run's `text` and stores
+the returned live session URL on the batch ("Routine run" button). The endpoint ships under
+the `experimental-cc-routine-2026-04-01` beta header and may change during the preview.
+
+### Transport 3 — Managed Agents (beta): "Run managed agent"
+
+Spawns an Anthropic-hosted sandbox session from our own backend: mounts the repo, works the
+batch, pushes a `claude/fix-batch-<id>` branch. No runner timeouts; API-metered billing on
+`ANTHROPIC_API_KEY`. Requirements: `ANTHROPIC_API_KEY` + `GITHUB_DISPATCH_TOKEN` with
+**Contents: Read and write** on the repo (the token is injected by Anthropic's git proxy —
+it never enters the sandbox).
+
+The agent ("NullShift Fix Batch Runner") and its cloud environment are created lazily on
+first dispatch and persisted in `ops_settings` — never per run. The batch page shows the
+live session status (refreshes on load), the agent's latest summary, a Console link, and a
+**Compare branch / open PR** button once the branch is pushed. v1 deliberately stops at
+branch-push; adding the GitHub MCP server + vault credentials to the agent would let it
+open the PR itself (documented upgrade).
+
+Pick per batch: GitHub issue (visible in the repo, subscription-billed via the Action),
+routine (subscription-billed, watchable at claude.ai), or managed agent (API-billed,
+fastest to start, status polled into the admin). All three consume the same compiled work
+order — the compiler doesn't care about the transport.
 
 ## Intake rules (how WhatsApp dies)
 

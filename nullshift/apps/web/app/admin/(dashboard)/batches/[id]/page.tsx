@@ -10,6 +10,12 @@ import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { CopyButton } from "@/components/app/CopyButton";
 import { createGithubFixIssue } from "@/lib/ops/githubDispatch";
+import { fireRoutine } from "@/lib/ops/routineDispatch";
+import {
+  dispatchBatchToManagedAgent,
+  getManagedSessionStatus,
+  hasManagedAgentConfig,
+} from "@/lib/ops/managedAgents";
 import { currentPeriodStart } from "@/lib/carePlans";
 import type { SystemProfileRow } from "@/lib/ops/batchCompiler";
 import { SEVERITY_META, STATUS_TONE, type IssueRow } from "@/lib/ops/issues";
@@ -37,6 +43,15 @@ type BatchRow = {
   shipped_at: string | null;
   notes: string | null;
   created_at: string;
+  routine_session_url: string | null;
+  routine_fired_at: string | null;
+  ma_session_id: string | null;
+  ma_session_url: string | null;
+};
+
+type ProfileWithDispatch = SystemProfileRow & {
+  routine_fire_url: string | null;
+  routine_token: string | null;
 };
 
 type Tone = "accent" | "success" | "warning" | "danger" | "muted";
@@ -88,6 +103,92 @@ async function dispatchBatch(formData: FormData) {
       target: `batch:${id}`,
       tenantId: batch.tenant_id,
       metadata: { repo: repoFullName, issue_url: result.url },
+    });
+  }
+  revalidatePath(`/admin/batches/${id}`);
+  revalidatePath("/admin/batches");
+}
+
+async function fireRoutineAction(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+  const supabase = await createClient();
+  const { data: batchRow } = await supabase.from("fix_batches").select("*").eq("id", id).single();
+  if (!batchRow) return;
+  const batch = batchRow as BatchRow;
+  if (batch.status !== "compiled" || !batch.prompt || !batch.project_id) return;
+  const { data: profile } = await supabase
+    .from("system_profiles")
+    .select("routine_fire_url, routine_token")
+    .eq("project_id", batch.project_id)
+    .maybeSingle();
+  const fireUrl = (profile?.routine_fire_url as string | null) ?? null;
+  const token = (profile?.routine_token as string | null) ?? null;
+  if (!fireUrl || !token) return;
+
+  const result = await fireRoutine({ fireUrl, token, text: batch.prompt });
+  if (result) {
+    await supabase
+      .from("fix_batches")
+      .update({
+        routine_session_url: result.sessionUrl,
+        routine_fired_at: new Date().toISOString(),
+        status: "dispatched",
+        dispatched_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+    await logAudit({
+      action: "batch.routine_fired",
+      target: `batch:${id}`,
+      tenantId: batch.tenant_id,
+      metadata: { session_url: result.sessionUrl },
+    });
+  }
+  revalidatePath(`/admin/batches/${id}`);
+  revalidatePath("/admin/batches");
+}
+
+async function runManagedAgent(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+  const supabase = await createClient();
+  const { data: batchRow } = await supabase.from("fix_batches").select("*").eq("id", id).single();
+  if (!batchRow) return;
+  const batch = batchRow as BatchRow;
+  if (batch.status !== "compiled" || !batch.prompt || !batch.project_id) return;
+  const { data: profile } = await supabase
+    .from("system_profiles")
+    .select("repo_full_name, default_branch")
+    .eq("project_id", batch.project_id)
+    .maybeSingle();
+  const repoFullName = (profile?.repo_full_name as string | null) ?? null;
+  if (!repoFullName) return;
+
+  const result = await dispatchBatchToManagedAgent({
+    repoFullName,
+    defaultBranch: (profile?.default_branch as string | null) ?? "main",
+    workOrder: batch.prompt,
+    batchId: batch.id,
+  });
+  if (result) {
+    await supabase
+      .from("fix_batches")
+      .update({
+        ma_session_id: result.sessionId,
+        ma_session_url: result.sessionUrl,
+        status: "dispatched",
+        dispatched_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+    await logAudit({
+      action: "batch.managed_agent_started",
+      target: `batch:${id}`,
+      tenantId: batch.tenant_id,
+      metadata: { session_id: result.sessionId, repo: repoFullName },
     });
   }
   revalidatePath(`/admin/batches/${id}`);
@@ -227,16 +328,26 @@ export default async function BatchDetailPage({
         ? supabase
             .from("system_profiles")
             .select(
-              "project_id, repo_full_name, default_branch, vercel_project, supabase_ref, stack, runbook, quirks"
+              "project_id, repo_full_name, default_branch, vercel_project, supabase_ref, stack, runbook, quirks, routine_fire_url, routine_token"
             )
             .eq("project_id", batch.project_id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
     ]);
   const issues = (issueRows ?? []) as IssueRow[];
-  const profile = (profileRow as SystemProfileRow | null) ?? null;
+  const profile = (profileRow as ProfileWithDispatch | null) ?? null;
   const active = batch.status !== "shipped" && batch.status !== "cancelled";
   const dispatchConfigured = Boolean(process.env.GITHUB_DISPATCH_TOKEN);
+  const routineConfigured = Boolean(profile?.routine_fire_url && profile?.routine_token);
+  const maConfigured = hasManagedAgentConfig();
+  // Live Managed Agent session status — best-effort, refreshed on page load.
+  const maStatus = batch.ma_session_id
+    ? await getManagedSessionStatus(batch.ma_session_id)
+    : null;
+  const maBranch = `claude/fix-batch-${batch.id.slice(0, 8)}`;
+  const maCompareUrl = profile?.repo_full_name
+    ? `https://github.com/${profile.repo_full_name}/compare/${profile.default_branch ?? "main"}...${maBranch}?expand=1`
+    : null;
 
   return (
     <div>
@@ -272,6 +383,26 @@ export default async function BatchDetailPage({
                 className="kb kb-outline kb-sm"
               >
                 Pull request
+              </a>
+            )}
+            {batch.routine_session_url && (
+              <a
+                href={batch.routine_session_url}
+                target="_blank"
+                rel="noreferrer"
+                className="kb kb-outline kb-sm"
+              >
+                Routine run
+              </a>
+            )}
+            {batch.ma_session_url && (
+              <a
+                href={batch.ma_session_url}
+                target="_blank"
+                rel="noreferrer"
+                className="kb kb-outline kb-sm"
+              >
+                Agent session
               </a>
             )}
             <Link href="/admin/batches" className="kb kb-outline kb-sm">
@@ -355,6 +486,46 @@ export default async function BatchDetailPage({
               </p>
             )}
 
+            {batch.status === "compiled" && routineConfigured && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <form action={fireRoutineAction}>
+                  <input type="hidden" name="id" value={batch.id} />
+                  <SubmitButton
+                    style={btn("var(--k-accent)", "var(--k-on-accent)")}
+                    pendingLabel="Firing…"
+                  >
+                    Fire routine
+                  </SubmitButton>
+                </form>
+                <span
+                  style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+                >
+                  Starts this system&apos;s Claude Code routine on Anthropic&apos;s cloud
+                  with the work order attached — you get a live session link.
+                </span>
+              </div>
+            )}
+
+            {batch.status === "compiled" && maConfigured && profile?.repo_full_name && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <form action={runManagedAgent}>
+                  <input type="hidden" name="id" value={batch.id} />
+                  <SubmitButton
+                    style={btn("var(--k-accent)", "var(--k-on-accent)")}
+                    pendingLabel="Starting session…"
+                  >
+                    Run managed agent
+                  </SubmitButton>
+                </form>
+                <span
+                  style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+                >
+                  Anthropic-hosted sandbox session (beta): mounts {profile.repo_full_name},
+                  fixes the batch, pushes {maBranch} — no runner timeouts. API-metered.
+                </span>
+              </div>
+            )}
+
             {active && (
               <form action={recordPr} className="flex items-center gap-2 flex-wrap">
                 <input type="hidden" name="id" value={batch.id} />
@@ -402,6 +573,63 @@ export default async function BatchDetailPage({
           </div>
         </Panel>
       </Reveal>
+
+      {/* ── Managed agent session status ────────────────────── */}
+      {batch.ma_session_id && (
+        <Reveal className="block" delay={0.09}>
+          <Panel label="// AGENT SESSION" className="mt-5">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <StatusChip
+                  tone={
+                    maStatus?.status === "running"
+                      ? "accent"
+                      : maStatus?.status === "idle"
+                        ? "success"
+                        : maStatus?.status === "terminated"
+                          ? "muted"
+                          : "warning"
+                  }
+                >
+                  {maStatus?.status ?? "status unavailable"}
+                </StatusChip>
+                <span
+                  style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+                >
+                  Refreshes on page load. Idle usually means the run finished — check the
+                  summary below, then open the branch compare to review and open the PR.
+                </span>
+                {maCompareUrl && (
+                  <a
+                    href={maCompareUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="kb kb-outline kb-sm ml-auto"
+                  >
+                    Compare branch / open PR
+                  </a>
+                )}
+              </div>
+              {maStatus?.lastMessage && (
+                <pre
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 12,
+                    lineHeight: 1.6,
+                    color: "var(--k-muted)",
+                    margin: 0,
+                    maxHeight: 260,
+                    overflow: "auto",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {maStatus.lastMessage}
+                </pre>
+              )}
+            </div>
+          </Panel>
+        </Reveal>
+      )}
 
       {/* ── Issues in batch ─────────────────────────────────── */}
       <Reveal className="block" delay={0.1}>

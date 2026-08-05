@@ -43,6 +43,8 @@ type ProfileRow = {
   runbook: string | null;
   quirks: string | null;
   health: string;
+  routine_fire_url: string | null;
+  routine_token: string | null;
 };
 type PassportIssue = Pick<IssueRow, "id" | "title" | "severity" | "status" | "created_at">;
 type BatchRow = { id: string; title: string; status: string; created_at: string };
@@ -84,6 +86,8 @@ async function saveProfile(formData: FormData) {
   if (formData.has("health")) patch.health = String(formData.get("health") || "unknown");
   if (formData.has("runbook")) patch.runbook = str("runbook");
   if (formData.has("quirks")) patch.quirks = str("quirks");
+  if (formData.has("routine_fire_url")) patch.routine_fire_url = str("routine_fire_url");
+  if (formData.has("routine_token")) patch.routine_token = str("routine_token");
   // Stack facts arrive as individual inputs, folded into the stack jsonb.
   if (STACK_KEYS.some((k) => formData.has(`stack_${k}`))) {
     const stack: Record<string, string> = {};
@@ -224,7 +228,7 @@ export default async function SystemPassportPage({
     supabase
       .from("system_profiles")
       .select(
-        "project_id, tenant_id, repo_full_name, default_branch, vercel_project, supabase_ref, stack, env_checklist, features, runbook, quirks, health"
+        "project_id, tenant_id, repo_full_name, default_branch, vercel_project, supabase_ref, stack, env_checklist, features, runbook, quirks, health, routine_fire_url, routine_token"
       )
       .eq("project_id", id)
       .maybeSingle(),
@@ -393,6 +397,38 @@ export default async function SystemPassportPage({
                     </Field>
                   ))}
                 </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <Field label="Routine fire URL">
+                    <input
+                      name="routine_fire_url"
+                      defaultValue={profile?.routine_fire_url ?? ""}
+                      placeholder="https://api.anthropic.com/v1/claude_code/routines/…/fire"
+                      style={monoInp}
+                    />
+                  </Field>
+                  <Field label="Routine token">
+                    <input
+                      name="routine_token"
+                      type="password"
+                      defaultValue={profile?.routine_token ?? ""}
+                      placeholder="sk-ant-oat01-…"
+                      autoComplete="off"
+                      style={monoInp}
+                    />
+                  </Field>
+                </div>
+                <p
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    color: "var(--k-faint)",
+                    margin: 0,
+                  }}
+                >
+                  From claude.ai/code/routines: a routine with this repo + an API trigger.
+                  Its saved prompt must say to act on the routine-fire-payload block — see
+                  docs/OPERATIONS.md. Enables &quot;Fire routine&quot; on fix batches.
+                </p>
                 <div>
                   <SubmitButton style={btn("var(--k-accent)", T.primaryFg)}>
                     Save facts
