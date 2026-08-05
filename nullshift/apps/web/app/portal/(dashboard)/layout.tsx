@@ -91,11 +91,13 @@ export default async function PortalLayout({ children }: { children: React.React
       <PortalHeader email={user.email!} />
       {needsDpa && project ? (
         <main
+          className="px-4 sm:px-6"
           style={{
             flex: 1,
             display: "flex",
             justifyContent: "center",
-            padding: "40px 24px",
+            paddingTop: 40,
+            paddingBottom: 40,
           }}
         >
           <div style={{ maxWidth: 640, width: "100%" }}>

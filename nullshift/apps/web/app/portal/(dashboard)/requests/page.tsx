@@ -182,7 +182,10 @@ export default async function PortalRequestsPage() {
   const issueList = (issues ?? []) as PortalIssue[];
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 16px 56px" }}>
+    <div
+      className="px-4 sm:px-6"
+      style={{ maxWidth: 760, margin: "0 auto", paddingTop: 28, paddingBottom: 56 }}
+    >
       <PageHeader
         index="02"
         label="REQUESTS"
@@ -221,8 +224,9 @@ export default async function PortalRequestsPage() {
                         borderTop: i ? "1px solid var(--k-border)" : "none",
                       }}
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
                         <span
+                          className="min-w-0 break-words"
                           style={{
                             fontFamily: T.sans,
                             fontWeight: 600,

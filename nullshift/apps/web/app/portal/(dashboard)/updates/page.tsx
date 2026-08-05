@@ -99,7 +99,10 @@ export default async function PortalUpdatesPage() {
   );
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 16px 56px" }}>
+    <div
+      className="px-4 sm:px-6"
+      style={{ maxWidth: 760, margin: "0 auto", paddingTop: 28, paddingBottom: 56 }}
+    >
       <PageHeader
         index="03"
         label="UPDATES"
@@ -132,14 +135,14 @@ export default async function PortalUpdatesPage() {
                   </p>
                 )}
                 {(d.options ?? []).length > 0 ? (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     {(d.options ?? []).map((opt) => (
-                      <form key={opt.id} action={decide}>
+                      <form key={opt.id} action={decide} className="min-w-0 sm:flex-1">
                         <input type="hidden" name="id" value={d.id} />
                         <input type="hidden" name="tenant_id" value={d.tenant_id} />
                         <input type="hidden" name="option_id" value={opt.id} />
                         <SubmitButton
-                          className="flex flex-col gap-1 text-left w-full"
+                          className="flex flex-col gap-1 text-left w-full h-full"
                           pendingLabel="Saving your choice…"
                           style={{
                             padding: "13px 14px",
@@ -220,14 +223,15 @@ export default async function PortalUpdatesPage() {
             return (
               <Reveal key={u.id} delay={Math.min(i, 8) * 0.04}>
                 <div
-                  className="k-kard"
+                  className="k-kard min-w-0"
                   style={{ background: "var(--k-surface)", padding: "16px 18px" }}
                 >
                   <div
-                    className="flex items-center justify-between gap-3"
+                    className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
                     style={{ marginBottom: u.body || images.length ? 8 : 0 }}
                   >
                     <span
+                      className="min-w-0 break-words"
                       style={{
                         fontFamily: T.sans,
                         fontWeight: 600,

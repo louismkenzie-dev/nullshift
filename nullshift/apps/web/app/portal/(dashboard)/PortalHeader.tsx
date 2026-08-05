@@ -35,6 +35,7 @@ export function PortalHeader({ email }: { email: string }) {
   const pathname = usePathname();
   return (
     <header
+      className="pt-[env(safe-area-inset-top)]"
       style={{
         borderBottom: `1px solid var(--k-border)`,
         background: "rgba(10,10,10,0.72)",
@@ -122,7 +123,7 @@ export function PortalHeader({ email }: { email: string }) {
         style={{ borderTop: "1px solid var(--k-border)" }}
       >
         <div
-          className="flex items-center gap-5 overflow-x-auto"
+          className="flex items-center gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{ maxWidth: 880, margin: "0 auto", padding: "0 16px" }}
         >
           {NAV.map((item) => {

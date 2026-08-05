@@ -87,7 +87,10 @@ export default async function PortalPlanPage() {
   );
 
   return (
-    <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 16px 56px" }}>
+    <div
+      className="px-4 sm:px-6"
+      style={{ maxWidth: 760, margin: "0 auto", paddingTop: 28, paddingBottom: 56 }}
+    >
       <PageHeader
         index="04"
         label="YOUR PLAN"
@@ -201,8 +204,8 @@ export default async function PortalPlanPage() {
                   sub={`of ${plan.buildAllowance} this month — resets on the 1st`}
                   accent={remaining > 0}
                 />
-                <div className="flex flex-col justify-center gap-2" style={{ padding: 18 }}>
-                  <div className="flex items-center gap-1">
+                <div className="flex flex-col justify-center gap-2 min-w-0" style={{ padding: 18 }}>
+                  <div className="flex flex-wrap items-center gap-1">
                     {Array.from({ length: plan.buildAllowance }).map((_, i) => (
                       <span
                         key={i}
@@ -254,7 +257,7 @@ export default async function PortalPlanPage() {
                       borderTop: i ? "1px solid var(--k-border)" : "none",
                     }}
                   >
-                    <div className="flex flex-col">
+                    <div className="flex flex-col min-w-0">
                       <span
                         style={{
                           fontFamily: T.sans,

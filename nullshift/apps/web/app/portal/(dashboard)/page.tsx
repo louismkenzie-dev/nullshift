@@ -138,7 +138,10 @@ export default async function PortalHome({
   const hasActiveProposal = projectList.some((p) => p.proposal_status !== "draft");
   if (!hasActiveProposal) {
     return (
-      <div style={{ maxWidth: 560, margin: "0 auto", padding: "64px 20px" }}>
+      <div
+        className="px-4 sm:px-6"
+        style={{ maxWidth: 560, margin: "0 auto", paddingTop: 64, paddingBottom: 64 }}
+      >
         <Reveal>
           <Panel className="k-kard-h">
             <div className="flex flex-col items-center text-center" style={{ gap: 14 }}>
@@ -174,7 +177,10 @@ export default async function PortalHome({
   const systems = projectList.filter((p) => p.proposal_status !== "draft");
 
   return (
-    <div style={{ maxWidth: 880, margin: "0 auto", padding: "28px 16px 56px" }}>
+    <div
+      className="px-4 sm:px-6"
+      style={{ maxWidth: 880, margin: "0 auto", paddingTop: 28, paddingBottom: 56 }}
+    >
       {/* Stripe Checkout success return — their care plan just went live. */}
       {care === "active" && (
         <Reveal>
@@ -213,7 +219,7 @@ export default async function PortalHome({
         {systems.map((p, i) => (
           <Reveal key={p.id} delay={i * 0.05}>
             <div
-              className="k-kard k-kard-h"
+              className="k-kard k-kard-h min-w-0"
               style={{ background: "var(--k-surface)", padding: "18px 20px" }}
             >
               <div
@@ -221,6 +227,7 @@ export default async function PortalHome({
                 style={{ marginBottom: 12 }}
               >
                 <span
+                  className="min-w-0 break-words"
                   style={{
                     fontFamily: T.sans,
                     fontWeight: 700,
@@ -272,7 +279,7 @@ export default async function PortalHome({
                 <Link
                   key={iss.id}
                   href="/portal/requests"
-                  className="flex items-center justify-between gap-3"
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5"
                   style={{
                     padding: "10px 0",
                     borderTop: i ? "1px solid var(--k-border)" : "none",
@@ -280,6 +287,7 @@ export default async function PortalHome({
                   }}
                 >
                   <span
+                    className="min-w-0 break-words"
                     style={{
                       fontFamily: T.sans,
                       fontSize: "0.9rem",
@@ -311,7 +319,7 @@ export default async function PortalHome({
                 <Link
                   key={d.id}
                   href="/portal/updates"
-                  className="flex items-center justify-between gap-3"
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5"
                   style={{
                     padding: "10px 0",
                     borderTop: i ? "1px solid var(--k-border)" : "none",
@@ -319,6 +327,7 @@ export default async function PortalHome({
                   }}
                 >
                   <span
+                    className="min-w-0 break-words"
                     style={{
                       fontFamily: T.sans,
                       fontSize: "0.9rem",
@@ -371,7 +380,7 @@ export default async function PortalHome({
                 <Link
                   key={u.id}
                   href="/portal/updates"
-                  className="flex items-center justify-between gap-3"
+                  className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
                   style={{
                     padding: "10px 0",
                     borderTop: i ? "1px solid var(--k-border)" : "none",
@@ -379,6 +388,7 @@ export default async function PortalHome({
                   }}
                 >
                   <span
+                    className="min-w-0 break-words"
                     style={{
                       fontFamily: T.sans,
                       fontSize: "0.9rem",
@@ -450,7 +460,7 @@ export default async function PortalHome({
               </p>
               {plan.buildAllowance > 0 && (
                 <div className="flex flex-col gap-1.5" style={{ marginTop: 4 }}>
-                  <div className="flex items-center gap-1">
+                  <div className="flex flex-wrap items-center gap-1">
                     {Array.from({ length: plan.buildAllowance }).map((_, i) => (
                       <span
                         key={i}
@@ -498,14 +508,14 @@ export default async function PortalHome({
               {billed.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-center justify-between gap-3"
+                  className="flex flex-wrap items-center justify-between gap-3"
                   style={{
                     padding: "12px 14px",
                     background: "var(--k-bg)",
                     border: "1px solid var(--k-border)",
                   }}
                 >
-                  <div className="flex flex-col">
+                  <div className="flex flex-col min-w-0">
                     <span
                       style={{
                         fontFamily: T.sans,
