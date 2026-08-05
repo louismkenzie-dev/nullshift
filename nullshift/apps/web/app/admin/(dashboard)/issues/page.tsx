@@ -311,10 +311,19 @@ export default async function IssuesPage({
               {s.replace(/_/g, " ")}
             </Link>
           ))}
-          <form method="get" action="/admin/issues" className="flex items-center gap-2 ml-auto">
+          <form
+            method="get"
+            action="/admin/issues"
+            className="flex flex-wrap items-center gap-2 ml-auto max-md:ml-0 max-md:w-full"
+          >
             {statusFilter && <input type="hidden" name="status" value={statusFilter} />}
             {projectFilter && <input type="hidden" name="project" value={projectFilter} />}
-            <select name="tenant" defaultValue={tenantFilter ?? ""} style={inp}>
+            <select
+              name="tenant"
+              defaultValue={tenantFilter ?? ""}
+              className="min-w-0 max-md:flex-1"
+              style={{ ...inp, maxWidth: "100%" }}
+            >
               <option value="">All clients</option>
               {tenants.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -332,7 +341,13 @@ export default async function IssuesPage({
         <Panel label="// LOG ISSUE" className="mt-5">
           <form action={createIssue} className="flex items-end gap-2 flex-wrap">
             <Field label="System">
-              <select name="project_id" required defaultValue="" style={inp}>
+              <select
+                name="project_id"
+                required
+                defaultValue=""
+                className="max-md:w-full"
+                style={{ ...inp, maxWidth: "100%" }}
+              >
                 <option value="" disabled>
                   Client — project…
                 </option>
@@ -344,17 +359,24 @@ export default async function IssuesPage({
               </select>
             </Field>
             <Field label="Title">
-              <input name="title" required placeholder="What happened?" style={{ ...inp, width: 240 }} />
+              <input
+                name="title"
+                required
+                placeholder="What happened?"
+                className="w-full md:w-[240px]"
+                style={inp}
+              />
             </Field>
             <Field label="Description">
               <input
                 name="description"
                 placeholder="Detail (optional)"
-                style={{ ...inp, width: 260 }}
+                className="w-full md:w-[260px]"
+                style={inp}
               />
             </Field>
             <Field label="Kind">
-              <select name="kind" defaultValue="bug" style={inp}>
+              <select name="kind" defaultValue="bug" className="max-md:w-full" style={inp}>
                 {KINDS.map((k) => (
                   <option key={k} value={k}>
                     {KIND_LABEL[k]}
@@ -363,7 +385,7 @@ export default async function IssuesPage({
               </select>
             </Field>
             <Field label="Severity">
-              <select name="severity" defaultValue="normal" style={inp}>
+              <select name="severity" defaultValue="normal" className="max-md:w-full" style={inp}>
                 {SEVERITIES.map((s) => (
                   <option key={s} value={s}>
                     {SEVERITY_META[s].label}
@@ -372,7 +394,7 @@ export default async function IssuesPage({
               </select>
             </Field>
             <Field label="Source">
-              <select name="source" defaultValue="internal" style={inp}>
+              <select name="source" defaultValue="internal" className="max-md:w-full" style={inp}>
                 {SOURCES.map((s) => (
                   <option key={s} value={s}>
                     {SOURCE_LABEL[s]}
@@ -434,7 +456,7 @@ export default async function IssuesPage({
       {/* ── Issue table ─────────────────────────────────────── */}
       <div className="mt-5" style={{ border: "1px solid var(--k-border)" }}>
         <div
-          className="grid gap-3 items-center px-4 py-2.5"
+          className="max-md:hidden md:grid gap-3 items-center px-4 py-2.5"
           style={{
             gridTemplateColumns: GRID,
             background: "var(--k-surface)",
@@ -476,10 +498,10 @@ export default async function IssuesPage({
             <Reveal key={issue.id} delay={Math.min(i, 8) * 0.04}>
               <details style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}>
                 <summary
-                  className="grid gap-3 items-center px-4 py-3 list-none hover:bg-[var(--k-surface)] transition-colors"
+                  className="max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-2 max-md:gap-y-1.5 md:grid md:gap-3 items-center px-4 py-3 list-none hover:bg-[var(--k-surface)] transition-colors"
                   style={{ gridTemplateColumns: GRID, cursor: "pointer" }}
                 >
-                  <span className="min-w-0">
+                  <span className="min-w-0 max-md:w-full">
                     <span
                       className="block truncate"
                       style={{
@@ -505,7 +527,7 @@ export default async function IssuesPage({
                     </span>
                     {ai && issue.billing === "unclassified" && (
                       <span
-                        className="block truncate"
+                        className="block max-md:break-words md:truncate"
                         style={{
                           fontFamily: T.mono,
                           fontSize: "10px",
@@ -582,7 +604,7 @@ export default async function IssuesPage({
                   <form action={triageIssue} className="flex items-end gap-2 flex-wrap">
                     <input type="hidden" name="id" value={issue.id} />
                     <Field label="Kind">
-                      <select name="kind" defaultValue={issue.kind} style={inp}>
+                      <select name="kind" defaultValue={issue.kind} className="max-md:w-full" style={inp}>
                         {KINDS.map((k) => (
                           <option key={k} value={k}>
                             {KIND_LABEL[k]}
@@ -591,7 +613,7 @@ export default async function IssuesPage({
                       </select>
                     </Field>
                     <Field label="Severity">
-                      <select name="severity" defaultValue={issue.severity} style={inp}>
+                      <select name="severity" defaultValue={issue.severity} className="max-md:w-full" style={inp}>
                         {SEVERITIES.map((s) => (
                           <option key={s} value={s}>
                             {SEVERITY_META[s].label}
@@ -600,7 +622,7 @@ export default async function IssuesPage({
                       </select>
                     </Field>
                     <Field label="Billing">
-                      <select name="billing" defaultValue={issue.billing} style={inp}>
+                      <select name="billing" defaultValue={issue.billing} className="max-md:w-full" style={inp}>
                         {BILLINGS.map((b) => (
                           <option key={b} value={b}>
                             {BILLING_LABEL[b]}
@@ -609,7 +631,7 @@ export default async function IssuesPage({
                       </select>
                     </Field>
                     <Field label="Status">
-                      <select name="status" defaultValue={issue.status} style={inp}>
+                      <select name="status" defaultValue={issue.status} className="max-md:w-full" style={inp}>
                         {ALL_STATUSES.map((s) => (
                           <option key={s} value={s}>
                             {s.replace(/_/g, " ")}
@@ -624,7 +646,8 @@ export default async function IssuesPage({
                         step="0.5"
                         min="0"
                         defaultValue={issue.build_items ?? ""}
-                        style={{ ...inp, width: 80 }}
+                        className="w-full md:w-[80px]"
+                        style={inp}
                       />
                     </Field>
                     <Field label="Quoted £">
@@ -634,7 +657,8 @@ export default async function IssuesPage({
                         step="0.01"
                         min="0"
                         defaultValue={issue.quoted_price ?? ""}
-                        style={{ ...inp, width: 100 }}
+                        className="w-full md:w-[100px]"
+                        style={inp}
                       />
                     </Field>
                     <Field label="Due">
@@ -642,7 +666,8 @@ export default async function IssuesPage({
                         name="due_at"
                         type="date"
                         defaultValue={issue.due_at ? issue.due_at.slice(0, 10) : ""}
-                        style={inp}
+                        className="max-md:w-full"
+                        style={{ ...inp, maxWidth: "100%" }}
                       />
                     </Field>
                     <label className="flex items-center gap-2" style={{ ...check, height: 36 }}>
@@ -654,7 +679,8 @@ export default async function IssuesPage({
                         name="promised_note"
                         defaultValue={issue.promised_note ?? ""}
                         placeholder="What was promised"
-                        style={{ ...inp, width: 190 }}
+                        className="w-full md:w-[190px]"
+                        style={inp}
                       />
                     </Field>
                     <label className="flex items-center gap-2" style={{ ...check, height: 36 }}>
@@ -670,7 +696,8 @@ export default async function IssuesPage({
                         name="resolution_note"
                         defaultValue={issue.resolution_note ?? ""}
                         placeholder="Plain-English fix summary"
-                        style={{ ...inp, width: 240 }}
+                        className="w-full md:w-[240px]"
+                        style={inp}
                       />
                     </Field>
                     <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
@@ -678,7 +705,7 @@ export default async function IssuesPage({
                     </SubmitButton>
                   </form>
                   {OPEN_STATUSES.includes(issue.status) && (
-                    <div className="flex items-center gap-2 mt-3">
+                    <div className="flex flex-wrap items-center gap-2 mt-3">
                       {issue.status !== "queued" && issue.status !== "batched" && (
                         <form action={queueIssue}>
                           <input type="hidden" name="id" value={issue.id} />
@@ -709,7 +736,7 @@ export default async function IssuesPage({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1">
+    <label className="flex flex-col gap-1 min-w-0 max-md:w-full">
       <span
         style={{
           fontFamily: T.mono,
