@@ -5,16 +5,17 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
+  Boxes,
+  Bug,
+  Zap,
   Inbox,
-  Receipt,
-  ShieldCheck,
-  ListChecks,
-  Calendar,
-  Megaphone,
-  KeyRound,
-  UsersRound,
-  Mail,
+  Funnel,
   Building2,
+  Receipt,
+  Copy,
+  ShieldCheck,
+  Calendar,
+  KeyRound,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@nullshift/db/client";
@@ -24,28 +25,35 @@ import { LogoMark } from "@nullshift/ui/components/Logo";
 type NavItem = { label: string; href: string; Icon: LucideIcon };
 type NavGroup = { section: string; items: NavItem[] };
 
-// Ordered by the client lifecycle: inquiry → call (Pipeline) → portal, proposal,
-// DPA, build edits, notes (Delivery) → itemised invoice (Billing) → compliance.
+// Ordered by how the agency runs: Operate (the daily cockpit — mission control,
+// the fleet, the issue bank, fix batches, raw intake) → Commercial (winning and
+// billing clients) → Admin (the paperwork that keeps it all legal and safe).
 const groups: NavGroup[] = [
   {
-    section: "Lifecycle",
+    section: "Operate",
     items: [
       { label: "Dashboard", href: "/admin", Icon: LayoutDashboard },
-      { label: "Pipeline", href: "/admin/pipeline", Icon: Inbox },
-      { label: "Clients", href: "/admin/clients", Icon: Building2 },
-      { label: "Billing", href: "/admin/billing", Icon: Receipt },
-      { label: "Compliance", href: "/admin/compliance", Icon: ShieldCheck },
+      { label: "Systems", href: "/admin/systems", Icon: Boxes },
+      { label: "Issues", href: "/admin/issues", Icon: Bug },
+      { label: "Batches", href: "/admin/batches", Icon: Zap },
+      { label: "Inbox", href: "/admin/inbox", Icon: Inbox },
     ],
   },
   {
-    section: "Tools",
+    section: "Commercial",
     items: [
-      { label: "Enquiries", href: "/admin/enquiries", Icon: Mail },
-      { label: "Tasks", href: "/admin/tasks", Icon: ListChecks },
+      { label: "Pipeline", href: "/admin/pipeline", Icon: Funnel },
+      { label: "Clients", href: "/admin/clients", Icon: Building2 },
+      { label: "Billing", href: "/admin/billing", Icon: Receipt },
+      { label: "Templates", href: "/admin/templates", Icon: Copy },
+    ],
+  },
+  {
+    section: "Admin",
+    items: [
+      { label: "Compliance", href: "/admin/compliance", Icon: ShieldCheck },
       { label: "Calendar", href: "/admin/calendar", Icon: Calendar },
-      { label: "Marketing", href: "/admin/marketing", Icon: Megaphone },
       { label: "Security", href: "/admin/security", Icon: KeyRound },
-      { label: "Users", href: "/admin/users", Icon: UsersRound },
     ],
   },
 ];
@@ -281,7 +289,7 @@ export function AdminNav({ email }: { email: string }) {
           </button>
         </div>
 
-        {/* Nav links — grouped by lifecycle */}
+        {/* Nav links — grouped: Operate / Commercial / Admin */}
         <nav className="flex flex-col gap-1 px-4 py-5 flex-1 overflow-y-auto">
           {groups.map((group) => (
             <div key={group.section} className="mb-2">

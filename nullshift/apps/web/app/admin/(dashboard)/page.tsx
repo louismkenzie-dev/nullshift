@@ -1,187 +1,154 @@
-"use client";
-
-import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { createClient } from "@nullshift/db/client";
+import { createClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
 import { formatCallDate, formatCallTime, money, LONDON_TZ } from "@nullshift/ui/format";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
+import { OPEN_STATUSES, SEVERITY_META, type IssueRow } from "@/lib/ops/issues";
 
-// Dashboard reads the unified multi-tenant model: calls + projects + invoices are
-// all tenant-scoped, and every client link points at the unified hub
-// /admin/clients/[tenantId].
-type Call = {
+/**
+ * Mission Control — one glance = state of the whole agency. Every open issue,
+ * every batch in flight, every promise made to a client and every call this
+ * week, folded from a handful of bulk queries (no N+1). Staff-only via RLS.
+ */
+
+export const dynamic = "force-dynamic";
+
+type DashIssue = Pick<
+  IssueRow,
+  | "id"
+  | "tenant_id"
+  | "project_id"
+  | "severity"
+  | "status"
+  | "title"
+  | "due_at"
+  | "promised_at"
+  | "promised_note"
+  | "created_at"
+>;
+type BatchRow = {
+  id: string;
+  tenant_id: string;
+  project_id: string | null;
+  title: string;
+  status: string;
+  created_at: string;
+};
+type SubRow = { tenant_id: string; mrr: number; status: string };
+type CallRow = {
   id: string;
   tenant_id: string;
   call_date: string;
   call_time: string;
   duration_min: number;
-  status: string;
-  tenants: { name: string } | null;
 };
 
-type Enquiry = {
-  id: string;
-  created_at: string;
-  name: string;
-  business_name: string | null;
-  email: string;
-  status: string;
-  source: string;
+// Batch lifecycle → signal tone (draft is quiet, shipped/cancelled never shown here).
+const BATCH_TONE: Record<string, "accent" | "success" | "warning" | "danger" | "muted"> = {
+  draft: "muted",
+  compiled: "accent",
+  dispatched: "accent",
+  pr_open: "warning",
 };
 
-type AwaitingProject = {
-  id: string;
-  tenant_id: string;
-  name: string;
-  proposal_status: string;
-  tenants: { name: string } | null;
-};
-
-type InvoiceRow = { amount: number; status: string; created_at: string };
-
-const pad = (n: number) => String(n).padStart(2, "0");
-const londonToday = () => new Date().toLocaleDateString("en-CA", { timeZone: LONDON_TZ });
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-// KYMA app-surface tokens (dark): the dashboard wears the same hairline /
-// emerald language as the marketing site via the shared --k-* vars.
-const monoLabel: React.CSSProperties = {
+const mono: React.CSSProperties = {
   fontFamily: T.mono,
-  fontSize: "0.62rem",
+  fontSize: 10,
   fontWeight: 500,
-  letterSpacing: "0.1em",
+  letterSpacing: "0.08em",
   textTransform: "uppercase",
-  color: "var(--k-muted)",
 };
 
-export default function DashboardPage() {
-  const supabase = createClient();
-  const [calls, setCalls] = useState<Call[]>([]);
-  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
-  const [awaiting, setAwaiting] = useState<AwaitingProject[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
-  const [loading, setLoading] = useState(true);
+export default async function MissionControlPage() {
+  const supabase = await createClient();
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: LONDON_TZ });
+  const weekEnd = new Date();
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const weekEndStr = weekEnd.toLocaleDateString("en-CA", { timeZone: LONDON_TZ });
 
-  const todayStr = londonToday();
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [
-      { data: callsData },
-      { data: enqData },
-      { data: awaitingData },
-      { data: invoiceData },
-    ] = await Promise.all([
+  const [{ data: issuesRaw }, { data: batchesRaw }, { data: subsRaw }, { data: callsRaw }] =
+    await Promise.all([
       supabase
-        .from("calls")
+        .from("issues")
         .select(
-          "id, tenant_id, call_date, call_time, duration_min, status, tenants(name)"
+          "id, tenant_id, project_id, severity, status, title, due_at, promised_at, promised_note, created_at"
         )
-        .eq("status", "confirmed")
-        .gte("call_date", todayStr)
-        .order("call_date")
-        .order("call_time"),
-      supabase
-        .from("enquiries")
-        .select("id, created_at, name, business_name, email, status, source")
-        .neq("status", "converted")
+        .in("status", OPEN_STATUSES)
         .order("created_at", { ascending: false }),
       supabase
-        .from("projects")
-        .select("id, tenant_id, name, proposal_status, tenants(name)")
-        .eq("proposal_status", "sent")
-        .order("proposal_sent_at", { ascending: false }),
-      supabase.from("invoices").select("amount, status, created_at"),
+        .from("fix_batches")
+        .select("id, tenant_id, project_id, title, status, created_at")
+        .not("status", "in", "(shipped,cancelled)")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("subscriptions")
+        .select("tenant_id, mrr, status")
+        .in("status", ["active", "trialing"]),
+      supabase
+        .from("calls")
+        .select("id, tenant_id, call_date, call_time, duration_min")
+        .eq("status", "confirmed")
+        .gte("call_date", todayStr)
+        .lte("call_date", weekEndStr)
+        .order("call_date")
+        .order("call_time"),
     ]);
-    setCalls((callsData as unknown as Call[]) ?? []);
-    setEnquiries((enqData as Enquiry[]) ?? []);
-    setAwaiting((awaitingData as unknown as AwaitingProject[]) ?? []);
-    setInvoices((invoiceData as InvoiceRow[]) ?? []);
-    setLoading(false);
-  }, [supabase, todayStr]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const issues = (issuesRaw ?? []) as DashIssue[];
+  const batches = (batchesRaw ?? []) as BatchRow[];
+  const subs = (subsRaw ?? []) as SubRow[];
+  const calls = (callsRaw ?? []) as CallRow[];
 
-  const nextCall = calls[0] ?? null;
-  const newEnquiries = enquiries.filter((e) => e.status === "new");
+  // Join issues/batches/calls to tenants + projects in memory (bulk + fold).
+  const tenantIds = [
+    ...new Set([...issues, ...batches, ...calls].map((r) => r.tenant_id)),
+  ];
+  const projectIds = [
+    ...new Set(
+      [...issues, ...batches].map((r) => r.project_id).filter((p): p is string => !!p)
+    ),
+  ];
+  const [{ data: tenantsRaw }, { data: projectsRaw }] = await Promise.all([
+    tenantIds.length
+      ? supabase.from("tenants").select("id, name").in("id", tenantIds)
+      : Promise.resolve({ data: [] }),
+    projectIds.length
+      ? supabase.from("projects").select("id, name").in("id", projectIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const tenantName = new Map(
+    ((tenantsRaw ?? []) as { id: string; name: string }[]).map((t) => [t.id, t.name])
+  );
+  const projectName = new Map(
+    ((projectsRaw ?? []) as { id: string; name: string }[]).map((p) => [p.id, p.name])
+  );
 
-  // Invoiced this month (the unified income signal — invoices come from the
-  // itemised build modules on each client's hub).
-  const monthlyIncome = invoices
-    .filter((inv) => {
-      const d = new Date(inv.created_at);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    })
-    .reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+  const now = Date.now();
+  const isOverdue = (i: DashIssue) => !!i.due_at && new Date(i.due_at).getTime() < now;
 
-  // Mini calendar
-  const calView = useMemo(() => {
-    const [y, m] = todayStr.split("-").map(Number);
-    return { y, m: m - 1 };
-  }, [todayStr]);
+  // Needs attention: critical + high first (critical before high), then anything
+  // else that has blown past its due date.
+  const critHigh = issues.filter((i) => i.severity === "critical" || i.severity === "high");
+  critHigh.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "critical" ? -1 : 1));
+  const overdueRest = issues.filter(
+    (i) => i.severity !== "critical" && i.severity !== "high" && isOverdue(i)
+  );
+  const needsAttention = [...critHigh, ...overdueRest];
 
-  const callDates = useMemo(() => {
-    const s = new Set<string>();
-    for (const c of calls) s.add(c.call_date);
-    return s;
-  }, [calls]);
-
-  const cells = useMemo(() => {
-    const firstWeekday = (new Date(calView.y, calView.m, 1).getDay() + 6) % 7;
-    const daysInMonth = new Date(calView.y, calView.m + 1, 0).getDate();
-    const out: { day: number; key: string; inMonth: boolean }[] = [];
-    for (let i = 0; i < firstWeekday; i++)
-      out.push({ day: 0, key: `pre-${i}`, inMonth: false });
-    for (let d = 1; d <= daysInMonth; d++) {
-      out.push({
-        day: d,
-        key: `${calView.y}-${pad(calView.m + 1)}-${pad(d)}`,
-        inMonth: true,
-      });
-    }
-    return out;
-  }, [calView]);
-
-  const todayDay = parseInt(todayStr.split("-")[2]);
-
-  if (loading) {
-    return (
-      <p style={{ fontFamily: T.mono, fontSize: "12px", color: "var(--k-muted)" }}>
-        Loading dashboard…
-      </p>
-    );
-  }
+  const blocked = issues.filter((i) => i.status === "awaiting_client");
+  const promises = issues.filter((i) => i.promised_at !== null);
+  const mrr = subs.reduce((sum, s) => sum + (Number(s.mrr) || 0), 0);
 
   return (
     <div>
-      {/* Header */}
       <PageHeader
         index="01"
-        label="OVERVIEW"
-        title="DASHBOARD"
+        label="Overview"
+        title="Mission control"
+        lead="The whole agency in one glance — what to fix first, who we're waiting on, what we've promised and what's in flight."
         actions={
-          <span style={{ ...monoLabel, fontSize: "0.66rem" }}>
+          <span style={{ ...mono, fontSize: 11, color: "var(--k-muted)" }}>
             {new Date().toLocaleDateString("en-GB", {
               weekday: "long",
               day: "numeric",
@@ -191,30 +158,15 @@ export default function DashboardPage() {
             })}
           </span>
         }
-        className="mb-8"
       />
 
       {/* Stat row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8 mb-6">
         {[
-          {
-            value: money(monthlyIncome),
-            label: "Invoiced this month",
-            sub: `${MONTHS[currentMonth]} ${currentYear}`,
-            accent: true,
-          },
-          {
-            value: String(newEnquiries.length),
-            label: "New enquiries",
-            sub: "Awaiting action",
-            accent: false,
-          },
-          {
-            value: String(awaiting.length),
-            label: "Awaiting acceptance",
-            sub: "Proposals sent to clients",
-            accent: false,
-          },
+          { value: String(issues.length), label: "Open issues", sub: "Across every system", accent: false },
+          { value: String(critHigh.length), label: "Critical / high", sub: "Fix these first", accent: false },
+          { value: String(batches.length), label: "Batches in flight", sub: "Compiled → shipped", accent: false },
+          { value: money(mrr), label: "MRR", sub: "Active + trialing plans", accent: true },
         ].map((s, i) => (
           <Reveal key={s.label} delay={i * 0.05}>
             <StatCard value={s.value} label={s.label} sub={s.sub} accent={s.accent} />
@@ -222,360 +174,234 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Main grid */}
-      <div className="grid lg:grid-cols-[1fr_320px] gap-6">
-        {/* Left: tasks */}
+      <div className="grid lg:grid-cols-[1fr_360px] gap-6 items-start">
+        {/* Left: the work */}
         <div className="flex flex-col gap-6">
-          {/* New enquiries */}
+          {/* Needs attention rail */}
           <Reveal delay={0.1}>
             <Panel
-              label="// INBOX"
-              title="New enquiries"
+              label="// NEEDS ATTENTION"
+              title="Fix first"
               pad={false}
-              actions={<ViewAll href="/admin/enquiries" />}
+              actions={<ViewAll href="/admin/issues" />}
             >
-              {newEnquiries.length === 0 ? (
-                <EmptyState text="No new enquiries — you're all caught up." />
+              {needsAttention.length === 0 ? (
+                <EmptyState text="Nothing on fire — no critical, high or overdue issues." />
               ) : (
-                <>
-                  {newEnquiries.slice(0, 6).map((e, i) => (
-                    <Link
-                      key={e.id}
-                      href="/admin/enquiries"
-                      className="flex items-center justify-between py-3.5 px-4 transition-colors"
-                      style={{
-                        borderTop: i ? "1px solid var(--k-border)" : "none",
-                      }}
-                      onMouseEnter={(ev) =>
-                        (ev.currentTarget.style.background = "rgba(255,255,255,0.03)")
-                      }
-                      onMouseLeave={(ev) =>
-                        (ev.currentTarget.style.background = "transparent")
-                      }
-                    >
-                      <div className="min-w-0">
-                        <div
-                          style={{
-                            fontFamily: T.sans,
-                            fontWeight: 700,
-                            fontSize: "0.95rem",
-                            letterSpacing: "-0.01em",
-                            color: "var(--k-fg)",
-                          }}
-                        >
-                          {e.name}
-                        </div>
-                        {e.business_name && (
+                needsAttention.slice(0, 8).map((iss, i) => {
+                  const overdue = isOverdue(iss);
+                  return (
+                    <Reveal key={iss.id} delay={Math.min(i, 8) * 0.04}>
+                      <Link
+                        href="/admin/issues"
+                        className="flex items-center justify-between gap-4 py-3 px-4 hover:bg-[var(--k-bg)]"
+                        style={{
+                          borderTop: i ? "1px solid var(--k-border)" : "none",
+                          transition: "background-color 0.15s ease",
+                        }}
+                      >
+                        <div className="min-w-0">
                           <div
                             style={{
                               fontFamily: T.sans,
-                              fontSize: "0.8rem",
-                              color: "var(--k-muted)",
+                              fontWeight: 600,
+                              fontSize: "0.9rem",
+                              color: "var(--k-fg)",
                             }}
                           >
-                            {e.business_name}
+                            {iss.title}
                           </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-1.5 shrink-0 ml-4">
-                        <StatusChip tone="warning">
-                          <span className="k-livedot" aria-hidden>
-                            ●
-                          </span>
-                          NEW
-                        </StatusChip>
-                        <span style={{ ...monoLabel, fontSize: "0.6rem" }}>
-                          {new Date(e.created_at).toLocaleDateString("en-GB")}
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                  {newEnquiries.length > 6 && (
-                    <MoreLink href="/admin/enquiries" count={newEnquiries.length - 6} />
-                  )}
-                </>
+                          <div style={{ ...mono, color: "var(--k-faint)", marginTop: 4 }}>
+                            {tenantName.get(iss.tenant_id) ?? "—"}
+                            {iss.project_id && projectName.get(iss.project_id) && (
+                              <> · {projectName.get(iss.project_id)}</>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {overdue && <StatusChip tone="danger">Overdue</StatusChip>}
+                          <StatusChip tone={SEVERITY_META[iss.severity].tone}>
+                            {SEVERITY_META[iss.severity].label}
+                          </StatusChip>
+                        </div>
+                      </Link>
+                    </Reveal>
+                  );
+                })
+              )}
+              {needsAttention.length > 8 && (
+                <MoreLink href="/admin/issues" count={needsAttention.length - 8} />
               )}
             </Panel>
           </Reveal>
 
-          {/* Awaiting client acceptance */}
+          {/* Batches in flight */}
           <Reveal delay={0.15}>
             <Panel
-              label="// PROPOSALS SENT"
-              title="Awaiting client acceptance"
+              label="// BATCHES IN FLIGHT"
+              title="Work orders"
               pad={false}
-              actions={<ViewAll href="/admin/clients" />}
+              actions={<ViewAll href="/admin/batches" />}
             >
-              {awaiting.length === 0 ? (
-                <EmptyState text="No proposals are waiting on a client signature." />
+              {batches.length === 0 ? (
+                <EmptyState text="No batches in flight — compile one from the issue bank when you're ready." />
               ) : (
-                <>
-                  {awaiting.slice(0, 6).map((p, i) => (
+                batches.map((b, i) => (
+                  <Reveal key={b.id} delay={Math.min(i, 8) * 0.04}>
                     <Link
-                      key={p.id}
-                      href={`/admin/clients/${p.tenant_id}`}
-                      className="flex items-center justify-between py-3.5 px-4 transition-colors"
+                      href={`/admin/batches/${b.id}`}
+                      className="flex items-center justify-between gap-4 py-3 px-4 hover:bg-[var(--k-bg)]"
                       style={{
                         borderTop: i ? "1px solid var(--k-border)" : "none",
+                        transition: "background-color 0.15s ease",
                       }}
-                      onMouseEnter={(ev) =>
-                        (ev.currentTarget.style.background = "rgba(255,255,255,0.03)")
-                      }
-                      onMouseLeave={(ev) =>
-                        (ev.currentTarget.style.background = "transparent")
-                      }
                     >
                       <div className="min-w-0">
                         <div
                           style={{
                             fontFamily: T.sans,
-                            fontWeight: 700,
-                            fontSize: "0.95rem",
-                            letterSpacing: "-0.01em",
+                            fontWeight: 600,
+                            fontSize: "0.9rem",
                             color: "var(--k-fg)",
                           }}
                         >
-                          {p.tenants?.name ?? "Client"}
+                          {b.title}
                         </div>
-                        <div
-                          style={{
-                            fontFamily: T.sans,
-                            fontSize: "0.8rem",
-                            color: "var(--k-muted)",
-                          }}
-                        >
-                          {p.name}
+                        <div style={{ ...mono, color: "var(--k-faint)", marginTop: 4 }}>
+                          {tenantName.get(b.tenant_id) ?? "—"}
                         </div>
                       </div>
-                      <span
-                        className="shrink-0 ml-4 inline-flex items-center gap-1.5"
-                        style={{
-                          fontFamily: T.mono,
-                          fontSize: "0.62rem",
-                          fontWeight: 500,
-                          letterSpacing: "0.1em",
-                          textTransform: "uppercase",
-                          color: "var(--k-accent)",
-                        }}
-                      >
-                        OPEN
-                        <span aria-hidden>→</span>
-                      </span>
+                      <StatusChip tone={BATCH_TONE[b.status] ?? "muted"}>
+                        {b.status.replace(/_/g, " ")}
+                      </StatusChip>
                     </Link>
-                  ))}
-                  {awaiting.length > 6 && (
-                    <MoreLink href="/admin/clients" count={awaiting.length - 6} />
-                  )}
-                </>
+                  </Reveal>
+                ))
               )}
             </Panel>
           </Reveal>
         </div>
 
-        {/* Right: calendar + next call */}
+        {/* Right: waiting, promised, booked */}
         <div className="flex flex-col gap-6">
-          {/* Next call */}
+          {/* Blocked on client */}
           <Reveal delay={0.1}>
-            <div
-              className="k-kard p-5"
-              style={{
-                background: "var(--k-surface)",
-                border: `1px solid ${nextCall ? "var(--k-accent)" : "var(--k-border)"}`,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: "0.62rem",
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "var(--k-accent)",
-                  marginBottom: "14px",
-                }}
-              >
-                {"// NEXT CALL"}
-              </div>
-              {nextCall ? (
-                <Link
-                  href={`/admin/clients/${nextCall.tenant_id}`}
-                  className="block hover:opacity-90 transition-opacity"
-                >
-                  <div
-                    style={{
-                      fontFamily: T.sans,
-                      fontWeight: 700,
-                      fontSize: "1.3rem",
-                      letterSpacing: "-0.02em",
-                      textTransform: "uppercase",
-                      color: "var(--k-fg)",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    {nextCall.tenants?.name || "Client"}
-                  </div>
-                  <div
-                    className="flex items-center gap-3 p-3"
-                    style={{
-                      background: "rgba(16,185,129,0.10)",
-                      border: "1px solid rgba(16,185,129,0.28)",
-                    }}
-                  >
-                    <span
-                      className="k-livedot"
+            <Panel label="// BLOCKED ON CLIENT" title="Waiting on them" pad={false}>
+              {blocked.length === 0 ? (
+                <EmptyState text="Nothing is waiting on a client right now." />
+              ) : (
+                blocked.map((iss, i) => (
+                  <Reveal key={iss.id} delay={Math.min(i, 8) * 0.04}>
+                    <Link
+                      href="/admin/issues"
+                      className="block py-3 px-4 hover:bg-[var(--k-bg)]"
                       style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: "var(--k-accent)",
-                        flexShrink: 0,
+                        borderTop: i ? "1px solid var(--k-border)" : "none",
+                        transition: "background-color 0.15s ease",
                       }}
-                    />
-                    <div>
+                    >
                       <div
                         style={{
                           fontFamily: T.sans,
-                          fontSize: "0.88rem",
-                          color: "var(--k-fg)",
                           fontWeight: 600,
+                          fontSize: "0.85rem",
+                          color: "var(--k-fg)",
                         }}
                       >
-                        {formatCallDate(nextCall.call_date)}
+                        {iss.title}
                       </div>
-                      <div
-                        style={{
-                          fontFamily: T.mono,
-                          fontSize: "0.78rem",
-                          color: "var(--k-accent)",
-                        }}
-                      >
-                        {formatCallTime(nextCall.call_time)} · {nextCall.duration_min} min
+                      <div style={{ ...mono, color: T.warning, marginTop: 4 }}>
+                        {tenantName.get(iss.tenant_id) ?? "—"}
                       </div>
-                    </div>
-                  </div>
-                  {calls.length > 1 && (
-                    <div
-                      className="mt-3"
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "0.62rem",
-                        color: "var(--k-muted)",
-                        letterSpacing: "0.08em",
-                      }}
-                    >
-                      +{calls.length - 1} more upcoming call
-                      {calls.length > 2 ? "s" : ""}
-                    </div>
-                  )}
-                </Link>
-              ) : (
-                <div>
-                  <p
-                    style={{
-                      fontFamily: T.sans,
-                      fontSize: "0.88rem",
-                      color: "var(--k-muted)",
-                      marginBottom: "14px",
-                    }}
-                  >
-                    No upcoming calls booked.
-                  </p>
-                  <InlineLink href="/admin/calendar" label="VIEW CALENDAR" />
-                </div>
+                    </Link>
+                  </Reveal>
+                ))
               )}
-            </div>
+            </Panel>
           </Reveal>
 
-          {/* Mini calendar */}
+          {/* Promise ledger */}
           <Reveal delay={0.15}>
-            <div
-              className="k-kard overflow-hidden"
-              style={{
-                background: "var(--k-surface)",
-                border: "1px solid var(--k-border)",
-              }}
-            >
-              <div
-                className="flex items-center justify-between px-4 py-3"
-                style={{ borderBottom: "1px solid var(--k-border)" }}
-              >
-                <span
-                  style={{
-                    fontFamily: T.sans,
-                    fontWeight: 700,
-                    fontSize: "1rem",
-                    letterSpacing: "-0.01em",
-                    textTransform: "uppercase",
-                    color: "var(--k-fg)",
-                  }}
-                >
-                  {MONTHS[calView.m]}{" "}
-                  <span style={{ color: "var(--k-muted)" }}>{calView.y}</span>
-                </span>
-                <InlineLink href="/admin/calendar" label="FULL CALENDAR" tone="muted" />
-              </div>
-              <div className="p-3">
-                <div className="grid grid-cols-7 mb-1">
-                  {WEEKDAYS.map((w, i) => (
-                    <div
-                      key={w}
-                      className="text-center py-1"
+            <Panel label="// PROMISES" title="Promise ledger" pad={false}>
+              {promises.length === 0 ? (
+                <EmptyState text="No outstanding promises — say it, log it, ship it." />
+              ) : (
+                promises.map((iss, i) => (
+                  <Reveal key={iss.id} delay={Math.min(i, 8) * 0.04}>
+                    <Link
+                      href="/admin/issues"
+                      className="block py-3 px-4 hover:bg-[var(--k-bg)]"
                       style={{
-                        fontFamily: T.mono,
-                        fontSize: 8,
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        color: i >= 5 ? "var(--k-faint)" : "var(--k-muted)",
+                        borderTop: i ? "1px solid var(--k-border)" : "none",
+                        transition: "background-color 0.15s ease",
                       }}
                     >
-                      {w}
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-0.5">
-                  {cells.map((c) => {
-                    if (!c.inMonth) return <div key={c.key} />;
-                    const isToday = c.day === todayDay;
-                    const hasCall = callDates.has(c.key);
-                    return (
                       <div
-                        key={c.key}
-                        className="aspect-square flex flex-col items-center justify-center relative"
                         style={{
-                          background: isToday
-                            ? "var(--k-accent)"
-                            : hasCall
-                              ? "rgba(16,185,129,0.16)"
-                              : "transparent",
+                          fontFamily: T.sans,
+                          fontWeight: 600,
+                          fontSize: "0.85rem",
+                          color: "var(--k-fg)",
                         }}
                       >
-                        <span
-                          style={{
-                            fontFamily: T.mono,
-                            fontSize: 10,
-                            color: isToday ? T.primaryFg : "var(--k-fg)",
-                            fontWeight: isToday ? 700 : 400,
-                          }}
-                        >
-                          {c.day}
-                        </span>
-                        {hasCall && !isToday && (
-                          <span
-                            style={{
-                              position: "absolute",
-                              bottom: 3,
-                              width: 3,
-                              height: 3,
-                              borderRadius: "50%",
-                              background: "var(--k-accent)",
-                            }}
-                          />
-                        )}
+                        {iss.promised_note || iss.title}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+                      <div style={{ ...mono, color: "var(--k-faint)", marginTop: 4 }}>
+                        {tenantName.get(iss.tenant_id) ?? "—"} ·{" "}
+                        <span style={{ color: "var(--k-accent)" }}>
+                          {new Date(iss.promised_at as string).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            timeZone: LONDON_TZ,
+                          })}
+                        </span>
+                      </div>
+                    </Link>
+                  </Reveal>
+                ))
+              )}
+            </Panel>
+          </Reveal>
+
+          {/* This week's calls */}
+          <Reveal delay={0.2}>
+            <Panel
+              label="// THIS WEEK"
+              title="Upcoming calls"
+              pad={false}
+              actions={<ViewAll href="/admin/calendar" />}
+            >
+              {calls.length === 0 ? (
+                <EmptyState text="No calls booked in the next seven days." />
+              ) : (
+                calls.map((c, i) => (
+                  <Reveal key={c.id} delay={Math.min(i, 8) * 0.04}>
+                    <div
+                      className="py-3 px-4"
+                      style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: T.sans,
+                          fontWeight: 600,
+                          fontSize: "0.85rem",
+                          color: "var(--k-fg)",
+                        }}
+                      >
+                        {tenantName.get(c.tenant_id) ?? "—"}
+                      </div>
+                      <div style={{ ...mono, color: "var(--k-muted)", marginTop: 4 }}>
+                        {formatCallDate(c.call_date)} ·{" "}
+                        <span style={{ color: "var(--k-accent)" }}>
+                          {formatCallTime(c.call_time)}
+                        </span>{" "}
+                        · {c.duration_min} min
+                      </div>
+                    </div>
+                  </Reveal>
+                ))
+              )}
+            </Panel>
           </Reveal>
         </div>
       </div>
@@ -599,35 +425,6 @@ function ViewAll({ href }: { href: string }) {
       }}
     >
       VIEW ALL
-      <span aria-hidden>→</span>
-    </Link>
-  );
-}
-
-/** Mono inline link with optional emerald/muted tone. */
-function InlineLink({
-  href,
-  label,
-  tone = "accent",
-}: {
-  href: string;
-  label: string;
-  tone?: "accent" | "muted";
-}) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex items-center gap-1.5"
-      style={{
-        fontFamily: T.mono,
-        fontSize: "0.62rem",
-        fontWeight: 500,
-        letterSpacing: "0.1em",
-        textTransform: "uppercase",
-        color: tone === "muted" ? "var(--k-muted)" : "var(--k-accent)",
-      }}
-    >
-      {label}
       <span aria-hidden>→</span>
     </Link>
   );
