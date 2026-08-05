@@ -308,7 +308,7 @@ export default async function BillingPage() {
             style={{ background: "var(--k-surface)", borderColor: T.danger }}
           >
             <div
-              className="flex items-center justify-between gap-4"
+              className="flex flex-wrap items-center justify-between gap-4"
               style={{ padding: "14px 18px", borderBottom: "1px solid var(--k-border)" }}
             >
               <span
@@ -362,7 +362,7 @@ export default async function BillingPage() {
       )}
 
       {/* ── The four numbers ──────────────────────────────────── */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mt-7">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 mt-7">
         <Reveal delay={0.05}>
           <StatCard value={gbp(summary.mrr)} label="MRR" sub="Active + trialing retainers" accent />
         </Reveal>
@@ -448,8 +448,8 @@ export default async function BillingPage() {
           ) : (
             <div>
               <div
+                className="max-md:hidden md:grid"
                 style={{
-                  display: "grid",
                   gridTemplateColumns: RETAINER_GRID,
                   gap: 12,
                   alignItems: "center",
@@ -475,9 +475,8 @@ export default async function BillingPage() {
                   <Reveal key={t.id} className="block" delay={Math.min(i, 8) * 0.04}>
                     <details style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}>
                       <summary
-                        className="k-kard-h"
+                        className="k-kard-h max-md:flex max-md:flex-wrap max-md:items-center md:grid"
                         style={{
-                          display: "grid",
                           gridTemplateColumns: RETAINER_GRID,
                           gap: 12,
                           alignItems: "center",
@@ -487,6 +486,7 @@ export default async function BillingPage() {
                         }}
                       >
                         <span
+                          className="min-w-0 max-md:w-full"
                           style={{
                             fontFamily: T.sans,
                             fontSize: "0.86rem",
@@ -496,7 +496,7 @@ export default async function BillingPage() {
                         >
                           {t.name}
                         </span>
-                        <span>
+                        <span className={sub ? undefined : "max-md:hidden"}>
                           {sub ? (
                             <StatusChip tone="accent">
                               {plan?.label ?? sub.plan ?? "—"}
@@ -514,10 +514,19 @@ export default async function BillingPage() {
                             <StatusChip tone="muted">none</StatusChip>
                           )}
                         </span>
-                        <span style={dimMono}>
+                        <span
+                          className={sub ? undefined : "max-md:hidden"}
+                          style={dimMono}
+                        >
                           {sub ? `${gbp(Number(sub.mrr))}/mo` : "—"}
                         </span>
-                        <span>
+                        <span
+                          className={
+                            plan && plan.buildAllowance > 0
+                              ? "max-md:w-full"
+                              : "max-md:hidden"
+                          }
+                        >
                           {plan && plan.buildAllowance > 0 ? (
                             <span className="inline-flex items-center gap-2">
                               <span
@@ -551,7 +560,10 @@ export default async function BillingPage() {
                             <span style={{ ...dimMono, color: "var(--k-faint)" }}>—</span>
                           )}
                         </span>
-                        <span style={{ ...dimMono, textAlign: "right" as const }}>
+                        <span
+                          className="max-md:ml-auto"
+                          style={{ ...dimMono, textAlign: "right" as const }}
+                        >
                           Manage ▾
                         </span>
                       </summary>
@@ -565,9 +577,17 @@ export default async function BillingPage() {
                       >
                         {!live && (
                           <ActionGroup label="Send signup">
-                            <form action={sendSubscriptionSignup} className="flex items-center gap-2">
+                            <form
+                              action={sendSubscriptionSignup}
+                              className="flex flex-wrap items-center gap-2"
+                            >
                               <input type="hidden" name="tenant_id" value={t.id} />
-                              <select name="plan" style={inp} defaultValue={plan?.id ?? "hosting"}>
+                              <select
+                                name="plan"
+                                className="max-md:w-full"
+                                style={{ ...inp, maxWidth: "100%" }}
+                                defaultValue={plan?.id ?? "hosting"}
+                              >
                                 {CARE_PLANS.map((p) => (
                                   <option key={p.id} value={p.id}>
                                     {p.label} · £{p.mrr}/mo
@@ -584,10 +604,15 @@ export default async function BillingPage() {
                           <ActionGroup label="Record manually (standing order)">
                             <form
                               action={recordManualSubscription}
-                              className="flex items-center gap-2"
+                              className="flex flex-wrap items-center gap-2"
                             >
                               <input type="hidden" name="tenant_id" value={t.id} />
-                              <select name="plan" style={inp} defaultValue="hosting">
+                              <select
+                                name="plan"
+                                className="max-md:w-full"
+                                style={{ ...inp, maxWidth: "100%" }}
+                                defaultValue="hosting"
+                              >
                                 {CARE_PLANS.map((p) => (
                                   <option key={p.id} value={p.id}>
                                     {p.label} · £{p.mrr}/mo
@@ -601,7 +626,7 @@ export default async function BillingPage() {
                           </ActionGroup>
                         )}
                         <ActionGroup label="Grant top-up (build items)">
-                          <form action={grantTopUp} className="flex items-center gap-2">
+                          <form action={grantTopUp} className="flex flex-wrap items-center gap-2">
                             <input type="hidden" name="tenant_id" value={t.id} />
                             <input
                               name="delta"
@@ -610,7 +635,7 @@ export default async function BillingPage() {
                               step="1"
                               placeholder="+N"
                               required
-                              style={{ ...inp, width: 70 }}
+                              style={{ ...inp, width: 70, maxWidth: "100%" }}
                             />
                             <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
                               Grant
@@ -646,7 +671,13 @@ export default async function BillingPage() {
             className="flex items-center gap-2 flex-wrap"
             style={{ padding: "16px 18px", borderBottom: "1px solid var(--k-border)" }}
           >
-            <select name="tenant_id" style={inp} required defaultValue="">
+            <select
+              name="tenant_id"
+              className="max-md:w-full"
+              style={{ ...inp, maxWidth: "100%" }}
+              required
+              defaultValue=""
+            >
               <option value="" disabled>
                 Client…
               </option>
@@ -656,7 +687,12 @@ export default async function BillingPage() {
                 </option>
               ))}
             </select>
-            <select name="type" style={inp} defaultValue="build_milestone">
+            <select
+              name="type"
+              className="max-md:w-full"
+              style={{ ...inp, maxWidth: "100%" }}
+              defaultValue="build_milestone"
+            >
               <option value="build_milestone">Build milestone</option>
               <option value="one_off">One-off</option>
             </select>
@@ -665,7 +701,8 @@ export default async function BillingPage() {
               type="number"
               step="1"
               placeholder="£ amount"
-              style={{ ...inp, width: 110 }}
+              className="w-full md:w-[110px]"
+              style={inp}
               required
             />
             <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
@@ -677,8 +714,8 @@ export default async function BillingPage() {
           ) : (
             <div>
               <div
+                className="max-md:hidden md:grid"
                 style={{
-                  display: "grid",
                   gridTemplateColumns: INVOICE_GRID,
                   gap: 12,
                   alignItems: "center",
@@ -696,9 +733,8 @@ export default async function BillingPage() {
               {[...openInvoices, ...recentPaid].map((inv, i) => (
                 <Reveal key={inv.id} className="block" delay={Math.min(i, 8) * 0.04}>
                   <div
-                    className="k-kard-h"
+                    className="k-kard-h max-md:flex max-md:flex-wrap max-md:items-center md:grid"
                     style={{
-                      display: "grid",
                       gridTemplateColumns: INVOICE_GRID,
                       gap: 12,
                       alignItems: "center",
@@ -707,6 +743,7 @@ export default async function BillingPage() {
                     }}
                   >
                     <span
+                      className="min-w-0 max-md:w-full"
                       style={{
                         fontFamily: T.sans,
                         fontSize: "0.86rem",
@@ -723,7 +760,7 @@ export default async function BillingPage() {
                         {inv.status}
                       </StatusChip>
                     </span>
-                    <span>
+                    <span className={inv.hosted_invoice_url ? undefined : "max-md:hidden"}>
                       {inv.hosted_invoice_url ? (
                         <a
                           href={inv.hosted_invoice_url}
@@ -737,7 +774,7 @@ export default async function BillingPage() {
                         <span style={{ ...dimMono, color: "var(--k-faint)" }}>—</span>
                       )}
                     </span>
-                    <span className="flex justify-end">
+                    <span className="flex justify-end max-md:ml-auto">
                       {inv.status !== "paid" ? (
                         <form action={markInvoicePaid}>
                           <input type="hidden" name="id" value={inv.id} />
@@ -784,7 +821,7 @@ export default async function BillingPage() {
               {footprint.map((f, idx) => (
                 <div
                   key={f.tenant_id}
-                  className="flex items-center justify-between gap-3 k-kard-h"
+                  className="flex flex-wrap items-center justify-between gap-3 k-kard-h"
                   style={{
                     padding: "12px 18px",
                     borderTop: idx ? "1px solid var(--k-border)" : "none",
@@ -832,7 +869,7 @@ export default async function BillingPage() {
 
 function ActionGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 min-w-0 max-md:w-full">
       <span
         style={{
           fontFamily: T.mono,

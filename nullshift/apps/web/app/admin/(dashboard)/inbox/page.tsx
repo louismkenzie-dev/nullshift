@@ -198,7 +198,13 @@ export default async function InboxPage() {
         <Panel label="// PASTE SOURCE" className="mt-7">
           <form action={ingestSource} className="flex flex-col gap-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <select name="project_id" required defaultValue="" style={inp}>
+              <select
+                name="project_id"
+                required
+                defaultValue=""
+                className="max-md:w-full"
+                style={{ ...inp, maxWidth: "100%" }}
+              >
                 <option value="" disabled>
                   Client — project…
                 </option>
@@ -208,7 +214,12 @@ export default async function InboxPage() {
                   </option>
                 ))}
               </select>
-              <select name="source" defaultValue="whatsapp" style={inp}>
+              <select
+                name="source"
+                defaultValue="whatsapp"
+                className="max-md:w-full"
+                style={{ ...inp, maxWidth: "100%" }}
+              >
                 {PASTE_SOURCES.map((s) => (
                   <option key={s} value={s}>
                     {SOURCE_LABEL[s]}
@@ -221,7 +232,9 @@ export default async function InboxPage() {
               required
               rows={9}
               placeholder="Paste the chat export or transcript here…"
+              className="w-full"
               style={{
+                maxWidth: "100%",
                 ...inp,
                 height: "auto",
                 padding: 12,
@@ -280,6 +293,7 @@ export default async function InboxPage() {
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <span
+                      className="min-w-0 max-md:w-full"
                       style={{
                         fontFamily: T.sans,
                         fontWeight: 600,
@@ -303,7 +317,7 @@ export default async function InboxPage() {
                   </div>
                   {d.source_quote && (
                     <p
-                      className="line-clamp-2"
+                      className="line-clamp-2 break-words"
                       style={{
                         fontFamily: T.mono,
                         fontSize: "11px",

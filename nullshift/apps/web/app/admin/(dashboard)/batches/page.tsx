@@ -294,6 +294,7 @@ export default async function BatchesPage({
               </span>
               <span style={{ fontFamily: T.mono, fontSize: "11px", color: "var(--k-muted)" }}>
                 {counts.get(b.id) ?? 0}
+                <span className="md:hidden"> issues</span>
               </span>
               <span style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}>
                 {new Date(b.created_at).toLocaleDateString("en-GB", {

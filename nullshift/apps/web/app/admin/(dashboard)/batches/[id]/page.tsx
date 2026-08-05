@@ -596,7 +596,8 @@ export default async function BatchDetailPage({
                   required
                   placeholder="https://github.com/…/pull/…"
                   defaultValue={batch.pr_url ?? ""}
-                  style={{ ...inp, width: 320 }}
+                  className="w-full md:w-[320px]"
+                  style={{ ...inp, maxWidth: "100%" }}
                 />
                 <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
                   Record PR
@@ -638,7 +639,7 @@ export default async function BatchDetailPage({
       {batch.ma_session_id && (
         <Reveal className="block" delay={0.09}>
           <Panel label="// AGENT SESSION" className="mt-5">
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
                 <StatusChip
                   tone={
@@ -664,7 +665,7 @@ export default async function BatchDetailPage({
                     href={maCompareUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="kb kb-outline kb-sm ml-auto"
+                    className="kb kb-outline kb-sm ml-auto max-md:ml-0"
                   >
                     Compare branch / open PR
                   </a>
@@ -712,6 +713,7 @@ export default async function BatchDetailPage({
                 }}
               >
                 <span
+                  className="min-w-0 max-md:w-full"
                   style={{
                     fontFamily: T.sans,
                     fontWeight: 600,
@@ -721,7 +723,7 @@ export default async function BatchDetailPage({
                 >
                   {issue.title}
                 </span>
-                <span className="ml-auto flex items-center gap-2">
+                <span className="ml-auto max-md:ml-0 flex flex-wrap items-center gap-2">
                   <StatusChip tone={SEVERITY_META[issue.severity].tone}>
                     {SEVERITY_META[issue.severity].label}
                   </StatusChip>

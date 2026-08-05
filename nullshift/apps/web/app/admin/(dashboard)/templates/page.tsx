@@ -260,7 +260,7 @@ export default async function TemplatesPage() {
             No templates yet — capture your first one below.
           </p>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 items-stretch">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
             {templateList.map((t, i) => {
               const feats = featureNames(t.features);
               return (
@@ -336,6 +336,7 @@ export default async function TemplatesPage() {
                       }}
                     >
                       <span
+                        className="min-w-0 break-all"
                         style={{
                           fontFamily: T.mono,
                           fontSize: "11px",
@@ -393,11 +394,11 @@ export default async function TemplatesPage() {
               style={txt}
             />
             <div className="md:col-span-2 flex items-center gap-2 flex-wrap">
-              <input name="framework" defaultValue="nextjs" placeholder="Framework" style={{ ...inp, width: 120 }} />
-              <input name="database" defaultValue="supabase" placeholder="Database" style={{ ...inp, width: 120 }} />
-              <input name="payments" placeholder="Payments" style={{ ...inp, width: 120 }} />
-              <input name="email" defaultValue="resend" placeholder="Email" style={{ ...inp, width: 120 }} />
-              <input name="ai" placeholder="AI" style={{ ...inp, width: 120 }} />
+              <input name="framework" defaultValue="nextjs" placeholder="Framework" className="w-full md:w-[120px]" style={inp} />
+              <input name="database" defaultValue="supabase" placeholder="Database" className="w-full md:w-[120px]" style={inp} />
+              <input name="payments" placeholder="Payments" className="w-full md:w-[120px]" style={inp} />
+              <input name="email" defaultValue="resend" placeholder="Email" className="w-full md:w-[120px]" style={inp} />
+              <input name="ai" placeholder="AI" className="w-full md:w-[120px]" style={inp} />
             </div>
             <div className="md:col-span-2">
               <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
@@ -432,7 +433,13 @@ export default async function TemplatesPage() {
           ) : (
             <form action={stampSystem} className="flex flex-col gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <select name="template_id" required defaultValue="" style={inp}>
+                <select
+                  name="template_id"
+                  required
+                  defaultValue=""
+                  className="max-md:w-full"
+                  style={{ ...inp, maxWidth: "100%" }}
+                >
                   <option value="" disabled>
                     Template…
                   </option>
@@ -442,7 +449,12 @@ export default async function TemplatesPage() {
                     </option>
                   ))}
                 </select>
-                <select name="tenant_id" defaultValue="" style={inp}>
+                <select
+                  name="tenant_id"
+                  defaultValue=""
+                  className="max-md:w-full"
+                  style={{ ...inp, maxWidth: "100%" }}
+                >
                   <option value="">New client…</option>
                   {tenantList.map((t) => (
                     <option key={t.id} value={t.id}>
