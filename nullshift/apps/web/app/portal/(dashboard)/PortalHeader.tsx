@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
 
@@ -12,14 +13,25 @@ const mono: React.CSSProperties = {
   textTransform: "uppercase",
 };
 
+/** Portal navigation — the client's five places, in plain words. */
+const NAV = [
+  { href: "/portal", label: "Home" },
+  { href: "/portal/requests", label: "Requests" },
+  { href: "/portal/updates", label: "Updates" },
+  { href: "/portal/plan", label: "Plan" },
+  { href: "/portal/deliverables", label: "Documents" },
+];
+
 /**
  * Portal header — deliberately minimal and mobile-safe, branded to match the
- * marketing nav (KYMA). Navigation happens inside the project (cards on the home
- * page → project hub), so the header only carries the home link, a live status
- * marker, and account/sign-out. The email is hidden on narrow screens to keep it
- * from overlapping the sign-out button.
+ * marketing nav (KYMA). Top row: logo, live status marker, account/sign-out.
+ * Below it a slim nav row (mono uppercase links, emerald underline on the
+ * active section) so the client can move between Home / Requests / Updates /
+ * Plan / Documents. The email is hidden on narrow screens to keep it from
+ * overlapping the sign-out button; the nav row scrolls sideways if it must.
  */
 export function PortalHeader({ email }: { email: string }) {
+  const pathname = usePathname();
   return (
     <header
       style={{
@@ -102,6 +114,48 @@ export function PortalHeader({ email }: { email: string }) {
           </form>
         </div>
       </div>
+
+      {/* Section nav — emerald underline marks where you are */}
+      <nav
+        aria-label="Portal sections"
+        style={{ borderTop: "1px solid var(--k-border)" }}
+      >
+        <div
+          className="flex items-center gap-5 overflow-x-auto"
+          style={{ maxWidth: 880, margin: "0 auto", padding: "0 16px" }}
+        >
+          {NAV.map((item) => {
+            const active =
+              item.href === "/portal"
+                ? pathname === "/portal"
+                : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: active ? "var(--k-accent)" : "var(--k-muted)",
+                  textDecoration: "none",
+                  padding: "11px 0 9px",
+                  borderBottom: active
+                    ? "2px solid var(--k-accent)"
+                    : "2px solid transparent",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </header>
   );
 }

@@ -1,20 +1,28 @@
 import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
-import { carePlan } from "@/lib/carePlans";
+import { carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
+import {
+  CLIENT_STATUS_LABEL,
+  OPEN_STATUSES,
+  STATUS_TONE,
+  type IssueRow,
+} from "@/lib/ops/issues";
 import { StageStepper } from "@/components/portal/StageStepper";
-import { PageHeader, Panel, StatCard } from "@/components/app/AppKit";
+import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Eyebrow, Display, Lead } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
 
 /**
- * Client portal home — project-centric. The client's project(s) are front and
- * centre as cards; tapping one opens the project hub. A small summary shows what
- * they've invested and their care plan. Mobile-first: everything stacks.
+ * Client portal home — "Your system" at a glance: where the build is, anything
+ * open, anything we need from them, the latest news, their plan and payments.
+ * RLS scopes every read to the client's own tenant, so no tenant filters here.
  */
 export const dynamic = "force-dynamic";
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
+const dateGB = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 type Project = {
   id: string;
@@ -23,21 +31,86 @@ type Project = {
   proposal_status: string;
   live_url: string | null;
 };
+type PortalIssue = Pick<IssueRow, "id" | "title" | "status" | "created_at">;
+type UpdateRow = {
+  id: string;
+  title: string;
+  created_at: string;
+  type: string;
+  requires_action: boolean | null;
+  action_resolved: boolean | null;
+};
 
-export default async function PortalHome() {
+/** Small mono link used at the foot of the home panels. */
+function PanelLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center gap-1.5"
+      style={{
+        fontFamily: T.mono,
+        fontSize: "0.66rem",
+        fontWeight: 500,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        color: "var(--k-accent)",
+        textDecoration: "none",
+      }}
+    >
+      {children}
+      <span className="k-arrow" aria-hidden>
+        →
+      </span>
+    </Link>
+  );
+}
+
+export default async function PortalHome({
+  searchParams,
+}: {
+  searchParams: Promise<{ care?: string }>;
+}) {
+  const { care } = await searchParams;
   const supabase = await createClient();
-  const [{ data: projects }, { data: invoices }, { data: subs }] = await Promise.all([
+  const [
+    { data: tenants },
+    { data: projects },
+    { data: issues },
+    { data: updates },
+    { data: invoices },
+    { data: subs },
+    { data: credits },
+  ] = await Promise.all([
+    supabase.from("tenants").select("id, name").limit(1),
     supabase
       .from("projects")
       .select("id, name, stage, proposal_status, live_url")
       .order("created_at"),
     supabase
+      .from("issues")
+      .select("id, title, status, created_at")
+      .in("status", OPEN_STATUSES)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("project_updates")
+      .select("id, title, created_at, type, requires_action, action_resolved")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
       .from("invoices")
       .select("id, amount, status, hosted_invoice_url")
       .order("created_at", { ascending: false }),
     supabase.from("subscriptions").select("plan, mrr, status").eq("status", "active"),
+    supabase
+      .from("build_credit_events")
+      .select("delta")
+      .eq("period", currentPeriodStart()),
   ]);
+
+  const tenant = (tenants ?? [])[0] as { id: string; name: string } | undefined;
   const projectList = (projects ?? []) as Project[];
+  const openIssues = (issues ?? []) as PortalIssue[];
+  const updateList = (updates ?? []) as UpdateRow[];
   const invList = (invoices ?? []) as {
     id: string;
     amount: number;
@@ -46,14 +119,18 @@ export default async function PortalHome() {
   }[];
   // Invoices to surface for payment: sent/open/paid (skip drafts + voided).
   const billed = invList.filter((i) => i.status !== "void" && i.status !== "draft");
-  const invested = invList
-    .filter((i) => i.status === "paid")
-    .reduce((s, i) => s + Number(i.amount), 0);
-  const outstanding = invList
-    .filter((i) => i.status === "open")
-    .reduce((s, i) => s + Number(i.amount), 0);
   const sub = (subs ?? [])[0] as { plan: string; mrr: number } | undefined;
   const plan = sub ? carePlan(sub.plan) : null;
+  const deltaSum = ((credits ?? []) as { delta: number }[]).reduce(
+    (s, e) => s + Number(e.delta),
+    0
+  );
+  const remaining = remainingAllowance(plan, deltaSum);
+
+  const decisions = updateList.filter(
+    (u) => u.requires_action === true && u.action_resolved !== true
+  );
+  const latest = updateList.slice(0, 3);
 
   // A freshly-onboarded client (no proposal sent yet) sees a "check back after
   // your call" screen rather than an empty project — there's nothing to review
@@ -93,39 +170,330 @@ export default async function PortalHome() {
     );
   }
 
+  // Systems to show as cards — anything past the draft stage.
+  const systems = projectList.filter((p) => p.proposal_status !== "draft");
+
   return (
     <div style={{ maxWidth: 880, margin: "0 auto", padding: "28px 16px 56px" }}>
+      {/* Stripe Checkout success return — their care plan just went live. */}
+      {care === "active" && (
+        <Reveal>
+          <div
+            className="flex items-center gap-3"
+            style={{
+              padding: "14px 16px",
+              marginBottom: 20,
+              background: "rgba(16,185,129,0.10)",
+              border: "1px solid rgba(16,185,129,0.4)",
+            }}
+          >
+            <span
+              aria-hidden
+              style={{ fontFamily: T.mono, color: "var(--k-accent)", fontSize: "1.1rem" }}
+            >
+              ✓
+            </span>
+            <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-fg)" }}>
+              Your care plan is active — thank you. We&apos;re looking after your system
+              from here.
+            </p>
+          </div>
+        </Reveal>
+      )}
+
       <PageHeader
         index="01"
         label="CLIENT PORTAL"
-        title="Your projects"
-        lead="Tap a project to see its status, updates, tasks and documents."
+        title="Your system"
+        lead={`Welcome back — here's how things stand for ${tenant?.name ?? "your business"}.`}
       />
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-3" style={{ margin: "24px 0 20px" }}>
-        <Reveal delay={0}>
-          <StatCard
-            value={gbp(invested)}
-            label="Invested"
-            sub={outstanding > 0 ? `${gbp(outstanding)} outstanding` : undefined}
-          />
-        </Reveal>
-        <Reveal delay={0.05}>
-          <StatCard
-            value={plan ? plan.label : "None yet"}
-            label="Care plan"
-            sub={plan ? `${gbp(plan.mrr)}/mo` : undefined}
-            accent={!!plan}
-          />
-        </Reveal>
+      {/* System card(s): where the build is + the live site */}
+      <div className="flex flex-col gap-3" style={{ margin: "24px 0 20px" }}>
+        {systems.map((p, i) => (
+          <Reveal key={p.id} delay={i * 0.05}>
+            <div
+              className="k-kard k-kard-h"
+              style={{ background: "var(--k-surface)", padding: "18px 20px" }}
+            >
+              <div
+                className="flex items-center justify-between gap-3 flex-wrap"
+                style={{ marginBottom: 12 }}
+              >
+                <span
+                  style={{
+                    fontFamily: T.sans,
+                    fontWeight: 700,
+                    fontSize: "1.1rem",
+                    letterSpacing: "-0.01em",
+                    textTransform: "uppercase",
+                    color: "var(--k-fg)",
+                  }}
+                >
+                  {p.name}
+                </span>
+                {p.live_url && (
+                  <a
+                    href={p.live_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="kb kb-primary kb-sm"
+                  >
+                    Open your site
+                    <span className="k-arrow" aria-hidden>
+                      ↗
+                    </span>
+                  </a>
+                )}
+              </div>
+              <StageStepper stage={p.stage} />
+            </div>
+          </Reveal>
+        ))}
       </div>
+
+      {/* Open requests */}
+      <Reveal>
+        <Panel
+          label="// YOUR REQUESTS"
+          actions={<PanelLink href="/portal/requests">View all</PanelLink>}
+          style={{ marginBottom: 20 }}
+        >
+          {openIssues.length === 0 ? (
+            <p
+              className="text-center py-7"
+              style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}
+            >
+              Nothing open — all clear.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {openIssues.map((iss, i) => (
+                <Link
+                  key={iss.id}
+                  href="/portal/requests"
+                  className="flex items-center justify-between gap-3"
+                  style={{
+                    padding: "10px 0",
+                    borderTop: i ? "1px solid var(--k-border)" : "none",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.9rem",
+                      color: "var(--k-fg)",
+                    }}
+                  >
+                    {iss.title}
+                  </span>
+                  <StatusChip tone={STATUS_TONE[iss.status]}>
+                    {CLIENT_STATUS_LABEL[iss.status]}
+                  </StatusChip>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </Reveal>
+
+      {/* Decisions we're waiting on — warning-toned, only when there are any */}
+      {decisions.length > 0 && (
+        <Reveal>
+          <Panel
+            label="// DECISIONS NEEDED"
+            title="We need a quick decision from you"
+            style={{ marginBottom: 20, borderColor: "rgba(245,213,71,0.45)" }}
+          >
+            <div className="flex flex-col">
+              {decisions.map((d, i) => (
+                <Link
+                  key={d.id}
+                  href="/portal/updates"
+                  className="flex items-center justify-between gap-3"
+                  style={{
+                    padding: "10px 0",
+                    borderTop: i ? "1px solid var(--k-border)" : "none",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.9rem",
+                      color: "var(--k-fg)",
+                    }}
+                  >
+                    {d.title}
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.66rem",
+                      fontWeight: 500,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: T.warning,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Choose
+                    <span className="k-arrow" aria-hidden>
+                      →
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </Panel>
+        </Reveal>
+      )}
+
+      {/* Latest updates */}
+      <Reveal>
+        <Panel
+          label="// LATEST UPDATES"
+          actions={<PanelLink href="/portal/updates">All updates</PanelLink>}
+          style={{ marginBottom: 20 }}
+        >
+          {latest.length === 0 ? (
+            <p
+              className="text-center py-7"
+              style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}
+            >
+              Updates will appear here as we work on your system.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {latest.map((u, i) => (
+                <Link
+                  key={u.id}
+                  href="/portal/updates"
+                  className="flex items-center justify-between gap-3"
+                  style={{
+                    padding: "10px 0",
+                    borderTop: i ? "1px solid var(--k-border)" : "none",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.9rem",
+                      color: "var(--k-fg)",
+                    }}
+                  >
+                    {u.title}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.62rem",
+                      letterSpacing: "0.06em",
+                      color: "var(--k-faint)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {dateGB(u.created_at)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Panel>
+      </Reveal>
+
+      {/* Care plan + build allowance */}
+      <Reveal>
+        <Panel
+          label="// YOUR PLAN"
+          actions={<PanelLink href="/portal/plan">Plan details</PanelLink>}
+          style={{ marginBottom: 20 }}
+        >
+          {plan ? (
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                <span
+                  style={{
+                    fontFamily: T.sans,
+                    fontWeight: 700,
+                    fontSize: "1.05rem",
+                    letterSpacing: "-0.01em",
+                    textTransform: "uppercase",
+                    color: "var(--k-accent)",
+                  }}
+                >
+                  {plan.label}
+                </span>
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "0.72rem",
+                    letterSpacing: "0.06em",
+                    color: "var(--k-muted)",
+                  }}
+                >
+                  {gbp(plan.mrr)}/mo
+                </span>
+              </div>
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.86rem",
+                  color: "var(--k-muted)",
+                  lineHeight: 1.55,
+                }}
+              >
+                {plan.blurb}
+              </p>
+              {plan.buildAllowance > 0 && (
+                <div className="flex flex-col gap-1.5" style={{ marginTop: 4 }}>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: plan.buildAllowance }).map((_, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          width: 16,
+                          height: 6,
+                          background:
+                            i < remaining ? "var(--k-accent)" : "var(--k-border-strong)",
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.66rem",
+                      fontWeight: 500,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--k-muted)",
+                    }}
+                  >
+                    {remaining} of {plan.buildAllowance} build items left this month
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p
+              className="text-center py-7"
+              style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}
+            >
+              No active plan yet — talk to us about looking after your system.
+            </p>
+          )}
+        </Panel>
+      </Reveal>
 
       {/* Payments — pay outstanding invoices; flips to Paid automatically once
           the Stripe payment goes through (invoice.paid webhook). */}
       {billed.length > 0 && (
-        <Reveal delay={0.08}>
-          <Panel label="Payments" style={{ margin: "0 0 20px" }}>
+        <Reveal>
+          <Panel label="// PAYMENTS">
             <div className="flex flex-col gap-2.5">
               {billed.map((inv) => (
                 <div
@@ -202,83 +570,6 @@ export default async function PortalHome() {
             </div>
           </Panel>
         </Reveal>
-      )}
-
-      {/* Project cards */}
-      {projectList.length === 0 ? (
-        <Reveal>
-          <p style={{ fontFamily: T.sans, fontSize: "0.92rem", color: "var(--k-muted)" }}>
-            Your project is being set up — it&apos;ll appear here shortly.
-          </p>
-        </Reveal>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {projectList.map((p, i) => (
-            <Reveal key={p.id} delay={i * 0.05}>
-              <Link
-                href={`/portal/project/${p.id}`}
-                className="k-kard k-kard-h block"
-                style={{
-                  background: "var(--k-surface)",
-                  padding: "18px 20px",
-                  textDecoration: "none",
-                }}
-              >
-                <div
-                  className="flex items-center justify-between gap-3"
-                  style={{ marginBottom: 12 }}
-                >
-                  <span
-                    style={{
-                      fontFamily: T.sans,
-                      fontWeight: 700,
-                      fontSize: "1.1rem",
-                      letterSpacing: "-0.01em",
-                      textTransform: "uppercase",
-                      color: "var(--k-fg)",
-                    }}
-                  >
-                    {p.name}
-                  </span>
-                  <span
-                    className="inline-flex items-center gap-1.5"
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: "0.68rem",
-                      fontWeight: 500,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      color: "var(--k-accent)",
-                    }}
-                  >
-                    Open
-                    <span className="k-arrow" aria-hidden>
-                      →
-                    </span>
-                  </span>
-                </div>
-                <StageStepper stage={p.stage} />
-                {p.live_url && (
-                  <div
-                    className="inline-flex items-center gap-2"
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: "0.66rem",
-                      fontWeight: 500,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      color: "var(--k-accent)",
-                      marginTop: 12,
-                    }}
-                  >
-                    <span className="k-livedot" aria-hidden />
-                    Live site available
-                  </div>
-                )}
-              </Link>
-            </Reveal>
-          ))}
-        </div>
       )}
     </div>
   );
