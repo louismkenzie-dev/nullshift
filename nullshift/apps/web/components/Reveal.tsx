@@ -10,12 +10,20 @@ export function useReveal(threshold = 0.12) {
     if (!el) return;
     const io = new IntersectionObserver(
       ([e]) => {
-        if (e.isIntersecting) {
+        if (!e.isIntersecting) return;
+        // A block taller than ~60% of the viewport can NEVER reach the ratio
+        // threshold (max ratio = viewport/height), so demanding 12% would hide
+        // it forever — e.g. a signed agreement page thousands of pixels tall.
+        // Tall content reveals as soon as any of it is on screen instead.
+        const tall = el.offsetHeight > (window.innerHeight || 800) * 0.6;
+        if (tall || e.intersectionRatio >= threshold) {
           setVisible(true);
           io.unobserve(el);
         }
       },
-      { threshold, rootMargin: "0px 0px -40px 0px" }
+      // Observe both edges: 0 fires for the tall-content escape hatch, the
+      // ratio fires for normal-sized blocks (original behaviour).
+      { threshold: [0, threshold], rootMargin: "0px 0px -40px 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
