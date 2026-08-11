@@ -52,6 +52,12 @@ const SUB_LABEL: Record<string, string> = {
   incomplete: "Awaiting sign-up",
   canceled: "Cancelled",
 };
+// 'incomplete' means different things per rail — a GoCardless row is waiting
+// on the Direct Debit mandate (same copy as the Payments page).
+const subLabel = (s: Sub) =>
+  s.status === "incomplete" && s.provider === "gocardless"
+    ? "Awaiting Direct Debit"
+    : (SUB_LABEL[s.status] ?? s.status.replace(/_/g, " "));
 const INV_TONE: Record<string, Tone> = {
   open: "warning",
   paid: "success",
@@ -298,7 +304,7 @@ export default async function PortalPlanPage({
             actions={
               sub ? (
                 <StatusChip tone={SUB_TONE[sub.status] ?? "muted"}>
-                  {SUB_LABEL[sub.status] ?? sub.status.replace(/_/g, " ")}
+                  {subLabel(sub)}
                 </StatusChip>
               ) : undefined
             }

@@ -14,6 +14,7 @@ import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { sendCareSubscriptionSignup } from "@/lib/careSubscription";
 import { getStripe, voidStripeInvoice } from "@nullshift/billing/stripe";
 import {
+  cancelBillingRequest,
   isGoCardlessConfigured,
   startCareDirectDebit,
 } from "@nullshift/billing/gocardless";
@@ -707,6 +708,18 @@ async function sendDirectDebitSetup(formData: FormData) {
     origin,
   });
   if (!dd) return;
+  // Supersede any earlier attempt: cancel its billing request at GoCardless
+  // (so the old emailed link dies) before replacing the tracking row.
+  const { data: stale } = await service
+    .from("subscriptions")
+    .select("gc_billing_request_id")
+    .eq("tenant_id", tenantId)
+    .eq("provider", "gocardless")
+    .eq("status", "incomplete");
+  for (const row of (stale ?? []) as { gc_billing_request_id: string | null }[]) {
+    if (row.gc_billing_request_id && row.gc_billing_request_id !== dd.billingRequestId)
+      await cancelBillingRequest(row.gc_billing_request_id);
+  }
   await service
     .from("subscriptions")
     .delete()
@@ -2629,9 +2642,16 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
               >
                 {htid}
                 <input type="hidden" name="plan" value={pendingSub.plan} />
-                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                <SubmitButton
+                  style={btn("var(--k-surface)", "var(--k-fg)")}
+                  title={
+                    pendingSub.provider === "gocardless"
+                      ? "Emails a FRESH authorisation link — the previous link is cancelled at GoCardless and stops working"
+                      : undefined
+                  }
+                >
                   {pendingSub.provider === "gocardless"
-                    ? "Resend Direct Debit link"
+                    ? "Send new Direct Debit link"
                     : "Resend sign-up"}
                 </SubmitButton>
               </form>
@@ -2671,42 +2691,12 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     )}/mo — not set up yet. Send billing setup to start it.`
                   : "No care plan yet. Pick one and send the client billing setup to start it."}
               </p>
-              {isGoCardlessConfigured() && (
-                <form
-                  action={sendDirectDebitSetup}
-                  className="flex items-center gap-2 flex-wrap"
-                  style={{ marginBottom: 8 }}
-                >
-                  {htid}
-                  <select
-                    name="plan"
-                    defaultValue={project?.proposed_plan ?? "hosting"}
-                    style={{ ...inp, width: 170 }}
-                  >
-                    {CARE_PLANS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.label} — £{p.mrr}/mo
-                      </option>
-                    ))}
-                  </select>
-                  <SubmitButton
-                    disabled={!isAccepted}
-                    style={{
-                      ...btn(
-                        isAccepted ? "var(--k-accent)" : "var(--k-surface)",
-                        isAccepted ? "var(--k-on-accent)" : "var(--k-faint)"
-                      ),
-                      cursor: isAccepted ? "pointer" : "not-allowed",
-                      opacity: isAccepted ? 1 : 0.7,
-                    }}
-                    title="Email the client a GoCardless Direct Debit authorisation for this plan"
-                  >
-                    Send Direct Debit setup
-                  </SubmitButton>
-                </form>
-              )}
+              {/* ONE form, ONE plan select — the buttons pick the rail via
+                  formAction, so the chosen plan always goes with the click. */}
               <form
-                action={sendSubscriptionSignup}
+                action={
+                  isGoCardlessConfigured() ? sendDirectDebitSetup : sendSubscriptionSignup
+                }
                 className="flex items-center gap-2 flex-wrap"
               >
                 {htid}
@@ -2721,7 +2711,25 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     </option>
                   ))}
                 </select>
+                {isGoCardlessConfigured() && (
+                  <SubmitButton
+                    formAction={sendDirectDebitSetup}
+                    disabled={!isAccepted}
+                    style={{
+                      ...btn(
+                        isAccepted ? "var(--k-accent)" : "var(--k-surface)",
+                        isAccepted ? "var(--k-on-accent)" : "var(--k-faint)"
+                      ),
+                      cursor: isAccepted ? "pointer" : "not-allowed",
+                      opacity: isAccepted ? 1 : 0.7,
+                    }}
+                    title="Email the client a GoCardless Direct Debit authorisation for this plan"
+                  >
+                    Send Direct Debit setup
+                  </SubmitButton>
+                )}
                 <SubmitButton
+                  formAction={sendSubscriptionSignup}
                   disabled={!isAccepted}
                   style={{
                     ...btn(

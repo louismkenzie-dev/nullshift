@@ -106,10 +106,13 @@ export async function sendCareSubscriptionSignup(
 
   // Record/keep a pending 'incomplete' row so the admin sees "awaiting completion"
   // until the client finishes the Checkout (the webhook flips it to active).
+  // Scoped to provider='stripe' so a pending GoCardless Direct Debit attempt
+  // is never hijacked into a card row (the two rails track independently).
   const { data: pending } = await service
     .from("subscriptions")
     .select("id")
     .eq("tenant_id", opts.tenantId)
+    .eq("provider", "stripe")
     .is("stripe_subscription_id", null)
     .neq("status", "canceled")
     .limit(1)
@@ -125,6 +128,7 @@ export async function sendCareSubscriptionSignup(
       plan: plan.id,
       mrr: plan.mrr,
       status: "incomplete",
+      provider: "stripe",
       stripe_subscription_id: null,
       started_at: new Date().toISOString(),
     });

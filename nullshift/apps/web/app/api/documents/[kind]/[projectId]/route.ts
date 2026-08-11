@@ -26,6 +26,7 @@ type Project = {
   name: string;
   stage: string;
   proposal_status: string;
+  proposal_sent_at: string | null;
   proposed_plan: string | null;
   overview: string | null;
   payment_terms: string | null;
@@ -40,6 +41,7 @@ type Project = {
   accepted_name: string | null;
   accepted_at: string | null;
   client_entity_type: string | null;
+  created_at: string;
   tenants: { name: string } | null;
 };
 type Item = { id: string; project_id: string; name: string; amount: number };
@@ -63,11 +65,17 @@ export async function GET(
   const { data: project } = (await supabase
     .from("projects")
     .select(
-      "id, tenant_id, name, stage, proposal_status, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at, accepted_name, accepted_at, client_entity_type, tenants(name)"
+      "id, tenant_id, name, stage, proposal_status, proposal_sent_at, proposed_plan, overview, payment_terms, dpa_client_country, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at, accepted_name, accepted_at, client_entity_type, created_at, tenants(name)"
     )
     .eq("id", projectId)
     .maybeSingle()) as { data: Project | null };
   if (!project) return new Response("Not found", { status: 404 });
+
+  // Draft and declined documents are internal — only proposals the admin has
+  // actually sent (or the client has accepted) are downloadable, matching what
+  // the portal UI shows.
+  if (project.proposal_status !== "sent" && project.proposal_status !== "accepted")
+    return new Response("Not found", { status: 404 });
 
   // The full DPA only exists for limited companies.
   if (kind === "dpa" && project.client_entity_type !== "limited")
@@ -77,7 +85,12 @@ export async function GET(
   const accepted = project.accepted_at
     ? { name: project.accepted_name ?? "", at: project.accepted_at }
     : null;
-  const date = new Date().toLocaleDateString("en-GB", {
+  // The document carries its own date — when it was sent (falling back to
+  // acceptance/creation for older rows) — never the download time, so a
+  // re-download months later still matches the copy saved at signing.
+  const date = new Date(
+    project.proposal_sent_at ?? project.accepted_at ?? project.created_at
+  ).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",

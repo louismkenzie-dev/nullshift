@@ -107,6 +107,9 @@ export async function POST(req: Request) {
             .from("subscriptions")
             .select("id")
             .eq("tenant_id", tenantId)
+            // Stripe checkout completes STRIPE rows only — never a pending
+            // GoCardless Direct Debit attempt (that's the other rail).
+            .eq("provider", "stripe")
             .is("stripe_subscription_id", null)
             .neq("status", "canceled")
             .order("created_at", { ascending: false })

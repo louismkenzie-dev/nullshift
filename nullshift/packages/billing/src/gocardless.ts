@@ -24,14 +24,23 @@ export function isGoCardlessConfigured(): boolean {
   return !!process.env.GOCARDLESS_ACCESS_TOKEN;
 }
 
-/** POST to the GoCardless API; throws with the API's error message on failure. */
-async function gcPost<T>(path: string, body: Record<string, unknown>): Promise<T> {
+/**
+ * POST to the GoCardless API; throws with the API's error message on failure.
+ * Pass an idempotencyKey for any create that must survive retries without
+ * duplicating (GoCardless replays the original response for a reused key).
+ */
+async function gcPost<T>(
+  path: string,
+  body: Record<string, unknown>,
+  idempotencyKey?: string
+): Promise<T> {
   const res = await fetch(`${gcBaseUrl()}${path}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.GOCARDLESS_ACCESS_TOKEN}`,
       "GoCardless-Version": GOCARDLESS_VERSION,
       "Content-Type": "application/json",
+      ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     },
     body: JSON.stringify(body),
   });
@@ -125,20 +134,82 @@ export async function createCareSubscription(opts: {
   plan: string;
   amountPence: number;
   description: string;
+  /**
+   * Stable key across webhook re-deliveries (use the billing request id) so a
+   * retried create can never double-bill the same mandate.
+   */
+  idempotencyKey?: string;
 }): Promise<{ subscriptionId: string } | null> {
   if (!isGoCardlessConfigured()) return null;
 
-  const sub = await gcPost<{ subscriptions: { id: string } }>("/subscriptions", {
-    subscriptions: {
-      amount: Math.round(opts.amountPence),
-      currency: "GBP",
-      interval_unit: "monthly",
-      name: opts.description,
-      metadata: { plan: opts.plan },
-      links: { mandate: opts.mandateId },
+  const sub = await gcPost<{ subscriptions: { id: string } }>(
+    "/subscriptions",
+    {
+      subscriptions: {
+        amount: Math.round(opts.amountPence),
+        currency: "GBP",
+        interval_unit: "monthly",
+        name: opts.description,
+        metadata: { plan: opts.plan },
+        links: { mandate: opts.mandateId },
+      },
+    },
+    opts.idempotencyKey
+  );
+  return { subscriptionId: sub.subscriptions.id };
+}
+
+/**
+ * Cancel a billing request whose authorisation link is being superseded, so
+ * the OLD emailed/open link can no longer be completed into a mandate we've
+ * stopped tracking. Best-effort by design: an already-completed or already-
+ * cancelled request 4xxes, which callers treat as "nothing to cancel".
+ */
+export async function cancelBillingRequest(id: string): Promise<boolean> {
+  if (!isGoCardlessConfigured()) return false;
+  try {
+    await gcPost(`/billing_requests/${id}/actions/cancel`, { data: {} });
+    return true;
+  } catch (e) {
+    console.warn(`cancelBillingRequest(${id}):`, (e as Error).message);
+    return false;
+  }
+}
+
+/**
+ * Fetch a billing request — the webhook's fallback for mapping a fulfilled
+ * request back to a tenant via its metadata when our pending row is missing
+ * (e.g. it was superseded after the client had already opened the old link).
+ */
+export async function getBillingRequest(id: string): Promise<{
+  id: string;
+  status: string;
+  metadata: Record<string, string>;
+  mandateId: string | null;
+} | null> {
+  if (!isGoCardlessConfigured()) return null;
+  const res = await fetch(`${gcBaseUrl()}/billing_requests/${id}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.GOCARDLESS_ACCESS_TOKEN}`,
+      "GoCardless-Version": GOCARDLESS_VERSION,
     },
   });
-  return { subscriptionId: sub.subscriptions.id };
+  if (!res.ok) return null;
+  const data = (await res.json()) as {
+    billing_requests: {
+      id: string;
+      status: string;
+      metadata?: Record<string, string>;
+      links?: { mandate_request_mandate?: string };
+    };
+  };
+  const br = data.billing_requests;
+  return {
+    id: br.id,
+    status: br.status,
+    metadata: br.metadata ?? {},
+    mandateId: br.links?.mandate_request_mandate ?? null,
+  };
 }
 
 /**

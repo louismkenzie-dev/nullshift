@@ -1,5 +1,6 @@
 import {
   createCareSubscription,
+  getBillingRequest,
   verifyGoCardlessWebhook,
 } from "@nullshift/billing/gocardless";
 import { createServiceClient } from "@nullshift/db";
@@ -59,17 +60,43 @@ export async function POST(req: Request) {
             );
             break;
           }
-          const { data: pending } = await supabase
+          let { data: pending } = await supabase
             .from("subscriptions")
             .select("id, tenant_id, plan, gc_subscription_id")
             .eq("gc_billing_request_id", billingRequestId)
             .maybeSingle();
+          // Orphan rescue: our pending row was superseded (a newer link was
+          // issued) but the client completed THIS link anyway. The billing
+          // request's own metadata carries tenant_id + plan — recreate the
+          // tracking row so the live mandate is never left orphaned.
           if (!pending) {
-            console.error(
-              "gocardless billing_requests.fulfilled: no subscription row for",
-              billingRequestId
-            );
-            break;
+            const br = await getBillingRequest(billingRequestId);
+            const tenantId = br?.metadata?.tenant_id;
+            const planId = br?.metadata?.plan ?? "";
+            if (!tenantId || !carePlan(planId)) {
+              console.error(
+                "gocardless billing_requests.fulfilled: no subscription row and no usable metadata for",
+                billingRequestId
+              );
+              break;
+            }
+            const { data: recreated, error: recreateErr } = await supabase
+              .from("subscriptions")
+              .insert({
+                tenant_id: tenantId,
+                plan: planId,
+                mrr: carePlan(planId)!.mrr,
+                status: "incomplete",
+                provider: "gocardless",
+                gc_billing_request_id: billingRequestId,
+              })
+              .select("id, tenant_id, plan, gc_subscription_id")
+              .single();
+            if (recreateErr || !recreated) {
+              console.error("gocardless orphan-rescue insert failed:", recreateErr);
+              return new Response("db error", { status: 500 });
+            }
+            pending = recreated;
           }
           // Re-delivery: the GoCardless subscription already exists — done.
           if (pending.gc_subscription_id) break;
@@ -80,34 +107,88 @@ export async function POST(req: Request) {
             );
             break;
           }
+          // Cross-rail guard: if this tenant already has a LIVE subscription
+          // (e.g. a Stripe card plan completed meanwhile), do NOT start a
+          // second recurring charge. Park this row and shout for follow-up.
+          const { data: live, error: liveErr } = await supabase
+            .from("subscriptions")
+            .select("id")
+            .eq("tenant_id", pending.tenant_id)
+            .in("status", ["active", "trialing", "past_due"])
+            .neq("id", pending.id)
+            .limit(1);
+          if (liveErr) {
+            console.error("gocardless live-check failed:", liveErr);
+            return new Response("db error", { status: 500 });
+          }
+          if (live && live.length > 0) {
+            console.error(
+              `gocardless billing_requests.fulfilled: tenant ${pending.tenant_id} already has a live subscription — NOT creating a second one. Mandate ${mandateId} is authorised but unused; cancel it in the GoCardless dashboard.`
+            );
+            const { error } = await supabase
+              .from("subscriptions")
+              .update({ status: "canceled", gc_mandate_id: mandateId })
+              .eq("id", pending.id);
+            if (error) return new Response("db error", { status: 500 });
+            break;
+          }
+          // Record the mandate BEFORE creating the GC subscription, so a
+          // later mandates.cancelled event can always match this row no
+          // matter where the flow stops.
+          const { error: mandateErr } = await supabase
+            .from("subscriptions")
+            .update({ gc_mandate_id: mandateId, provider: "gocardless" })
+            .eq("id", pending.id);
+          if (mandateErr) {
+            console.error("gocardless mandate-record failed:", mandateErr);
+            return new Response("db error", { status: 500 });
+          }
+          // Idempotency-Key = billing request id: a webhook re-delivery after
+          // a crash replays the SAME GoCardless subscription instead of
+          // creating a second one against the mandate.
           const created = await createCareSubscription({
             mandateId,
             plan: plan.id,
             amountPence: plan.mrr * 100,
             description: `Nullshift ${plan.label} care plan`,
+            idempotencyKey: billingRequestId,
           });
-          await supabase
+          if (!created) {
+            console.error("gocardless createCareSubscription returned null mid-flow");
+            return new Response("unconfigured", { status: 500 });
+          }
+          const { error: activateErr } = await supabase
             .from("subscriptions")
             .update({
               status: "active",
-              provider: "gocardless",
-              gc_mandate_id: mandateId,
-              gc_subscription_id: created?.subscriptionId ?? null,
+              gc_subscription_id: created.subscriptionId,
               mrr: plan.mrr,
               started_at: new Date().toISOString(),
             })
             .eq("id", pending.id);
+          if (activateErr) {
+            // 500 → GoCardless redelivers; the idempotency key makes the
+            // repeated create safe and the row activates on the retry.
+            console.error("gocardless activation update failed:", activateErr);
+            return new Response("db error", { status: 500 });
+          }
           break;
         }
         case "mandates": {
           if (!["cancelled", "expired", "failed"].includes(event.action)) break;
           const mandateId = event.links?.mandate;
           if (!mandateId) break;
-          const { data: updated } = await supabase
+          const { data: updated, error } = await supabase
             .from("subscriptions")
             .update({ status: "canceled" })
             .eq("gc_mandate_id", mandateId)
             .select("id");
+          // A DB failure must NOT ack — 500 so GoCardless redelivers (the
+          // cancel update is idempotent). "No row" is a real ack-able outcome.
+          if (error) {
+            console.error(`gocardless mandates.${event.action} update failed:`, error);
+            return new Response("db error", { status: 500 });
+          }
           if (!updated?.length)
             console.warn(
               `gocardless mandates.${event.action}: no subscription row for mandate`,
@@ -119,11 +200,18 @@ export async function POST(req: Request) {
           if (!["cancelled", "finished"].includes(event.action)) break;
           const subscriptionId = event.links?.subscription;
           if (!subscriptionId) break;
-          const { data: updated } = await supabase
+          const { data: updated, error } = await supabase
             .from("subscriptions")
             .update({ status: "canceled" })
             .eq("gc_subscription_id", subscriptionId)
             .select("id");
+          if (error) {
+            console.error(
+              `gocardless subscriptions.${event.action} update failed:`,
+              error
+            );
+            return new Response("db error", { status: 500 });
+          }
           if (!updated?.length)
             console.warn(
               `gocardless subscriptions.${event.action}: no subscription row for`,

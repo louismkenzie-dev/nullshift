@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import {
+  cancelBillingRequest,
   isGoCardlessConfigured,
   startCareDirectDebit,
 } from "@nullshift/billing/gocardless";
@@ -98,7 +99,20 @@ export async function choosePlan(formData: FormData): Promise<void> {
   }
 
   // Track the pending mandate so the webhook can activate it. Stale pending
-  // GoCardless attempts for this tenant are superseded, not duplicated.
+  // GoCardless attempts for this tenant are superseded, not duplicated — and
+  // their billing requests are CANCELLED at GoCardless first, so an old
+  // emailed/open authorisation link can't be completed into a mandate we no
+  // longer track. (Belt-and-braces: the webhook also rescues orphans via the
+  // billing request's metadata.)
+  const { data: stale } = await service
+    .from("subscriptions")
+    .select("gc_billing_request_id")
+    .eq("tenant_id", tenantId)
+    .eq("provider", "gocardless")
+    .eq("status", "incomplete");
+  for (const row of (stale ?? []) as { gc_billing_request_id: string | null }[]) {
+    if (row.gc_billing_request_id) await cancelBillingRequest(row.gc_billing_request_id);
+  }
   await service
     .from("subscriptions")
     .delete()
