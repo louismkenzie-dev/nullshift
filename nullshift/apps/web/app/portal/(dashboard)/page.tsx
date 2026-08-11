@@ -11,6 +11,14 @@ import {
 import { StageStepper } from "@/components/portal/StageStepper";
 import { BankTransferDetails } from "@/components/portal/BankTransferDetails";
 import { clientRef } from "@nullshift/ui/format";
+import {
+  FileText,
+  CreditCard,
+  MessageSquare,
+  Bell,
+  Shield,
+  Folder,
+} from "lucide-react";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Eyebrow, Display, Lead } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
@@ -179,6 +187,76 @@ export default async function PortalHome({
   // Systems to show as cards — anything past the draft stage.
   const systems = projectList.filter((p) => p.proposal_status !== "draft");
 
+  // ── Quick-nav tiles: each place in the portal, coloured by what's waiting
+  //    there right now, so the home page pulls you to whatever needs you. ──
+  const proposalSent = projectList.some((p) => p.proposal_status === "sent");
+  const outstandingSum = billed
+    .filter((i) => i.status !== "paid")
+    .reduce((s, i) => s + Number(i.amount), 0);
+  type TileTone = "accent" | "warning" | "success" | "muted";
+  const TILE_COLOR: Record<TileTone, string> = {
+    accent: "var(--k-accent)",
+    warning: T.warning,
+    success: T.success,
+    muted: "var(--k-muted)",
+  };
+  const tiles: {
+    href: string;
+    label: string;
+    sub: string;
+    tone: TileTone;
+    Icon: typeof FileText;
+  }[] = [
+    {
+      href: "/portal/proposal",
+      label: "Agreement",
+      sub: proposalSent ? "Review & sign" : "Signed — view & download",
+      tone: proposalSent ? "accent" : "muted",
+      Icon: FileText,
+    },
+    {
+      href: "/portal/payments",
+      label: "Payments",
+      sub: outstandingSum > 0 ? `${gbp(outstandingSum)} outstanding` : "All settled ✓",
+      tone: outstandingSum > 0 ? "warning" : "success",
+      Icon: CreditCard,
+    },
+    {
+      href: "/portal/requests",
+      label: "Requests",
+      sub:
+        openIssues.length > 0
+          ? `${openIssues.length} open request${openIssues.length === 1 ? "" : "s"}`
+          : "Tell us about anything",
+      tone: openIssues.length > 0 ? "warning" : "muted",
+      Icon: MessageSquare,
+    },
+    {
+      href: "/portal/updates",
+      label: "Updates",
+      sub:
+        decisions.length > 0
+          ? `${decisions.length} decision${decisions.length === 1 ? "" : "s"} needed`
+          : "News from the build",
+      tone: decisions.length > 0 ? "warning" : "muted",
+      Icon: Bell,
+    },
+    {
+      href: "/portal/plan",
+      label: "Plan",
+      sub: plan ? `${plan.label} — active` : "Choose your care plan",
+      tone: plan ? "success" : "accent",
+      Icon: Shield,
+    },
+    {
+      href: "/portal/deliverables",
+      label: "Documents",
+      sub: "Files & contracts",
+      tone: "muted",
+      Icon: Folder,
+    },
+  ];
+
   return (
     <div
       className="px-4 sm:px-6"
@@ -264,6 +342,74 @@ export default async function PortalHome({
           </div>
         </Reveal>
       )}
+
+      {/* Quick-nav — every portal section as a coloured, iconed tile with a
+          live signal of what's waiting there. The thumb-first way around. */}
+      <div
+        className="grid grid-cols-2 sm:grid-cols-3 gap-3"
+        style={{ marginTop: 24 }}
+      >
+        {tiles.map((tile, i) => (
+          <Reveal key={tile.href} delay={Math.min(i, 6) * 0.04}>
+            <Link
+              href={tile.href}
+              className="k-kard k-kard-h flex flex-col gap-3 h-full"
+              style={{
+                background: "var(--k-surface)",
+                padding: "14px 15px",
+                textDecoration: "none",
+                minHeight: 108,
+              }}
+            >
+              <span
+                className="inline-flex items-center justify-center"
+                style={{
+                  width: 34,
+                  height: 34,
+                  background: `color-mix(in oklab, ${TILE_COLOR[tile.tone]} 14%, transparent)`,
+                  border: `1px solid color-mix(in oklab, ${TILE_COLOR[tile.tone]} 38%, transparent)`,
+                }}
+              >
+                <tile.Icon size={17} color={TILE_COLOR[tile.tone]} strokeWidth={1.8} />
+              </span>
+              <span className="flex flex-col gap-0.5" style={{ marginTop: "auto" }}>
+                <span
+                  className="inline-flex items-center justify-between gap-2"
+                  style={{
+                    fontFamily: T.sans,
+                    fontWeight: 700,
+                    fontSize: "0.92rem",
+                    letterSpacing: "-0.01em",
+                    textTransform: "uppercase",
+                    color: "var(--k-fg)",
+                  }}
+                >
+                  {tile.label}
+                  <span
+                    className="k-arrow"
+                    aria-hidden
+                    style={{ color: TILE_COLOR[tile.tone] }}
+                  >
+                    →
+                  </span>
+                </span>
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "0.6rem",
+                    fontWeight: 500,
+                    letterSpacing: "0.07em",
+                    textTransform: "uppercase",
+                    color: TILE_COLOR[tile.tone],
+                  }}
+                >
+                  {tile.sub}
+                </span>
+              </span>
+            </Link>
+          </Reveal>
+        ))}
+      </div>
 
       {/* System card(s): where the build is + the live site */}
       <div className="flex flex-col gap-3" style={{ margin: "24px 0 20px" }}>
