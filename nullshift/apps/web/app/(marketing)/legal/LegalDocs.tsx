@@ -260,7 +260,26 @@ export function PrivacyDoc() {
       <P>
         We are registered with the Information Commissioner&apos;s Office (ICO) under
         registration number{" "}
-        {entity(LEGAL_ENTITY.ico, "ICO registration number — to confirm")}.
+        {entity(LEGAL_ENTITY.ico, "ICO registration number — to confirm")}. You can view
+        our{" "}
+        <a
+          href="/legal/ico-registration-certificate.pdf"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: T.primary, textDecoration: "none" }}
+        >
+          ICO registration certificate
+        </a>{" "}
+        or verify our entry on the{" "}
+        <a
+          href="https://ico.org.uk/ESDWebPages/Entry/ZC214743"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: T.primary, textDecoration: "none" }}
+        >
+          ICO public register
+        </a>
+        .
       </P>
       <P>
         If you have any questions about this policy or your personal data, contact us at{" "}

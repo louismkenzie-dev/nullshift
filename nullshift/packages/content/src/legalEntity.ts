@@ -17,8 +17,9 @@ export const LEGAL_ENTITY = {
   registeredOffice: "66 Paul Street, London, England, United Kingdom, EC2A 4NA" as
     | string
     | null,
-  /** ICO registration number (data protection register). */
-  ico: null as string | null,
+  /** ICO registration number (data protection register). Registered 05 Aug 2026,
+   *  expires 04 Aug 2027 — certificate at /legal/ico-registration-certificate.pdf. */
+  ico: "ZC214743" as string | null,
   email: "louis@nullshift.co.uk",
   domain: "nullshift.co.uk",
 } as const;
