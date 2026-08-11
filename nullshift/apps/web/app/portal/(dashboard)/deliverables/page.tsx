@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { signDeliverableUrl } from "@nullshift/db/documents";
 import { T } from "@nullshift/ui/tokens";
@@ -28,10 +29,17 @@ export default async function DeliverablesPage() {
       .from("documents")
       .select("id, project_id, kind, storage_path, version")
       .order("created_at", { ascending: false }),
-    supabase.from("projects").select("id, name"),
+    supabase.from("projects").select("id, name, proposal_status, accepted_at"),
   ]);
   const docList = (docs ?? []) as Doc[];
-  const projectList = (projects ?? []) as Project[];
+  const projectList = (projects ?? []) as (Project & {
+    proposal_status: string;
+    accepted_at: string | null;
+  })[];
+  // Contracts live on the Agreement page — surface them here too, since
+  // "Documents" is where people go looking for signed paperwork.
+  const signed = projectList.find((p) => p.proposal_status === "accepted");
+  const awaiting = projectList.find((p) => p.proposal_status === "sent");
   const nameOf = (id: string) => projectList.find((p) => p.id === id)?.name ?? "Project";
 
   // Mint a signed URL per document (RLS lets the client read only their tenant's).
@@ -50,6 +58,63 @@ export default async function DeliverablesPage() {
         title="Your files"
         lead="Every asset we ship lands here — versioned, and yours to download any time."
       />
+
+      {/* Signed paperwork lives on the Agreement page — link it from here,
+          because "Documents" is the first place people look for contracts. */}
+      {(signed || awaiting) && (
+        <Reveal>
+          <div
+            className="k-kard flex flex-wrap items-center justify-between gap-x-4 gap-y-3"
+            style={{
+              marginTop: 24,
+              padding: "14px 16px",
+              background: "var(--k-surface)",
+            }}
+          >
+            <div className="flex flex-col min-w-0" style={{ gap: 2 }}>
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.62rem",
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--k-muted)",
+                }}
+              >
+                {"// CONTRACTS"}
+              </span>
+              <span
+                style={{
+                  fontFamily: T.sans,
+                  fontWeight: 600,
+                  fontSize: "0.92rem",
+                  color: "var(--k-fg)",
+                }}
+              >
+                {signed
+                  ? `Proposal & agreement — signed${
+                      signed.accepted_at
+                        ? " " +
+                          new Date(signed.accepted_at).toLocaleDateString("en-GB")
+                        : ""
+                    }`
+                  : "Proposal & agreement — awaiting your signature"}
+              </span>
+            </div>
+            <Link
+              href="/portal/proposal"
+              className="kb kb-sm"
+              style={{ flexShrink: 0 }}
+            >
+              {signed ? "View & download PDF" : "Review & sign"}
+              <span className="k-arrow" aria-hidden>
+                →
+              </span>
+            </Link>
+          </div>
+        </Reveal>
+      )}
 
       <div
         className="k-kard"
@@ -165,7 +230,8 @@ export default async function DeliverablesPage() {
               padding: 18,
             }}
           >
-            No deliverables yet — they&apos;ll appear here as we ship them.
+            No files yet — designs, exports and handover packs appear here as we
+            ship them. Your proposal and signed agreement live under Agreement.
           </p>
         )}
       </div>
