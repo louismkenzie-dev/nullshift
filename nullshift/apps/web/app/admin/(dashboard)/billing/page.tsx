@@ -235,7 +235,14 @@ export default async function BillingPage() {
     { data: footprintRows },
   ] = await Promise.all([
     getMrrSummary(supabase),
-    supabase.from("tenants").select("id, name").eq("type", "client").order("name"),
+    // Prospective clients (status 'prospect') stay out of the money cockpit
+    // until they're onboarded — see /admin/systems.
+    supabase
+      .from("tenants")
+      .select("id, name")
+      .eq("type", "client")
+      .neq("status", "prospect")
+      .order("name"),
     supabase
       .from("subscriptions")
       .select("id, tenant_id, plan, mrr, status, stripe_subscription_id, created_at")

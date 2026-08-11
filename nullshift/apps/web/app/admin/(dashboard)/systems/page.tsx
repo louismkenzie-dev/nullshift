@@ -37,7 +37,7 @@ const mono: React.CSSProperties = {
   textTransform: "uppercase",
 };
 
-type Tenant = { id: string; name: string };
+type Tenant = { id: string; name: string; status: string; contact_name: string | null };
 type Project = { id: string; tenant_id: string; name: string; stage: string };
 type Profile = { project_id: string; repo_full_name: string | null; health: string };
 type Sub = { tenant_id: string; plan: string | null };
@@ -48,9 +48,13 @@ export default async function SystemsPage() {
   const supabase = await createClient();
   const { data: tenantsRaw } = await supabase
     .from("tenants")
-    .select("id, name")
+    .select("id, name, status, contact_name")
     .eq("type", "client");
-  const tenants = (tenantsRaw ?? []) as Tenant[];
+  const allTenants = (tenantsRaw ?? []) as Tenant[];
+  // Prospects sit apart from the active fleet: real relationships, not yet
+  // paying — parked below, one click from onboarding.
+  const prospects = allTenants.filter((t) => t.status === "prospect");
+  const tenants = allTenants.filter((t) => t.status !== "prospect");
   const tenantIds = tenants.map((t) => t.id);
 
   const { data: projectsRaw } = tenantIds.length
@@ -230,6 +234,64 @@ export default async function SystemsPage() {
             );
           })}
         </div>
+      )}
+
+      {/* ── Prospective clients — parked, ready to onboard ───── */}
+      {prospects.length > 0 && (
+        <Reveal className="block" delay={0.1}>
+          <div
+            className="overflow-hidden"
+            style={{ border: "1px dashed var(--k-border)", marginTop: 28 }}
+          >
+            <div
+              className="flex items-center justify-between gap-3 px-5 py-3"
+              style={{
+                background: "var(--k-surface)",
+                borderBottom: "1px solid var(--k-border)",
+              }}
+            >
+              <span style={{ ...mono, color: "var(--k-muted)" }}>
+                {"// PROSPECTIVE CLIENTS"}
+              </span>
+              <span style={{ ...mono, color: "var(--k-faint)" }}>
+                not active — onboard when ready
+              </span>
+            </div>
+            {prospects.map((t, i) => (
+              <Link
+                key={t.id}
+                href={`/admin/clients/${t.id}`}
+                className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-5 py-3.5 hover:bg-[var(--k-surface)]"
+                style={{
+                  borderTop: i ? "1px solid var(--k-border)" : "none",
+                  textDecoration: "none",
+                  transition: "background-color 0.15s ease",
+                }}
+              >
+                <span
+                  className="min-w-0"
+                  style={{
+                    fontFamily: T.sans,
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
+                    color: "var(--k-fg)",
+                  }}
+                >
+                  {t.name}
+                </span>
+                {t.contact_name && (
+                  <span style={{ ...mono, color: "var(--k-faint)" }}>{t.contact_name}</span>
+                )}
+                <span className="ml-auto inline-flex items-center gap-2">
+                  <StatusChip tone="muted">prospect</StatusChip>
+                  <span style={{ ...mono, fontSize: 11, color: "var(--k-accent)" }}>
+                    Onboard <span className="k-arrow">→</span>
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </Reveal>
       )}
     </div>
   );
