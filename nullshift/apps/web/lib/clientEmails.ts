@@ -10,6 +10,7 @@
  *     confirms the lead is Won and links straight to their client hub.
  */
 import { C, FONT, esc, button, wrap } from "./emailLayout";
+import { BANK_DETAILS } from "@nullshift/content/legalEntity";
 
 export function portalReadyEmail(opts: {
   name: string;
@@ -256,17 +257,21 @@ Nothing is charged until you confirm.
 }
 
 /**
- * Branded invoice email with a Stripe "Pay now" link — sent to the client when
- * their itemised build invoice is generated. Complements Stripe's own invoice
- * email; `payUrl` is the Stripe hosted_invoice_url.
+ * Branded invoice email — sent to the client when their itemised build invoice
+ * is generated. Offers both payment routes: the Stripe "Pay by card" link
+ * (`payUrl`, when Stripe is configured — complements Stripe's own invoice
+ * email) and a bank transfer to the business account (no card fees), with the
+ * client's payment reference so transfers can be matched.
  */
 export function buildInvoiceReadyEmail(opts: {
   name: string;
   total: number;
-  payUrl: string;
+  payUrl: string | null;
   items: { name: string; amount: number; quantity?: number }[];
+  /** Payment reference for bank transfers (e.g. NS-2E458EB1). */
+  reference: string;
 }): { subject: string; html: string; text: string } {
-  const { name, total, payUrl, items } = opts;
+  const { name, total, payUrl, items, reference } = opts;
   const first = name.split(" ")[0] || name || "there";
   const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
   const subject = `Your Nullshift invoice — ${gbp(total)}`;
@@ -284,7 +289,7 @@ export function buildInvoiceReadyEmail(opts: {
     <tr><td style="padding:22px 32px 0">
       <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Invoice ready</p>
       <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Your invoice is ready to pay</h1>
-      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, here's your itemised invoice for the build. Pay securely below — your card is handled by Stripe and you'll get a receipt automatically.</p>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, here's your itemised invoice for the build. ${payUrl ? "Pay securely below — your card is handled by Stripe and you'll get a receipt automatically." : "Pay by bank transfer using the details below — we'll confirm as soon as it arrives."}</p>
     </td></tr>
     <tr><td style="padding:18px 32px 0">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -295,9 +300,28 @@ export function buildInvoiceReadyEmail(opts: {
         </tr>
       </table>
     </td></tr>
-    <tr><td style="padding:22px 32px 6px">${button(payUrl, "Pay now →")}</td></tr>
-    <tr><td style="padding:0 32px 8px">
-      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">You can also pay any time from your Nullshift client portal. This link is personal to you.</p>
+    ${payUrl ? `<tr><td style="padding:22px 32px 6px">${button(payUrl, "Pay by card →")}</td></tr>` : ""}
+    <tr><td style="padding:${payUrl ? "10px" : "22px"} 32px 8px">
+      <p style="margin:0 0 8px;font-family:${FONT};font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:${C.faint}">${payUrl ? "Or pay" : "Pay"} by bank transfer</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${C.border}">
+        ${(
+          [
+            ["Account name", BANK_DETAILS.accountName],
+            ["Sort code", BANK_DETAILS.sortCode],
+            ["Account number", BANK_DETAILS.accountNumber],
+            ["Amount", gbp(total)],
+            ["Payment reference", reference],
+          ] as [string, string][]
+        )
+          .map(
+            ([k, v], i) => `<tr>
+          <td style="padding:9px 14px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:${C.faint};vertical-align:middle">${esc(k)}</td>
+          <td style="padding:9px 14px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:13px;color:${C.fg};text-align:right;white-space:nowrap;vertical-align:middle">${esc(v)}</td>
+        </tr>`
+          )
+          .join("")}
+      </table>
+      <p style="margin:10px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Faster Payments, BACS and CHAPS all work — please include the payment reference so we can match your transfer. We mark the invoice paid as soon as it arrives.${payUrl ? " You can also pay any time from your Nullshift client portal — the card link is personal to you." : ""}</p>
     </td></tr>`;
 
   const html = wrap(inner, `Your Nullshift invoice for ${gbp(total)} is ready to pay.`);
@@ -313,9 +337,23 @@ ${items
   .join("\n")}
 
 Total due: ${gbp(total)}
-
-Pay securely here:
+${
+  payUrl
+    ? `
+Pay by card here:
 ${payUrl}
+`
+    : ""
+}
+${payUrl ? "Or pay" : "Pay"} by bank transfer:
+  Account name:      ${BANK_DETAILS.accountName}
+  Sort code:         ${BANK_DETAILS.sortCode}
+  Account number:    ${BANK_DETAILS.accountNumber}
+  Amount:            ${gbp(total)}
+  Payment reference: ${reference}
+
+Faster Payments, BACS and CHAPS all work — please include the payment
+reference so we can match your transfer.
 
 You can also pay any time from your client portal.
 

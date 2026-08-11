@@ -9,6 +9,8 @@ import {
   type IssueRow,
 } from "@/lib/ops/issues";
 import { StageStepper } from "@/components/portal/StageStepper";
+import { BankTransferDetails } from "@/components/portal/BankTransferDetails";
+import { clientRef } from "@nullshift/ui/format";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Eyebrow, Display, Lead } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
@@ -98,7 +100,7 @@ export default async function PortalHome({
       .limit(20),
     supabase
       .from("invoices")
-      .select("id, amount, status, hosted_invoice_url")
+      .select("id, tenant_id, amount, status, hosted_invoice_url")
       .order("created_at", { ascending: false }),
     supabase.from("subscriptions").select("plan, mrr, status").eq("status", "active"),
     supabase
@@ -113,6 +115,7 @@ export default async function PortalHome({
   const updateList = (updates ?? []) as UpdateRow[];
   const invList = (invoices ?? []) as {
     id: string;
+    tenant_id: string;
     amount: number;
     status: string;
     hosted_invoice_url: string | null;
@@ -508,72 +511,68 @@ export default async function PortalHome({
               {billed.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex flex-wrap items-center justify-between gap-3"
                   style={{
                     padding: "12px 14px",
                     background: "var(--k-bg)",
                     border: "1px solid var(--k-border)",
                   }}
                 >
-                  <div className="flex flex-col min-w-0">
-                    <span
-                      style={{
-                        fontFamily: T.sans,
-                        fontWeight: 700,
-                        fontSize: "1rem",
-                        color: "var(--k-fg)",
-                      }}
-                    >
-                      {gbp(Number(inv.amount))}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "0.62rem",
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        color: "var(--k-faint)",
-                      }}
-                    >
-                      Build invoice
-                    </span>
-                  </div>
-                  {inv.status === "paid" ? (
-                    <span
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "0.7rem",
-                        letterSpacing: "0.06em",
-                        textTransform: "uppercase",
-                        color: T.success,
-                      }}
-                    >
-                      Paid ✓
-                    </span>
-                  ) : inv.hosted_invoice_url ? (
-                    <a
-                      href={inv.hosted_invoice_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="kb kb-primary kb-sm"
-                    >
-                      Pay now
-                      <span className="k-arrow" aria-hidden>
-                        →
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-col min-w-0">
+                      <span
+                        style={{
+                          fontFamily: T.sans,
+                          fontWeight: 700,
+                          fontSize: "1rem",
+                          color: "var(--k-fg)",
+                        }}
+                      >
+                        {gbp(Number(inv.amount))}
                       </span>
-                    </a>
-                  ) : (
-                    <span
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "0.7rem",
-                        letterSpacing: "0.06em",
-                        textTransform: "uppercase",
-                        color: "var(--k-faint)",
-                      }}
-                    >
-                      Awaiting invoice
-                    </span>
+                      <span
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: "0.62rem",
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          color: "var(--k-faint)",
+                        }}
+                      >
+                        Build invoice
+                      </span>
+                    </div>
+                    {inv.status === "paid" ? (
+                      <span
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: "0.7rem",
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          color: T.success,
+                        }}
+                      >
+                        Paid ✓
+                      </span>
+                    ) : inv.hosted_invoice_url ? (
+                      <a
+                        href={inv.hosted_invoice_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="kb kb-primary kb-sm"
+                      >
+                        Pay by card
+                        <span className="k-arrow" aria-hidden>
+                          →
+                        </span>
+                      </a>
+                    ) : null}
+                  </div>
+                  {inv.status !== "paid" && (
+                    <BankTransferDetails
+                      reference={clientRef(inv.tenant_id)}
+                      amount={Number(inv.amount)}
+                      only={!inv.hosted_invoice_url}
+                    />
                   )}
                 </div>
               ))}

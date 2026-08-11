@@ -24,6 +24,18 @@ export const LEGAL_ENTITY = {
   domain: "nullshift.co.uk",
 } as const;
 
+/**
+ * Business bank account for receiving client payments by bank transfer —
+ * shown alongside invoices in the portal and invoice emails as a no-card-fee
+ * alternative to Stripe. Receive-only details (the same ones printed on
+ * invoices). Accepts Faster Payments, BACS and CHAPS.
+ */
+export const BANK_DETAILS = {
+  accountName: "Nullshift Development Ltd",
+  sortCode: "23-01-63",
+  accountNumber: "90063199",
+} as const;
+
 /** The authorised sub-processors included in every DPA, in all cases. */
 export type SubProcessor = { name: string; service: string; location: string };
 

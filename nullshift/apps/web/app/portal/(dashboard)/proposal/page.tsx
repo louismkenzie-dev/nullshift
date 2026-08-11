@@ -6,6 +6,7 @@ import { clientRef } from "@nullshift/ui/format";
 import { carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
+import { BankTransferDetails } from "@/components/portal/BankTransferDetails";
 import { ProposalDocument } from "@/components/portal/ProposalDocument";
 import { SignProposal } from "@/components/portal/SignProposal";
 import { DownloadDocButton } from "@/components/portal/DownloadDocButton";
@@ -661,19 +662,28 @@ export default async function PortalProposal() {
                         </span>
                       </div>
                     ))}
-                    {inv.status !== "paid" && inv.hosted_invoice_url && (
-                      <a
-                        href={inv.hosted_invoice_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="kb kb-primary kb-sm"
-                        style={{ marginTop: 14 }}
-                      >
-                        Pay now
-                        <span className="k-arrow" aria-hidden>
-                          →
-                        </span>
-                      </a>
+                    {inv.status !== "paid" && inv.status !== "void" && (
+                      <>
+                        {inv.hosted_invoice_url && (
+                          <a
+                            href={inv.hosted_invoice_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="kb kb-primary kb-sm"
+                            style={{ marginTop: 14 }}
+                          >
+                            Pay by card
+                            <span className="k-arrow" aria-hidden>
+                              →
+                            </span>
+                          </a>
+                        )}
+                        <BankTransferDetails
+                          reference={clientRef(project.tenant_id)}
+                          amount={Number(inv.amount)}
+                          only={!inv.hosted_invoice_url}
+                        />
+                      </>
                     )}
                     {inv.status === "paid" && (
                       <p

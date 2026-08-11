@@ -475,6 +475,52 @@ async function syncInvoiceStatus(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
+/**
+ * Record an out-of-band payment (bank transfer): mark the invoice paid here
+ * and — when a Stripe invoice exists — mark it paid out-of-band in Stripe too,
+ * so the hosted "Pay by card" link stops asking for payment. Never touches an
+ * already-paid or voided invoice.
+ */
+async function markInvoicePaid(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const invoiceId = String(formData.get("invoice_id") || "");
+  if (!tenantId || !invoiceId) return;
+  const service = createServiceClient();
+  const { data: inv } = await service
+    .from("invoices")
+    .select("id, status, stripe_invoice_id")
+    .eq("id", invoiceId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (!inv || inv.status === "paid" || inv.status === "void") return;
+  const stripe = getStripe();
+  if (stripe && inv.stripe_invoice_id) {
+    try {
+      await stripe.invoices.pay(inv.stripe_invoice_id, { paid_out_of_band: true });
+    } catch (e) {
+      // Best-effort — the local record is the source of truth for "invested".
+      console.error("markInvoicePaid: Stripe out-of-band pay failed", e);
+    }
+  }
+  // Compare-and-set: the Stripe roundtrip above leaves a window where another
+  // staff action (e.g. "Regenerate live") could void this invoice — only flip
+  // the row if it's still in the state we checked.
+  await service
+    .from("invoices")
+    .update({ status: "paid", paid_at: new Date().toISOString() })
+    .eq("id", invoiceId)
+    .eq("status", inv.status);
+  await logAudit({
+    action: "invoice.marked_paid",
+    target: `invoice:${invoiceId}`,
+    tenantId,
+    metadata: { via: "bank_transfer" },
+  });
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
 async function bookCall(formData: FormData) {
   "use server";
   const tenantId = String(formData.get("tenant_id") || "");
@@ -1887,7 +1933,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 invoiceList.map((inv) => (
                   <div
                     key={inv.id}
-                    className="flex items-center justify-between"
+                    className="flex flex-wrap items-center justify-between gap-y-2"
                     style={{ padding: "8px 0", borderTop: "1px solid var(--k-border)" }}
                   >
                     <span
@@ -1908,7 +1954,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                         · {inv.project_item_count ?? 0} items
                       </span>
                     </span>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3 gap-y-2">
                       {inv.status === "paid" && inv.paid_at && (
                         <span
                           style={{ fontFamily: T.mono, fontSize: 10, color: T.success }}
@@ -1969,6 +2015,30 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                             title="Void this invoice and create a fresh LIVE one (new Pay-now link), then re-email the client"
                           >
                             Regenerate live
+                          </SubmitButton>
+                        </form>
+                      )}
+                      {inv.status !== "paid" && inv.status !== "void" && (
+                        <form action={markInvoicePaid}>
+                          {htid}
+                          <input type="hidden" name="invoice_id" value={inv.id} />
+                          <SubmitButton
+                            pendingLabel="Marking…"
+                            style={{
+                              fontFamily: T.mono,
+                              fontSize: 10,
+                              letterSpacing: "0.04em",
+                              textTransform: "uppercase",
+                              color: "var(--k-accent)",
+                              background: "transparent",
+                              border: "1px solid var(--k-accent)",
+                              borderRadius: 0,
+                              padding: "5px 9px",
+                              cursor: "pointer",
+                            }}
+                            title="Bank transfer received — mark this invoice paid (also marks the Stripe invoice paid out-of-band so its card link closes)"
+                          >
+                            Mark paid — transfer
                           </SubmitButton>
                         </form>
                       )}

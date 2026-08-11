@@ -3,6 +3,7 @@ import {
   findOrCreateCustomer,
 } from "@nullshift/billing/stripe";
 import { createServiceClient } from "@nullshift/db";
+import { clientRef } from "@nullshift/ui/format";
 import { sendEmail } from "./sendEmail";
 import { buildInvoiceReadyEmail } from "./clientEmails";
 
@@ -103,6 +104,10 @@ export async function generateProjectInvoice(
     email = u.user?.email ?? null;
   }
 
+  // Best-effort Stripe leg: create the hosted card-payment invoice. Any
+  // failure (or Stripe simply unconfigured) still leaves the invoice open and
+  // payable by bank transfer — the email below always carries those details.
+  let payUrl: string | null = null;
   if (email) {
     try {
       const customerId = await findOrCreateCustomer({
@@ -128,6 +133,7 @@ export async function generateProjectInvoice(
           })
         : null;
       if (stripeInv) {
+        payUrl = stripeInv.url ?? null;
         await service
           .from("invoices")
           .update({
@@ -136,27 +142,32 @@ export async function generateProjectInvoice(
             hosted_invoice_url: stripeInv.url,
           })
           .eq("id", invoice.id);
-        // Branded "Pay now" email (best-effort; complements Stripe's own invoice email).
-        if (stripeInv.url) {
-          const mail = buildInvoiceReadyEmail({
-            name: tenantRow?.contact_name ?? tenantRow?.name ?? "",
-            total,
-            payUrl: stripeInv.url,
-            items: lines.map((l) => ({ name: l.name, amount: Number(l.amount) })),
-          });
-          await sendEmail({
-            to: email,
-            subject: mail.subject,
-            html: mail.html,
-            text: mail.text,
-          });
-        }
       } else {
         await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
       }
     } catch (e) {
       console.error("Stripe invoice send failed:", e);
       await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
+    }
+
+    // Branded invoice email — card link (when Stripe produced one) + bank
+    // transfer details in all cases. Best-effort; complements Stripe's own email.
+    try {
+      const mail = buildInvoiceReadyEmail({
+        name: tenantRow?.contact_name ?? tenantRow?.name ?? "",
+        total,
+        payUrl,
+        items: lines.map((l) => ({ name: l.name, amount: Number(l.amount) })),
+        reference: clientRef(tenantId),
+      });
+      await sendEmail({
+        to: email,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+      });
+    } catch (e) {
+      console.error("Invoice email send failed:", e);
     }
   } else {
     await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
