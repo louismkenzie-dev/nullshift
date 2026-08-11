@@ -70,7 +70,10 @@ const jsonLd = {
         addressCountry: "GB",
       },
       priceRange: "££",
-      founder: { "@id": `${SITE_URL}/#founder` },
+      founder: [
+        { "@id": `${SITE_URL}/#founder` },
+        { "@id": `${SITE_URL}/#cofounder` },
+      ],
       identifier: [
         {
           "@type": "PropertyValue",
@@ -84,6 +87,7 @@ const jsonLd = {
         },
       ],
       sameAs: [
+        "https://www.linkedin.com/company/nullshift-development-ltd",
         `https://find-and-update.company-information.service.gov.uk/company/${LEGAL_ENTITY.companyNumber}`,
         `https://ico.org.uk/ESDWebPages/Entry/${LEGAL_ENTITY.ico}`,
       ],
@@ -127,15 +131,23 @@ const jsonLd = {
       "@type": "Person",
       "@id": `${SITE_URL}/#founder`,
       name: "Louis McKenzie",
-      jobTitle: "Founder & Lead Developer",
+      jobTitle: "Co-Founder & Lead Developer",
       worksFor: { "@id": `${SITE_URL}/#organization` },
       url: `${SITE_URL}/about`,
       email: LEGAL_ENTITY.email,
+      sameAs: ["https://www.linkedin.com/in/louis-mckenzie-a287b9247"],
       knowsAbout: [
         "agentic AI automation",
         "full-stack development",
         "business operations systems",
       ],
+    },
+    {
+      "@type": "Person",
+      "@id": `${SITE_URL}/#cofounder`,
+      name: "Christopher Melsa",
+      jobTitle: "Co-Founder & Director",
+      worksFor: { "@id": `${SITE_URL}/#organization` },
     },
     {
       "@type": "WebSite",

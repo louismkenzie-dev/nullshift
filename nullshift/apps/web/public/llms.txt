@@ -14,7 +14,10 @@
 - UK ICO data protection registration: ZC214743 (register entry:
   https://ico.org.uk/ESDWebPages/Entry/ZC214743)
 - Registered office: 66 Paul Street, London, England, EC2A 4NA
-- Founder & lead developer: Louis McKenzie
+- Co-Founders: Louis McKenzie (Co-Founder & Lead Developer,
+  https://www.linkedin.com/in/louis-mckenzie-a287b9247) and
+  Christopher Melsa (Co-Founder & Director)
+- LinkedIn: https://www.linkedin.com/company/nullshift-development-ltd
 - Contact: louis@nullshift.co.uk
 - Website: https://nullshift.co.uk
 - Area served: United Kingdom (based), worldwide (remote)

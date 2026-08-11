@@ -463,7 +463,7 @@ export default function AboutPage() {
                   }}
                 />
                 <div className="absolute bottom-0 left-0 p-6 md:p-8">
-                  <Eyebrow label="Founder · Lead developer" />
+                  <Eyebrow label="Co-Founder · Lead developer" />
                   <div
                     className="mt-3"
                     style={{
