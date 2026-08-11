@@ -217,6 +217,54 @@ export default async function PortalHome({
         lead={`Welcome back — here's how things stand for ${tenant?.name ?? "your business"}.`}
       />
 
+      {/* Proposal awaiting signature — the one action that unlocks everything
+          else, so it leads the page until it's signed. */}
+      {projectList.some((p) => p.proposal_status === "sent") && (
+        <Reveal>
+          <div
+            className="k-kard flex flex-wrap items-center justify-between gap-x-4 gap-y-3"
+            style={{
+              marginTop: 24,
+              padding: "16px 18px",
+              background: "rgba(16,185,129,0.08)",
+              borderColor: "var(--k-accent)",
+            }}
+          >
+            <div className="flex flex-col min-w-0" style={{ gap: 2 }}>
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.62rem",
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--k-accent)",
+                }}
+              >
+                {"// ACTION NEEDED"}
+              </span>
+              <span
+                style={{
+                  fontFamily: T.sans,
+                  fontWeight: 700,
+                  fontSize: "1rem",
+                  letterSpacing: "-0.01em",
+                  color: "var(--k-fg)",
+                }}
+              >
+                Your proposal &amp; agreement are ready to review and sign
+              </span>
+            </div>
+            <Link href="/portal/proposal" className="kb kb-primary kb-sm">
+              Review &amp; sign
+              <span className="k-arrow" aria-hidden>
+                →
+              </span>
+            </Link>
+          </div>
+        </Reveal>
+      )}
+
       {/* System card(s): where the build is + the live site */}
       <div className="flex flex-col gap-3" style={{ margin: "24px 0 20px" }}>
         {systems.map((p, i) => (

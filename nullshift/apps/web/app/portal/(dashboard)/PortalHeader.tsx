@@ -17,10 +17,11 @@ const mono: React.CSSProperties = {
 /** Portal navigation — the client's five places, in plain words. */
 const NAV = [
   { n: "01", href: "/portal", label: "Home" },
-  { n: "02", href: "/portal/requests", label: "Requests" },
-  { n: "03", href: "/portal/updates", label: "Updates" },
-  { n: "04", href: "/portal/plan", label: "Plan" },
-  { n: "05", href: "/portal/deliverables", label: "Documents" },
+  { n: "02", href: "/portal/proposal", label: "Agreement" },
+  { n: "03", href: "/portal/requests", label: "Requests" },
+  { n: "04", href: "/portal/updates", label: "Updates" },
+  { n: "05", href: "/portal/plan", label: "Plan" },
+  { n: "06", href: "/portal/deliverables", label: "Documents" },
 ];
 
 /**
