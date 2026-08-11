@@ -11,10 +11,11 @@ import { ScrambleHover } from "@/components/anim/ScrambleHover";
 
 const LINKS = [
   { n: "01", label: "What we build", href: "/#capabilities" },
-  { n: "02", label: "Systems Lab", href: "/systems-lab" },
-  { n: "03", label: "Pricing", href: "/pricing" },
-  { n: "04", label: "About", href: "/about" },
-  { n: "05", label: "FAQ", href: "/faq" },
+  { n: "02", label: "Client stories", href: "/work" },
+  { n: "03", label: "Systems Lab", href: "/systems-lab" },
+  { n: "04", label: "Pricing", href: "/pricing" },
+  { n: "05", label: "About", href: "/about" },
+  { n: "06", label: "FAQ", href: "/faq" },
 ];
 
 const SOCIALS = [
