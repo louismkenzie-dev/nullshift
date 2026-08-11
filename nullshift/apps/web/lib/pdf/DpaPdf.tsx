@@ -181,11 +181,10 @@ function B({ children }: { children: React.ReactNode }) {
 }
 
 function H2({ children }: { children: React.ReactNode }) {
-  return (
-    <Text style={s.h2} minPresenceAhead={90}>
-      {children}
-    </Text>
-  );
+  // NB: orphan protection is done by wrapping each heading together with its
+  // first clause/table in a wrap={false} View at the call sites — react-pdf
+  // 4.x's minPresenceAhead prop is typed but not implemented.
+  return <Text style={s.h2}>{children}</Text>;
 }
 
 function UL({ items }: { items: React.ReactNode[] }) {
@@ -555,9 +554,10 @@ export function DpaPdf({
           Agreement continues in full force.
         </P>
 
-        <H2>Annex 1 — Details of the Processing</H2>
-        <Table
-          widths={[0.3, 0.7]}
+        <View wrap={false}>
+          <H2>Annex 1 — Details of the Processing</H2>
+          <Table
+            widths={[0.3, 0.7]}
           head={["Item", "Detail"]}
           rows={[
             [
@@ -577,7 +577,8 @@ export function DpaPdf({
             ["Categories of Data Subjects", dataSubjectsText],
             ["Frequency", "Continuous, for the duration of the Services."],
           ]}
-        />
+          />
+        </View>
 
         <View wrap={false}>
           <H2>Annex 2 — Technical and organisational security measures</H2>
@@ -596,12 +597,14 @@ export function DpaPdf({
           ]}
         />
 
-        <H2>Annex 3 — Authorised Sub-processors</H2>
-        <Table
-          widths={[0.3, 0.4, 0.3]}
-          head={["Sub-processor", "Service provided", "Location of Processing"]}
-          rows={SUB_PROCESSORS.map((sp) => [sp.name, sp.service, sp.location])}
-        />
+        <View wrap={false}>
+          <H2>Annex 3 — Authorised Sub-processors</H2>
+          <Table
+            widths={[0.3, 0.4, 0.3]}
+            head={["Sub-processor", "Service provided", "Location of Processing"]}
+            rows={SUB_PROCESSORS.map((sp) => [sp.name, sp.service, sp.location])}
+          />
+        </View>
         <P>
           This list reflects the tools currently used and is updated to match the actual
           tools used for each Client.

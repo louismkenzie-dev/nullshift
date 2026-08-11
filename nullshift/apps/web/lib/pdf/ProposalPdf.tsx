@@ -240,12 +240,23 @@ export function PdfFooter() {
 }
 
 function SectionTitle({ n, title }: { n: string; title: string }) {
+  // NB: orphan protection is done by wrapping this title together with the
+  // section's first content block in a wrap={false} View at each call site —
+  // react-pdf 4.x's minPresenceAhead prop is typed but not implemented.
   return (
-    <View style={s.secRow} minPresenceAhead={90}>
+    <View style={s.secRow}>
       <Text style={s.secNum}>{n}</Text>
       <Text style={s.secTitle}>{title}</Text>
     </View>
   );
+}
+
+/** First paragraph (grouped with the heading) + the rest, split on blank lines. */
+function splitFirstPara(text: string): [string, string | null] {
+  const idx = text.indexOf("\n");
+  if (idx === -1) return [text, null];
+  const rest = text.slice(idx + 1).replace(/^\n+/, "");
+  return [text.slice(0, idx), rest.length > 0 ? rest : null];
 }
 
 export type ProposalPdfProps = {
@@ -309,24 +320,40 @@ export function ProposalPdf({
         <Text style={s.preparedLabel}>Prepared for</Text>
         <Text style={s.preparedName}>{businessName || clientName}</Text>
 
-        {overview ? (
-          <View style={s.section}>
-            <SectionTitle n={sec()} title="Overview" />
-            <Text style={s.body}>{overview}</Text>
-          </View>
-        ) : null}
+        {overview
+          ? (() => {
+              const [first, rest] = splitFirstPara(overview);
+              return (
+                <View style={s.section}>
+                  <View wrap={false}>
+                    <SectionTitle n={sec()} title="Overview" />
+                    <Text style={s.body}>{first}</Text>
+                  </View>
+                  {rest ? <Text style={{ ...s.body, marginTop: 6 }}>{rest}</Text> : null}
+                </View>
+              );
+            })()
+          : null}
 
         <View style={s.section}>
-          <SectionTitle n={sec()} title="What we'll build & you'll own" />
-          {items.map((it, i) => (
+          <View wrap={false}>
+            <SectionTitle n={sec()} title="What we'll build & you'll own" />
+            {items.length === 0 ? (
+              <Text style={s.body}>Build modules will be listed here.</Text>
+            ) : (
+              <View style={s.row}>
+                <Text style={s.rowName}>{items[0].name}</Text>
+                <Text style={s.rowAmount}>{gbp(Number(items[0].amount))}</Text>
+              </View>
+            )}
+          </View>
+          {items.slice(1).map((it, i) => (
             <View key={i} style={s.row} wrap={false}>
               <Text style={s.rowName}>{it.name}</Text>
               <Text style={s.rowAmount}>{gbp(Number(it.amount))}</Text>
             </View>
           ))}
-          {items.length === 0 ? (
-            <Text style={s.body}>Build modules will be listed here.</Text>
-          ) : (
+          {items.length > 0 && (
             <View style={s.totalRow} wrap={false}>
               <Text style={s.totalLabel}>Total — one-off build</Text>
               <Text style={s.totalAmount}>{gbp(total)}</Text>
@@ -335,10 +362,19 @@ export function ProposalPdf({
         </View>
 
         <View style={s.section}>
-          <SectionTitle n={sec()} title="How we'll build it" />
-          {PHASES.map((p, i) => (
+          <View wrap={false}>
+            <SectionTitle n={sec()} title="How we'll build it" />
+            <View style={s.phaseRow}>
+              <Text style={s.phaseNum}>01</Text>
+              <View style={s.phaseBody}>
+                <Text style={s.phaseTitle}>{PHASES[0].title}</Text>
+                <Text style={s.phaseDetail}>{PHASES[0].detail}</Text>
+              </View>
+            </View>
+          </View>
+          {PHASES.slice(1).map((p, i) => (
             <View key={i} style={s.phaseRow} wrap={false}>
-              <Text style={s.phaseNum}>{String(i + 1).padStart(2, "0")}</Text>
+              <Text style={s.phaseNum}>{String(i + 2).padStart(2, "0")}</Text>
               <View style={s.phaseBody}>
                 <Text style={s.phaseTitle}>{p.title}</Text>
                 <Text style={s.phaseDetail}>{p.detail}</Text>
@@ -348,12 +384,14 @@ export function ProposalPdf({
         </View>
 
         <View style={s.section}>
-          <SectionTitle n={sec()} title="Investment" />
-          <View style={s.row} wrap={false}>
-            <Text style={{ ...s.rowName, fontFamily: "Helvetica-Bold" }}>
-              One-off build (you own it)
-            </Text>
-            <Text style={s.totalAmount}>{gbp(total)}</Text>
+          <View wrap={false}>
+            <SectionTitle n={sec()} title="Investment" />
+            <View style={s.row}>
+              <Text style={{ ...s.rowName, fontFamily: "Helvetica-Bold" }}>
+                One-off build (you own it)
+              </Text>
+              <Text style={s.totalAmount}>{gbp(total)}</Text>
+            </View>
           </View>
           {carePlan ? (
             <View style={s.row} wrap={false}>
@@ -369,25 +407,26 @@ export function ProposalPdf({
 
         {carePlan && (carePlan.blurb || (carePlan.features?.length ?? 0) > 0) ? (
           <View style={s.section}>
-            <SectionTitle n={sec()} title="Your care plan" />
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                marginBottom: 4,
-              }}
-              wrap={false}
-            >
-              <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 10, color: INK }}>
-                {carePlan.label}
-              </Text>
-              <Text style={{ fontSize: 9.5, color: ACCENT }}>
-                {gbp(carePlan.mrr)}/mo
-              </Text>
+            <View wrap={false}>
+              <SectionTitle n={sec()} title="Your care plan" />
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 4,
+                }}
+              >
+                <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 10, color: INK }}>
+                  {carePlan.label}
+                </Text>
+                <Text style={{ fontSize: 9.5, color: ACCENT }}>
+                  {gbp(carePlan.mrr)}/mo
+                </Text>
+              </View>
+              {carePlan.blurb ? (
+                <Text style={{ ...s.body, marginBottom: 6 }}>{carePlan.blurb}</Text>
+              ) : null}
             </View>
-            {carePlan.blurb ? (
-              <Text style={{ ...s.body, marginBottom: 6 }}>{carePlan.blurb}</Text>
-            ) : null}
             {(carePlan.features ?? []).map((f, i) => (
               <View key={i} style={s.featureRow} wrap={false}>
                 <Text style={s.featureBullet}>–</Text>
@@ -398,12 +437,20 @@ export function ProposalPdf({
           </View>
         ) : null}
 
-        <View style={s.section}>
-          <SectionTitle n={sec()} title="Payment terms" />
-          <Text style={s.body}>{paymentTerms || DEFAULT_PAYMENT_TERMS}</Text>
-        </View>
+        {(() => {
+          const [first, rest] = splitFirstPara(paymentTerms || DEFAULT_PAYMENT_TERMS);
+          return (
+            <View style={s.section}>
+              <View wrap={false}>
+                <SectionTitle n={sec()} title="Payment terms" />
+                <Text style={s.body}>{first}</Text>
+              </View>
+              {rest ? <Text style={{ ...s.body, marginTop: 6 }}>{rest}</Text> : null}
+            </View>
+          );
+        })()}
 
-        <View style={s.section}>
+        <View style={s.section} wrap={false}>
           <SectionTitle
             n={sec()}
             title={

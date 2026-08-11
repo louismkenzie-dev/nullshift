@@ -6,6 +6,7 @@ import { createServiceClient } from "@nullshift/db";
 import { clientRef } from "@nullshift/ui/format";
 import { sendEmail } from "./sendEmail";
 import { buildInvoiceReadyEmail } from "./clientEmails";
+import { syncInvoiceToXero } from "./xeroSync";
 
 type Service = ReturnType<typeof createServiceClient>;
 
@@ -172,6 +173,9 @@ export async function generateProjectInvoice(
   } else {
     await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
   }
+
+  // Mirror the invoice into Xero (best-effort — logged + swallowed inside).
+  await syncInvoiceToXero(service, invoice.id);
 
   return { ok: true, invoiceId: invoice.id, total };
 }

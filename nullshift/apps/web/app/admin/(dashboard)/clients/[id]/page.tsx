@@ -17,6 +17,8 @@ import {
   isGoCardlessConfigured,
   startCareDirectDebit,
 } from "@nullshift/billing/gocardless";
+import { isXeroConfigured } from "@nullshift/billing/xero";
+import { syncInvoiceToXero, syncInvoicePaymentToXero } from "@/lib/xeroSync";
 import { sendEmail } from "@/lib/sendEmail";
 import {
   portalReadyEmail,
@@ -64,6 +66,7 @@ type Invoice = {
   project_item_count: number | null;
   created_at: string;
   paid_at: string | null;
+  xero_invoice_id: string | null;
 };
 type Call = {
   id: string;
@@ -529,6 +532,27 @@ async function markInvoicePaid(formData: FormData) {
     tenantId,
     metadata: { via: "bank_transfer" },
   });
+  // Mirror the payment into Xero (best-effort — logged + swallowed inside).
+  await syncInvoicePaymentToXero(service, invoiceId);
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/** Push an invoice into Xero on demand (backfill for pre-Xero invoices). */
+async function pushInvoiceToXero(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const invoiceId = String(formData.get("invoice_id") || "");
+  if (!tenantId || !invoiceId) return;
+  const service = createServiceClient();
+  const res = await syncInvoiceToXero(service, invoiceId);
+  if (res.ok)
+    await logAudit({
+      action: "invoice.xero_synced",
+      target: `invoice:${invoiceId}`,
+      tenantId,
+      metadata: { xeroInvoiceId: res.xeroInvoiceId },
+    });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -1249,7 +1273,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       ? supabase
           .from("invoices")
           .select(
-            "id, amount, status, hosted_invoice_url, project_item_count, created_at, paid_at"
+            "id, amount, status, hosted_invoice_url, project_item_count, created_at, paid_at, xero_invoice_id"
           )
           .eq("project_id", projectId)
           .order("created_at", { ascending: false })
@@ -2069,6 +2093,44 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                           payment link ↗
                         </a>
                       )}
+                      {isXeroConfigured() &&
+                        (inv.xero_invoice_id ? (
+                          <span
+                            title="Synced to Xero"
+                            style={{
+                              fontFamily: T.mono,
+                              fontSize: 10,
+                              letterSpacing: "0.04em",
+                              textTransform: "uppercase",
+                              color: "var(--k-faint)",
+                            }}
+                          >
+                            xero ✓
+                          </span>
+                        ) : (
+                          <form action={pushInvoiceToXero}>
+                            {htid}
+                            <input type="hidden" name="invoice_id" value={inv.id} />
+                            <SubmitButton
+                              pendingLabel="Pushing…"
+                              title="Create this invoice in Xero (records the payment too if already paid)"
+                              style={{
+                                fontFamily: T.mono,
+                                fontSize: 10,
+                                letterSpacing: "0.04em",
+                                textTransform: "uppercase",
+                                color: "var(--k-muted)",
+                                background: "transparent",
+                                border: "1px solid var(--k-border)",
+                                borderRadius: 0,
+                                padding: "5px 9px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              → Xero
+                            </SubmitButton>
+                          </form>
+                        ))}
                       {inv.status !== "paid" &&
                         (inv.hosted_invoice_url ?? "").includes("/test") && (
                           <span

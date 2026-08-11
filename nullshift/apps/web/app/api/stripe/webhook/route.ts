@@ -3,6 +3,7 @@ import { stripeConfig } from "@nullshift/billing/config";
 import { createServiceClient } from "@nullshift/db";
 import { mapStripeSubStatus } from "@/lib/careSubscription";
 import { carePlan } from "@/lib/carePlans";
+import { syncInvoicePaymentToXero } from "@/lib/xeroSync";
 
 /**
  * Stripe webhook — the single authoritative consumer (point the Stripe dashboard
@@ -51,13 +52,18 @@ export async function POST(req: Request) {
         const inv = event.data.object as Stripe.Invoice;
         if (inv.id) {
           const paidAt = inv.status_transitions?.paid_at ?? event.created;
-          await supabase
+          const { data: paidRows } = await supabase
             .from("invoices")
             .update({
               status: "paid",
               paid_at: new Date(paidAt * 1000).toISOString(),
             })
-            .eq("stripe_invoice_id", inv.id);
+            .eq("stripe_invoice_id", inv.id)
+            .select("id");
+          // Mirror the payment into Xero (best-effort, never blocks the 200).
+          for (const row of paidRows ?? []) {
+            await syncInvoicePaymentToXero(supabase, (row as { id: string }).id);
+          }
         }
         break;
       }

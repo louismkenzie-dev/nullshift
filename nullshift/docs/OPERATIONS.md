@@ -205,3 +205,31 @@ sandbox access token — the client targets `api-sandbox.gocardless.com`. In the
 authorisation flow use GoCardless's test bank details (sort code `20-00-00`, account
 `55779911`); mandates activate within minutes and webhooks fire for the full lifecycle,
 so the whole choose → authorise → activate loop is testable without moving money.
+
+## Xero invoice sync
+
+Every invoice the system creates is mirrored into Xero as an authorised ACCREC
+sales invoice against the client's Xero contact (found or created by email/name
+on first sync, cached on the tenant). Payments are recorded in Xero when the
+invoice is paid — by card (Stripe webhook) or by bank transfer ("Mark paid —
+transfer" in the client hub). Older invoices can be pushed on demand with the
+"→ Xero" button on the client hub's invoice rows.
+
+**Setup (Xero custom connection — machine-to-machine, one organisation):**
+
+1. developer.xero.com → New app → **Custom connection**.
+2. Scopes: `accounting.transactions` + `accounting.contacts`. Authorise it
+   against the Nullshift organisation (Xero bills custom connections as a
+   small monthly add-on in the UK).
+3. Vercel env vars:
+   - `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` — from the custom connection.
+   - `XERO_SALES_ACCOUNT_CODE` — revenue account for invoice lines
+     (default `200`, Xero's standard Sales account).
+   - `XERO_PAYMENT_ACCOUNT_CODE` — the bank account payments are recorded
+     against (tick "Enable payments to this account" on it in Xero).
+     Optional: leave unset and invoices sync as AUTHORISED but payments
+     stay manual in Xero.
+   - `XERO_TAX_TYPE` — line tax type; default `NONE` (not VAT-registered).
+     Set `OUTPUT2` (20% VAT) if/when VAT registration happens.
+
+Unconfigured = fully inert: no env vars, no Xero calls, no UI buttons.

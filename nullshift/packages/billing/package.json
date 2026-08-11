@@ -10,7 +10,8 @@
     "./fees": "./src/fees.ts",
     "./mrr": "./src/mrr.ts",
     "./stripe": "./src/stripe.ts",
-    "./gocardless": "./src/gocardless.ts"
+    "./gocardless": "./src/gocardless.ts",
+    "./xero": "./src/xero.ts"
   },
   "dependencies": {
     "@nullshift/db": "workspace:*",
