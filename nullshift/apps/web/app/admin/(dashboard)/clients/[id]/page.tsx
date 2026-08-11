@@ -13,12 +13,17 @@ import { CARE_PLANS, CARE_PLAN_MRR, carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { sendCareSubscriptionSignup } from "@/lib/careSubscription";
 import { getStripe, voidStripeInvoice } from "@nullshift/billing/stripe";
+import {
+  isGoCardlessConfigured,
+  startCareDirectDebit,
+} from "@nullshift/billing/gocardless";
 import { sendEmail } from "@/lib/sendEmail";
 import {
   portalReadyEmail,
   documentsReadyEmail,
   portalAccessEmail,
   passwordResetEmail,
+  buildDirectDebitEmail,
 } from "@/lib/clientEmails";
 import { ProposalDocsForm } from "@/components/admin/ProposalDocsForm";
 import { dpaReadyToSend } from "@/lib/dpa";
@@ -70,7 +75,13 @@ type Call = {
   meeting_id: string | null;
   meeting_password: string | null;
 };
-type Sub = { id: string; plan: string; mrr: number; status: string };
+type Sub = {
+  id: string;
+  plan: string;
+  mrr: number;
+  status: string;
+  provider?: string | null;
+};
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 const STAGES = ["discovery", "build", "review", "live", "care"];
@@ -628,6 +639,85 @@ async function sendSubscriptionSignup(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
+/**
+ * Email the client a GoCardless Direct Debit authorisation for a care plan —
+ * the admin-initiated path for attaching a plan later (e.g. a client who chose
+ * "no care plan" during onboarding). The webhook activates the subscription
+ * once the mandate is confirmed.
+ */
+async function sendDirectDebitSetup(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const plan = String(formData.get("plan") || "");
+  if (!tenantId || !(plan in CARE_PLAN_MRR)) return;
+  if (!isGoCardlessConfigured()) return;
+  const meta = carePlan(plan);
+  if (!meta) return;
+  const service = createServiceClient();
+  // Never double-bill: bail if billing is already live.
+  const { data: live } = await service
+    .from("subscriptions")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .in("status", ["active", "trialing", "past_due"])
+    .limit(1);
+  if (live && live.length > 0) return;
+  const { data: tenant } = await service
+    .from("tenants")
+    .select("name, contact_name, contact_email")
+    .eq("id", tenantId)
+    .maybeSingle();
+  if (!tenant?.contact_email) return;
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
+    /\/$/,
+    ""
+  );
+  const dd = await startCareDirectDebit({
+    tenantId,
+    plan: meta.id,
+    amountPence: Math.round(meta.mrr * 100),
+    description: `Nullshift ${meta.label} care plan`,
+    email: tenant.contact_email,
+    name: tenant.name ?? tenant.contact_name ?? null,
+    origin,
+  });
+  if (!dd) return;
+  await service
+    .from("subscriptions")
+    .delete()
+    .eq("tenant_id", tenantId)
+    .eq("provider", "gocardless")
+    .eq("status", "incomplete");
+  await service.from("subscriptions").insert({
+    tenant_id: tenantId,
+    plan: meta.id,
+    mrr: meta.mrr,
+    status: "incomplete",
+    provider: "gocardless",
+    gc_billing_request_id: dd.billingRequestId,
+  });
+  const mail = buildDirectDebitEmail({
+    name: tenant.contact_name ?? tenant.name ?? "",
+    planLabel: meta.label,
+    mrr: meta.mrr,
+    url: dd.url,
+  });
+  await sendEmail({
+    to: tenant.contact_email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+  });
+  await logAudit({
+    action: "care_plan.dd_setup_sent",
+    target: `tenant:${tenantId}`,
+    tenantId,
+    metadata: { plan: meta.id, billingRequest: dd.billingRequestId, via: "admin" },
+  });
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
 async function cancelSubscription(formData: FormData) {
   "use server";
   if (!(await requireStaff()).ok) return;
@@ -990,7 +1080,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
     supabase
       .from("tenants")
       .select(
-        "id, name, type, vertical, status, contact_name, contact_email, contact_phone, notes"
+        "id, name, type, vertical, status, contact_name, contact_email, contact_phone, notes, care_plan_choice"
       )
       .eq("id", tenantId)
       .maybeSingle(),
@@ -1013,7 +1103,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       .maybeSingle(),
     supabase
       .from("subscriptions")
-      .select("id, plan, mrr, status")
+      .select("id, plan, mrr, status, provider")
       .eq("tenant_id", tenantId)
       .neq("status", "canceled")
       .order("created_at", { ascending: false }),
@@ -1039,6 +1129,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
     contact_email: string | null;
     contact_phone: string | null;
     notes: string | null;
+    care_plan_choice: string | null;
   };
   // Primary project (most recent). Tenant-scoped sections work without one.
   const project = (projects ?? [])[0] as
@@ -2450,7 +2541,9 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     padding: "6px 12px",
                   }}
                 >
-                  Sign-up sent — awaiting completion
+                  {pendingSub.provider === "gocardless"
+                    ? "Direct Debit — awaiting authorisation"
+                    : "Sign-up sent — awaiting completion"}
                 </span>
               </div>
               <p
@@ -2461,19 +2554,47 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                   margin: "8px 0 12px",
                 }}
               >
-                The client&apos;s been emailed a secure card sign-up. This flips to Active
-                automatically once they complete it.
+                {pendingSub.provider === "gocardless"
+                  ? "The client has a GoCardless Direct Debit authorisation link. This flips to Active automatically once the mandate is confirmed."
+                  : "The client's been emailed a secure card sign-up. This flips to Active automatically once they complete it."}
               </p>
-              <form action={sendSubscriptionSignup}>
+              <form
+                action={
+                  pendingSub.provider === "gocardless"
+                    ? sendDirectDebitSetup
+                    : sendSubscriptionSignup
+                }
+              >
                 {htid}
                 <input type="hidden" name="plan" value={pendingSub.plan} />
                 <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
-                  Resend sign-up
+                  {pendingSub.provider === "gocardless"
+                    ? "Resend Direct Debit link"
+                    : "Resend sign-up"}
                 </SubmitButton>
               </form>
             </div>
           ) : (
             <div style={{ marginTop: 14 }}>
+              {tenant?.care_plan_choice && (
+                <p
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color:
+                      tenant.care_plan_choice === "none" ? T.warning : "var(--k-accent)",
+                    marginBottom: 8,
+                  }}
+                >
+                  Client chose:{" "}
+                  {tenant.care_plan_choice === "none"
+                    ? "No care plan (for now)"
+                    : (carePlan(tenant.care_plan_choice)?.label ??
+                      tenant.care_plan_choice)}
+                </p>
+              )}
               <p
                 style={{
                   fontFamily: T.sans,
@@ -2485,9 +2606,43 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 {project?.proposed_plan
                   ? `${carePlan(project.proposed_plan)?.label} · ${gbp(
                       carePlan(project.proposed_plan)?.mrr ?? 0
-                    )}/mo — not set up yet. Email the client a sign-up to start it.`
-                  : "No care plan yet. Pick one and email the client a sign-up to start it."}
+                    )}/mo — not set up yet. Send billing setup to start it.`
+                  : "No care plan yet. Pick one and send the client billing setup to start it."}
               </p>
+              {isGoCardlessConfigured() && (
+                <form
+                  action={sendDirectDebitSetup}
+                  className="flex items-center gap-2 flex-wrap"
+                  style={{ marginBottom: 8 }}
+                >
+                  {htid}
+                  <select
+                    name="plan"
+                    defaultValue={project?.proposed_plan ?? "hosting"}
+                    style={{ ...inp, width: 170 }}
+                  >
+                    {CARE_PLANS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label} — £{p.mrr}/mo
+                      </option>
+                    ))}
+                  </select>
+                  <SubmitButton
+                    disabled={!isAccepted}
+                    style={{
+                      ...btn(
+                        isAccepted ? "var(--k-accent)" : "var(--k-surface)",
+                        isAccepted ? "var(--k-on-accent)" : "var(--k-faint)"
+                      ),
+                      cursor: isAccepted ? "pointer" : "not-allowed",
+                      opacity: isAccepted ? 1 : 0.7,
+                    }}
+                    title="Email the client a GoCardless Direct Debit authorisation for this plan"
+                  >
+                    Send Direct Debit setup
+                  </SubmitButton>
+                </form>
+              )}
               <form
                 action={sendSubscriptionSignup}
                 className="flex items-center gap-2 flex-wrap"
@@ -2508,14 +2663,24 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                   disabled={!isAccepted}
                   style={{
                     ...btn(
-                      isAccepted ? "var(--k-accent)" : "var(--k-surface)",
-                      isAccepted ? "var(--k-on-accent)" : "var(--k-faint)"
+                      isGoCardlessConfigured()
+                        ? "var(--k-surface)"
+                        : isAccepted
+                          ? "var(--k-accent)"
+                          : "var(--k-surface)",
+                      isGoCardlessConfigured()
+                        ? "var(--k-fg)"
+                        : isAccepted
+                          ? "var(--k-on-accent)"
+                          : "var(--k-faint)"
                     ),
                     cursor: isAccepted ? "pointer" : "not-allowed",
                     opacity: isAccepted ? 1 : 0.7,
                   }}
                 >
-                  Send care-plan sign-up
+                  {isGoCardlessConfigured()
+                    ? "Or send card sign-up (Stripe)"
+                    : "Send care-plan sign-up"}
                 </SubmitButton>
               </form>
               {!isAccepted && (

@@ -170,3 +170,38 @@ All are optional — every AI/automation feature degrades to a manual path when 
 
 Admin access = a `staff` membership on the internal tenant (preferred) **or** an entry in
 `ADMIN_EMAILS` (transitional). Every admin mutation is audit-logged (`audit_log`).
+
+## GoCardless Direct Debit (care plans)
+
+Monthly care plans can be collected by Bacs Direct Debit through GoCardless as an
+alternative to the Stripe card checkout. Same graceful degradation as Stripe: with no env
+vars set, every helper no-ops (`@nullshift/billing/gocardless`).
+
+| Var | Purpose |
+|-----|---------|
+| `GOCARDLESS_ACCESS_TOKEN` | API access token (from the GoCardless dashboard → Developers) |
+| `GOCARDLESS_ENVIRONMENT` | `live` or `sandbox` — anything other than `live` uses the sandbox API |
+| `GOCARDLESS_WEBHOOK_SECRET` | Webhook endpoint secret (HMAC-SHA256 signature verification) |
+
+**Webhook endpoint:** `https://nullshift.co.uk/api/gocardless/webhook` — add it in the
+GoCardless dashboard (Developers → Webhook endpoints) with the secret above. GoCardless
+sends all events to the endpoint; the handler acts on these and 200-acks the rest:
+
+- `billing_requests` / `fulfilled` — mandate authorised → creates the monthly GoCardless
+  subscription and activates our `subscriptions` row (`provider='gocardless'`).
+- `mandates` / `cancelled`, `expired`, `failed` — row → `canceled`.
+- `subscriptions` / `cancelled`, `finished` — row → `canceled`.
+- `payments` / `failed` — logged only (surfaces via the Friday pulse), no DB write.
+
+**The flow:** client chooses a plan in the portal → `startCareDirectDebit()` creates a
+GoCardless billing request (Bacs mandate, metadata carries tenant + plan) plus a hosted
+flow, and the pending `subscriptions` row stores `gc_billing_request_id` → the client
+authorises the mandate on GoCardless's page (returned to `/portal/plan?dd=authorised`,
+or `?dd=exit` if they bail) → the `billing_requests.fulfilled` webhook creates the
+subscription against the new mandate and flips the row to active.
+
+**Sandbox testing:** leave `GOCARDLESS_ENVIRONMENT` unset (or `sandbox`) and use a
+sandbox access token — the client targets `api-sandbox.gocardless.com`. In the sandbox
+authorisation flow use GoCardless's test bank details (sort code `20-00-00`, account
+`55779911`); mandates activate within minutes and webhooks fire for the full lifecycle,
+so the whole choose → authorise → activate loop is testable without moving money.

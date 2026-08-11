@@ -9,7 +9,8 @@
     "./pricing": "./src/pricing.ts",
     "./fees": "./src/fees.ts",
     "./mrr": "./src/mrr.ts",
-    "./stripe": "./src/stripe.ts"
+    "./stripe": "./src/stripe.ts",
+    "./gocardless": "./src/gocardless.ts"
   },
   "dependencies": {
     "@nullshift/db": "workspace:*",

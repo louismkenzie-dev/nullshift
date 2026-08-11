@@ -9,7 +9,6 @@ import { DpaTemplate } from "@/components/legal/DpaTemplate";
 import { BankTransferDetails } from "@/components/portal/BankTransferDetails";
 import { ProposalDocument } from "@/components/portal/ProposalDocument";
 import { SignProposal } from "@/components/portal/SignProposal";
-import { DownloadDocButton } from "@/components/portal/DownloadDocButton";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 import { setEntityType } from "../dpa-actions";
 import { dpaReadyToSend } from "@/lib/dpa";
@@ -484,17 +483,19 @@ export default async function PortalProposal() {
                       <span style={{ marginRight: "auto" }}>
                         <MonoTag>Signed documents</MonoTag>
                       </span>
-                      <DownloadDocButton
-                        targetId={`proposal-document-${project.id}`}
-                        filename={`nullshift-proposal-${clientRef(project.tenant_id)}.pdf`}
-                        label="Proposal PDF"
-                      />
+                      <a
+                        href={`/api/documents/proposal/${project.id}`}
+                        className="kb kb-sm"
+                      >
+                        ↓ Proposal PDF
+                      </a>
                       {limited && (
-                        <DownloadDocButton
-                          targetId={`dpa-document-${project.id}`}
-                          filename={`nullshift-dpa-${clientRef(project.tenant_id)}.pdf`}
-                          label="DPA PDF"
-                        />
+                        <a
+                          href={`/api/documents/dpa/${project.id}`}
+                          className="kb kb-sm"
+                        >
+                          ↓ DPA PDF
+                        </a>
                       )}
                     </div>
                   )}

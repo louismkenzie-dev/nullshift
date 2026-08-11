@@ -18,10 +18,11 @@ const mono: React.CSSProperties = {
 const NAV = [
   { n: "01", href: "/portal", label: "Home" },
   { n: "02", href: "/portal/proposal", label: "Agreement" },
-  { n: "03", href: "/portal/requests", label: "Requests" },
-  { n: "04", href: "/portal/updates", label: "Updates" },
-  { n: "05", href: "/portal/plan", label: "Plan" },
-  { n: "06", href: "/portal/deliverables", label: "Documents" },
+  { n: "03", href: "/portal/payments", label: "Payments" },
+  { n: "04", href: "/portal/requests", label: "Requests" },
+  { n: "05", href: "/portal/updates", label: "Updates" },
+  { n: "06", href: "/portal/plan", label: "Plan" },
+  { n: "07", href: "/portal/deliverables", label: "Documents" },
 ];
 
 /**

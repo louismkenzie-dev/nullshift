@@ -18,6 +18,7 @@
     "@nullshift/content": "workspace:*",
     "@nullshift/db": "workspace:*",
     "@nullshift/ui": "workspace:*",
+    "@react-pdf/renderer": "^4.6.0",
     "@splinetool/react-spline": "^4.1.0",
     "@splinetool/runtime": "^1.12.97",
     "@stripe/stripe-js": "^9.8.0",

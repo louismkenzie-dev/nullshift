@@ -360,3 +360,49 @@ You can also pay any time from your client portal.
 — Nullshift`;
   return { subject, html, text };
 }
+
+/**
+ * Care-plan Direct Debit authorisation email — sent when the admin attaches a
+ * plan and starts GoCardless setup. One link: the client authorises the BACS
+ * mandate and the plan activates automatically once it's confirmed.
+ */
+export function buildDirectDebitEmail(opts: {
+  name: string;
+  planLabel: string;
+  mrr: number;
+  url: string;
+}): { subject: string; html: string; text: string } {
+  const { name, planLabel, mrr, url } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
+  const subject = `Set up your Nullshift ${planLabel} plan — ${gbp(mrr)}/month by Direct Debit`;
+
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Care plan setup</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Authorise your Direct Debit</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, your <strong style="color:${C.fg}">${esc(planLabel)}</strong> care plan is ready to start — <strong style="color:${C.fg}">${gbp(mrr)}/month</strong>, collected by Direct Debit. Authorise the mandate below (it takes about a minute, powered by GoCardless) and your plan activates automatically.</p>
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(url, "Set up Direct Debit →")}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Protected by the Direct Debit Guarantee. You can cancel any time. If you weren't expecting this, just reply and tell us.</p>
+    </td></tr>`;
+
+  const html = wrap(
+    inner,
+    `Authorise your ${planLabel} care plan Direct Debit — ${gbp(mrr)}/month.`
+  );
+  const text = `Hi ${first},
+
+Your ${planLabel} care plan is ready to start — ${gbp(mrr)}/month, collected
+by Direct Debit and protected by the Direct Debit Guarantee.
+
+Authorise the mandate here (takes about a minute, powered by GoCardless):
+${url}
+
+Your plan activates automatically once the mandate is confirmed. You can
+cancel any time. If you weren't expecting this, just reply and tell us.
+
+— Nullshift`;
+  return { subject, html, text };
+}
