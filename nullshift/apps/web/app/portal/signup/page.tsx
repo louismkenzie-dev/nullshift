@@ -8,6 +8,7 @@ import { T } from "@nullshift/ui/tokens";
 import { LogoMark } from "@nullshift/ui/components/Logo";
 import { Eyebrow, Display } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
+import { useOperationPending } from "@/components/app/operationOverlay";
 
 type Step = "form" | "verify";
 
@@ -53,6 +54,8 @@ function SignupFlow() {
   const [digits, setDigits] = useState(["", "", "", "", "", ""]);
   const inputRefs = Array.from({ length: 6 }, () => React.createRef<HTMLInputElement>());
   const [busy, setBusy] = useState(false);
+  // Full-bleed Nullshift loader while auth round-trips run.
+  useOperationPending(busy);
   const [resendBusy, setResendBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

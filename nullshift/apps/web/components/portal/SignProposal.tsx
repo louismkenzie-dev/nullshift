@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useOperationPending } from "@/components/app/operationOverlay";
 import { useRouter } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
 import { SignatureField } from "./SignatureField";
@@ -29,6 +30,8 @@ export function SignProposal({
   const [signed, setSigned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Full-bleed Nullshift loader while signing executes (invoice + emails).
+  useOperationPending(pending);
 
   function onAccept(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

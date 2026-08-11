@@ -5,6 +5,7 @@ import { AdminNav } from "../AdminNav";
 import { T } from "@nullshift/ui/tokens";
 import { Atmosphere } from "@/components/funnel/Atmosphere";
 import { hasSupabaseServerConfig, getMissingSupabaseEnv } from "@nullshift/db/env";
+import { OperationOverlay } from "@/components/app/OperationOverlay";
 
 // Auth-gated dashboard — always render per request, never statically prerender,
 // so `next build` can't try to reach Supabase with placeholder CI/build env.
@@ -161,6 +162,8 @@ export default async function DashboardLayout({
         <AdminNav email={user.email ?? ""} />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">{children}</main>
       </div>
+      {/* Full-bleed Nullshift loader for pressed operations (global). */}
+      <OperationOverlay />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useOperationPending } from "@/components/app/operationOverlay";
 import { useRouter } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
 
@@ -51,6 +52,8 @@ export function EntityTypeForm({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Full-bleed Nullshift loader while the declaration saves.
+  useOperationPending(pending);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

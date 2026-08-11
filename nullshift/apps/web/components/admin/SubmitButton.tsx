@@ -2,6 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
+import { useOperationPending } from "@/components/app/operationOverlay";
 
 /**
  * A submit button that gives instant feedback: the moment it's clicked it shows a
@@ -23,6 +24,8 @@ export function SubmitButton({
   pendingLabel?: string;
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
   const { pending } = useFormStatus();
+  // Raise the full-bleed Nullshift loader while this form's action runs.
+  useOperationPending(pending);
   const isDisabled = !!disabled || pending;
   return (
     <button

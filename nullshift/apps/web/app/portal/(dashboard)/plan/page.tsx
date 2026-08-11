@@ -4,6 +4,7 @@ import { CARE_PLANS, carePlan, currentPeriodStart, remainingAllowance } from "@/
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/Reveal";
 import { choosePlan } from "./actions";
+import { PendingBeacon } from "@/components/app/PendingBeacon";
 
 /**
  * Client portal — your plan. What their care plan covers, how many build items
@@ -173,6 +174,7 @@ export default async function PortalPlanPage({
               {p.blurb}
             </p>
             <form action={choosePlan}>
+                      <PendingBeacon />
               <input type="hidden" name="plan" value={p.id} />
               <button type="submit" className="kb kb-primary kb-sm">
                 Choose {p.label}
@@ -203,6 +205,7 @@ export default async function PortalPlanPage({
           when you need us.
         </p>
         <form action={choosePlan}>
+                      <PendingBeacon />
           <input type="hidden" name="plan" value="none" />
           <button type="submit" className="kb kb-sm">
             Continue without a plan

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OperationOverlay } from "@/components/app/OperationOverlay";
 
 // Client portal — authenticated surface, keep it out of search indexes.
 // (Previously the portal app's own root layout; now a thin segment layout.)
@@ -13,5 +14,11 @@ export default function PortalLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {/* Full-bleed Nullshift loader for pressed operations (global). */}
+      <OperationOverlay />
+    </>
+  );
 }
