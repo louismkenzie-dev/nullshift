@@ -104,7 +104,7 @@ export default async function PortalUpdatesPage() {
       style={{ maxWidth: 760, margin: "0 auto", paddingTop: 28, paddingBottom: 56 }}
     >
       <PageHeader
-        index="03"
+        index="05"
         label="UPDATES"
         title="Updates"
         lead="Progress notes from the team as we work on your system — and the odd decision we'd like you to make."

@@ -41,6 +41,13 @@ const INV_TONE: Record<string, Tone> = {
   uncollectible: "danger",
   void: "muted",
 };
+// Client-facing wording — raw Stripe statuses like "uncollectible" stay internal.
+const INV_LABEL: Record<string, string> = {
+  open: "Awaiting payment",
+  paid: "Paid",
+  uncollectible: "Overdue",
+  void: "Void",
+};
 const SUB_TONE: Record<string, Tone> = {
   active: "success",
   trialing: "accent",
@@ -224,7 +231,7 @@ export default async function PortalPaymentsPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2.5">
                         <StatusChip tone={INV_TONE[inv.status] ?? "muted"}>
-                          {inv.status}
+                          {INV_LABEL[inv.status] ?? inv.status.replace(/_/g, " ")}
                         </StatusChip>
                         {inv.status === "open" && inv.hosted_invoice_url && (
                           <a

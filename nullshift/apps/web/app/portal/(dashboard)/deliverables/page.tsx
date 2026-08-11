@@ -53,7 +53,7 @@ export default async function DeliverablesPage() {
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "28px 16px 56px" }}>
       <PageHeader
-        index="01"
+        index="07"
         label="DELIVERABLES"
         title="Your files"
         lead="Every asset we ship lands here — versioned, and yours to download any time."

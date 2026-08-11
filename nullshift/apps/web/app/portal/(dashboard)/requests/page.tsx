@@ -187,7 +187,7 @@ export default async function PortalRequestsPage() {
       style={{ maxWidth: 760, margin: "0 auto", paddingTop: 28, paddingBottom: 56 }}
     >
       <PageHeader
-        index="02"
+        index="04"
         label="REQUESTS"
         title="Requests"
         lead="Spotted something broken? Want something changed? Tell us here — it goes straight onto our board and you can watch its progress below."

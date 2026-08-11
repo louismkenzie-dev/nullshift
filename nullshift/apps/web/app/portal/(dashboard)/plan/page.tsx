@@ -108,6 +108,122 @@ export default async function PortalPlanPage({
     (i) => i.status !== "draft" && i.status !== "void"
   );
 
+  const hasLiveSub = subList.some((s) =>
+    ["active", "trialing", "past_due"].includes(s.status)
+  );
+  // A Direct Debit authorisation is underway — don't push the full chooser at
+  // someone who already started (re-choosing would restart the flow).
+  const pendingDd = subList.some(
+    (s) => s.provider === "gocardless" && s.status === "incomplete"
+  );
+  // A recorded paid-plan choice with no subscription row at all means
+  // GoCardless wasn't configured when they chose — the Direct Debit link
+  // arrives by email later, so acknowledge the choice instead of staying
+  // silent.
+  const chosenPlan =
+    choice && choice !== "none" && !subList.some((s) => s.status === "incomplete")
+      ? carePlan(choice)
+      : null;
+
+  const chooserPanel = (
+    <Panel
+      label="// CHOOSE YOUR CARE PLAN"
+      title="How would you like your system looked after?"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {CARE_PLANS.map((p) => (
+          <div
+            key={p.id}
+            className="k-kard k-kard-h flex flex-col gap-2"
+            style={{ background: "var(--k-bg)", padding: "16px 18px" }}
+          >
+            <div className="flex items-baseline justify-between gap-3">
+              <span
+                style={{
+                  fontFamily: T.sans,
+                  fontWeight: 700,
+                  fontSize: "0.98rem",
+                  letterSpacing: "-0.01em",
+                  textTransform: "uppercase",
+                  color: "var(--k-accent)",
+                }}
+              >
+                {p.label}
+              </span>
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.72rem",
+                  letterSpacing: "0.04em",
+                  color: "var(--k-fg)",
+                }}
+              >
+                {gbp(p.mrr)}/mo
+              </span>
+            </div>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.82rem",
+                color: "var(--k-muted)",
+                lineHeight: 1.55,
+                flex: 1,
+              }}
+            >
+              {p.blurb}
+            </p>
+            <form action={choosePlan}>
+              <input type="hidden" name="plan" value={p.id} />
+              <button type="submit" className="kb kb-primary kb-sm">
+                Choose {p.label}
+                <span className="k-arrow" aria-hidden>
+                  →
+                </span>
+              </button>
+            </form>
+          </div>
+        ))}
+      </div>
+      <div
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+        style={{
+          marginTop: 12,
+          padding: "12px 16px",
+          border: "1px dashed var(--k-border)",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.84rem",
+            color: "var(--k-muted)",
+          }}
+        >
+          Not ready for a monthly plan? That&apos;s fine — we&apos;re still here
+          when you need us.
+        </p>
+        <form action={choosePlan}>
+          <input type="hidden" name="plan" value="none" />
+          <button type="submit" className="kb kb-sm">
+            Continue without a plan
+          </button>
+        </form>
+      </div>
+      <p
+        style={{
+          fontFamily: T.mono,
+          fontSize: "0.62rem",
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          color: "var(--k-faint)",
+          marginTop: 10,
+        }}
+      >
+        Paid monthly by Direct Debit — cancel any time
+      </p>
+    </Panel>
+  );
+
   return (
     <div
       className="px-4 sm:px-6"
@@ -162,27 +278,13 @@ export default async function PortalPlanPage({
         </Reveal>
       )}
 
-      {/* ── Choose a plan — shown until billing is live ─────────── */}
-      {!subList.some((s) => ["active", "trialing", "past_due"].includes(s.status)) && (
+      {/* ── Choose a plan — shown until billing is live. Hidden entirely on
+          the ?dd=authorised return leg: the success banner plus the pending
+          plan chip below are the whole story, and re-choosing would restart
+          the flow that was just completed. ─────────────────────────────── */}
+      {!hasLiveSub && dd !== "authorised" && (
         <div style={{ marginTop: 24 }}>
-          {subList.some(
-            (s) => s.provider === "gocardless" && s.status === "incomplete"
-          ) &&
-            dd !== "authorised" && (
-              <p
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: "0.68rem",
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: "var(--k-muted)",
-                  marginBottom: 12,
-                }}
-              >
-                A Direct Debit setup is in progress — choosing again restarts it.
-              </p>
-            )}
-          {choice === "none" && (
+          {choice === "none" && !pendingDd && (
             <p
               style={{
                 fontFamily: T.sans,
@@ -195,103 +297,65 @@ export default async function PortalPlanPage({
               recorded. You can add one below any time.
             </p>
           )}
-          <Reveal>
-            <Panel
-              label="// CHOOSE YOUR CARE PLAN"
-              title="How would you like your system looked after?"
+          {chosenPlan && !pendingDd && (
+            <div
+              className="flex items-center gap-3"
+              style={{
+                padding: "14px 16px",
+                marginBottom: 12,
+                background: "rgba(16,185,129,0.10)",
+                border: "1px solid rgba(16,185,129,0.4)",
+              }}
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {CARE_PLANS.map((p) => (
-                  <div
-                    key={p.id}
-                    className="k-kard k-kard-h flex flex-col gap-2"
-                    style={{ background: "var(--k-bg)", padding: "16px 18px" }}
-                  >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span
-                        style={{
-                          fontFamily: T.sans,
-                          fontWeight: 700,
-                          fontSize: "0.98rem",
-                          letterSpacing: "-0.01em",
-                          textTransform: "uppercase",
-                          color: "var(--k-accent)",
-                        }}
-                      >
-                        {p.label}
-                      </span>
-                      <span
-                        style={{
-                          fontFamily: T.mono,
-                          fontSize: "0.72rem",
-                          letterSpacing: "0.04em",
-                          color: "var(--k-fg)",
-                        }}
-                      >
-                        {gbp(p.mrr)}/mo
-                      </span>
-                    </div>
-                    <p
-                      style={{
-                        fontFamily: T.sans,
-                        fontSize: "0.82rem",
-                        color: "var(--k-muted)",
-                        lineHeight: 1.55,
-                        flex: 1,
-                      }}
-                    >
-                      {p.blurb}
-                    </p>
-                    <form action={choosePlan}>
-                      <input type="hidden" name="plan" value={p.id} />
-                      <button type="submit" className="kb kb-primary kb-sm">
-                        Choose {p.label}
-                        <span className="k-arrow" aria-hidden>
-                          →
-                        </span>
-                      </button>
-                    </form>
-                  </div>
-                ))}
-              </div>
-              <div
-                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+              <span
+                aria-hidden
                 style={{
-                  marginTop: 12,
-                  padding: "12px 16px",
-                  border: "1px dashed var(--k-border)",
+                  fontFamily: T.mono,
+                  color: "var(--k-accent)",
+                  fontSize: "1.1rem",
                 }}
               >
+                ✓
+              </span>
+              <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-fg)" }}>
+                You chose the {chosenPlan.label} plan — that&apos;s recorded.
+                We&apos;ll email you a Direct Debit link to start it.
+              </p>
+            </div>
+          )}
+          <Reveal>
+            {pendingDd ? (
+              <Panel label="// DIRECT DEBIT" title="Direct Debit setup in progress">
                 <p
                   style={{
                     fontFamily: T.sans,
-                    fontSize: "0.84rem",
+                    fontSize: "0.88rem",
                     color: "var(--k-muted)",
+                    lineHeight: 1.6,
                   }}
                 >
-                  Not ready for a monthly plan? That&apos;s fine — we&apos;re still here
-                  when you need us.
+                  Check your email for the authorisation link — your plan goes live
+                  once the Direct Debit mandate is authorised.
                 </p>
-                <form action={choosePlan}>
-                  <input type="hidden" name="plan" value="none" />
-                  <button type="submit" className="kb kb-sm">
-                    Continue without a plan
-                  </button>
-                </form>
-              </div>
-              <p
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: "0.62rem",
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                  color: "var(--k-faint)",
-                  marginTop: 10,
-                }}
-              >
-                Paid monthly by Direct Debit — cancel any time
-              </p>
-            </Panel>
+                <details style={{ marginTop: 14 }}>
+                  <summary
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.68rem",
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      color: "var(--k-muted)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Start over / choose a different plan
+                  </summary>
+                  <div style={{ marginTop: 14 }}>{chooserPanel}</div>
+                </details>
+              </Panel>
+            ) : (
+              chooserPanel
+            )}
           </Reveal>
         </div>
       )}

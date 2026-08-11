@@ -271,7 +271,7 @@ export default async function PortalProposal() {
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "40px 24px" }}>
       <PageHeader
-        index="01"
+        index="02"
         label="Proposal & invoices"
         title="Your project"
         className="mb-8"

@@ -7,13 +7,14 @@ import { clientRef } from "@nullshift/ui/format";
 import { carePlan } from "@/lib/carePlans";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
 import { ProposalDocument } from "@/components/portal/ProposalDocument";
-import { DownloadDocButton } from "@/components/portal/DownloadDocButton";
 import { PageHeader } from "@/components/app/AppKit";
 
 /**
  * Admin view of a client's signable documents — the same ProposalDocument +
  * DpaTemplate the client sees in their portal, rendered in full so an admin can
- * read them and save each to PDF. Linked from the client hub.
+ * read them and download each as the formal A4 PDF (the same
+ * /api/documents/... renders the client portal serves). Linked from the client
+ * hub.
  */
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,42 @@ type Project = {
   accepted_name: string | null;
   accepted_at: string | null;
 };
+
+/** Emerald-outline download link, styled like the old capture button. */
+function PdfLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      style={{
+        fontFamily: T.mono,
+        fontSize: "0.72rem",
+        fontWeight: 500,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        height: 38,
+        paddingInline: 16,
+        border: "1px solid var(--k-accent)",
+        background: "rgba(16,185,129,0.10)",
+        color: "var(--k-accent)",
+        textDecoration: "none",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+      }}
+    >
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+        <path
+          d="M7 1v8M4 6l3 3 3-3M2 11h10"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {label}
+    </a>
+  );
+}
 
 export default async function ClientDocuments({
   params,
@@ -115,20 +152,19 @@ export default async function ClientDocuments({
     <div style={{ maxWidth: 820, margin: "0 auto" }}>
       <div className="flex items-center justify-between flex-wrap gap-3">
         {back}
-        <div className="flex items-center gap-2 flex-wrap">
-          <DownloadDocButton
-            targetId="admin-proposal-document"
-            filename={`nullshift-proposal-${ref}.pdf`}
-            label="Proposal PDF"
-          />
-          {limited && (
-            <DownloadDocButton
-              targetId="admin-dpa-document"
-              filename={`nullshift-dpa-${ref}.pdf`}
-              label="DPA PDF"
+        {/* The PDF route only serves sent/accepted documents — drafts and
+            declined proposals stay internal, so no dead links for them. */}
+        {["sent", "accepted"].includes(project.proposal_status) && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <PdfLink
+              href={`/api/documents/proposal/${project.id}`}
+              label="Proposal PDF"
             />
-          )}
-        </div>
+            {limited && (
+              <PdfLink href={`/api/documents/dpa/${project.id}`} label="DPA PDF" />
+            )}
+          </div>
+        )}
       </div>
 
       <div style={{ marginTop: 18 }}>
