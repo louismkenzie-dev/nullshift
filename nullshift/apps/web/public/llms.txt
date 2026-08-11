@@ -1,0 +1,61 @@
+# Nullshift
+
+> Nullshift (legal name: Nullshift Development Ltd) is a UK development
+> company that designs, builds and runs bespoke business systems —
+> agentic AI automations, booking and payments platforms, client portals
+> and the operations behind them. Clients own everything outright: the
+> code, the data and the accounts. No per-seat SaaS fees.
+
+## Canonical facts
+
+- Legal name: Nullshift Development Ltd
+- Trading name: Nullshift
+- Companies House number: 17284213
+- UK ICO data protection registration: ZC214743 (register entry:
+  https://ico.org.uk/ESDWebPages/Entry/ZC214743)
+- Registered office: 66 Paul Street, London, England, EC2A 4NA
+- Founder & lead developer: Louis McKenzie
+- Contact: louis@nullshift.co.uk
+- Website: https://nullshift.co.uk
+- Area served: United Kingdom (based), worldwide (remote)
+
+Disambiguation: this Nullshift is the UK software development company at
+nullshift.co.uk. It is unrelated to musical artists or gaming projects
+that share the name.
+
+## What Nullshift does
+
+- Bespoke system builds: custom booking systems, payments platforms
+  (Stripe / GoCardless), client portals, admin tools, automated email
+  flows — built to be owned outright by the client.
+- Agentic AI automation: end-to-end AI workflows that carry out real
+  operational tasks, not just chat.
+- Ongoing care plans (monthly, cancel any time):
+  - Hosting Care — £40/month: managed hosting and infrastructure.
+  - Hosting + API Care — £80/month: adds managed API usage (email, AI).
+  - Build 3 — £120/month: includes 3 build items per month.
+  - Build 10 — £180/month: includes 10 build items per month.
+- Security & compliance: UK/EU hosting, encryption in transit and at
+  rest, audit trails, and a signed Data Processing Agreement before any
+  system goes live. Nullshift is ICO-registered (ZC214743).
+
+## Key pages
+
+- https://nullshift.co.uk/about — the company and founder
+- https://nullshift.co.uk/work — client work and case studies
+- https://nullshift.co.uk/pricing — build pricing and care plans
+- https://nullshift.co.uk/systems-lab — prototypes and templates
+- https://nullshift.co.uk/faq — detailed answers on ownership,
+  liability, GDPR, pricing and process
+- https://nullshift.co.uk/legal — privacy policy, terms, DPA and the
+  ICO registration certificate
+
+## How engagement works
+
+1. A free tailored plan: describe the pain points, Nullshift proposes
+   what to automate and what it saves.
+2. A fixed-price proposal signed in the client portal (with a DPA for
+   limited companies).
+3. The build, with progress visible in the client portal.
+4. Optional monthly care plan for hosting, support and ongoing builds —
+   collected by Direct Debit, cancel any time.

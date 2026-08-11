@@ -74,9 +74,25 @@ const FAQS: FAQItem[] = [
   },
 ];
 
+// FAQPage structured data — generated from the SAME array the page renders,
+// so search + AI answer engines can quote the answers verbatim.
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+
 export default function FaqPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <Nav />
       <main>
         {/* ═══════════════ HERO (dark · layered WebGL depth) ═══════════════ */}
