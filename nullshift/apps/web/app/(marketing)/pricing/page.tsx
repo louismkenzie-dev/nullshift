@@ -215,7 +215,7 @@ export default function PricingPage() {
 
             <Reveal delay={0.16}>
               <Link
-                href="/#savings"
+                href="/work"
                 className="mt-9 inline-flex flex-col gap-1.5"
                 style={{
                   maxWidth: "60ch",
@@ -234,7 +234,7 @@ export default function PricingPage() {
                     color: "var(--k-accent)",
                   }}
                 >
-                  The cuttable bill
+                  Client stories
                 </span>
                 <span
                   style={{
@@ -244,10 +244,10 @@ export default function PricingPage() {
                     color: "var(--k-fg)",
                   }}
                 >
-                  Renting per-seat software that grows with every hire? Own it instead,
-                  and stop the line on your P&amp;L from climbing.{" "}
+                  See what owning the system looks like — real platforms doing real daily
+                  work for the businesses that own them.{" "}
                   <span style={{ color: "var(--k-accent)" }}>
-                    See what you&apos;d save →
+                    See the client stories →
                   </span>
                 </span>
               </Link>

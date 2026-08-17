@@ -14,7 +14,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
       { label: "What we build", href: "/#capabilities" },
       { label: "Systems Lab", href: "/systems-lab" },
       { label: "Pricing", href: "/pricing" },
-      { label: "The cuttable bill", href: "/#savings" },
+      { label: "Client stories", href: "/work" },
     ],
   },
   {

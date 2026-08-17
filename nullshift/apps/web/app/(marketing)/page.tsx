@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import React from "react";
+import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { SplineScene } from "@/components/SplineScene";
 import { Parallax } from "@/components/Parallax";
 import { NeuralField } from "@/components/NeuralField";
-import { ScrollStory, ScrollFX, PinnedReveal } from "@/components/ScrollFX";
+import { ScrollStory, PinnedReveal } from "@/components/ScrollFX";
 import { DesktopOnly } from "@/components/DesktopOnly";
-import { RevenueCalculator } from "@nullshift/ui/components/RevenueCalculator";
-import { CLINIC } from "@nullshift/content/marketing";
 import { ClipReveal } from "@/components/anim/ClipReveal";
 import { SplineShowcase } from "@/components/SplineShowcase";
 import { ClaudePartnerBadge } from "@/components/ClaudePartnerBadge";
@@ -535,24 +534,108 @@ export default function Page() {
           />
         </Section>
 
-        {/* ═══════════════ 04 — THE CUTTABLE BILL (dark calculator) ═══════════════ */}
-        <Section theme="dark" id="savings" pad="lg" topBorder>
+        {/* ═══════════════ 04 — CLIENT STORIES (dark editorial rail) ═══════════════ */}
+        <Section theme="dark" id="stories" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
               index="04"
-              label="The cuttable bill"
-              title="Own the system. Cut the bill."
-              lead="Every seat of rented software is a bill that grows as you hire. Own the system that does the work instead — and watch what stops the day it's yours."
+              label="Client stories"
+              title="Real businesses. Incredible systems."
+              lead="Not templates — bespoke platforms doing real daily work for the businesses that own them outright. Here's what that looks like."
             />
           </Reveal>
-          <ScrollFX
-            scale={[0.965, 1]}
-            opacity={[0.5, 1]}
-            offset={["start end", "start center"]}
-            className="mt-12"
-          >
-            <RevenueCalculator calc={CLINIC.calc} ctaHref="/start" />
-          </ScrollFX>
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                tag: "Dance & fitness · Suffolk",
+                title: "Three venues. One booking system. Zero spreadsheets.",
+                body: "Parents book and pay through the studio's own Stripe account — memberships bill themselves on the 5th, sibling discounts apply automatically, and every register knows each child's allergies before class starts.",
+                meta: "Case study",
+              },
+              {
+                tag: "Therapy & wellness",
+                title: "A practice system its owner actually loves.",
+                body: "New Future Therapy runs on a system built for exactly how the practice works — and Laura tells the story better than we can, on camera.",
+                meta: "Video testimonial",
+              },
+              {
+                tag: "Agency operations",
+                title: "We run Nullshift on the systems we sell.",
+                body: "Client onboarding, signed agreements, invoicing, Direct Debits, accounting sync and AI-dispatched fixes — our own operations run end to end on a system we built for ourselves.",
+                meta: "Under the hood",
+              },
+            ].map((story, i) => (
+              <Reveal key={story.tag} delay={i * 0.07}>
+                <Link
+                  href="/work"
+                  className="k-kard k-kard-h flex flex-col gap-3 h-full"
+                  style={{
+                    background: "var(--k-surface)",
+                    padding: "22px 24px",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.64rem",
+                      fontWeight: 500,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "var(--k-accent)",
+                    }}
+                  >
+                    {story.tag}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: 700,
+                      fontSize: "1.25rem",
+                      lineHeight: 1.15,
+                      letterSpacing: "-0.02em",
+                      textTransform: "uppercase",
+                      color: "var(--k-fg)",
+                    }}
+                  >
+                    {story.title}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.9rem",
+                      lineHeight: 1.65,
+                      color: "var(--k-muted)",
+                      flex: 1,
+                    }}
+                  >
+                    {story.body}
+                  </span>
+                  <span
+                    className="inline-flex items-center gap-2"
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.66rem",
+                      fontWeight: 500,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "var(--k-faint)",
+                      marginTop: 6,
+                    }}
+                  >
+                    {story.meta}
+                    <span style={{ color: "var(--k-accent)" }}>
+                      Read
+                      <span className="k-arrow" aria-hidden>
+                        {" "}
+                        →
+                      </span>
+                    </span>
+                  </span>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
         </Section>
 
         {/* ═══════════════ 05 — WHAT WE BUILD (cream services) ═══════════════ */}
