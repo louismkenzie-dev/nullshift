@@ -281,7 +281,13 @@ export function FunnelClient() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         answers: answersRef.current,
-        contact: { name: c.name, business: c.business, email: c.email, phone: c.phone },
+        contact: {
+          name: c.name,
+          business: c.business,
+          email: c.email,
+          phone: c.phone,
+          siteUrl: c.siteUrl,
+        },
         utm: utmRef.current,
         planToken,
         website: c.website,

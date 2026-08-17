@@ -10,6 +10,8 @@ export type CaptureContact = {
   business: string;
   email: string;
   phone: string;
+  /** Their real website — the agent researches it. (NOT `website`: that's the honeypot.) */
+  siteUrl: string;
   website: string; // honeypot
   elapsedMs: number; // time-trap
 };
@@ -28,6 +30,7 @@ export function CaptureForm({
   const [business, setBusiness] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [siteUrl, setSiteUrl] = useState("");
   const [website, setWebsite] = useState(""); // honeypot
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
   const [busy, setBusy] = useState(false);
@@ -46,6 +49,7 @@ export function CaptureForm({
       business: business.trim(),
       email: email.trim(),
       phone: phone.trim(),
+      siteUrl: siteUrl.trim(),
       website,
       elapsedMs: Date.now() - mountedAt.current,
     });
@@ -147,6 +151,18 @@ export function CaptureForm({
             value={business}
             onChange={(e) => setBusiness(e.target.value)}
             placeholder="e.g. Riverside Physio"
+          />
+        </Field>
+
+        <Field label="Your website" note="optional — your agent researches it">
+          <input
+            className="brief-input"
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            value={siteUrl}
+            onChange={(e) => setSiteUrl(e.target.value)}
+            placeholder="e.g. riversidephysio.co.uk"
           />
         </Field>
 

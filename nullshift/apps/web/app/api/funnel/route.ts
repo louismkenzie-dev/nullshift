@@ -17,7 +17,14 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Body = {
   answers?: Answers;
-  contact?: { name?: string; business?: string; email?: string; phone?: string };
+  contact?: {
+    name?: string;
+    business?: string;
+    email?: string;
+    phone?: string;
+    /** Their real website (optional) — researched by the Agent Consultation. */
+    siteUrl?: string;
+  };
   utm?: Record<string, string>;
   planToken?: string; // client-minted token for the permanent /plan link
   website?: string; // honeypot
@@ -43,7 +50,18 @@ export async function POST(request: Request) {
   const business = body.contact?.business?.trim() || null;
   const email = body.contact?.email?.trim().toLowerCase();
   const phone = body.contact?.phone?.trim() || null;
-  const answers = body.answers ?? {};
+  // Fold their website into the answer set (key: website_url) so it flows into
+  // quiz_answers and the agent's research without schema changes. Normalised +
+  // sanity-capped; never trusted beyond being a URL to look at.
+  const rawSite = body.contact?.siteUrl?.trim() ?? "";
+  const siteUrl =
+    rawSite && rawSite.length <= 200 && !/\s/.test(rawSite)
+      ? /^https?:\/\//i.test(rawSite)
+        ? rawSite
+        : `https://${rawSite}`
+      : null;
+  const answers: Answers = { ...(body.answers ?? {}) };
+  if (siteUrl) answers.website_url = siteUrl;
 
   if (!name || !email || !EMAIL_RE.test(email)) {
     return NextResponse.json(

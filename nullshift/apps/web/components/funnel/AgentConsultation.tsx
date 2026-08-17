@@ -5,12 +5,13 @@ import Link from "next/link";
 import { T } from "@nullshift/ui/tokens";
 import type { ConsultationPlan } from "@nullshift/agents/consultation";
 
-/** The Agent Consultation section of /plan/[token].
+/** The Agent Consultation — the primary content of /plan/[token].
  *
- *  First visit: opens the generation stream and turns the wait into theatre —
- *  "your agent is drafting your plan… now building your live mockup" — then
- *  renders the tailored plan and the sandboxed mockup. Later visits load the
- *  cached result instantly via GET.
+ *  First visit drives two generation phases against /api/consult/[token]:
+ *    1. POST ?phase=plan   — the agent researches the business online, then
+ *       drafts the tailored plan (statuses: researching → planning)
+ *    2. POST ?phase=mockup — designs the bespoke frontend mockup
+ *  Both stream SSE; later visits load the cached result instantly via GET.
  *
  *  The mockup iframe is sandbox="allow-scripts" with allow-same-origin
  *  deliberately omitted (opaque origin) — never add it.
@@ -18,12 +19,19 @@ import type { ConsultationPlan } from "@nullshift/agents/consultation";
 
 type Phase =
   | "loading"
+  | "researching"
   | "planning"
   | "building"
   | "ready"
   | "mockup_failed"
   | "failed"
   | "unconfigured";
+
+const WORKING_COPY: Record<string, string> = {
+  loading: "Waking your agent…",
+  researching: "Your agent is finding your business online…",
+  planning: "Reading what it found and drafting your tailored plan…",
+};
 
 export function AgentConsultation({ token }: { token: string }) {
   const [phase, setPhase] = useState<Phase>("loading");
@@ -32,68 +40,78 @@ export function AgentConsultation({ token }: { token: string }) {
   const [buildChars, setBuildChars] = useState(0);
   const started = useRef(false);
 
-  const generate = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/consult/${token}`, { method: "POST" });
-      if (res.status === 503) {
-        setPhase("unconfigured");
-        return;
-      }
-      const ctype = res.headers.get("content-type") ?? "";
-      if (ctype.includes("application/json")) {
-        // Another tab is generating, or it's already done — poll GET.
-        pollUntilReady();
-        return;
-      }
-      if (!res.body) throw new Error("no stream");
-      setPhase("planning");
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split("\n\n");
-        buf = parts.pop() ?? "";
-        for (const part of parts) {
-          const line = part.trim();
-          if (!line.startsWith("data: ")) continue;
-          const ev = JSON.parse(line.slice(6)) as Record<string, unknown>;
-          switch (ev.type) {
-            case "status":
-              setPhase(ev.status === "building" ? "building" : "planning");
-              break;
-            case "plan":
-              setPlan(ev.plan as ConsultationPlan);
-              break;
-            case "mockup_delta":
-              setBuildChars(ev.chars as number);
-              break;
-            case "mockup_ready":
-              setHasMockup(true);
-              setPhase("ready");
-              break;
-            case "mockup_error":
-              setPhase("mockup_failed");
-              break;
-            case "error":
-              setPhase("failed");
-              break;
-            case "done":
-              setPhase((p) => (p === "mockup_failed" ? p : "ready"));
-              break;
-          }
+  /** Consume one SSE response; returns the last `done` phase seen (or null). */
+  const consume = useCallback(async (res: Response): Promise<string | null> => {
+    if (!res.body) throw new Error("no stream");
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let donePhase: string | null = null;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split("\n\n");
+      buf = parts.pop() ?? "";
+      for (const part of parts) {
+        const line = part.trim();
+        if (!line.startsWith("data: ")) continue;
+        const ev = JSON.parse(line.slice(6)) as Record<string, unknown>;
+        switch (ev.type) {
+          case "status":
+            setPhase(ev.status as Phase);
+            break;
+          case "plan":
+            setPlan(ev.plan as ConsultationPlan);
+            break;
+          case "mockup_delta":
+            setBuildChars(ev.chars as number);
+            break;
+          case "mockup_ready":
+            setHasMockup(true);
+            break;
+          case "mockup_error":
+            setPhase("mockup_failed");
+            break;
+          case "error":
+            setPhase("failed");
+            break;
+          case "done":
+            donePhase = (ev.phase as string) ?? null;
+            break;
         }
       }
-    } catch {
-      setPhase("failed");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+    return donePhase;
+  }, []);
 
-  const pollUntilReady = useCallback(() => {
+  const runMockupPhase = useCallback(async () => {
+    setPhase("building");
+    const res = await fetch(`/api/consult/${token}?phase=mockup`, { method: "POST" });
+    const ctype = res.headers.get("content-type") ?? "";
+    if (ctype.includes("application/json")) return "poll";
+    const done = await consume(res);
+    if (done === "mockup") {
+      setPhase((p) => (p === "mockup_failed" ? p : "ready"));
+      return "done";
+    }
+    return "poll";
+  }, [token, consume]);
+
+  const runPlanPhase = useCallback(async () => {
+    setPhase("researching");
+    const res = await fetch(`/api/consult/${token}?phase=plan`, { method: "POST" });
+    if (res.status === 503) {
+      setPhase("unconfigured");
+      return "stop";
+    }
+    const ctype = res.headers.get("content-type") ?? "";
+    if (ctype.includes("application/json")) return "poll";
+    const done = await consume(res);
+    return done === "plan" ? "mockup" : "poll";
+  }, [token, consume]);
+
+  const poll = useCallback(() => {
     const tick = async () => {
       try {
         const res = await fetch(`/api/consult/${token}`);
@@ -103,23 +121,36 @@ export function AgentConsultation({ token }: { token: string }) {
           hasMockup?: boolean;
         };
         if (data.plan) setPlan(data.plan);
-        if (data.status === "ready") {
-          setHasMockup(Boolean(data.hasMockup));
-          setPhase(data.hasMockup ? "ready" : "mockup_failed");
-          return;
+        switch (data.status) {
+          case "ready":
+            setHasMockup(Boolean(data.hasMockup));
+            setPhase(data.hasMockup ? "ready" : "mockup_failed");
+            return;
+          case "failed":
+            setPhase("failed");
+            return;
+          case "plan_ready": {
+            // The plan-phase tab died before starting the mockup — pick it up.
+            const r = await runMockupPhase();
+            if (r === "done") return;
+            break;
+          }
+          case "building":
+            setPhase("building");
+            break;
+          case "generating":
+            setPhase((p) => (p === "researching" ? p : "planning"));
+            break;
+          default:
+            setPhase("planning");
         }
-        if (data.status === "failed") {
-          setPhase("failed");
-          return;
-        }
-        setPhase(data.status === "generating" ? "building" : "planning");
         setTimeout(tick, 3000);
       } catch {
         setTimeout(tick, 5000);
       }
     };
     void tick();
-  }, [token]);
+  }, [token, runMockupPhase]);
 
   useEffect(() => {
     if (started.current) return;
@@ -132,28 +163,43 @@ export function AgentConsultation({ token }: { token: string }) {
           plan?: ConsultationPlan | null;
           hasMockup?: boolean;
         };
-        if (data.status === "ready") {
-          setPlan(data.plan ?? null);
-          setHasMockup(Boolean(data.hasMockup));
-          setPhase(data.hasMockup ? "ready" : "mockup_failed");
-        } else if (data.status === "generating") {
-          if (data.plan) setPlan(data.plan);
-          pollUntilReady();
-        } else {
-          void generate();
+        if (data.plan) setPlan(data.plan);
+        switch (data.status) {
+          case "ready":
+            setHasMockup(Boolean(data.hasMockup));
+            setPhase(data.hasMockup ? "ready" : "mockup_failed");
+            return;
+          case "plan_ready": {
+            const r = await runMockupPhase();
+            if (r !== "done") poll();
+            return;
+          }
+          case "generating":
+          case "building":
+            poll();
+            return;
+          default: {
+            const next = await runPlanPhase();
+            if (next === "mockup") {
+              const r = await runMockupPhase();
+              if (r !== "done") poll();
+            } else if (next === "poll") {
+              poll();
+            }
+          }
         }
       } catch {
-        void generate();
+        poll();
       }
     })();
-  }, [token, generate, pollUntilReady]);
+  }, [token, poll, runPlanPhase, runMockupPhase]);
 
   if (phase === "unconfigured") return null;
 
-  return (
-    <section style={{ marginTop: 56 }}>
-      <SectionHeading tag="Agent consultation" title="Your tailored plan" />
+  const working = WORKING_COPY[phase];
 
+  return (
+    <section style={{ marginTop: 40 }}>
       {phase === "failed" && (
         <Panel>
           <p style={bodyStyle}>
@@ -163,19 +209,17 @@ export function AgentConsultation({ token }: { token: string }) {
         </Panel>
       )}
 
-      {(phase === "loading" || phase === "planning") && !plan && (
-        <WorkingRow label="Your agent is reading your answers and drafting your plan…" />
-      )}
+      {working && !plan && <WorkingRow label={working} />}
 
       {plan && <PlanBody plan={plan} />}
 
       {/* Mockup */}
       {plan && (
         <div style={{ marginTop: 40 }}>
-          <SectionHeading tag="Live mockup" title="See your system in action" />
+          <SectionHeading tag="Live mockup" title="Your system, in your brand" />
           {phase === "building" && (
             <WorkingRow
-              label={`Building your live mockup${buildChars > 0 ? ` · ${Math.round(buildChars / 1000)}k characters written` : "…"}`}
+              label={`Designing your bespoke mockup${buildChars > 0 ? ` · ${Math.round(buildChars / 1000)}k characters written` : "…"}`}
             />
           )}
           {phase === "mockup_failed" && (
@@ -197,7 +241,7 @@ export function AgentConsultation({ token }: { token: string }) {
                 className="flex items-center justify-between px-4"
                 style={{ height: 40, borderBottom: `1px solid ${T.border}` }}
               >
-                <span style={monoTagStyle}>Interactive · built by your agent</span>
+                <span style={monoTagStyle}>Interactive · designed for your business</span>
                 <span style={{ ...monoTagStyle, color: T.faint }}>
                   Demo data — nothing is saved
                 </span>

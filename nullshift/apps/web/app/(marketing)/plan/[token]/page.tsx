@@ -151,11 +151,15 @@ export default async function PlanPage({
           you&apos;re ready.
         </p>
 
-        <ScalingPlan plan={plan.scalingPlan} />
-
-        {/* Agent Consultation — tailored plan + live mockup, generated on
-            first view and cached thereafter. */}
-        <AgentConsultation token={token} />
+        {/* The Agent Consultation is the plan: researched online, tailored,
+            with a bespoke mockup — generated on first view, cached thereafter.
+            The old template-built ScalingPlan renders only as the fallback
+            when the agent isn't configured. */}
+        {process.env.ANTHROPIC_API_KEY ? (
+          <AgentConsultation token={token} />
+        ) : (
+          <ScalingPlan plan={plan.scalingPlan} />
+        )}
 
         {/* CTA */}
         <div
