@@ -7,9 +7,9 @@ const BASE_URL = "https://nullshift.co.uk";
 const ROUTES = [
   "", // homepage
   "/about",
-  "/work",
   "/pricing",
-  "/systems-lab",
+  "/start",
+  "/client-stories",
   "/faq",
   "/brand",
   "/book",

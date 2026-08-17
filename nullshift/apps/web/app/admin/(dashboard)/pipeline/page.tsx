@@ -40,6 +40,15 @@ type Lead = {
     requested_time?: string | null;
   } | null;
   plan: { businessName?: string | null } | null;
+  /** Written by the Agent Consultation (see /api/consult) — internal CRM notes. */
+  agent_enrichment: {
+    summary?: string;
+    painPoints?: string[];
+    estimatedMonthlySpend?: string;
+    suggestedService?: string;
+    urgencySignals?: string[];
+    draftReply?: string;
+  } | null;
 };
 
 /** A client who signed up directly (no funnel lead) — surfaced in the "new" lane. */
@@ -58,7 +67,17 @@ const TIME_SHORT: Record<string, string> = {
   evening: "Eve",
 };
 
+/** Lead lifecycle lanes, named for the client journey:
+ *  Funnel → AI consultation → Human call → (won: proposal & contract, updates &
+ *  change requests, handover — those stages live on the client hub) — or lost. */
 const COLUMNS = ["new", "qualified", "call_booked", "won", "lost"] as const;
+const COLUMN_LABEL: Record<(typeof COLUMNS)[number], string> = {
+  new: "01 · Funnel",
+  qualified: "02 · AI consultation",
+  call_booked: "03 · Call",
+  won: "04 · Won → delivery",
+  lost: "Lost",
+};
 const SPEND_LABEL: Record<string, string> = {
   under50: "<£50/mo",
   "50to150": "£50–150/mo",
@@ -308,7 +327,51 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
         {spend && <Tag tone="warning">{spend}</Tag>}
         {pain && <Tag>{pain}</Tag>}
       </div>
-      {describe && (
+      {lead.agent_enrichment?.summary && (
+        <div
+          style={{
+            marginTop: 8,
+            borderLeft: "2px solid var(--k-accent)",
+            paddingLeft: 8,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: T.mono,
+              fontSize: "9px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--k-accent)",
+            }}
+          >
+            Agent notes
+          </span>
+          <p
+            title={lead.agent_enrichment.summary}
+            style={{
+              fontFamily: T.sans,
+              fontSize: "11px",
+              lineHeight: 1.45,
+              color: "var(--k-muted)",
+              marginTop: 2,
+            }}
+          >
+            {lead.agent_enrichment.summary}
+          </p>
+          {(lead.agent_enrichment.painPoints?.length ||
+            lead.agent_enrichment.suggestedService) && (
+            <div className="flex flex-wrap gap-1" style={{ marginTop: 6 }}>
+              {lead.agent_enrichment.suggestedService && (
+                <Tag tone="accent">{lead.agent_enrichment.suggestedService}</Tag>
+              )}
+              {(lead.agent_enrichment.painPoints ?? []).slice(0, 3).map((p, i) => (
+                <Tag key={i}>{p}</Tag>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {!lead.agent_enrichment?.summary && describe && (
         <p
           title={describe}
           style={{
@@ -508,7 +571,9 @@ export default async function PipelinePage() {
   const [{ data }, { data: clientTenants }, { data: dpaRows }] = await Promise.all([
     supabase
       .from("leads")
-      .select("id, name, email, vertical, status, lead_score, quiz_answers, plan")
+      .select(
+        "id, name, email, vertical, status, lead_score, quiz_answers, plan, agent_enrichment"
+      )
       .order("lead_score", { ascending: false, nullsFirst: false }),
     supabase
       .from("tenants")
@@ -571,8 +636,9 @@ export default async function PipelinePage() {
                 {signupClients.length === 1 ? "" : "s"}
               </>
             )}{" "}
-            · click any card to open their client profile (booking, brief, quote &amp;
-            proposal).
+            · Funnel → AI consultation → call → proposal &amp; contract → updates →
+            handover. Click any card to open the client profile, where the post-win stages
+            live.
           </>
         }
         className="mb-8"
@@ -635,7 +701,7 @@ export default async function PipelinePage() {
                         ●
                       </span>
                     )}
-                    {col.replace(/_/g, " ")}
+                    {COLUMN_LABEL[col]}
                   </span>
                   <span
                     style={{

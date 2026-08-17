@@ -4,9 +4,9 @@ import { T } from "@nullshift/ui/tokens";
 import { FunnelClient } from "./FunnelClient";
 
 export const metadata: Metadata = {
-  title: "Get started — Nullshift",
+  title: "Agent Consultation — Nullshift",
   description:
-    "Answer a few quick questions and we'll recommend exactly what your business needs — and show you the next step. Takes under a minute.",
+    "A free consultation with the Nullshift Agent. Answer a few quick questions and it drafts a tailored plan for your business — with a live mockup of your system so you can see it in action.",
 };
 
 export default function StartPage() {

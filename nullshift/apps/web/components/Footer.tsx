@@ -12,9 +12,9 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     title: "Product",
     links: [
       { label: "What we build", href: "/#capabilities" },
-      { label: "Systems Lab", href: "/systems-lab" },
+      { label: "Agent Consultation", href: "/start" },
+      { label: "Client stories", href: "/client-stories" },
       { label: "Pricing", href: "/pricing" },
-      { label: "Client stories", href: "/work" },
     ],
   },
   {

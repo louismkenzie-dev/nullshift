@@ -362,7 +362,7 @@ export default function Page() {
                     <BtnGhost href="/book" size="sm">
                       Book a call
                     </BtnGhost>
-                    <TextLink href="/systems-lab">Try the live demos</TextLink>
+                    <TextLink href="/start">Try the Agent Consultation</TextLink>
                   </div>
                 </Reveal>
               </div>
@@ -567,7 +567,7 @@ export default function Page() {
             ].map((story, i) => (
               <Reveal key={story.tag} delay={i * 0.07}>
                 <Link
-                  href="/work"
+                  href="/client-stories"
                   className="k-kard k-kard-h flex flex-col gap-3 h-full"
                   style={{
                     background: "var(--k-surface)",
@@ -652,7 +652,7 @@ export default function Page() {
             <ServiceAccordion items={SERVICES} />
           </div>
           <div className="mt-8">
-            <TextLink href="/systems-lab">See it live in the Systems Lab</TextLink>
+            <TextLink href="/start">See it live — free Agent Consultation</TextLink>
           </div>
         </Section>
 
@@ -952,22 +952,23 @@ export default function Page() {
           />
         </div>
 
-        {/* ═══════════════ SYSTEMS LAB (cream) ═══════════════ */}
+        {/* ═══════════════ AGENT CONSULTATION (cream) ═══════════════ */}
         <Section theme="cream" pad="md" topBorder>
           <Reveal>
             <div className="flex flex-col gap-7 md:flex-row md:items-center md:justify-between">
               <div>
-                <Eyebrow label="New — Systems Lab" />
+                <Eyebrow label="New — Agent Consultation" />
                 <Display size="lg" className="mt-5">
-                  See it run{" "}
-                  <span style={{ color: "var(--k-muted)" }}>before you build.</span>
+                  See your system{" "}
+                  <span style={{ color: "var(--k-muted)" }}>before you build it.</span>
                 </Display>
                 <Lead className="mt-4" style={{ maxWidth: "52ch" }}>
-                  Live, interactive demos — agents, automations, the client portal and
-                  CRM. Click around and see exactly what you&apos;d own.
+                  A free consultation with the Nullshift Agent. Tell it about your
+                  business and it drafts your tailored plan — then builds a live,
+                  clickable mockup of your system so you can see it in action.
                 </Lead>
               </div>
-              <BtnPrimary href="/systems-lab">Enter Systems Lab</BtnPrimary>
+              <BtnPrimary href="/start">Start your consultation</BtnPrimary>
             </div>
           </Reveal>
         </Section>

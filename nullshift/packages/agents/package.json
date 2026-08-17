@@ -1,0 +1,17 @@
+{
+  "name": "@nullshift/agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./consultation": "./src/consultation.ts",
+    "./runs": "./src/runs.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.117.1",
+    "@nullshift/db": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

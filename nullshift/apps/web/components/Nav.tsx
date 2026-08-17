@@ -11,8 +11,8 @@ import { ScrambleHover } from "@/components/anim/ScrambleHover";
 
 const LINKS = [
   { n: "01", label: "What we build", href: "/#capabilities" },
-  { n: "02", label: "Client stories", href: "/work" },
-  { n: "03", label: "Systems Lab", href: "/systems-lab" },
+  { n: "02", label: "Agent Consultation", href: "/start" },
+  { n: "03", label: "Client stories", href: "/client-stories" },
   { n: "04", label: "Pricing", href: "/pricing" },
   { n: "05", label: "About", href: "/about" },
   { n: "06", label: "FAQ", href: "/faq" },

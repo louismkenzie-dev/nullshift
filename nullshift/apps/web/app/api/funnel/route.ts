@@ -65,29 +65,9 @@ export async function POST(request: Request) {
       ? body.planToken
       : randomUUID();
 
-  // ── Save to Supabase (best-effort — never blocks the emails) ──
-  try {
-    const supabase = createServiceClient();
-    const { error } = await supabase.from("enquiries").insert({
-      source: "funnel",
-      name,
-      email,
-      phone,
-      message: null,
-      funnel_data: { answers, recommendation },
-      lead_score: score,
-      segment,
-      utm: body.utm && Object.keys(body.utm).length ? body.utm : null,
-      status: "new",
-    });
-    if (error) console.error("Funnel insert error:", error.message);
-  } catch (e) {
-    console.error("Supabase not configured:", e);
-  }
-
-  // ── Also write the canonical multi-tenant `leads` row (Phase 1 schema). The
-  //    enquiries write above stays during the transition so the legacy admin
-  //    keeps showing leads until the ops hub reads `leads` directly (Phase 3). ──
+  // ── Write the canonical multi-tenant `leads` row. (The old dual-write to
+  //    `enquiries` is gone — the pipeline reads `leads`; `enquiries` now only
+  //    carries contact/booking/brief messages.) ──
   const lead = await recordLead({
     name,
     email,
@@ -100,6 +80,20 @@ export async function POST(request: Request) {
     plan: { scalingPlan, businessName: business, name, segment },
   });
   if (!lead.ok) console.error("Lead insert error:", lead.error);
+
+  // ── Seed the Agent Consultation row (pending) so the /plan page generates
+  //    the tailored plan + live mockup on first view. Best-effort. ──
+  try {
+    const supabase = createServiceClient();
+    await supabase
+      .from("agent_consultations")
+      .upsert(
+        { plan_token: planToken },
+        { onConflict: "plan_token", ignoreDuplicates: true }
+      );
+  } catch (e) {
+    console.error("agent_consultations seed failed (non-fatal):", e);
+  }
 
   // ── Branded emails via Resend (best-effort) ──
   try {
