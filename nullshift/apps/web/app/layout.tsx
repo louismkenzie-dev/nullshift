@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { NoZoom } from "@/components/NoZoom";
 import "@nullshift/ui/styles/fonts.css";
 import "./globals.css";
 
@@ -44,13 +45,28 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-full bg-[#09090b] text-[#fafafa] antialiased overflow-x-hidden">
-        {/* iOS zooms any focused control whose font-size is under 16px — the
-            other half of the fixed-scale, app-like feel (with viewport
-            maximumScale above). Stylesheet !important beats the inline styles
-            components set on their inputs. */}
-        <style>{`@media (max-width: 767px), (pointer: coarse) {
-          input, select, textarea { font-size: 16px !important; }
-        }`}</style>
+        {/* App-like fixed scale on touch devices — three iOS zoom behaviours,
+            three locks:
+            1. Focus zoom: any control under 16px triggers it → force ≥16px
+               (stylesheet !important beats components' inline styles).
+            2. Pinch + double-tap zoom: Safari IGNORES the viewport maximumScale
+               for these, but honours touch-action — html/body allowing only
+               panning blocks zoom gestures everywhere (descendants can't
+               re-enable a gesture an ancestor forbids).
+            3. Legacy gesture events: belt-and-braces in NoZoom below.
+            Plus app-feel details: no tap-highlight flash, no font inflation on
+            rotation. Desktop is untouched. */}
+        <style>{`
+          html { -webkit-text-size-adjust: 100%; }
+          @media (max-width: 767px), (pointer: coarse) {
+            input, select, textarea { font-size: 16px !important; }
+          }
+          @media (pointer: coarse) {
+            html, body { touch-action: pan-x pan-y; }
+            * { -webkit-tap-highlight-color: transparent; }
+          }
+        `}</style>
+        <NoZoom />
         {children}
       </body>
     </html>
