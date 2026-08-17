@@ -254,9 +254,10 @@ export function FunnelClient() {
     } catch {
       /* ignore */
     }
-    // Generate the Free Scaling Plan up front (pure) so the result reveals instantly,
-    // and mint a token so the permanent /plan link is known without awaiting the
-    // server. The server re-computes authoritatively and persists under this token.
+    // Mint the permanent plan token, persist the lead, then hand over to
+    // /plan/[token] where the Agent Consultation researches the business and
+    // generates the tailored plan + bespoke mockup. The templated in-funnel
+    // reveal survives only as the fallback when the save fails.
     const segment: Segment = state.segment ?? "nurture";
     const plan = buildScalingPlan(answersRef.current, {
       segment,
@@ -266,35 +267,54 @@ export function FunnelClient() {
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    // The server only honours well-formed client-minted tokens.
+    const tokenIsUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(planToken);
 
+    // The lead must exist before /plan can generate — await the save (bounded,
+    // so a dead network can't strand the visitor on the capture button).
+    let saved = false;
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      const res = await fetch("/api/funnel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answers: answersRef.current,
+          contact: {
+            name: c.name,
+            business: c.business,
+            email: c.email,
+            phone: c.phone,
+            siteUrl: c.siteUrl,
+          },
+          utm: utmRef.current,
+          planToken,
+          website: c.website,
+          elapsedMs: c.elapsedMs,
+        }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      saved = res.ok;
+    } catch {
+      saved = false;
+    }
+
+    if (saved && tokenIsUuid) {
+      // Full-page nav (not router.push) so the funnel's audio/anim state is
+      // torn down cleanly; the capture button stays busy until the browser leaves.
+      window.location.assign(`/plan/${planToken}`);
+      return;
+    }
+
+    // Fallback — the old instant, templated in-funnel reveal.
     dispatch({
       type: "CAPTURED",
       contact: { name: c.name, business: c.business, email: c.email, phone: c.phone },
       plan,
       planToken,
-    });
-
-    // Persist the lead + plan in the background — fire-and-forget so the result
-    // reveals instantly and is never gated on the network.
-    void fetch("/api/funnel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        answers: answersRef.current,
-        contact: {
-          name: c.name,
-          business: c.business,
-          email: c.email,
-          phone: c.phone,
-          siteUrl: c.siteUrl,
-        },
-        utm: utmRef.current,
-        planToken,
-        website: c.website,
-        elapsedMs: c.elapsedMs,
-      }),
-    }).catch(() => {
-      /* ignore — the result is the value to the visitor */
     });
   };
 

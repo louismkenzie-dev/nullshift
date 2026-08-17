@@ -208,7 +208,7 @@ export function CaptureForm({
             boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
           }}
         >
-          {busy ? "Revealing…" : "See my recommendation →"}
+          {busy ? "Waking your agent…" : "Start my agent consultation →"}
         </button>
 
         <p style={{ fontFamily: T.sans, fontSize: "0.75rem", color: T.faint }}>

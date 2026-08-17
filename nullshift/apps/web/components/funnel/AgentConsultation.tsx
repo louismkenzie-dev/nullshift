@@ -141,6 +141,20 @@ export function AgentConsultation({ token }: { token: string }) {
           case "generating":
             setPhase((p) => (p === "researching" ? p : "planning"));
             break;
+          case "pending": {
+            // Nothing is generating (e.g. the funnel saved the lead but the
+            // visitor landed here before any generator ran, or a claim was
+            // released). Kick the plan phase ourselves — the DB claim makes
+            // this safe if another tab beats us to it.
+            const next = await runPlanPhase();
+            if (next === "mockup") {
+              const r = await runMockupPhase();
+              if (r === "done") return;
+            } else if (next === "stop") {
+              return;
+            }
+            break;
+          }
           default:
             setPhase("planning");
         }
@@ -150,7 +164,7 @@ export function AgentConsultation({ token }: { token: string }) {
       }
     };
     void tick();
-  }, [token, runMockupPhase]);
+  }, [token, runMockupPhase, runPlanPhase]);
 
   useEffect(() => {
     if (started.current) return;
