@@ -8,7 +8,7 @@ import { T } from "@nullshift/ui/tokens";
 import { LogoMark } from "@nullshift/ui/components/Logo";
 import { Eyebrow, Display } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
-import { useOperationPending } from "@/components/app/operationOverlay";
+import { useOperationPending } from "@/components/app/operationState";
 
 type Step = "form" | "verify";
 

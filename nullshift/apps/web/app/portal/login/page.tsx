@@ -9,7 +9,7 @@ import { LogoMark } from "@nullshift/ui/components/Logo";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
 import { Eyebrow, Display } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
-import { useOperationPending } from "@/components/app/operationOverlay";
+import { useOperationPending } from "@/components/app/operationState";
 
 /* ── Shared input style (KYMA — square, hairline, emerald focus) ── */
 const inputStyle: React.CSSProperties = {

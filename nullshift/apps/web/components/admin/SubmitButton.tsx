@@ -2,7 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
-import { useOperationPending } from "@/components/app/operationOverlay";
+import { useOperationPending } from "@/components/app/operationState";
 
 /**
  * A submit button that gives instant feedback: the moment it's clicked it shows a
