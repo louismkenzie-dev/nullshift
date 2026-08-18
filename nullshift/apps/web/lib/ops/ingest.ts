@@ -76,6 +76,7 @@ Extract every distinct bug report, change request, question, or task mentioned. 
 
 Over-capture rather than filter — a human confirms each draft before it becomes real. Merge repeated mentions of the same problem into one draft. ${existing}`,
     prompt: `Client: ${input.clientName}\nSystem: ${input.systemName}\n\n--- RAW SOURCE ---\n${input.text}`,
+    logAs: "ops.ingest",
     schema: SCHEMA as unknown as Record<string, unknown>,
     effort: "medium",
     maxTokens: 16000,

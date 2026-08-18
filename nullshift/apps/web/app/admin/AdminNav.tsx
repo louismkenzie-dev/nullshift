@@ -16,6 +16,10 @@ import {
   ShieldCheck,
   Calendar,
   KeyRound,
+  Bot,
+  Network,
+  Users,
+  ListChecks,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@nullshift/db/client";
@@ -38,6 +42,15 @@ const groups: NavGroup[] = [
       { label: "Issues", href: "/admin/issues", Icon: Bug },
       { label: "Batches", href: "/admin/batches", Icon: Zap },
       { label: "Inbox", href: "/admin/inbox", Icon: Inbox },
+    ],
+  },
+  {
+    section: "AI Office",
+    items: [
+      { label: "AI Workspace", href: "/admin/ai", Icon: Bot },
+      { label: "Office map", href: "/admin/ai/map", Icon: Network },
+      { label: "Agents", href: "/admin/ai/agents", Icon: Users },
+      { label: "Agent tasks", href: "/admin/ai/tasks", Icon: ListChecks },
     ],
   },
   {
