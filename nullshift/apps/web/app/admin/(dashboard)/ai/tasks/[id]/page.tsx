@@ -37,6 +37,98 @@ const HUMAN_TRANSITIONS: Partial<Record<TaskStatus, TaskStatus[]>> = {
   quality_review: ["complete", "failed"],
 };
 
+async function runNow(formData: FormData) {
+  "use server";
+  const staff = await requireStaff();
+  if (!staff.ok) return;
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+  const { executeInternalTask } = await import("@/lib/aiw-runtime");
+  await executeInternalTask(id, "admin");
+  revalidatePath(`/admin/ai/tasks/${id}`);
+  revalidatePath("/admin/ai/tasks");
+  revalidatePath("/admin/ai/approvals");
+}
+
+async function delegateChild(formData: FormData) {
+  "use server";
+  const staff = await requireStaff();
+  if (!staff.ok) return;
+  const parentId = String(formData.get("parent_id") || "");
+  const agentId = String(formData.get("agent_id") || "");
+  const objective = String(formData.get("objective") || "").trim();
+  const riskTier = Math.min(2, Math.max(0, Number(formData.get("risk_tier") || 0)));
+  if (!parentId || !agentId || !objective) return;
+
+  const supabase = await createClient();
+  const { data: parent } = await supabase
+    .from("agent_tasks")
+    .select("id, tenant_id, agent_id")
+    .eq("id", parentId)
+    .maybeSingle();
+  if (!parent) return;
+
+  // Phase 2 policy gate: depth, fan-out, risk inheritance, scope inheritance.
+  const { checkDelegation } = await import("@/lib/aiw-policy");
+  const verdict = await checkDelegation({
+    parentTaskId: parentId,
+    agentId,
+    riskTier,
+    tenantId: (parent.tenant_id as string | null) ?? null,
+  });
+  if (!verdict.ok) {
+    await supabase.from("agent_events").insert({
+      agent_id: parent.agent_id,
+      task_id: parentId,
+      type: "policy.denied",
+      summary: `Child delegation denied: ${verdict.reason}`,
+      actor: staff.email,
+      detail: {
+        objective: objective.slice(0, 200),
+        attempted_agent: agentId,
+        risk_tier: riskTier,
+      },
+    });
+    await logAudit({
+      action: "agent_task.delegation_denied",
+      target: `agent_task:${parentId}`,
+      metadata: { reason: verdict.reason },
+    });
+    revalidatePath(`/admin/ai/tasks/${parentId}`);
+    return;
+  }
+
+  const { data: child } = await supabase
+    .from("agent_tasks")
+    .insert({
+      agent_id: agentId,
+      parent_task_id: parentId,
+      tenant_id: parent.tenant_id,
+      objective,
+      status: "queued",
+      risk_tier: riskTier,
+      execution_mode: "draft_only",
+      source: "delegated",
+      requested_by: staff.email,
+    })
+    .select("id")
+    .single();
+  if (child) {
+    await supabase.from("agent_events").insert({
+      agent_id: agentId,
+      task_id: child.id,
+      type: "task.created",
+      summary: `Child task delegated under "${objective.slice(0, 80)}" (scope inherited)`,
+      actor: staff.email,
+    });
+    await logAudit({
+      action: "agent_task.child_created",
+      target: `agent_task:${child.id}`,
+    });
+  }
+  revalidatePath(`/admin/ai/tasks/${parentId}`);
+}
+
 async function resolveTask(formData: FormData) {
   "use server";
   const staff = await requireStaff();
@@ -111,6 +203,13 @@ export default async function AgentTaskDetailPage({
         .select("id, objective, status")
         .eq("parent_task_id", id),
     ]);
+
+  const { data: assignableRaw } = await supabase
+    .from("agents")
+    .select("*")
+    .in("lifecycle", ["active", "test"])
+    .order("name");
+  const assignable = (assignableRaw ?? []) as AgentRow[];
 
   const events = (eventsRaw ?? []) as AgentEventRow[];
   const a = agent as AgentRow | null;
@@ -217,6 +316,74 @@ export default async function AgentTaskDetailPage({
               </Panel>
             </Reveal>
           )}
+
+          {["queued", "proposed"].includes(task.status) &&
+            a &&
+            ["active", "test"].includes(a.lifecycle) &&
+            a.runtime === "internal_call" && (
+              <Reveal className="block" delay={0.05}>
+                <Panel label="// RUNTIME" title="Execute now (internal draft run)">
+                  <p style={body}>
+                    Runs one bounded internal model call for this task. Tier 0–1 output
+                    completes as a recorded draft; Tier 2+ output lands in the approval
+                    inbox — nothing external ever happens without a named human.
+                  </p>
+                  <form action={runNow} className="mt-3">
+                    <input type="hidden" name="id" value={task.id} />
+                    <SubmitButton className="kb kb-primary kb-sm" pendingLabel="Running…">
+                      Run task now
+                    </SubmitButton>
+                  </form>
+                </Panel>
+              </Reveal>
+            )}
+
+          <Reveal className="block" delay={0.055}>
+            <Panel label="// DELEGATE" title="Delegate a child task (policy-checked)">
+              <form action={delegateChild} className="flex flex-col gap-3">
+                <input type="hidden" name="parent_id" value={task.id} />
+                <input
+                  name="objective"
+                  required
+                  className="brief-input"
+                  placeholder="Bounded sub-objective (inherits this task's client scope)"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    name="agent_id"
+                    required
+                    className="brief-input"
+                    style={{ flex: 1, minWidth: 200 }}
+                  >
+                    <option value="">Choose an agent…</option>
+                    {assignable.map((ag) => (
+                      <option key={ag.id} value={ag.id}>
+                        {ag.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    name="risk_tier"
+                    defaultValue="0"
+                    className="brief-input"
+                    style={{ width: 160 }}
+                  >
+                    <option value="0">Tier 0</option>
+                    <option value="1">Tier 1</option>
+                    <option value="2">Tier 2</option>
+                  </select>
+                  <SubmitButton className="kb kb-outline kb-sm" pendingLabel="Checking…">
+                    Delegate child
+                  </SubmitButton>
+                </div>
+                <p style={monoFaint}>
+                  Denied automatically if it exceeds delegation depth, fan-out, the
+                  parent&apos;s risk tier, the agent&apos;s permitted tier, or widens
+                  client scope — denials are recorded in the trail below.
+                </p>
+              </form>
+            </Panel>
+          </Reveal>
 
           <Reveal className="block" delay={0.06}>
             <Panel label="// RESOLVE" title="Human decision">

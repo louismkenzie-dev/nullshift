@@ -59,15 +59,50 @@ runtime adapter arrive in Phases 2–4.
   and the agent profile with the error, cost and duration. Stale active agents are
   flagged rather than shown as live.
 
-## What Phase 1 deliberately does not do
+## Phases 2–5 (implemented)
 
-- No autonomous execution paths were added; active agents = existing production
-  behaviour, now visible and recorded.
-- No approvals inbox yet (Phase 2), no Agent Studio (Phase 3), no runtime
-  adapter/heartbeats/routines (Phase 4), no ops automations (Phase 5).
+- **Approvals** (`/admin/ai/approvals`): every Tier 2+ draft an agent produces
+  lands here with the exact preview, risk tier, evidence and expiry. Decisions
+  (approve / request changes / reject) are attributable, per-item, expire after
+  7 days, update the linked task, and write the ledger + audit log. Open
+  escalations (failures, budget, compliance flags) are worked from the same page.
+- **Policy enforcement** (`lib/aiw-policy.ts`): structured limits from
+  `ops_settings.ai_workspace_policy` — delegation depth (2), fan-out (5/task),
+  task budget, org daily AI budget — evaluated in code before anything runs.
+  Child delegation from a task detail page is policy-checked; **denials are
+  recorded** in the task trail (`policy.denied`).
+- **Agent Studio** (`/admin/ai/studio`): describing a need creates a _proposal_
+  — the Designer assistant drafts role, manager, capabilities, gates, risk tier
+  (0–2 only), instructions, overlap warning and 3 test cases, landing as a
+  draft agent + v1 config. It cannot activate or grant anything. Test mode on
+  the profile runs sandbox inputs only, logged with cost; the lifecycle buttons
+  enforce draft → review → test → active.
+- **Runtime** (`lib/aiw-runtime.ts`): the internal_call adapter — one bounded,
+  fully-logged model call per task; Tier 0–1 completes as a recorded draft,
+  Tier 2+ becomes a pending approval. 3 consecutive failures flip the agent to
+  `needs_attention` + escalate. Wedged runs time out after 30 minutes; stale
+  approvals expire. Org/agent budgets are enforced _before_ spending.
+- **Routines** (`/admin/ai/routines`, fired by the `ai-tick` cron each workday
+  07:00 UTC): morning briefing, project-risk scan, invoice watch, weekly update
+  drafts, onboarding scan, compliance screening, change-request intake. A
+  routine fires only when an admin enables it AND its agent is active; firings
+  are idempotent via unique fire keys (a day/event can never fire twice); every
+  skip is recorded honestly (`skipped_inactive`, `skipped_budget`).
+
+**To bring a routine to life**: activate its agent (profile → review → test →
+activate), then enable the routine. Until both are true, the tick records a
+visible skip instead of pretending.
+
+## Still deliberately not done
+
 - Role tiers (Workspace Admin / Supervisor / Operator / Observer) await the
   org-wide role split — today every internal staff member has full Workspace
   visibility, and that is stated honestly in the audit.
+- External sends remain fully manual: approving a draft records the decision;
+  actually sending it stays with the human in the existing tools (deliberate
+  until send-rails get their own per-channel gates).
+- Managed-Agents fix-batch dispatch keeps its existing UI on the batch page;
+  wrapping it into the adapter event model is a Phase 4.5 refinement.
 
 ## Configuration decisions needed (carried from the audit)
 

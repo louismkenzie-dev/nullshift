@@ -5,9 +5,12 @@ import { costUsd, MODEL } from "./client";
  *  Best-effort: never throws, never blocks the caller. */
 
 export type AgentRunInput = {
-  agent: string; // 'consultation.plan' | 'consultation.mockup'
-  trigger: string; // 'plan_view' | 'admin' | 'cron'
+  agent: string; // 'consultation.plan' | 'ops.classify' | 'aiw.execute' | ...
+  trigger: string; // 'plan_view' | 'admin' | 'cron' | 'routine' | 'test'
   planToken?: string | null;
+  /** AI Workspace links (0019): the registered agent + task this run served. */
+  agentId?: string | null;
+  taskId?: string | null;
   status: "ok" | "error";
   usage?: {
     input_tokens: number;
@@ -25,6 +28,8 @@ export async function logAgentRun(run: AgentRunInput): Promise<void> {
       agent: run.agent,
       trigger: run.trigger,
       plan_token: run.planToken ?? null,
+      agent_id: run.agentId ?? null,
+      task_id: run.taskId ?? null,
       model: MODEL,
       status: run.status,
       input_tokens: run.usage?.input_tokens ?? null,

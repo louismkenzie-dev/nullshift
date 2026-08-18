@@ -20,6 +20,9 @@ import {
   Network,
   Users,
   ListChecks,
+  CheckSquare,
+  Timer,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@nullshift/db/client";
@@ -51,6 +54,9 @@ const groups: NavGroup[] = [
       { label: "Office map", href: "/admin/ai/map", Icon: Network },
       { label: "Agents", href: "/admin/ai/agents", Icon: Users },
       { label: "Agent tasks", href: "/admin/ai/tasks", Icon: ListChecks },
+      { label: "Approvals", href: "/admin/ai/approvals", Icon: CheckSquare },
+      { label: "Routines", href: "/admin/ai/routines", Icon: Timer },
+      { label: "Agent Studio", href: "/admin/ai/studio", Icon: Sparkles },
     ],
   },
   {

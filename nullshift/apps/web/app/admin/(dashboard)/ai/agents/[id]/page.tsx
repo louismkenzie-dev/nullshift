@@ -43,6 +43,18 @@ const TRANSITIONS: Record<AgentLifecycle, AgentLifecycle[]> = {
   archived: [],
 };
 
+async function runTest(formData: FormData) {
+  "use server";
+  const staff = await requireStaff();
+  if (!staff.ok) return;
+  const id = String(formData.get("id") || "");
+  const sample = String(formData.get("sample") || "").trim();
+  if (!id || !sample) return;
+  const { runTestCase } = await import("@/lib/aiw-runtime");
+  await runTestCase(id, sample, staff.email);
+  revalidatePath(`/admin/ai/agents/${id}`);
+}
+
 async function changeLifecycle(formData: FormData) {
   "use server";
   const staff = await requireStaff();
@@ -267,6 +279,64 @@ export default async function AgentProfilePage({
               />
             </Panel>
           </Reveal>
+
+          {["draft", "under_review", "test"].includes(agent.lifecycle) && (
+            <Reveal className="block" delay={0.06}>
+              <Panel label="// TEST MODE" title="Run a test case (sandbox input only)">
+                <form action={runTest} className="flex flex-col gap-3">
+                  <input type="hidden" name="id" value={agent.id} />
+                  <textarea
+                    name="sample"
+                    required
+                    rows={3}
+                    className="brief-input"
+                    style={{ height: "auto", paddingTop: 10 }}
+                    placeholder="Paste a sample input — the agent runs against this text only; no live data, no actions."
+                  />
+                  <div>
+                    <SubmitButton
+                      className="kb kb-primary kb-sm"
+                      pendingLabel="Running test…"
+                    >
+                      Run test case
+                    </SubmitButton>
+                  </div>
+                </form>
+                {(() => {
+                  const lastTest = events.find((e) => e.type === "test.ran");
+                  const out = (
+                    lastTest as
+                      | (AgentEventRow & { detail?: { output?: string } })
+                      | undefined
+                  )?.detail?.output;
+                  return out ? (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        border: "1px solid var(--k-border)",
+                        background: "var(--k-bg)",
+                        padding: 12,
+                        whiteSpace: "pre-wrap",
+                        fontFamily: T.sans,
+                        fontSize: "0.83rem",
+                        lineHeight: 1.55,
+                        color: "var(--k-fg)",
+                        maxHeight: 280,
+                        overflowY: "auto",
+                      }}
+                    >
+                      {out}
+                    </div>
+                  ) : null;
+                })()}
+                <p style={{ ...monoFaint, marginTop: 8 }}>
+                  Test runs are logged with cost and appear in the ledger. Activation
+                  should follow passing tests — the transition buttons above enforce the
+                  draft → review → test → active pipeline.
+                </p>
+              </Panel>
+            </Reveal>
+          )}
 
           <Reveal className="block" delay={0.08}>
             <Panel
