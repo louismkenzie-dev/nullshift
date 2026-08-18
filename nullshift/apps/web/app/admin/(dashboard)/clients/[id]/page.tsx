@@ -11,6 +11,7 @@ import { DeliverySections } from "./DeliverySections";
 import { TimelinePanel } from "./TimelinePanel";
 import { wrap, button, esc, C, FONT } from "@/lib/emailLayout";
 import { draftClientUpdate, draftDiscoveryBrief } from "@/lib/ops/assistants";
+import { canEnterBuild } from "@/lib/stageGates";
 import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
 import { CATALOG } from "@nullshift/content/catalog";
@@ -522,17 +523,17 @@ async function setStage(formData: FormData) {
   if (!STAGES.includes(stage)) return;
   const supabase = await createClient();
 
-  // Deposit-before-build gate: committed build work needs money to have moved
-  // (any paid invoice on the project — the acceptance invoice qualifies).
-  // Manual exceptions are allowed but must carry a recorded reason.
-  if (stage === "build" && !overrideReason) {
+  // Deposit-before-build gate (lib/stageGates, unit-tested): committed build
+  // work needs money to have moved — any paid invoice on the project — or a
+  // staff override carrying a recorded reason (audit-logged below).
+  if (stage === "build") {
     const { data: paid } = await supabase
       .from("invoices")
       .select("id")
       .eq("project_id", projectId)
       .eq("status", "paid")
       .limit(1);
-    if (!paid || paid.length === 0) {
+    if (!canEnterBuild({ hasPaidInvoice: !!paid?.length, overrideReason })) {
       revalidatePath(`/admin/clients/${tenantId}`);
       redirect(`/admin/clients/${tenantId}?stage_blocked=build`);
     }

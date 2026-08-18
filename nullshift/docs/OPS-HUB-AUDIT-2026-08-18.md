@@ -339,6 +339,26 @@ completeness + erasure report; sub-processor register update (Anthropic). 4.5 Ro
 8. **Repo topology** — git root is the parent dir; untracked client work (`House Of Gino/`) sits
    in the same tree; stray root `index.mjs` + KYMA template folder in the deployable repo.
 
+## 7a. Live 8-stage lifecycle walkthrough — VERIFIED 2026-08-18
+
+Executed against the production database with a disposable tenant
+("ZZ OPS VERIFICATION", deleted afterwards with zero residue):
+
+| Step                                                  | Result                                                                                                          |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| discovery → onboarding → build → review → launch_prep | ✅ every transition accepted (enum + triggers)                                                                  |
+| launch_prep → live **without** a signed DPA           | ✅ **BLOCKED** by trigger 0005 — stage stayed launch_prep                                                       |
+| live after `dpa_signed` compliance record             | ✅ admitted                                                                                                     |
+| live → care → complete                                | ✅ accepted; `complete` is a real terminal stage                                                                |
+| RLS shape on delivery tables                          | ✅ risks / decisions / compliance_reviews have **no** member policy; milestones + checklists member-SELECT only |
+| Cleanup                                               | ✅ cascade delete left 0 tenants / 0 projects / 0 records                                                       |
+
+App-level gates aren't reachable via SQL, so they're pinned in the test suite
+instead: `canEnterBuild` (deposit-or-override, `tests/stage-gates.test.ts`),
+`isBatchable` (quote acceptance), and the compliance escalation gate
+(`tests/compliance.test.ts`). All 8 stages now offer at least one playbook
+(planning covers build; client_review covers review).
+
 ## 7. Verification scenarios (brief §"Required verification scenarios") — current status
 
 1. Lead → client/project via acceptance + deposit, no duplicates: 🟡 works except no deposit

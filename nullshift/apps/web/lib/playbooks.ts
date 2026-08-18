@@ -14,6 +14,8 @@ export type PlaybookKind =
   | "onboarding"
   | "discovery_call"
   | "proposal_review"
+  | "planning"
+  | "client_review"
   | "launch"
   | "handover"
   | "close_retro"
@@ -69,6 +71,32 @@ export const PLAYBOOKS: Record<PlaybookKind, Playbook> = {
       "Care plan recommendation fits their scale",
       "Client's DPA declaration complete",
       "Read once as the client would read it",
+    ],
+  },
+  planning: {
+    kind: "planning",
+    title: "Project planning",
+    stages: ["build"],
+    items: [
+      "Signed scope broken into milestones with target dates",
+      "Every milestone has an owner",
+      "First client-visible issue(s) queued so the portal shows movement",
+      "Dependencies on the client listed (content, access, approvals)",
+      "System passport started (repo, stack, provisioning checklist)",
+      "First weekly update scheduled",
+    ],
+  },
+  client_review: {
+    kind: "client_review",
+    title: "Client review",
+    stages: ["review"],
+    items: [
+      "Walkthrough booked with the decision-maker",
+      "Everything shipped so far demoed against the signed scope",
+      "Feedback captured as issues, not chat messages",
+      "Out-of-scope asks routed through a quote, not absorbed",
+      "Client sign-off on this round recorded as a decision",
+      "Next milestone confirmed or re-dated",
     ],
   },
   launch: {
