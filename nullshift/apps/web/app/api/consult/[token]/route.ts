@@ -113,6 +113,25 @@ export async function POST(
 
   /* ── Phase 1: research + tailored plan ─────────────────────────── */
   if (phase === "plan") {
+    // Daily spend cap: each consultation costs ~3 Opus calls (~$1-2). The
+    // funnel endpoint already rate-limits lead creation per IP; this is the
+    // backstop on total daily burn — past the cap, prospects get the solid
+    // templated plan (the pre-agent behaviour) instead of a generation, and
+    // agent_runs (the cost ledger) is what we count against.
+    const DAILY_CONSULT_CAP = 40;
+    const dayStart = new Date();
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const { count: runsToday } = await supabase
+      .from("agent_runs")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", dayStart.toISOString());
+    if ((runsToday ?? 0) >= DAILY_CONSULT_CAP) {
+      console.error(
+        `consult daily cap reached (${runsToday} agent runs today) — serving template fallback`
+      );
+      return currentState();
+    }
+
     await supabase
       .from("agent_consultations")
       .upsert(

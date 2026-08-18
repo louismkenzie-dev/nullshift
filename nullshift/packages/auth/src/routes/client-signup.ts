@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
-import {
-  generateVerificationCode,
-  sendConfirmationEmail,
-} from "../confirmation-email";
+import { rateLimitAllow, requestIp } from "@nullshift/db/rateLimit";
+import { generateVerificationCode, sendConfirmationEmail } from "../confirmation-email";
 
 const CODE_TTL_MINUTES = 15;
 
@@ -13,6 +11,14 @@ export async function POST(req: Request) {
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
+    }
+
+    // Durable per-IP brake (0026) — account creation sends verification email.
+    if (!(await rateLimitAllow("client-signup", requestIp(req), 5, 3600))) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again later." },
+        { status: 429 }
+      );
     }
 
     const serviceClient = createServiceClient();
@@ -65,7 +71,10 @@ export async function POST(req: Request) {
 
     if (insertError) {
       console.error("Failed to store verification code:", insertError);
-      return NextResponse.json({ error: "Could not create verification code." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Could not create verification code." },
+        { status: 500 }
+      );
     }
 
     // Send code via Resend

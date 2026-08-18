@@ -10,15 +10,8 @@ import {
 } from "@/lib/ops/issues";
 import { StageStepper } from "@/components/portal/StageStepper";
 import { BankTransferDetails } from "@/components/portal/BankTransferDetails";
-import { clientRef } from "@nullshift/ui/format";
-import {
-  FileText,
-  CreditCard,
-  MessageSquare,
-  Bell,
-  Shield,
-  Folder,
-} from "lucide-react";
+import { clientRef, invoiceRef } from "@nullshift/ui/format";
+import { FileText, CreditCard, MessageSquare, Bell, Shield, Folder } from "lucide-react";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Eyebrow, Display, Lead } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
@@ -345,10 +338,7 @@ export default async function PortalHome({
 
       {/* Quick-nav — every portal section as a coloured, iconed tile with a
           live signal of what's waiting there. The thumb-first way around. */}
-      <div
-        className="grid grid-cols-2 sm:grid-cols-3 gap-3"
-        style={{ marginTop: 24 }}
-      >
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" style={{ marginTop: 24 }}>
         {tiles.map((tile, i) => (
           <Reveal key={tile.href} delay={Math.min(i, 6) * 0.04}>
             <Link
@@ -763,7 +753,7 @@ export default async function PortalHome({
                   </div>
                   {inv.status !== "paid" && (
                     <BankTransferDetails
-                      reference={clientRef(inv.tenant_id)}
+                      reference={invoiceRef(inv.tenant_id, inv.id)}
                       amount={Number(inv.amount)}
                       only={!inv.hosted_invoice_url}
                     />

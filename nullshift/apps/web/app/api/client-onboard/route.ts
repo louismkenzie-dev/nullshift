@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { escapeLike, recordLead } from "@nullshift/db/leads";
+import { rateLimitAllow, requestIp } from "@nullshift/db/rateLimit";
 import { createServiceClient } from "@nullshift/db";
 
 /**
@@ -19,6 +20,13 @@ export async function POST(request: Request) {
     requested_date?: string;
     requested_time?: string;
   };
+
+  // Durable per-IP brake (0026): each post inserts a lead and emails the team.
+  if (!(await rateLimitAllow("client-onboard", requestIp(request), 5, 3600)))
+    return NextResponse.json(
+      { error: "Too many requests — please try again later." },
+      { status: 429 }
+    );
 
   try {
     body = await request.json();

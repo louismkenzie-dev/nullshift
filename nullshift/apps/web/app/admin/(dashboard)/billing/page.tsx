@@ -6,6 +6,7 @@ import { logAudit } from "@nullshift/db/audit";
 import { getMrrSummary } from "@nullshift/billing/mrr";
 import { getStripe } from "@nullshift/billing/stripe";
 import { cancelGoCardlessSubscription } from "@nullshift/billing/gocardless";
+import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
@@ -227,14 +228,11 @@ async function markInvoicePaid(formData: FormData) {
   if (!(await requireStaff()).ok) return;
   const id = String(formData.get("id") || "");
   const tenantId = String(formData.get("tenant_id") || "");
-  if (!id) return;
-  const supabase = await createClient();
-  // In production the Stripe webhook does this on invoice.paid.
-  await supabase
-    .from("invoices")
-    .update({ status: "paid", paid_at: new Date().toISOString() })
-    .eq("id", id);
-  await logAudit({ action: "invoice.paid", target: `invoice:${id}`, tenantId });
+  if (!id || !tenantId) return;
+  // Shared implementation — settles the Stripe hosted invoice out-of-band (so
+  // the card link stops collecting), CAS status flip, Xero payment mirror.
+  // This page used to have a weaker copy that skipped all three.
+  await markInvoicePaidOutOfBand({ tenantId, invoiceId: id });
   revalidatePath("/admin/billing");
 }
 

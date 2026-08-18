@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
+import { rateLimitAllow, requestIp } from "@nullshift/db/rateLimit";
 import { findUserByEmail } from "../confirmation-email";
 
 /**
@@ -16,6 +17,15 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Email and code are required." },
         { status: 400 }
+      );
+    }
+
+    // Durable per-IP brake (0026) on top of the per-code attempt cap — an
+    // attacker rotating target emails still hits a wall.
+    if (!(await rateLimitAllow("verify-code", requestIp(req), 20, 900))) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again later." },
+        { status: 429 }
       );
     }
 

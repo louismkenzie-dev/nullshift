@@ -1,6 +1,6 @@
 import { createClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
-import { clientRef } from "@nullshift/ui/format";
+import { invoiceRef } from "@nullshift/ui/format";
 import { carePlan } from "@/lib/carePlans";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { BankTransferDetails } from "@/components/portal/BankTransferDetails";
@@ -259,7 +259,7 @@ export default async function PortalPaymentsPage() {
                     </div>
                     {inv.status === "open" && (
                       <BankTransferDetails
-                        reference={clientRef(inv.tenant_id)}
+                        reference={invoiceRef(inv.tenant_id, inv.id)}
                         amount={Number(inv.amount)}
                         only={!inv.hosted_invoice_url}
                       />

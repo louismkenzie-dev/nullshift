@@ -12,6 +12,15 @@ export const proposalRef = (id: string) => `NS-${id.slice(0, 8).toUpperCase()}`;
  *  "NS-6B16CD56". Shown on the client hub and used as the initial portal password. */
 export const clientRef = (id: string) => `NS-${id.slice(0, 8).toUpperCase()}`;
 
+/**
+ * Per-INVOICE bank reference: NS-<tenant>-<invoice prefix>. The tenant-only
+ * clientRef can't disambiguate two open invoices — a transfer arriving with it
+ * couldn't be matched to a specific invoice. Use this wherever a payment
+ * reference accompanies one invoice; clientRef stays for tenant-level context.
+ */
+export const invoiceRef = (tenantId: string, invoiceId: string) =>
+  `${clientRef(tenantId)}-${invoiceId.slice(0, 6).toUpperCase()}`;
+
 /** Format a number as GBP, e.g. £1,000.00 */
 export const money = (n: number, currency = "GBP") =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(n);

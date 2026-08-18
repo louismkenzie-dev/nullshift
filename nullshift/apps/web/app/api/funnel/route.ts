@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
 import { recordLead } from "@nullshift/db/leads";
+import { rateLimitAllow, requestIp } from "@nullshift/db/rateLimit";
 import { buildScalingPlan } from "@nullshift/content/scalingPlan";
 import { scoreLead, type Answers } from "@/lib/funnel";
 import { scalingPlanEmail, ownerEmail } from "@/lib/funnelEmails";
@@ -47,6 +48,12 @@ export async function POST(request: Request) {
   if (body.website && body.website.trim() !== "") return NextResponse.json({ ok: true });
   if (typeof body.elapsedMs === "number" && body.elapsedMs < 1500)
     return NextResponse.json({ ok: true });
+
+  // Durable rate limit (0026): each funnel submission mints a lead, sends two
+  // Resend emails, and can trigger three Opus calls on /plan — a scripted
+  // client bypasses the honeypot trivially, so the brake is per-IP and real.
+  if (!(await rateLimitAllow("funnel", requestIp(request), 5, 3600)))
+    return NextResponse.json({ ok: true }); // indistinguishable from success
 
   const name = body.contact?.name?.trim();
   const business = body.contact?.business?.trim() || null;

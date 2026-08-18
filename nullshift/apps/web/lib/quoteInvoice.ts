@@ -3,7 +3,7 @@ import {
   findOrCreateCustomer,
 } from "@nullshift/billing/stripe";
 import { createServiceClient } from "@nullshift/db";
-import { clientRef } from "@nullshift/ui/format";
+import { invoiceRef } from "@nullshift/ui/format";
 import { sendEmail } from "./sendEmail";
 import { buildInvoiceReadyEmail } from "./clientEmails";
 import { syncInvoiceToXero } from "./xeroSync";
@@ -136,7 +136,7 @@ export async function generateQuoteInvoice(
         total: amount,
         payUrl,
         items: [{ name: title, amount }],
-        reference: clientRef(tenantId),
+        reference: invoiceRef(tenantId, invoice.id),
       });
       await sendEmail({
         to: email,

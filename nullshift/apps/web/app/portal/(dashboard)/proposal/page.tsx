@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
-import { clientRef } from "@nullshift/ui/format";
+import { clientRef, invoiceRef } from "@nullshift/ui/format";
 import { carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
@@ -77,7 +77,7 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "id, tenant_id, proposal_status, proposed_plan, client_entity_type, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at"
+      "id, tenant_id, proposal_status, proposed_plan, overview, payment_terms, client_entity_type, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at"
     )
     .eq("id", projectId)
     .maybeSingle();
@@ -113,6 +113,34 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   // Everything past here is best-effort — the proposal IS accepted, so a hiccup
   // in a downstream step must never turn the client's success into an error.
   try {
+    // Freeze the accepted agreement (migration 0025): the exact modules,
+    // overview, payment terms and care plan at the moment of signature. The
+    // signed PDF renders from THIS — scope edits after acceptance can never
+    // change what the legal record says was agreed.
+    const { data: snapItems } = await service
+      .from("project_items")
+      .select("name, amount")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: true });
+    const snapshotItems = ((snapItems ?? []) as { name: string; amount: number }[]).map(
+      (i) => ({ name: i.name, amount: Number(i.amount) })
+    );
+    await service
+      .from("projects")
+      .update({
+        accepted_snapshot: {
+          items: snapshotItems,
+          total: snapshotItems.reduce((s, i) => s + i.amount, 0),
+          overview: project.overview ?? null,
+          payment_terms: project.payment_terms ?? null,
+          proposed_plan: project.proposed_plan ?? null,
+          client_entity_type: project.client_entity_type ?? null,
+          accepted_name: signature,
+          accepted_at: now,
+        },
+      })
+      .eq("id", projectId);
+
     // Record the data-processing acceptance (satisfies the DPA-before-live gate
     // for both: a full DPA for limited companies, standard terms for sole traders).
     await service.from("compliance_records").insert({
@@ -679,7 +707,7 @@ export default async function PortalProposal() {
                           </a>
                         )}
                         <BankTransferDetails
-                          reference={clientRef(project.tenant_id)}
+                          reference={invoiceRef(project.tenant_id, inv.id)}
                           amount={Number(inv.amount)}
                           only={!inv.hosted_invoice_url}
                         />

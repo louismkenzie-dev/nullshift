@@ -6,6 +6,7 @@ import { createClient, createServiceClient } from "@nullshift/db";
 import { requireStaff } from "@nullshift/auth/guards";
 import { findUserByEmail } from "@nullshift/auth/confirmation-email";
 import { escapeLike } from "@nullshift/db/leads";
+import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
 import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
 import { CATALOG } from "@nullshift/content/catalog";
