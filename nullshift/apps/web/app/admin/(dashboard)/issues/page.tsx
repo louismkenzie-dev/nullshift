@@ -8,6 +8,7 @@ import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { currentPeriodStart } from "@/lib/carePlans";
+import { draftImpactStatement } from "@/lib/ops/assistants";
 import {
   BILLING_LABEL,
   BILLING_TONE,
@@ -294,6 +295,58 @@ async function queueIssue(formData: FormData) {
 
   await supabase.from("issues").update({ status: "queued" }).eq("id", id);
   await logAudit({ action: "issue.queued", target: `issue:${id}`, tenantId });
+  revalidatePath("/admin/issues");
+}
+
+/**
+ * Change-request assistant (audit 4.2): drafts the plain-English impact
+ * statement into the editable quote_note field and stashes clarifying
+ * questions on the issue's ai record. A DRAFT only — nothing reaches the
+ * client until staff review it and click "Send quote".
+ */
+async function draftImpact(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const id = String(formData.get("id") || "");
+  const tenantId = String(formData.get("tenant_id") || "");
+  if (!id) return;
+  const supabase = await createClient();
+  const { data: issue } = await supabase
+    .from("issues")
+    .select("id, title, description, project_id, quoted_price, quote_accepted_at, ai")
+    .eq("id", id)
+    .maybeSingle();
+  if (!issue || issue.quote_accepted_at) return; // accepted quotes are settled
+  const { data: proj } = issue.project_id
+    ? await supabase
+        .from("projects")
+        .select("name")
+        .eq("id", issue.project_id)
+        .maybeSingle()
+    : { data: null };
+  const draft = await draftImpactStatement({
+    title: issue.title,
+    description: issue.description,
+    projectName: proj?.name ?? "their system",
+    quotedPrice: issue.quoted_price ? Number(issue.quoted_price) : null,
+  });
+  if (draft) {
+    await supabase
+      .from("issues")
+      .update({
+        quote_note: draft.impact_statement,
+        ai: {
+          ...((issue.ai ?? {}) as Record<string, unknown>),
+          cr_questions: draft.clarifying_questions,
+        },
+      })
+      .eq("id", id);
+    await logAudit({
+      action: "ai.impact_statement_drafted",
+      target: `issue:${id}`,
+      tenantId,
+    });
+  }
   revalidatePath("/admin/issues");
 }
 
@@ -874,13 +927,47 @@ export default async function IssuesPage({
                       />
                     </Field>
                     <Field label="Impact statement (what the client reads with the quote)">
-                      <input
-                        name="quote_note"
-                        defaultValue={issue.quote_note ?? ""}
-                        placeholder="What we'd build, what it costs, how long, what it affects"
-                        className="w-full md:w-[280px]"
-                        style={inp}
-                      />
+                      <div className="flex items-center gap-1 w-full">
+                        <input
+                          name="quote_note"
+                          defaultValue={issue.quote_note ?? ""}
+                          placeholder="What we'd build, what it costs, how long, what it affects"
+                          className="w-full md:w-[280px]"
+                          style={inp}
+                        />
+                        <SubmitButton
+                          formAction={draftImpact}
+                          formNoValidate
+                          title="AI-drafts the impact statement into this field — you edit, then Send quote"
+                          style={{
+                            ...btn("transparent", "var(--k-accent)", true),
+                            height: 32,
+                            paddingInline: 8,
+                          }}
+                        >
+                          ✦
+                        </SubmitButton>
+                      </div>
+                      {Array.isArray(
+                        (issue.ai as Record<string, unknown> | null)?.cr_questions
+                      ) &&
+                        ((issue.ai as Record<string, unknown>).cr_questions as string[])
+                          .length > 0 && (
+                          <span
+                            style={{
+                              fontFamily: T.mono,
+                              fontSize: 9,
+                              color: "var(--k-faint)",
+                              marginTop: 3,
+                            }}
+                          >
+                            AI: settle first —{" "}
+                            {(
+                              (issue.ai as Record<string, unknown>)
+                                .cr_questions as string[]
+                            ).join(" · ")}
+                          </span>
+                        )}
                     </Field>
                     <Field label="Due">
                       <input

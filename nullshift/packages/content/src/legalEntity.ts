@@ -65,4 +65,9 @@ export const SUB_PROCESSORS: SubProcessor[] = [
     service: "Transactional email",
     location: "US (under appropriate safeguards)",
   },
+  {
+    name: "Anthropic, PBC",
+    service: "AI processing (request triage, communication parsing, drafting assistance)",
+    location: "US (under appropriate safeguards)",
+  },
 ];

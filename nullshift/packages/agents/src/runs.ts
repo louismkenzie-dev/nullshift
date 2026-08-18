@@ -16,6 +16,8 @@ export type AgentRunInput = {
     input_tokens: number;
     output_tokens: number;
     cache_read_input_tokens?: number | null;
+    cache_creation_input_tokens?: number | null;
+    server_tool_use?: { web_search_requests?: number | null } | null;
   } | null;
   durationMs?: number;
   error?: string | null;

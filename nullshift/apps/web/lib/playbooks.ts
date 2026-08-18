@@ -16,7 +16,8 @@ export type PlaybookKind =
   | "proposal_review"
   | "launch"
   | "handover"
-  | "close_retro";
+  | "close_retro"
+  | "children_data";
 
 export type Playbook = {
   kind: PlaybookKind;
@@ -108,6 +109,27 @@ export const PLAYBOOKS: Record<PlaybookKind, Playbook> = {
       "Credentials we held rotated or handed back",
       "What went well / what didn't captured",
       "Testimonial or case-study ask made",
+    ],
+  },
+  // Seeded automatically by the compliance review when a service is likely to
+  // be accessed by children (brief §"Children's-data workflow"). Not offered
+  // by stage — it exists because a flag raised it, and qualified human review
+  // before launch is the last, non-negotiable item.
+  children_data: {
+    kind: "children_data",
+    title: "Children's data review",
+    stages: [],
+    items: [
+      "Child-friendly privacy information drafted",
+      "High-privacy defaults on by default",
+      "Data minimisation reviewed for child users",
+      "Strict access controls on children's data",
+      "Sharing limited to what is proportionate",
+      "Location / profiling off for children unless justified",
+      "Relevant parental controls considered",
+      "Age-appropriate design assessment done",
+      "DPIA screening questions answered",
+      "Qualified human review before launch",
     ],
   },
 };

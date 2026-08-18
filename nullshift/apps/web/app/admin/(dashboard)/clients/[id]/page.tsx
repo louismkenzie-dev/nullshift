@@ -10,6 +10,7 @@ import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
 import { DeliverySections } from "./DeliverySections";
 import { TimelinePanel } from "./TimelinePanel";
 import { wrap, button, esc, C, FONT } from "@/lib/emailLayout";
+import { draftClientUpdate, draftDiscoveryBrief } from "@/lib/ops/assistants";
 import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
 import { CATALOG } from "@nullshift/content/catalog";
@@ -369,6 +370,145 @@ async function postUpdate(formData: FormData) {
     }
   } catch (e) {
     console.error("update notification email failed (non-fatal):", e);
+  }
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/**
+ * Client-update drafter (audit 4.2): assembles what actually happened —
+ * shipped work, the queue, blocked-on-client, milestones — and asks the
+ * assistant for prose. The draft lands back in the editable form via query
+ * params; NOTHING is posted or emailed until the human clicks Post update.
+ */
+async function draftUpdateWithAi(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  if (!tenantId || !projectId) return;
+  const supabase = await createClient();
+  const twoWeeksAgo = new Date(Date.now() - 14 * 86_400_000).toISOString();
+  const [{ data: t }, { data: proj }, { data: shipped }, { data: open }, { data: ms }] =
+    await Promise.all([
+      supabase.from("tenants").select("name").eq("id", tenantId).maybeSingle(),
+      supabase.from("projects").select("name, stage").eq("id", projectId).maybeSingle(),
+      supabase
+        .from("issues")
+        .select("title")
+        .eq("project_id", projectId)
+        .eq("client_visible", true)
+        .in("status", ["fixed", "shipped"])
+        .gte("resolved_at", twoWeeksAgo),
+      supabase
+        .from("issues")
+        .select("title, status")
+        .eq("project_id", projectId)
+        .eq("client_visible", true)
+        .in("status", ["queued", "batched", "in_progress", "awaiting_client"]),
+      supabase
+        .from("milestones")
+        .select("title, target_date")
+        .eq("project_id", projectId)
+        .neq("health", "done"),
+    ]);
+  const openList = (open ?? []) as { title: string; status: string }[];
+  const draft = await draftClientUpdate({
+    clientName: t?.name ?? "the client",
+    projectName: proj?.name ?? "the project",
+    stage: proj?.stage ?? "build",
+    shipped: ((shipped ?? []) as { title: string }[]).map((s) => s.title),
+    upNext: openList.filter((i) => i.status !== "awaiting_client").map((i) => i.title),
+    waitingOnClient: openList
+      .filter((i) => i.status === "awaiting_client")
+      .map((i) => i.title),
+    milestones: (ms ?? []) as { title: string; target_date: string | null }[],
+  });
+  if (!draft) {
+    redirect(`/admin/clients/${tenantId}?stage_blocked=`); // no-op refresh
+  }
+  const q = new URLSearchParams({
+    draft_title: draft.title.slice(0, 200),
+    draft_body: draft.body.slice(0, 1800),
+  });
+  redirect(`/admin/clients/${tenantId}?${q.toString()}`);
+}
+
+/**
+ * Discovery analyst (audit 4.2): drafts the internal discovery brief from the
+ * funnel answers, agent research, and call notes — saved as an internal
+ * project note, clearly labelled as an AI draft. Never client-visible.
+ */
+async function draftDiscoveryBriefAction(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  if (!tenantId || !projectId) return;
+  const supabase = await createClient();
+  const { data: t } = await supabase
+    .from("tenants")
+    .select("name, contact_email")
+    .eq("id", tenantId)
+    .maybeSingle();
+  const [{ data: leadRows }, { data: notes }] = await Promise.all([
+    t?.contact_email
+      ? supabase
+          .from("leads")
+          .select("quiz_answers, agent_enrichment")
+          .ilike("email", escapeLike(t.contact_email))
+          .order("created_at", { ascending: false })
+          .limit(5)
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from("project_notes")
+      .select("body")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+  const facts: [string, string][] = [];
+  let agentSummary: string | null = null;
+  let painPoints: string[] = [];
+  for (const lr of (leadRows ?? []) as {
+    quiz_answers: unknown;
+    agent_enrichment: unknown;
+  }[]) {
+    const qa = (lr.quiz_answers ?? {}) as { answers?: Record<string, unknown> };
+    if (qa.answers)
+      for (const [k, v] of Object.entries(qa.answers))
+        if (typeof v === "string" && v.trim()) facts.push([k, v]);
+    const enr = lr.agent_enrichment as Record<string, unknown> | null;
+    if (enr && !agentSummary && typeof enr.summary === "string")
+      agentSummary = enr.summary;
+    if (enr && Array.isArray(enr.painPoints))
+      painPoints = (enr.painPoints as unknown[]).filter(
+        (p): p is string => typeof p === "string"
+      );
+  }
+  const brief = await draftDiscoveryBrief({
+    clientName: t?.name ?? "the client",
+    facts,
+    agentSummary,
+    painPoints,
+    callNotes: ((notes ?? []) as { body: string }[])
+      .map((n) => n.body)
+      .filter((b) => !b.startsWith("AI DRAFT")),
+  });
+  if (brief) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    await supabase.from("project_notes").insert({
+      tenant_id: tenantId,
+      project_id: projectId,
+      author: user?.id ?? null,
+      body: `AI DRAFT — Discovery brief (verify before relying on it)\n\n${brief.brief}`,
+    });
+    await logAudit({
+      action: "ai.discovery_brief_drafted",
+      target: `project:${projectId}`,
+      tenantId,
+    });
   }
   revalidatePath(`/admin/clients/${tenantId}`);
 }
@@ -1298,10 +1438,18 @@ export default async function ClientHub({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ stage_blocked?: string }>;
+  searchParams: Promise<{
+    stage_blocked?: string;
+    draft_title?: string;
+    draft_body?: string;
+  }>;
 }) {
   const { id: tenantId } = await params;
-  const { stage_blocked: stageBlocked } = await searchParams;
+  const {
+    stage_blocked: stageBlocked,
+    draft_title: draftTitle,
+    draft_body: draftBody,
+  } = await searchParams;
   const supabase = await createClient();
 
   // Stage 1 — one batch keyed on the tenant id: the tenant, its projects, and
@@ -2019,7 +2167,21 @@ export default async function ClientHub({
       {hasDiscovery && (
         <Reveal>
           <section style={card}>
-            <h2 style={h2}>Discovery</h2>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 style={h2}>Discovery</h2>
+              {project && (
+                <form action={draftDiscoveryBriefAction}>
+                  {htid}
+                  {hpid}
+                  <SubmitButton
+                    title="Drafts an internal discovery brief from the records below — saved as an internal note, never client-visible"
+                    style={{ ...btn("transparent", "var(--k-accent)"), height: 26 }}
+                  >
+                    ✦ Draft brief
+                  </SubmitButton>
+                </form>
+              )}
+            </div>
             {discoveryFacts.length > 0 && (
               <div
                 className="grid gap-x-5 gap-y-2"
@@ -3233,15 +3395,30 @@ export default async function ClientHub({
               <form action={postUpdate} className="flex flex-col gap-2">
                 {htid}
                 {hpid}
+                {draftTitle && (
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 9,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--k-accent)",
+                    }}
+                  >
+                    AI draft below — edit before posting; nothing is sent until you post
+                  </span>
+                )}
                 <input
                   name="title"
                   required
+                  defaultValue={draftTitle ?? ""}
                   placeholder="Update title (e.g. Homepage design ready for review)"
                   style={inp}
                 />
                 <textarea
                   name="body"
-                  rows={2}
+                  rows={draftBody ? 6 : 2}
+                  defaultValue={draftBody ?? ""}
                   placeholder="Details (optional)"
                   style={{
                     ...inp,
@@ -3250,12 +3427,19 @@ export default async function ClientHub({
                     resize: "vertical",
                   }}
                 />
-                <SubmitButton
-                  className="self-start"
-                  style={btn("var(--k-surface)", "var(--k-fg)")}
-                >
-                  Post update
-                </SubmitButton>
+                <div className="flex items-center gap-2">
+                  <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                    Post update
+                  </SubmitButton>
+                  <SubmitButton
+                    formAction={draftUpdateWithAi}
+                    formNoValidate
+                    title="Drafts from shipped work, queued work, and milestones — you edit and post"
+                    style={btn("transparent", "var(--k-accent)")}
+                  >
+                    ✦ Draft with AI
+                  </SubmitButton>
+                </div>
               </form>
             </section>
           </Reveal>

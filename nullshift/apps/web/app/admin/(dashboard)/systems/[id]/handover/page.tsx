@@ -1,10 +1,99 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@nullshift/db";
+import { logAudit } from "@nullshift/db/audit";
+import { requireStaff } from "@nullshift/auth/guards";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { Reveal } from "@/components/kyma";
 import { OPEN_STATUSES } from "@/lib/ops/issues";
+import { draftHandoverSummary } from "@/lib/ops/assistants";
+
+/**
+ * Handover assistant (audit 4.2): stitches the page's own sources into a
+ * "read this first" block, saved as an internal project note labelled as an
+ * AI draft — the human decides whether it earns a place in the runbook.
+ */
+async function draftSummary(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const projectId = String(formData.get("project_id") || "");
+  const tenantId = String(formData.get("tenant_id") || "");
+  if (!projectId || !tenantId) return;
+  const supabase = await createClient();
+  const [
+    { data: proj },
+    { data: t },
+    { data: prof },
+    { data: decs },
+    { data: rks },
+    { data: open },
+  ] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("name, stage, overview, accepted_snapshot")
+      .eq("id", projectId)
+      .maybeSingle(),
+    supabase.from("tenants").select("name").eq("id", tenantId).maybeSingle(),
+    supabase
+      .from("system_profiles")
+      .select("quirks")
+      .eq("project_id", projectId)
+      .maybeSingle(),
+    supabase
+      .from("decisions")
+      .select("decision")
+      .eq("project_id", projectId)
+      .order("decided_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("risks")
+      .select("title")
+      .eq("project_id", projectId)
+      .eq("status", "open"),
+    supabase
+      .from("issues")
+      .select("title")
+      .eq("project_id", projectId)
+      .in("status", OPEN_STATUSES)
+      .limit(15),
+  ]);
+  if (!proj) return;
+  const snap = proj.accepted_snapshot as {
+    items?: { name: string }[];
+    overview?: string | null;
+  } | null;
+  const draft = await draftHandoverSummary({
+    projectName: proj.name,
+    clientName: t?.name ?? "the client",
+    stage: proj.stage,
+    purpose: snap?.overview ?? proj.overview,
+    scopeItems: (snap?.items ?? []).map((i) => i.name),
+    decisions: ((decs ?? []) as { decision: string }[]).map((d) => d.decision),
+    risks: ((rks ?? []) as { title: string }[]).map((r) => r.title),
+    openWork: ((open ?? []) as { title: string }[]).map((i) => i.title),
+    quirks: prof?.quirks ?? null,
+  });
+  if (draft) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    await supabase.from("project_notes").insert({
+      tenant_id: tenantId,
+      project_id: projectId,
+      author: user?.id ?? null,
+      body: `AI DRAFT — Handover summary (verify before relying on it)\n\n${draft.summary}`,
+    });
+    await logAudit({
+      action: "ai.handover_summary_drafted",
+      target: `project:${projectId}`,
+      tenantId,
+    });
+  }
+  revalidatePath(`/admin/systems/${projectId}/handover`);
+}
 
 /**
  * Handover — one compact page a new team member reads to take a project over
@@ -109,6 +198,15 @@ export default async function HandoverPage({
       .limit(10),
   ]);
 
+  const { data: aiSummaryNote } = await supabase
+    .from("project_notes")
+    .select("body, created_at")
+    .eq("project_id", id)
+    .like("body", "AI DRAFT — Handover summary%")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   const snapshot = project.accepted_snapshot as {
     items?: { name: string; amount: number }[];
     total?: number;
@@ -149,14 +247,53 @@ export default async function HandoverPage({
         title={`${project.name} — handover`}
         lead={`${tenant?.name ?? "Client"} · ${project.stage.replace(/_/g, " ")} · everything a new owner needs, on one page.`}
         actions={
-          <Link
-            href={`/admin/systems/${id}`}
-            style={{ ...mono, fontSize: 11, color: "var(--k-muted)" }}
-          >
-            ← Passport
-          </Link>
+          <div className="flex items-center gap-4">
+            <form action={draftSummary}>
+              <input type="hidden" name="project_id" value={id} />
+              <input type="hidden" name="tenant_id" value={project.tenant_id} />
+              <SubmitButton
+                title="AI-drafts a 'read this first' block from this page's sources — saved as an internal note for you to verify"
+                style={{
+                  ...mono,
+                  fontSize: 11,
+                  color: "var(--k-accent)",
+                  background: "transparent",
+                  border: "1px solid var(--k-border)",
+                  height: 28,
+                  paddingInline: 10,
+                  cursor: "pointer",
+                }}
+              >
+                ✦ Draft summary
+              </SubmitButton>
+            </form>
+            <Link
+              href={`/admin/systems/${id}`}
+              style={{ ...mono, fontSize: 11, color: "var(--k-muted)" }}
+            >
+              ← Passport
+            </Link>
+          </div>
         }
       />
+
+      {/* AI "read this first" — a draft, clearly labelled, human-verified */}
+      {aiSummaryNote && (
+        <Reveal>
+          <Panel
+            label="// READ THIS FIRST"
+            title="AI-drafted orientation"
+            className="mt-4"
+          >
+            <p style={{ ...dim, whiteSpace: "pre-wrap" }}>
+              {aiSummaryNote.body.replace(/^AI DRAFT[^\n]*\n+/, "")}
+            </p>
+            <p style={{ ...mono, color: T.warning, marginTop: 8 }}>
+              AI DRAFT — verify against the sections below before relying on it
+            </p>
+          </Panel>
+        </Reveal>
+      )}
 
       {/* Completeness rail */}
       <Reveal>

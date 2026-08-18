@@ -19,6 +19,12 @@ export async function GET(
   if (error) return new Response(error.message, { status: 500 });
 
   await logAudit({ action: "sar.exported", target: `tenant:${tenantId}`, tenantId });
+  // The SAR itself is a compliance event — record it where the compliance
+  // centre looks, not just in the audit log (the 'sar' kind was a dead enum
+  // value until now).
+  await supabase
+    .from("compliance_records")
+    .insert({ tenant_id: tenantId, kind: "sar", detail: { via: "staff_export" } });
 
   return new Response(JSON.stringify(data, null, 2), {
     headers: {

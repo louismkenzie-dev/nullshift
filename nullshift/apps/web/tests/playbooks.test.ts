@@ -6,11 +6,13 @@ import { PLAYBOOKS, instantiate, playbooksForStage, toggleItem } from "@/lib/pla
  * every lifecycle stage that promises a playbook must actually get one.
  */
 describe("playbook templates", () => {
-  it("every playbook has a title, at least one stage, and 3+ items", () => {
+  it("every playbook has a title and 3+ items; all but children_data are stage-offered", () => {
     for (const p of Object.values(PLAYBOOKS)) {
       expect(p.title).toBeTruthy();
-      expect(p.stages.length).toBeGreaterThan(0);
       expect(p.items.length).toBeGreaterThanOrEqual(3);
+      // children_data is seeded by a compliance flag, never offered by stage.
+      if (p.kind === "children_data") expect(p.stages).toEqual([]);
+      else expect(p.stages.length).toBeGreaterThan(0);
     }
   });
 

@@ -10,6 +10,7 @@ export const MODEL = "claude-opus-5";
 export const PRICE_IN_PER_MTOK = 5;
 export const PRICE_OUT_PER_MTOK = 25;
 export const PRICE_CACHE_READ_PER_MTOK = 0.5;
+export const PRICE_WEB_SEARCH_PER_REQUEST = 0.01;
 
 let _client: Anthropic | null = null;
 
@@ -29,12 +30,20 @@ export function costUsd(usage: {
   input_tokens: number;
   output_tokens: number;
   cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  server_tool_use?: { web_search_requests?: number | null } | null;
 }): number {
   const cacheRead = usage.cache_read_input_tokens ?? 0;
+  // Cache WRITES bill at 1.25x input; server web-search requests carry a flat
+  // per-request fee. Omitting them systematically undercounted research runs.
+  const cacheWrite = usage.cache_creation_input_tokens ?? 0;
+  const searches = usage.server_tool_use?.web_search_requests ?? 0;
   return (
     (usage.input_tokens * PRICE_IN_PER_MTOK +
       usage.output_tokens * PRICE_OUT_PER_MTOK +
-      cacheRead * PRICE_CACHE_READ_PER_MTOK) /
-    1_000_000
+      cacheRead * PRICE_CACHE_READ_PER_MTOK +
+      cacheWrite * PRICE_IN_PER_MTOK * 1.25) /
+      1_000_000 +
+    searches * PRICE_WEB_SEARCH_PER_REQUEST
   );
 }

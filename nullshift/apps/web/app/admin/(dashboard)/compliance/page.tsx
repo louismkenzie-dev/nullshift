@@ -171,6 +171,18 @@ export default async function CompliancePage() {
                   }}
                 >
                   <Link
+                    href={`/admin/compliance/${tenant.id}`}
+                    style={{
+                      ...actionBtn,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      textDecoration: "none",
+                      color: "var(--k-accent)",
+                    }}
+                  >
+                    Compliance reviews →
+                  </Link>
+                  <Link
                     href={`/api/sar/${tenant.id}`}
                     prefetch={false}
                     style={{
