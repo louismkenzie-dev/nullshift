@@ -127,9 +127,13 @@ export async function POST(
       .gte("created_at", dayStart.toISOString());
     if ((runsToday ?? 0) >= DAILY_CONSULT_CAP) {
       console.error(
-        `consult daily cap reached (${runsToday} agent runs today) — serving template fallback`
+        `consult daily cap reached (${runsToday} agent runs today) — reporting failed (client shows the retry screen; the cap resets at midnight UTC)`
       );
-      return currentState();
+      // "failed" is terminal for the client component — it stops polling and
+      // shows the honest "couldn't finish, refresh to retry" screen instead of
+      // spinning forever against the cap. Nothing is written to the DB, so a
+      // refresh after the cap resets generates normally.
+      return NextResponse.json({ status: "failed", plan: null, hasMockup: false });
     }
 
     await supabase
