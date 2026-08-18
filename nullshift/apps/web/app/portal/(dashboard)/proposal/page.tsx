@@ -100,8 +100,10 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       accepted_name: signature,
       accepted_signature: signature,
       accepted_at: now,
-      // Signing kicks the project into the build stage and unlocks build edits.
-      stage: "build",
+      // Signing opens onboarding — the deposit invoice goes out now, and the
+      // move to 'build' is gated on payment (or a recorded staff override) in
+      // the admin stage control. Work is not committed before money moves.
+      stage: "onboarding",
     })
     .eq("id", projectId)
     .eq("proposal_status", "sent")
@@ -490,10 +492,7 @@ export default async function PortalProposal() {
                         ↓ Proposal PDF
                       </a>
                       {limited && (
-                        <a
-                          href={`/api/documents/dpa/${project.id}`}
-                          className="kb kb-sm"
-                        >
+                        <a href={`/api/documents/dpa/${project.id}`} className="kb kb-sm">
                           ↓ DPA PDF
                         </a>
                       )}

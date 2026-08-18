@@ -4,7 +4,13 @@ import { T } from "@nullshift/ui/tokens";
 import { formatCallDate, formatCallTime, money, LONDON_TZ } from "@nullshift/ui/format";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
-import { OPEN_STATUSES, SEVERITY_META, type IssueRow } from "@/lib/ops/issues";
+import {
+  OPEN_STATUSES,
+  SEVERITY_META,
+  isUnreviewedDraft,
+  type IssueRow,
+} from "@/lib/ops/issues";
+import { computeMrr } from "@nullshift/billing/mrr";
 
 /**
  * Mission Control — one glance = state of the whole agency. Every open issue,
@@ -44,6 +50,28 @@ type CallRow = {
   call_time: string;
   duration_min: number;
 };
+type CrRow = {
+  id: string;
+  tenant_id: string;
+  project_id: string | null;
+  description: string;
+  status: string;
+  created_at: string;
+};
+type InvoiceRow = {
+  id: string;
+  tenant_id: string;
+  amount: number;
+  status: string;
+  due_at: string | null;
+};
+type ActivityRow = {
+  id: string;
+  tenant_id: string | null;
+  action: string;
+  target: string | null;
+  created_at: string;
+};
 
 // Batch lifecycle → signal tone (draft is quiet, shipped/cancelled never shown here).
 const BATCH_TONE: Record<string, "accent" | "success" | "warning" | "danger" | "muted"> =
@@ -74,6 +102,9 @@ export default async function MissionControlPage() {
     { data: batchesRaw },
     { data: subsRaw },
     { data: callsRaw },
+    { data: crsRaw },
+    { data: invoicesRaw },
+    { data: activityRaw },
   ] = await Promise.all([
     supabase
       .from("issues")
@@ -90,7 +121,7 @@ export default async function MissionControlPage() {
     supabase
       .from("subscriptions")
       .select("tenant_id, mrr, status")
-      .in("status", ["active", "trialing"]),
+      .in("status", ["active", "trialing", "past_due"]),
     supabase
       .from("calls")
       .select("id, tenant_id, call_date, call_time, duration_min")
@@ -99,20 +130,40 @@ export default async function MissionControlPage() {
       .lte("call_date", weekEndStr)
       .order("call_date")
       .order("call_time"),
+    supabase
+      .from("change_requests")
+      .select("id, tenant_id, project_id, description, status, created_at")
+      .not("status", "in", "(shipped,rejected)")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("invoices")
+      .select("id, tenant_id, amount, status, due_at")
+      .eq("status", "open")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("audit_log")
+      .select("id, tenant_id, action, target, created_at")
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
   // Unreviewed inbox drafts (hidden + still 'new') are not confirmed work —
   // the batch compiler excludes them, and mission-control counts must match.
-  const issues = ((issuesRaw ?? []) as DashIssue[]).filter(
-    (i) => !(i.status === "new" && !i.client_visible)
-  );
+  const issues = ((issuesRaw ?? []) as DashIssue[]).filter((i) => !isUnreviewedDraft(i));
   const batches = (batchesRaw ?? []) as BatchRow[];
   const subs = (subsRaw ?? []) as SubRow[];
   const calls = (callsRaw ?? []) as CallRow[];
+  const crs = (crsRaw ?? []) as CrRow[];
+  const openInvoices = (invoicesRaw ?? []) as InvoiceRow[];
+  const activity = (activityRaw ?? []) as ActivityRow[];
 
   // Join issues/batches/calls to tenants + projects in memory (bulk + fold).
   const tenantIds = [
-    ...new Set([...issues, ...batches, ...calls].map((r) => r.tenant_id)),
+    ...new Set(
+      [...issues, ...batches, ...calls, ...crs, ...openInvoices]
+        .map((r) => r.tenant_id)
+        .concat(activity.map((a) => a.tenant_id).filter((t): t is string => !!t))
+    ),
   ];
   const projectIds = [
     ...new Set(
@@ -152,7 +203,20 @@ export default async function MissionControlPage() {
 
   const blocked = issues.filter((i) => i.status === "awaiting_client");
   const promises = issues.filter((i) => i.promised_at !== null);
-  const mrr = subs.reduce((sum, s) => sum + (Number(s.mrr) || 0), 0);
+  const mrr = computeMrr(subs);
+  const pastDueSubs = subs.filter((s) => s.status === "past_due");
+  const overdueInvoices = openInvoices.filter(
+    (i) => !!i.due_at && new Date(i.due_at).getTime() < now
+  );
+  // CR queue folded into the two states a partner acts on: with us (assess /
+  // scope) vs with the client (awaiting their approval); the rest is in-flight.
+  const crAwaitingUs = crs.filter(
+    (c) => c.status === "submitted" || c.status === "triaged"
+  );
+  const crAwaitingClient = crs.filter((c) => c.status === "awaiting_approval");
+  const crInFlight = crs.filter(
+    (c) => !["submitted", "triaged", "awaiting_approval"].includes(c.status)
+  );
 
   return (
     <div>
@@ -314,10 +378,118 @@ export default async function MissionControlPage() {
               )}
             </Panel>
           </Reveal>
+          {/* Change requests — the scope-control queue (audit Phase 1.4) */}
+          <Reveal delay={0.2}>
+            <Panel
+              label="// CHANGE REQUESTS"
+              title="Scope control"
+              pad={false}
+              actions={
+                <span style={{ ...mono, color: "var(--k-faint)" }}>
+                  {crAwaitingUs.length} to assess · {crAwaitingClient.length} with client
+                  · {crInFlight.length} in flight
+                </span>
+              }
+            >
+              {crs.length === 0 ? (
+                <EmptyState text="No open change requests." />
+              ) : (
+                crs.slice(0, 6).map((cr, i) => (
+                  <Reveal key={cr.id} delay={Math.min(i, 8) * 0.04}>
+                    <Link
+                      href={`/admin/clients/${cr.tenant_id}`}
+                      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 px-4 hover:bg-[var(--k-bg)]"
+                      style={{
+                        borderTop: i ? "1px solid var(--k-border)" : "none",
+                        transition: "background-color 0.15s ease",
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <div
+                          style={{
+                            fontFamily: T.sans,
+                            fontWeight: 600,
+                            fontSize: "0.9rem",
+                            color: "var(--k-fg)",
+                          }}
+                        >
+                          {cr.description.length > 90
+                            ? `${cr.description.slice(0, 90)}…`
+                            : cr.description}
+                        </div>
+                        <div style={{ ...mono, color: "var(--k-faint)", marginTop: 4 }}>
+                          {tenantName.get(cr.tenant_id) ?? "—"}
+                        </div>
+                      </div>
+                      <StatusChip
+                        tone={
+                          cr.status === "awaiting_approval"
+                            ? "warning"
+                            : cr.status === "submitted" || cr.status === "triaged"
+                              ? "accent"
+                              : "muted"
+                        }
+                      >
+                        {cr.status.replace(/_/g, " ")}
+                      </StatusChip>
+                    </Link>
+                  </Reveal>
+                ))
+              )}
+            </Panel>
+          </Reveal>
         </div>
 
         {/* Right: waiting, promised, booked */}
         <div className="flex flex-col gap-6">
+          {/* Money — due and overdue (audit Phase 1.4) */}
+          <Reveal delay={0.05}>
+            <Panel label="// MONEY" title="Payments" pad={false}>
+              {openInvoices.length === 0 && pastDueSubs.length === 0 ? (
+                <EmptyState text="Nothing outstanding — no open invoices, no past-due plans." />
+              ) : (
+                <>
+                  {overdueInvoices.map((inv, i) => (
+                    <MoneyRow
+                      key={inv.id}
+                      first={i === 0}
+                      name={tenantName.get(inv.tenant_id) ?? "—"}
+                      amount={inv.amount}
+                      tone="danger"
+                      chip="Overdue"
+                    />
+                  ))}
+                  {openInvoices
+                    .filter((inv) => !overdueInvoices.includes(inv))
+                    .map((inv, i) => (
+                      <MoneyRow
+                        key={inv.id}
+                        first={overdueInvoices.length === 0 && i === 0}
+                        name={tenantName.get(inv.tenant_id) ?? "—"}
+                        amount={inv.amount}
+                        tone="warning"
+                        chip={
+                          inv.due_at
+                            ? `Due ${new Date(inv.due_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: LONDON_TZ })}`
+                            : "Open"
+                        }
+                      />
+                    ))}
+                  {pastDueSubs.map((s) => (
+                    <MoneyRow
+                      key={`sub-${s.tenant_id}`}
+                      first={false}
+                      name={tenantName.get(s.tenant_id) ?? "—"}
+                      amount={s.mrr}
+                      tone="danger"
+                      chip="Plan past due"
+                    />
+                  ))}
+                </>
+              )}
+            </Panel>
+          </Reveal>
+
           {/* Blocked on client */}
           <Reveal delay={0.1}>
             <Panel label="// BLOCKED ON CLIENT" title="Waiting on them" pad={false}>
@@ -440,9 +612,82 @@ export default async function MissionControlPage() {
               )}
             </Panel>
           </Reveal>
+
+          {/* Recent activity — the audit trail, finally read (audit Phase 1.4) */}
+          <Reveal delay={0.25}>
+            <Panel label="// ACTIVITY" title="Recent activity" pad={false}>
+              {activity.length === 0 ? (
+                <EmptyState text="No recorded activity yet." />
+              ) : (
+                activity.map((a, i) => (
+                  <div
+                    key={a.id}
+                    className="py-2.5 px-4"
+                    style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}
+                  >
+                    <div style={{ ...mono, color: "var(--k-fg)" }}>
+                      {a.action.replace(/[._]/g, " ")}
+                    </div>
+                    <div style={{ ...mono, color: "var(--k-faint)", marginTop: 3 }}>
+                      {(a.tenant_id && tenantName.get(a.tenant_id)) || "—"} ·{" "}
+                      {new Date(a.created_at).toLocaleString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        timeZone: LONDON_TZ,
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </Panel>
+          </Reveal>
         </div>
       </div>
     </div>
+  );
+}
+
+/** One money line: client · amount · state chip. */
+function MoneyRow({
+  first,
+  name,
+  amount,
+  tone,
+  chip,
+}: {
+  first: boolean;
+  name: string;
+  amount: number;
+  tone: "danger" | "warning";
+  chip: string;
+}) {
+  return (
+    <Link
+      href="/admin/billing"
+      className="flex items-center justify-between gap-3 py-2.5 px-4 hover:bg-[var(--k-bg)]"
+      style={{
+        borderTop: first ? "none" : "1px solid var(--k-border)",
+        transition: "background-color 0.15s ease",
+      }}
+    >
+      <span
+        className="min-w-0 truncate"
+        style={{
+          fontFamily: T.sans,
+          fontWeight: 600,
+          fontSize: "0.85rem",
+          color: "var(--k-fg)",
+        }}
+      >
+        {name}
+      </span>
+      <span className="flex items-center gap-2 shrink-0">
+        <span style={{ ...mono, color: "var(--k-muted)" }}>{money(amount)}</span>
+        <StatusChip tone={tone}>{chip}</StatusChip>
+      </span>
+    </Link>
   );
 }
 

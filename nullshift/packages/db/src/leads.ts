@@ -29,6 +29,10 @@ export type RecordLeadInput = {
   planToken?: string | null;
   /** Generated Build Blueprint payload ({ blueprint, businessName, name, segment }). */
   plan?: unknown;
+  /** Contact phone — persisted so a callback never depends on an email. */
+  phone?: string | null;
+  /** UTM params captured at the funnel — acquisition attribution. */
+  utm?: Record<string, string> | null;
 };
 
 /** Lifecycle order for advancing a lead's status — never downgrade on merge. */
@@ -105,6 +109,8 @@ export async function recordLead(
         if (input.leadScore != null) patch.lead_score = input.leadScore;
         if (input.plan != null) patch.plan = input.plan;
         if (input.planToken) patch.plan_token = input.planToken;
+        if (input.phone) patch.phone = input.phone;
+        if (input.utm && Object.keys(input.utm).length > 0) patch.utm = input.utm;
         const { error } = await supabase
           .from("leads")
           .update(patch)
@@ -125,6 +131,8 @@ export async function recordLead(
       status: input.status ?? "new",
       plan_token: input.planToken ?? null,
       plan: input.plan ?? null,
+      phone: input.phone ?? null,
+      utm: input.utm && Object.keys(input.utm).length > 0 ? input.utm : null,
     });
 
     if (error) return { ok: false, error: error.message };

@@ -50,6 +50,7 @@ type Invoice = {
   hosted_invoice_url: string | null;
   paid_at: string | null;
   created_at: string;
+  due_at: string | null;
 };
 type CreditEvent = { tenant_id: string; delta: number };
 
@@ -268,7 +269,7 @@ export default async function BillingPage() {
     supabase
       .from("invoices")
       .select(
-        "id, tenant_id, type, amount, status, hosted_invoice_url, paid_at, created_at"
+        "id, tenant_id, type, amount, status, hosted_invoice_url, paid_at, created_at, due_at"
       )
       .order("created_at", { ascending: false }),
     supabase.from("build_credit_events").select("tenant_id, delta").eq("period", period),
@@ -298,6 +299,12 @@ export default async function BillingPage() {
   const openInvoices = invoiceList.filter((i) => i.status === "open");
   const openTotal = openInvoices.reduce((sum, i) => sum + Number(i.amount || 0), 0);
   const recentPaid = invoiceList.filter((i) => i.status === "paid").slice(0, 10);
+  // Overdue = open past its due date. Legacy rows without due_at can't be
+  // overdue (they predate due dates being set at generation).
+  const nowMs = Date.now();
+  const isOverdueInv = (i: Invoice) =>
+    i.status === "open" && !!i.due_at && new Date(i.due_at).getTime() < nowMs;
+  const overdueInvoices = openInvoices.filter(isOverdueInv);
 
   // Per-tenant usage footprint (cost guardrail). A pricing trigger fires when a
   // tenant carries real activity but little/no recurring fee to cover it.
@@ -423,7 +430,11 @@ export default async function BillingPage() {
           <StatCard
             value={gbp(openTotal)}
             label="Unpaid invoices"
-            sub={`${openInvoices.length} open invoice${openInvoices.length === 1 ? "" : "s"}`}
+            sub={
+              overdueInvoices.length > 0
+                ? `${openInvoices.length} open · ${overdueInvoices.length} OVERDUE`
+                : `${openInvoices.length} open invoice${openInvoices.length === 1 ? "" : "s"}`
+            }
           />
         </Reveal>
       </div>
@@ -815,8 +826,16 @@ export default async function BillingPage() {
                     <span style={dimMono}>{inv.type.replace(/_/g, " ")}</span>
                     <span style={dimMono}>{gbp(Number(inv.amount))}</span>
                     <span>
-                      <StatusChip tone={inv.status === "paid" ? "success" : "warning"}>
-                        {inv.status}
+                      <StatusChip
+                        tone={
+                          inv.status === "paid"
+                            ? "success"
+                            : isOverdueInv(inv)
+                              ? "danger"
+                              : "warning"
+                        }
+                      >
+                        {isOverdueInv(inv) ? "overdue" : inv.status}
                       </StatusChip>
                     </span>
                     <span

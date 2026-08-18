@@ -76,7 +76,16 @@ export default async function ClientsPage() {
   for (const p of (projects ?? []) as { tenant_id: string; stage: string }[]) {
     // First seen wins is fine; projects aren't ordered, so prefer the "furthest"
     // stage by index for a sensible headline.
-    const order = ["discovery", "build", "review", "live", "care"];
+    const order = [
+      "discovery",
+      "onboarding",
+      "build",
+      "review",
+      "launch_prep",
+      "live",
+      "care",
+      "complete",
+    ];
     const cur = stageByTenant.get(p.tenant_id);
     if (!cur || order.indexOf(p.stage) > order.indexOf(cur))
       stageByTenant.set(p.tenant_id, p.stage);

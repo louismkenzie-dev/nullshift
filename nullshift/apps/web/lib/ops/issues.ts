@@ -70,6 +70,33 @@ export const OPEN_STATUSES: IssueStatus[] = [
 /** Statuses a batch pulls from when compiling. */
 export const QUEUEABLE_STATUSES: IssueStatus[] = ["new", "triaged", "queued"];
 
+/**
+ * An unreviewed inbox draft: AI-parsed, hidden, not yet confirmed by a human.
+ * Drafts must never count as real work (mission control) or enter a batch.
+ */
+export function isUnreviewedDraft(i: {
+  status: IssueStatus;
+  client_visible: boolean;
+}): boolean {
+  return i.status === "new" && !i.client_visible;
+}
+
+/**
+ * Whether an issue may be compiled into a fix batch. Two gates:
+ * 1. not an unreviewed draft (a human must have confirmed it exists), and
+ * 2. billing is classified as covered/build_item — out_of_scope (billable,
+ *    unapproved, unpaid) and unclassified work must never be built, shipped,
+ *    and announced to a client before anyone agreed to pay for it.
+ */
+export function isBatchable(i: {
+  status: IssueStatus;
+  client_visible: boolean;
+  billing: IssueBilling;
+}): boolean {
+  if (isUnreviewedDraft(i)) return false;
+  return i.billing === "covered" || i.billing === "build_item";
+}
+
 export const KIND_LABEL: Record<IssueKind, string> = {
   bug: "Bug",
   change: "Change",
@@ -79,14 +106,30 @@ export const KIND_LABEL: Record<IssueKind, string> = {
 
 /** Portal intake picker — phrased for non-technical clients. */
 export const PORTAL_KINDS: { id: IssueKind; label: string; hint: string }[] = [
-  { id: "bug", label: "Something's broken", hint: "An error, a page not working, a payment problem" },
-  { id: "change", label: "Request a change", hint: "Something new, or something done differently" },
-  { id: "question", label: "Ask a question", hint: "How something works, or anything else" },
+  {
+    id: "bug",
+    label: "Something's broken",
+    hint: "An error, a page not working, a payment problem",
+  },
+  {
+    id: "change",
+    label: "Request a change",
+    hint: "Something new, or something done differently",
+  },
+  {
+    id: "question",
+    label: "Ask a question",
+    hint: "How something works, or anything else",
+  },
 ];
 
 export const SEVERITY_META: Record<
   IssueSeverity,
-  { label: string; tone: "accent" | "success" | "warning" | "danger" | "muted"; dueDays: number }
+  {
+    label: string;
+    tone: "accent" | "success" | "warning" | "danger" | "muted";
+    dueDays: number;
+  }
 > = {
   critical: { label: "Critical", tone: "danger", dueDays: 1 },
   high: { label: "High", tone: "warning", dueDays: 3 },

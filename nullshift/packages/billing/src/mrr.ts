@@ -26,16 +26,28 @@ export type MrrSummary = {
   pctToTarget: number;
 };
 
+/**
+ * THE definition of MRR: sum of `mrr` over active + trialing subscriptions.
+ * Every surface that shows an MRR number must fold through this so the
+ * dashboard and the billing cockpit can never disagree.
+ */
+export function computeMrr(subs: { mrr: number; status: string }[]): number {
+  return subs
+    .filter((s) => s.status === "active" || s.status === "trialing")
+    .reduce((sum, s) => sum + Number(s.mrr || 0), 0);
+}
+
 export async function getMrrSummary(supabase: MinimalClient): Promise<MrrSummary> {
   const [{ data: subs }, { data: projects }] = await Promise.all([
     supabase.from("subscriptions").select("tenant_id, mrr, status"),
     supabase.from("projects").select("build_fee, started_at"),
   ]);
 
-  const activeSubs = (
-    (subs ?? []) as { tenant_id: string; mrr: number; status: string }[]
-  ).filter((s) => s.status === "active" || s.status === "trialing");
-  const mrr = activeSubs.reduce((sum, s) => sum + Number(s.mrr || 0), 0);
+  const allSubs = (subs ?? []) as { tenant_id: string; mrr: number; status: string }[];
+  const activeSubs = allSubs.filter(
+    (s) => s.status === "active" || s.status === "trialing"
+  );
+  const mrr = computeMrr(allSubs);
   const activeClients = new Set(activeSubs.map((s) => s.tenant_id)).size;
 
   // Average build fee for projects started this calendar month.

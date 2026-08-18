@@ -95,11 +95,12 @@ const PAIN_LABEL: Record<string, string> = {
   admin_overload: "admin overload",
   nothing: "exploring",
 };
+const LEAD_STATUSES = ["new", "qualified", "call_booked", "won", "lost"];
 async function setStatus(formData: FormData) {
   "use server";
   const id = String(formData.get("id") || "");
   const status = String(formData.get("status") || "");
-  if (!id || !status) return;
+  if (!id || !LEAD_STATUSES.includes(status)) return;
   const supabase = await createClient();
   await supabase
     .from("leads")
@@ -115,7 +116,11 @@ async function setStatus(formData: FormData) {
 async function deleteLead(formData: FormData) {
   "use server";
   const id = String(formData.get("id") || "");
-  if (!id) return;
+  // Hard delete is unrecoverable (quiz answers, plan, enrichment, and the
+  // prospect's permanent /plan link all die with the row) — require the typed
+  // confirmation from the card before acting.
+  const confirmText = String(formData.get("confirm") || "").trim();
+  if (!id || confirmText !== "DELETE") return;
   const supabase = await createClient();
   await logAudit({ action: "lead.deleted", target: `lead:${id}` });
   await supabase.from("leads").delete().eq("id", id);
@@ -406,20 +411,46 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
           {lead.email ? "Open profile →" : "No email"}
         </span>
         <div className="flex items-center gap-1.5">
-          <form action={deleteLead}>
+          <form action={deleteLead} className="flex items-center gap-1">
             <input type="hidden" name="id" value={lead.id} />
+            <input
+              name="confirm"
+              required
+              placeholder="DELETE"
+              aria-label="Type DELETE to confirm"
+              style={{
+                width: 58,
+                height: 20,
+                padding: "0 4px",
+                fontFamily: T.mono,
+                fontSize: 9,
+                letterSpacing: "0.06em",
+                background: "transparent",
+                border: "1px solid var(--k-border)",
+                color: "var(--k-muted)",
+              }}
+            />
             <button type="submit" style={miniBtn(T.danger)}>
               Delete
             </button>
           </form>
-          {lead.status !== "lost" && (
-            <form action={setStatus}>
-              <input type="hidden" name="id" value={lead.id} />
-              <input type="hidden" name="status" value="lost" />
-              <button type="submit" style={miniBtn("var(--k-muted)")}>
-                Lost
-              </button>
-            </form>
+          {lead.status !== "lost" && lead.status !== "won" && (
+            <>
+              <form action={setStatus}>
+                <input type="hidden" name="id" value={lead.id} />
+                <input type="hidden" name="status" value="won" />
+                <button type="submit" style={miniBtn("var(--k-accent)")}>
+                  Won
+                </button>
+              </form>
+              <form action={setStatus}>
+                <input type="hidden" name="id" value={lead.id} />
+                <input type="hidden" name="status" value="lost" />
+                <button type="submit" style={miniBtn("var(--k-muted)")}>
+                  Lost
+                </button>
+              </form>
+            </>
           )}
         </div>
       </div>

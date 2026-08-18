@@ -9,7 +9,12 @@ import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { compileBatchPrompt, type SystemProfileRow } from "@/lib/ops/batchCompiler";
-import { QUEUEABLE_STATUSES, type IssueRow, type IssueSeverity } from "@/lib/ops/issues";
+import {
+  QUEUEABLE_STATUSES,
+  isBatchable,
+  type IssueRow,
+  type IssueSeverity,
+} from "@/lib/ops/issues";
 
 /**
  * Fix batches — compile a project's queueable issues into one context-complete
@@ -64,15 +69,11 @@ async function compileBatch(formData: FormData) {
     .select("*")
     .eq("project_id", projectId)
     .in("status", QUEUEABLE_STATUSES);
-  // Unreviewed inbox drafts (hidden + still 'new') stay out of work orders
-  // until they're confirmed on /admin/inbox. Billable work stays out until a
-  // human has classified it AND the client has agreed: an out_of_scope issue
-  // must not be built, shipped, and announced before anyone approved or paid —
-  // it becomes batchable only once triage flips it to covered/build_item
-  // (after client sign-off) or explicit queueing follows an agreed quote.
+  // isBatchable: no unreviewed inbox drafts (a human must confirm first) and
+  // no unclassified/out_of_scope billing — billable work can't be built,
+  // shipped and announced before anyone approved or paid for it.
   const issues = ((issueRows ?? []) as IssueRow[])
-    .filter((i) => !(i.status === "new" && !i.client_visible))
-    .filter((i) => i.billing !== "unclassified" && i.billing !== "out_of_scope")
+    .filter(isBatchable)
     .sort(
       (a, b) =>
         SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||

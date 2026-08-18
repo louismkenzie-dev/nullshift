@@ -30,6 +30,7 @@ type Invoice = {
   hosted_invoice_url: string | null;
   created_at: string;
   paid_at: string | null;
+  due_at: string | null;
   type: string | null;
 };
 type Sub = { plan: string; mrr: number; status: string; provider?: string | null };
@@ -68,7 +69,9 @@ export default async function PortalPaymentsPage() {
   const [{ data: invoices }, { data: subs }] = await Promise.all([
     supabase
       .from("invoices")
-      .select("id, tenant_id, amount, status, hosted_invoice_url, created_at, paid_at, type")
+      .select(
+        "id, tenant_id, amount, status, hosted_invoice_url, created_at, paid_at, due_at, type"
+      )
       .order("created_at", { ascending: false }),
     supabase
       .from("subscriptions")
@@ -119,7 +122,11 @@ export default async function PortalPaymentsPage() {
                 }
                 accent={outstanding > 0}
               />
-              <StatCard value={gbp(paidTotal)} label="Paid to date" sub="Across all invoices" />
+              <StatCard
+                value={gbp(paidTotal)}
+                label="Paid to date"
+                sub="Across all invoices"
+              />
               <StatCard
                 value={plan && sub ? `${gbp(Number(sub.mrr ?? plan.mrr))}/mo` : "—"}
                 label="Care plan"
@@ -226,7 +233,9 @@ export default async function PortalPaymentsPage() {
                           ·{" "}
                           {inv.status === "paid" && inv.paid_at
                             ? `Paid ${dateGB(inv.paid_at)}`
-                            : `Issued ${dateGB(inv.created_at)}`}
+                            : inv.due_at
+                              ? `Issued ${dateGB(inv.created_at)} · due ${dateGB(inv.due_at)}`
+                              : `Issued ${dateGB(inv.created_at)}`}
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2.5">

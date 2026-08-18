@@ -12,8 +12,8 @@ import { scalingPlanEmail, ownerEmail } from "@/lib/funnelEmails";
  *  agent consultation seeded), then sends two branded emails via Resend: a
  *  tailored, lead-generating email to the visitor, and a new-lead notification
  *  to Nullshift. Honeypot + time-trap drop obvious bots. Email + DB are
- *  independent best-effort steps. NOTE: utm + phone are received but not yet
- *  persisted on the lead (see docs/OPS-HUB-AUDIT-2026-08-18.md, Phase 1.5). */
+ *  independent best-effort steps. Phone + UTM are persisted on the lead
+ *  (migration 0023) so callbacks and attribution survive capture. */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -88,6 +88,12 @@ export async function POST(request: Request) {
   // ── Write the canonical multi-tenant `leads` row. (The old dual-write to
   //    `enquiries` is gone — the pipeline reads `leads`; `enquiries` now only
   //    carries contact/booking/brief messages.) ──
+  // UTM: keep only sane string pairs (attribution data, not a dumping ground).
+  const utm: Record<string, string> = {};
+  for (const [k, v] of Object.entries(body.utm ?? {})) {
+    if (typeof v === "string" && k.length <= 40 && v.length <= 200) utm[k] = v;
+  }
+
   const lead = await recordLead({
     name,
     email,
@@ -98,6 +104,8 @@ export async function POST(request: Request) {
     status: segment === "qualified" ? "qualified" : "new",
     planToken,
     plan: { scalingPlan, businessName: business, name, segment },
+    phone,
+    utm,
   });
   if (!lead.ok) console.error("Lead insert error:", lead.error);
 

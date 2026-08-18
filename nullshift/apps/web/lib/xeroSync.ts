@@ -25,7 +25,9 @@ export async function syncInvoiceToXero(
   try {
     const { data: inv } = await service
       .from("invoices")
-      .select("id, tenant_id, project_id, type, amount, status, paid_at, created_at, xero_invoice_id")
+      .select(
+        "id, tenant_id, project_id, type, amount, status, paid_at, created_at, due_at, xero_invoice_id"
+      )
       .eq("id", invoiceId)
       .maybeSingle();
     if (!inv) return { ok: false };
@@ -80,7 +82,9 @@ export async function syncInvoiceToXero(
       contactId,
       reference: `${clientRef(inv.tenant_id)} · ${String(inv.id).slice(0, 8)}`,
       dateISO: inv.created_at,
-      dueDateISO: inv.created_at,
+      // Mirror the real due date (falling back to the issue date only for
+      // legacy rows that predate due_at being set at generation).
+      dueDateISO: inv.due_at ?? inv.created_at,
       lineItems,
     });
     if (!created) return { ok: false };

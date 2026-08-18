@@ -91,7 +91,18 @@ type Sub = {
 };
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
-const STAGES = ["discovery", "build", "review", "live", "care"];
+// Full delivery lifecycle (migration 0024): signed work lands in onboarding,
+// launch_prep is the real pre-live gate, complete closes a project out.
+const STAGES = [
+  "discovery",
+  "onboarding",
+  "build",
+  "review",
+  "launch_prep",
+  "live",
+  "care",
+  "complete",
+];
 /** Time-of-day the client picked when booking → a readable label + a sensible
  *  default exact time to prefill (still confirmed with them). */
 const TIME_BUCKETS: Record<string, { label: string; time: string }> = {
@@ -322,8 +333,26 @@ async function setStage(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   const projectId = String(formData.get("project_id") || "");
   const stage = String(formData.get("stage") || "");
+  const overrideReason = String(formData.get("override_reason") || "").trim();
   if (!STAGES.includes(stage)) return;
   const supabase = await createClient();
+
+  // Deposit-before-build gate: committed build work needs money to have moved
+  // (any paid invoice on the project — the acceptance invoice qualifies).
+  // Manual exceptions are allowed but must carry a recorded reason.
+  if (stage === "build" && !overrideReason) {
+    const { data: paid } = await supabase
+      .from("invoices")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("status", "paid")
+      .limit(1);
+    if (!paid || paid.length === 0) {
+      revalidatePath(`/admin/clients/${tenantId}`);
+      redirect(`/admin/clients/${tenantId}?stage_blocked=build`);
+    }
+  }
+
   // The DPA-before-live DB trigger blocks stage='live' until a DPA is logged.
   const { error } = await supabase
     .from("projects")
@@ -340,7 +369,41 @@ async function setStage(formData: FormData) {
     action: `project.stage.${stage}`,
     target: `project:${projectId}`,
     tenantId,
+    ...(overrideReason ? { metadata: { override_reason: overrideReason } } : {}),
   });
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/**
+ * Named ownership + the single next action — the brief's rule that a partner
+ * should answer "whose is this and what happens next?" from the record, not
+ * WhatsApp. One person may hold several roles; the names just have to be
+ * written down.
+ */
+async function saveOwnership(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  if (!projectId) return;
+  const clean = (k: string) => String(formData.get(k) || "").trim() || null;
+  const patch = {
+    account_owner: clean("account_owner"),
+    delivery_owner: clean("delivery_owner"),
+    technical_owner: clean("technical_owner"),
+    finance_owner: clean("finance_owner"),
+    next_action: clean("next_action"),
+    next_action_owner: clean("next_action_owner"),
+  };
+  const supabase = await createClient();
+  const { error } = await supabase.from("projects").update(patch).eq("id", projectId);
+  if (!error)
+    await logAudit({
+      action: "project.ownership_updated",
+      target: `project:${projectId}`,
+      tenantId,
+      metadata: patch,
+    });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -1182,7 +1245,7 @@ export default async function ClientHub({
     supabase
       .from("projects")
       .select(
-        "id, name, stage, proposal_status, proposed_plan, overview, payment_terms, client_entity_type, dpa_client_country, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at, accepted_name, accepted_at, live_url"
+        "id, name, stage, proposal_status, proposed_plan, overview, payment_terms, client_entity_type, dpa_client_country, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at, accepted_name, accepted_at, live_url, account_owner, delivery_owner, technical_owner, finance_owner, next_action, next_action_owner"
       )
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false }),
@@ -1248,6 +1311,12 @@ export default async function ClientHub({
         accepted_name: string | null;
         accepted_at: string | null;
         live_url: string | null;
+        account_owner: string | null;
+        delivery_owner: string | null;
+        technical_owner: string | null;
+        finance_owner: string | null;
+        next_action: string | null;
+        next_action_owner: string | null;
       }
     | undefined;
   const projectId = project?.id ?? null;
@@ -1304,7 +1373,7 @@ export default async function ClientHub({
     t.contact_email
       ? supabase
           .from("leads")
-          .select("quiz_answers")
+          .select("quiz_answers, agent_enrichment, phone, lead_score, source")
           .ilike("email", escapeLike(t.contact_email))
           .order("created_at", { ascending: false })
           .limit(10)
@@ -1351,9 +1420,17 @@ export default async function ClientHub({
   // The client's preferred call slot, carried over from the lead they created
   // when they booked (stored on quiz_answers.requested_date/_time). Used to
   // prefill + annotate the call booking below — we still confirm the exact time.
+  type LeadRow = {
+    quiz_answers: unknown;
+    agent_enrichment: unknown;
+    phone: string | null;
+    lead_score: number | null;
+    source: string | null;
+  };
+  const leadList = (leadRows ?? []) as LeadRow[];
   let preferredDate: string | null = null;
   let preferredTime: string | null = null;
-  for (const lr of (leadRows ?? []) as { quiz_answers: unknown }[]) {
+  for (const lr of leadList) {
     const qa = (lr.quiz_answers ?? {}) as Record<string, unknown>;
     if (typeof qa.requested_date === "string" && qa.requested_date) {
       preferredDate = qa.requested_date;
@@ -1361,6 +1438,47 @@ export default async function ClientHub({
       break;
     }
   }
+
+  // Discovery evidence carried from the funnel + AI consultation: the answers
+  // the prospect gave and what the research agent concluded — so the proposal
+  // is built from what they actually said, not memory.
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const funnelLead = leadList.find((l) => {
+    const qa = (l.quiz_answers ?? {}) as Record<string, unknown>;
+    return !!(qa.answers && typeof qa.answers === "object");
+  });
+  const funnelAnswers = (
+    (funnelLead?.quiz_answers ?? {}) as { answers?: Record<string, unknown> }
+  ).answers as Record<string, unknown> | undefined;
+  const enrichment = leadList
+    .map((l) => l.agent_enrichment as Record<string, unknown> | null)
+    .find((e) => e && typeof e === "object");
+  const leadPhone = leadList.map((l) => l.phone).find((p) => !!p) ?? null;
+  const discoveryFacts: [string, string][] = [];
+  if (funnelAnswers) {
+    for (const [key, label] of [
+      ["industry", "Industry"],
+      ["need", "What they want"],
+      ["budget", "Budget"],
+      ["timeline", "Timeline"],
+      ["software_spend", "Current software spend"],
+      ["admin_pain", "Biggest admin pain"],
+      ["provider", "Current provider"],
+      ["website_url", "Website"],
+    ] as const) {
+      const v = str(funnelAnswers[key]);
+      if (v) discoveryFacts.push([label, v]);
+    }
+  }
+  if (leadPhone) discoveryFacts.push(["Phone", leadPhone]);
+  const enrichSummary = str(enrichment?.summary);
+  const enrichDraftReply = str(enrichment?.draftReply);
+  const enrichPains = Array.isArray(enrichment?.painPoints)
+    ? (enrichment?.painPoints as unknown[]).filter(
+        (p): p is string => typeof p === "string"
+      )
+    : [];
+  const hasDiscovery = discoveryFacts.length > 0 || !!enrichSummary || !!enrichDraftReply;
 
   const itemList = (items ?? []) as Item[];
   const crList = (crs ?? []) as CR[];
@@ -1526,13 +1644,278 @@ export default async function ClientHub({
                   BLOCKED — can&apos;t set “{stageBlocked}”:
                   {stageBlocked === "live"
                     ? " the tenant DPA is not signed and logged."
-                    : " the database refused the change."}
+                    : stageBlocked === "build"
+                      ? " no paid invoice on this project yet."
+                      : " the database refused the change."}
                 </span>
+              )}
+              {stageBlocked === "build" && project && (
+                <form action={setStage} className="flex items-center gap-1">
+                  {htid}
+                  {hpid}
+                  <input type="hidden" name="stage" value="build" />
+                  <input
+                    name="override_reason"
+                    required
+                    placeholder="Reason to start build unpaid"
+                    style={{ ...inp, height: 28, width: 220 }}
+                  />
+                  <SubmitButton style={btn("transparent", "var(--k-muted)")}>
+                    Override
+                  </SubmitButton>
+                </form>
               )}
             </>
           }
         />
       </div>
+
+      {/* Ownership & next action — who holds this project, and what happens next */}
+      {project && (
+        <Reveal>
+          <section style={card}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 style={h2}>Ownership &amp; next action</h2>
+              {project.next_action ? (
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--k-accent)",
+                    border:
+                      "1px solid color-mix(in oklab, var(--k-accent) 32%, transparent)",
+                    padding: "3px 8px",
+                  }}
+                >
+                  NEXT: {project.next_action}
+                  {project.next_action_owner ? ` — ${project.next_action_owner}` : ""}
+                </span>
+              ) : (
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: T.danger,
+                    border: `1px solid color-mix(in oklab, ${T.danger} 32%, transparent)`,
+                    padding: "3px 8px",
+                  }}
+                >
+                  NO NEXT ACTION SET
+                </span>
+              )}
+            </div>
+            <form action={saveOwnership}>
+              {htid}
+              {hpid}
+              <div
+                className="grid gap-2"
+                style={{
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  marginTop: 12,
+                }}
+              >
+                {(
+                  [
+                    ["account_owner", "Account owner", project.account_owner],
+                    ["delivery_owner", "Delivery owner", project.delivery_owner],
+                    ["technical_owner", "Technical owner", project.technical_owner],
+                    ["finance_owner", "Finance owner", project.finance_owner],
+                  ] as const
+                ).map(([name, label, value]) => (
+                  <label key={name} className="flex flex-col gap-1">
+                    <span
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: 9,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "var(--k-faint)",
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <input
+                      name={name}
+                      defaultValue={value ?? ""}
+                      placeholder="Name"
+                      style={inp}
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-end gap-2 flex-wrap" style={{ marginTop: 10 }}>
+                <label className="flex flex-col gap-1" style={{ flex: "1 1 260px" }}>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 9,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--k-faint)",
+                    }}
+                  >
+                    Next action
+                  </span>
+                  <input
+                    name="next_action"
+                    defaultValue={project.next_action ?? ""}
+                    placeholder="e.g. Send proposal for sign-off"
+                    style={inp}
+                  />
+                </label>
+                <label className="flex flex-col gap-1" style={{ width: 170 }}>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 9,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--k-faint)",
+                    }}
+                  >
+                    Owner
+                  </span>
+                  <input
+                    name="next_action_owner"
+                    defaultValue={project.next_action_owner ?? ""}
+                    placeholder="Who"
+                    style={inp}
+                  />
+                </label>
+                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                  Save
+                </SubmitButton>
+              </div>
+            </form>
+          </section>
+        </Reveal>
+      )}
+
+      {/* Discovery — what the prospect told the funnel + what the agent found */}
+      {hasDiscovery && (
+        <Reveal>
+          <section style={card}>
+            <h2 style={h2}>Discovery</h2>
+            {discoveryFacts.length > 0 && (
+              <div
+                className="grid gap-x-5 gap-y-2"
+                style={{
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  marginTop: 10,
+                }}
+              >
+                {discoveryFacts.map(([label, value]) => (
+                  <div key={label}>
+                    <div
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: 9,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "var(--k-faint)",
+                      }}
+                    >
+                      {label}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.88rem",
+                        color: "var(--k-fg)",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {(enrichSummary || enrichPains.length > 0) && (
+              <div
+                style={{
+                  marginTop: 14,
+                  paddingTop: 12,
+                  borderTop: "1px solid var(--k-border)",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 9,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--k-accent)",
+                  }}
+                >
+                  Agent research — AI draft, verify before relying on it
+                </div>
+                {enrichSummary && (
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.88rem",
+                      color: "var(--k-muted)",
+                      marginTop: 6,
+                    }}
+                  >
+                    {enrichSummary}
+                  </p>
+                )}
+                {enrichPains.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5" style={{ marginTop: 8 }}>
+                    {enrichPains.slice(0, 6).map((p) => (
+                      <span
+                        key={p}
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: 10,
+                          color: "var(--k-muted)",
+                          border: "1px solid var(--k-border)",
+                          padding: "2px 7px",
+                        }}
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {enrichDraftReply && (
+              <details style={{ marginTop: 12 }}>
+                <summary
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--k-muted)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Drafted first reply (AI — review before sending)
+                </summary>
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.86rem",
+                    color: "var(--k-muted)",
+                    whiteSpace: "pre-wrap",
+                    marginTop: 8,
+                  }}
+                >
+                  {enrichDraftReply}
+                </p>
+              </details>
+            )}
+          </section>
+        </Reveal>
+      )}
 
       {/* Book Call */}
       <Reveal>
