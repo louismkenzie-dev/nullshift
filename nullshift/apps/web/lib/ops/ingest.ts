@@ -41,7 +41,19 @@ const SCHEMA = {
         ],
         properties: {
           title: { type: "string" },
-          kind: { type: "string", enum: ["bug", "change", "question", "task"] },
+          kind: {
+            type: "string",
+            enum: [
+              "bug",
+              "change",
+              "question",
+              "task",
+              "decision",
+              "feedback",
+              "risk",
+              "general",
+            ],
+          },
           severity: { type: "string", enum: ["critical", "high", "normal", "low"] },
           description: { type: "string" },
           source_quote: { type: "string" },
@@ -66,9 +78,9 @@ export async function parseIngest(input: {
   const result = await claudeJson<{ drafts: IngestDraft[] }>({
     system: `You extract actionable work items from messy client communications for NullShift, a UK dev agency. The input is a raw WhatsApp chat export, call transcript, or forwarded message thread between the agency (Louis) and a client.
 
-Extract every distinct bug report, change request, question, or task mentioned. For each:
+Extract every distinct bug report, change request, question, task, decision, piece of feedback, risk, or notable general communication mentioned. For each:
 - title: crisp, max 10 words.
-- kind: "bug" (broken behaviour), "change" (new/altered functionality), "question" (client asking how something works), "task" (content/admin chore).
+- kind: "bug" (broken behaviour), "change" (new/altered functionality), "question" (client asking how something works), "task" (content/admin chore), "decision" (something was agreed or chosen), "feedback" (opinion on delivered work), "risk" (a threat to delivery worth tracking), "general" (worth keeping, fits nothing else).
 - severity: "critical" only for payments broken / site down / data loss; "high" for a core flow degraded; "normal" default; "low" cosmetic.
 - description: everything a developer needs, written from the source material — include who reported it, what happened, and any repro detail mentioned.
 - source_quote: the exact message text (verbatim) this was extracted from, so the original context is preserved.

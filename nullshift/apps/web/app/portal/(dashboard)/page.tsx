@@ -441,6 +441,11 @@ export default async function PortalHome({
                 )}
               </div>
               <StageStepper stage={p.stage} />
+              <div style={{ marginTop: 12 }}>
+                <PanelLink href={`/portal/project/${p.id}`}>
+                  Project details, key dates &amp; onboarding
+                </PanelLink>
+              </div>
             </div>
           </Reveal>
         ))}

@@ -201,6 +201,7 @@ async function triageIssue(formData: FormData) {
     client_visible: formData.get("client_visible") === "on",
     resolution_note: String(formData.get("resolution_note") || "").trim() || null,
     quote_note: String(formData.get("quote_note") || "").trim() || null,
+    assignee: String(formData.get("assignee") || "").trim() || null,
   };
   if (status === "fixed" || status === "shipped" || status === "closed") {
     update.resolved_at = cur.resolved_at ?? now;
@@ -888,6 +889,15 @@ export default async function IssuesPage({
                         defaultValue={issue.due_at ? issue.due_at.slice(0, 10) : ""}
                         className="max-md:w-full"
                         style={{ ...inp, maxWidth: "100%" }}
+                      />
+                    </Field>
+                    <Field label="Owner">
+                      <input
+                        name="assignee"
+                        defaultValue={issue.assignee ?? ""}
+                        placeholder="Who owns it"
+                        className="w-full md:w-[110px]"
+                        style={inp}
                       />
                     </Field>
                     <label

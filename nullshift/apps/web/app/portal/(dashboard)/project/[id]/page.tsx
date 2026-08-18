@@ -88,6 +88,8 @@ export default async function PortalProject({
     { data: invoices },
     { data: subs },
     { count: docCount },
+    { data: milestonesRaw },
+    { data: onboardingRaw },
   ] = await Promise.all([
     // "What we're working on" reads the issue bank — the tracker staff
     // actually use — not the retired tasks board, and only client-visible
@@ -114,10 +116,35 @@ export default async function PortalProject({
       .from("documents")
       .select("id", { count: "exact", head: true })
       .eq("project_id", id),
+    // Key dates — milestones are member-readable by design (0028).
+    supabase
+      .from("milestones")
+      .select("id, title, target_date, health")
+      .eq("project_id", id)
+      .order("target_date", { ascending: true, nullsFirst: false }),
+    // Their onboarding checklist — the client-readable kind (0028 RLS).
+    supabase
+      .from("checklists")
+      .select("id, items")
+      .eq("project_id", id)
+      .eq("kind", "onboarding")
+      .maybeSingle(),
   ]);
 
   const taskList = (tasks ?? []) as Task[];
   const updateList = (updates ?? []) as Update[];
+  const milestoneList = (milestonesRaw ?? []) as {
+    id: string;
+    title: string;
+    target_date: string | null;
+    health: string;
+  }[];
+  const onboardingItems = (
+    (onboardingRaw?.items ?? []) as {
+      name: string;
+      done: boolean;
+    }[]
+  ).filter((i) => !i.done);
   const invList = (invoices ?? []) as { amount: number; status: string }[];
   const invested = invList
     .filter((i) => i.status === "paid")
@@ -235,6 +262,93 @@ export default async function PortalProject({
           />
         </Reveal>
       </div>
+
+      {/* What we still need from you — the client's slice of onboarding */}
+      {onboardingItems.length > 0 && (
+        <Reveal>
+          <Panel
+            label="NEEDED FROM YOU"
+            title="To keep things moving"
+            className="mb-[14px]"
+          >
+            <div className="flex flex-col gap-1.5">
+              {onboardingItems.map((item) => (
+                <span
+                  key={item.name}
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.88rem",
+                    color: "var(--k-fg)",
+                  }}
+                >
+                  ○ {item.name}
+                </span>
+              ))}
+            </div>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.8rem",
+                color: "var(--k-faint)",
+                marginTop: 10,
+              }}
+            >
+              Send anything on this list over whenever it&apos;s ready — we tick it off as
+              it arrives.
+            </p>
+          </Panel>
+        </Reveal>
+      )}
+
+      {/* Key dates */}
+      {milestoneList.length > 0 && (
+        <Reveal>
+          <Panel label="KEY DATES" title="Milestones" className="mb-[14px]">
+            <div className="flex flex-col">
+              {milestoneList.map((m, i) => (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between gap-3"
+                  style={{
+                    padding: "8px 0",
+                    borderTop: i ? "1px solid var(--k-border)" : "none",
+                    opacity: m.health === "done" ? 0.55 : 1,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.9rem",
+                      color: "var(--k-fg)",
+                      textDecoration: m.health === "done" ? "line-through" : "none",
+                    }}
+                  >
+                    {m.title}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.66rem",
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: m.health === "done" ? "var(--k-faint)" : "var(--k-accent)",
+                    }}
+                  >
+                    {m.health === "done"
+                      ? "Done"
+                      : m.target_date
+                        ? new Date(m.target_date).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                          })
+                        : "Scheduled"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </Reveal>
+      )}
 
       {/* Documents + deliverables */}
       <Reveal>

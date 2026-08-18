@@ -7,6 +7,9 @@ import { requireStaff } from "@nullshift/auth/guards";
 import { findUserByEmail } from "@nullshift/auth/confirmation-email";
 import { escapeLike } from "@nullshift/db/leads";
 import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
+import { DeliverySections } from "./DeliverySections";
+import { TimelinePanel } from "./TimelinePanel";
+import { wrap, button, esc, C, FONT } from "@/lib/emailLayout";
 import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
 import { CATALOG } from "@nullshift/content/catalog";
@@ -336,6 +339,37 @@ async function postUpdate(formData: FormData) {
     target: `project:${projectId}`,
     tenantId,
   });
+  // Tell the client — an update they never hear about isn't an update. The
+  // email carries the summary; the portal has the full feed. Best-effort.
+  try {
+    const service = createServiceClient();
+    const { data: membership } = await service
+      .from("memberships")
+      .select("user_id")
+      .eq("tenant_id", tenantId)
+      .eq("role", "client_admin")
+      .limit(1)
+      .maybeSingle();
+    let email: string | null = null;
+    if (membership?.user_id) {
+      const { data: u } = await service.auth.admin.getUserById(membership.user_id);
+      email = u.user?.email ?? null;
+    }
+    if (email) {
+      const portalUrl = `${SITE_URL}/portal/updates`;
+      await sendEmail({
+        to: email,
+        subject: `Project update: ${title}`,
+        html: wrap(
+          `<tr><td style="padding:26px 32px"><h1 style="margin:0 0 10px;font-family:${FONT};font-size:20px;font-weight:700;color:${C.fg}">${esc(title)}</h1>${body ? `<p style="margin:0 0 16px;font-family:${FONT};font-size:14px;line-height:1.6;color:${C.muted}">${esc(body)}</p>` : ""}<div>${button(portalUrl, "See it in your portal")}</div></td></tr>`,
+          title
+        ),
+        text: `${title}\n\n${body ?? ""}\n\n${portalUrl}`,
+      });
+    }
+  } catch (e) {
+    console.error("update notification email failed (non-fatal):", e);
+  }
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -3089,6 +3123,16 @@ export default async function ClientHub({
               </form>
             </section>
           </Reveal>
+
+          {/* Delivery layer: milestones, risks, decisions, playbooks (0028) */}
+          <DeliverySections
+            tenantId={tenantId}
+            projectId={project.id}
+            stage={project.stage}
+          />
+
+          {/* Unified timeline — every source, one chronological story */}
+          <TimelinePanel tenantId={tenantId} projectId={project.id} />
 
           {/* Notes */}
           <Reveal>

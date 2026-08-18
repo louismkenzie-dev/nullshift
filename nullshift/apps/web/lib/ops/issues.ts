@@ -8,7 +8,18 @@ import type { WorkClassification } from "@nullshift/content/legal/work";
  * client-facing timeline in the portal.
  */
 
-export type IssueKind = "bug" | "change" | "question" | "task";
+export type IssueKind =
+  | "bug"
+  | "change"
+  | "question"
+  | "task"
+  // Capture kinds (0028) — so a WhatsApp paste can be logged as what it IS,
+  // not shoehorned into bug/change. Staff-side only; the portal picker keeps
+  // its three client-friendly kinds.
+  | "decision"
+  | "feedback"
+  | "risk"
+  | "general";
 export type IssueSeverity = "critical" | "high" | "normal" | "low";
 export type IssueStatus =
   | "new"
@@ -47,6 +58,7 @@ export type IssueRow = {
   source_quote: string | null;
   image_urls: string[];
   client_visible: boolean;
+  assignee: string | null;
   quoted_price: number | null;
   quote_note: string | null;
   quote_accepted_at: string | null;
@@ -118,6 +130,10 @@ export const KIND_LABEL: Record<IssueKind, string> = {
   change: "Change",
   question: "Question",
   task: "Task",
+  decision: "Decision",
+  feedback: "Feedback",
+  risk: "Risk",
+  general: "General",
 };
 
 /** Portal intake picker — phrased for non-technical clients. */

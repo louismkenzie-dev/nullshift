@@ -10,7 +10,14 @@ import { SubmitButton } from "@/components/admin/SubmitButton";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
-import { OPEN_STATUSES, QUEUEABLE_STATUSES, isBatchable, SEVERITY_META, STATUS_TONE, type IssueRow } from "@/lib/ops/issues";
+import {
+  OPEN_STATUSES,
+  QUEUEABLE_STATUSES,
+  isBatchable,
+  SEVERITY_META,
+  STATUS_TONE,
+  type IssueRow,
+} from "@/lib/ops/issues";
 
 /**
  * System passport — everything a teammate (human or Claude session) needs to
@@ -28,7 +35,11 @@ type ProjectRow = {
   stage: string;
   live_url: string | null;
 };
-type Feature = { name: string; status: "planned" | "in_progress" | "built"; note: string | null };
+type Feature = {
+  name: string;
+  status: "planned" | "in_progress" | "built";
+  note: string | null;
+};
 type EnvItem = { label?: string; name?: string; done?: boolean };
 type ProfileRow = {
   project_id: string;
@@ -42,6 +53,7 @@ type ProfileRow = {
   features: Feature[];
   runbook: string | null;
   quirks: string | null;
+  client_preferences: string | null;
   health: string;
   routine_fire_url: string | null;
   routine_token: string | null;
@@ -61,14 +73,15 @@ const NEXT_FEATURE: Record<string, Feature["status"]> = {
   in_progress: "built",
   built: "planned",
 };
-const BATCH_TONE: Record<string, "accent" | "success" | "warning" | "danger" | "muted"> = {
-  draft: "muted",
-  compiled: "accent",
-  dispatched: "accent",
-  pr_open: "warning",
-  shipped: "success",
-  cancelled: "muted",
-};
+const BATCH_TONE: Record<string, "accent" | "success" | "warning" | "danger" | "muted"> =
+  {
+    draft: "muted",
+    compiled: "accent",
+    dispatched: "accent",
+    pr_open: "warning",
+    shipped: "success",
+    cancelled: "muted",
+  };
 
 /* ── Server actions ─────────────────────────────────────────── */
 
@@ -91,6 +104,8 @@ async function saveProfile(formData: FormData) {
   if (formData.has("runbook")) patch.runbook = str("runbook");
   if (formData.has("quirks")) patch.quirks = str("quirks");
   if (formData.has("build_goal")) patch.build_goal = str("build_goal");
+  if (formData.has("client_preferences"))
+    patch.client_preferences = str("client_preferences");
   if (formData.has("routine_fire_url")) patch.routine_fire_url = str("routine_fire_url");
   // Write-only secret: only overwrite when a new value is pasted — the stored
   // token is never sent back to the browser, so an empty field means "keep".
@@ -239,7 +254,7 @@ export default async function SystemPassportPage({
     supabase
       .from("system_profiles")
       .select(
-        "project_id, tenant_id, repo_full_name, default_branch, vercel_project, supabase_ref, stack, env_checklist, features, runbook, quirks, health, routine_fire_url, routine_token, build_goal"
+        "project_id, tenant_id, repo_full_name, default_branch, vercel_project, supabase_ref, stack, env_checklist, features, runbook, quirks, client_preferences, health, routine_fire_url, routine_token, build_goal"
       )
       .eq("project_id", id)
       .maybeSingle(),
@@ -343,12 +358,20 @@ export default async function SystemPassportPage({
         title={project.name}
         lead={`${tenant?.name ?? "Client"} · ${plan ? `${plan.label} plan` : "No care plan"} · ${project.stage}`}
         actions={
-          <Link
-            href="/admin/systems"
-            style={{ ...mono, fontSize: 11, color: "var(--k-muted)" }}
-          >
-            ← All systems
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/admin/systems/${project.id}/handover`}
+              style={{ ...mono, fontSize: 11, color: "var(--k-accent)" }}
+            >
+              Handover →
+            </Link>
+            <Link
+              href="/admin/systems"
+              style={{ ...mono, fontSize: 11, color: "var(--k-muted)" }}
+            >
+              ← All systems
+            </Link>
+          </div>
         }
       />
 
@@ -575,6 +598,15 @@ export default async function SystemPassportPage({
                     style={textarea}
                   />
                 </Field>
+                <Field label="Client preferences — how they like to work">
+                  <textarea
+                    name="client_preferences"
+                    defaultValue={profile?.client_preferences ?? ""}
+                    rows={3}
+                    placeholder="Comms channel + cadence, tone, decision style, no-go areas…"
+                    style={textarea}
+                  />
+                </Field>
                 <div>
                   <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
                     Save runbook
@@ -588,7 +620,13 @@ export default async function SystemPassportPage({
           <Reveal delay={0.15}>
             <Panel label="// PLAN" title="Care plan">
               {!plan ? (
-                <p style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}>
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.85rem",
+                    color: "var(--k-muted)",
+                  }}
+                >
                   No active care plan for this client yet.
                 </p>
               ) : (
@@ -695,7 +733,8 @@ export default async function SystemPassportPage({
                                 fontFamily: T.sans,
                                 fontSize: "0.85rem",
                                 fontWeight: g.key === "built" ? 600 : 400,
-                                color: g.key === "planned" ? "var(--k-muted)" : "var(--k-fg)",
+                                color:
+                                  g.key === "planned" ? "var(--k-muted)" : "var(--k-fg)",
                               }}
                             >
                               {f.name}
@@ -754,7 +793,11 @@ export default async function SystemPassportPage({
                       <div key={i} className="flex items-center gap-2.5">
                         <form action={toggleEnvItem} className="shrink-0">
                           <input type="hidden" name="project_id" value={project.id} />
-                          <input type="hidden" name="tenant_id" value={project.tenant_id} />
+                          <input
+                            type="hidden"
+                            name="tenant_id"
+                            value={project.tenant_id}
+                          />
                           <input type="hidden" name="index" value={i} />
                           <SubmitButton
                             title={done ? "Mark not done" : "Mark done"}
