@@ -10,6 +10,7 @@ import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
 import { Eyebrow, Display } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
 import { useOperationPending } from "@/components/app/operationState";
+import { resolveDestination } from "@/lib/authDestination";
 
 /* ── Shared input style (KYMA — square, hairline, emerald focus) ── */
 const inputStyle: React.CSSProperties = {
@@ -59,8 +60,9 @@ function LoginForm() {
   useEffect(() => {
     if (!hasSupabaseBrowserConfig()) return;
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.replace(next);
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      // Already signed in: staff belong in the admin hub, clients in the portal.
+      if (user) router.replace(await resolveDestination(supabase, next));
     });
   }, [next, router]);
 
@@ -75,7 +77,7 @@ function LoginForm() {
         password,
       });
       if (signInError) throw signInError;
-      router.replace(next);
+      router.replace(await resolveDestination(supabase, next));
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed.");

@@ -14,7 +14,8 @@ import { carePlan } from "@/lib/carePlans";
  *     subscriptions row (matched by gc_billing_request_id) to active.
  *   • mandates cancelled/expired/failed → subscription row → canceled.
  *   • subscriptions cancelled/finished  → subscription row → canceled.
- *   • payments failed → logged only (the Friday pulse picks it up).
+ *   • payments failed → subscription row → past_due (recovers to active on a
+ *     later confirmed/paid_out payment).
  * HMAC signature-verified. Verified events always get a 200 — even when no row
  * matched (logged) — so GoCardless doesn't retry forever; a processing error
  * returns 500 so it does retry (the writes are re-delivery safe).
@@ -220,12 +221,28 @@ export async function POST(req: Request) {
           break;
         }
         case "payments": {
-          // No DB write — the Friday pulse picks this out of the logs.
-          if (event.action === "failed")
-            console.error(
-              "gocardless payment failed for subscription",
-              event.links?.subscription ?? "(no subscription link)"
-            );
+          // A failed collection flips the row to past_due so it surfaces on
+          // the billing page's past-due rail and the dashboard Money panel —
+          // console.error alone reached no human. GoCardless retries per its
+          // own schedule; a later successful payment re-activates below.
+          const gcSubId = event.links?.subscription ?? null;
+          if (!gcSubId) break;
+          if (event.action === "failed") {
+            const { error } = await supabase
+              .from("subscriptions")
+              .update({ status: "past_due" })
+              .eq("gc_subscription_id", gcSubId)
+              .eq("status", "active");
+            if (error) console.error("gocardless payments.failed update failed:", error);
+          } else if (event.action === "confirmed" || event.action === "paid_out") {
+            const { error } = await supabase
+              .from("subscriptions")
+              .update({ status: "active" })
+              .eq("gc_subscription_id", gcSubId)
+              .eq("status", "past_due");
+            if (error)
+              console.error("gocardless payments recovery update failed:", error);
+          }
           break;
         }
         default:

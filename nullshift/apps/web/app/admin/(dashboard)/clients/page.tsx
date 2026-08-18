@@ -3,6 +3,7 @@ import { createClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
+import { OPEN_STATUSES, isUnreviewedDraft, type IssueStatus } from "@/lib/ops/issues";
 
 /**
  * Clients — the list of every client, backed by `tenants` (type='client'). One row
@@ -68,7 +69,13 @@ export default async function ClientsPage() {
           .select("tenant_id")
           .eq("kind", "dpa_signed")
           .in("tenant_id", ids),
-        supabase.from("change_requests").select("tenant_id, status").in("tenant_id", ids),
+        // Open requests = the live intake (issues), not the legacy
+        // change_requests table — which reads 0 for current-portal clients.
+        supabase
+          .from("issues")
+          .select("tenant_id, status, client_visible")
+          .in("status", OPEN_STATUSES)
+          .in("tenant_id", ids),
       ])
     : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
@@ -95,8 +102,14 @@ export default async function ClientsPage() {
     mrrByTenant.set(s.tenant_id, (mrrByTenant.get(s.tenant_id) ?? 0) + Number(s.mrr));
   const dpaSet = new Set((dpa ?? []).map((d: { tenant_id: string }) => d.tenant_id));
   const openCrByTenant = new Map<string, number>();
-  for (const c of (crs ?? []) as { tenant_id: string; status: string }[]) {
-    if (c.status !== "shipped" && c.status !== "rejected")
+  for (const c of (crs ?? []) as {
+    tenant_id: string;
+    status: string;
+    client_visible: boolean;
+  }[]) {
+    // Unreviewed inbox drafts aren't confirmed work — same rule as mission
+    // control and the batch compiler.
+    if (!isUnreviewedDraft(c as { status: IssueStatus; client_visible: boolean }))
       openCrByTenant.set(c.tenant_id, (openCrByTenant.get(c.tenant_id) ?? 0) + 1);
   }
   const totalMrr = [...mrrByTenant.values()].reduce((a, b) => a + b, 0);

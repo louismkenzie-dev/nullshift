@@ -29,6 +29,24 @@ describe("isBatchable", () => {
     expect(isBatchable({ ...base, billing: "out_of_scope" })).toBe(false);
   });
 
+  it("allows out_of_scope work once the client has accepted the quote", () => {
+    expect(
+      isBatchable({
+        ...base,
+        billing: "out_of_scope",
+        quote_accepted_at: "2026-08-18T12:00:00.000Z",
+      })
+    ).toBe(true);
+    // …but an accepted quote never unlocks unclassified work.
+    expect(
+      isBatchable({
+        ...base,
+        billing: "unclassified",
+        quote_accepted_at: "2026-08-18T12:00:00.000Z",
+      })
+    ).toBe(false);
+  });
+
   it("refuses unreviewed inbox drafts even when billing is covered", () => {
     expect(
       isBatchable({ status: "new", client_visible: false, billing: "covered" })

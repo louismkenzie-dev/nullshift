@@ -606,39 +606,7 @@ async function markInvoicePaid(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   const invoiceId = String(formData.get("invoice_id") || "");
   if (!tenantId || !invoiceId) return;
-  const service = createServiceClient();
-  const { data: inv } = await service
-    .from("invoices")
-    .select("id, status, stripe_invoice_id")
-    .eq("id", invoiceId)
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-  if (!inv || inv.status === "paid" || inv.status === "void") return;
-  const stripe = getStripe();
-  if (stripe && inv.stripe_invoice_id) {
-    try {
-      await stripe.invoices.pay(inv.stripe_invoice_id, { paid_out_of_band: true });
-    } catch (e) {
-      // Best-effort — the local record is the source of truth for "invested".
-      console.error("markInvoicePaid: Stripe out-of-band pay failed", e);
-    }
-  }
-  // Compare-and-set: the Stripe roundtrip above leaves a window where another
-  // staff action (e.g. "Regenerate live") could void this invoice — only flip
-  // the row if it's still in the state we checked.
-  await service
-    .from("invoices")
-    .update({ status: "paid", paid_at: new Date().toISOString() })
-    .eq("id", invoiceId)
-    .eq("status", inv.status);
-  await logAudit({
-    action: "invoice.marked_paid",
-    target: `invoice:${invoiceId}`,
-    tenantId,
-    metadata: { via: "bank_transfer" },
-  });
-  // Mirror the payment into Xero (best-effort — logged + swallowed inside).
-  await syncInvoicePaymentToXero(service, invoiceId);
+  await markInvoicePaidOutOfBand({ tenantId, invoiceId });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 

@@ -25,7 +25,13 @@ export async function GET(request: Request) {
   const supabase = createServiceClient();
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [{ data: tenants }, { data: shipped }, { data: open }] = await Promise.all([
+  const [
+    { data: tenants },
+    { data: shipped },
+    { data: open },
+    { data: openInv },
+    { data: pastDue },
+  ] = await Promise.all([
     supabase.from("tenants").select("id, name").eq("type", "client"),
     supabase
       .from("issues")
@@ -36,10 +42,22 @@ export async function GET(request: Request) {
       .from("issues")
       .select("tenant_id, title, status, severity, due_at, promised_note")
       .in("status", OPEN_STATUSES),
+    supabase
+      .from("invoices")
+      .select("tenant_id, amount, due_at, created_at")
+      .eq("status", "open"),
+    supabase
+      .from("subscriptions")
+      .select("tenant_id, plan, mrr")
+      .eq("status", "past_due"),
   ]);
 
-  const byTenant = new Map<string, { shipped: string[]; next: string[]; blocked: string[] }>();
-  for (const t of tenants ?? []) byTenant.set(t.id, { shipped: [], next: [], blocked: [] });
+  const byTenant = new Map<
+    string,
+    { shipped: string[]; next: string[]; blocked: string[] }
+  >();
+  for (const t of tenants ?? [])
+    byTenant.set(t.id, { shipped: [], next: [], blocked: [] });
   for (const i of shipped ?? []) byTenant.get(i.tenant_id)?.shipped.push(i.title);
   for (const i of open ?? []) {
     const bucket = byTenant.get(i.tenant_id);
@@ -67,12 +85,40 @@ export async function GET(request: Request) {
     );
   }
 
-  if (!sections.length) {
+  // Money section — the humane version of invoice chasing the brief asks for:
+  // a weekly human-reviewed list, never an automated dunning email to clients.
+  const nameOf = (id: string) =>
+    (tenants ?? []).find((t) => t.id === id)?.name ?? "Unknown client";
+  const nowMs = Date.now();
+  const moneyLines: string[] = [];
+  for (const inv of openInv ?? []) {
+    const overdue = inv.due_at && new Date(inv.due_at).getTime() < nowMs;
+    const ageDays = Math.floor((nowMs - new Date(inv.created_at).getTime()) / 86_400_000);
+    moneyLines.push(
+      `${esc(nameOf(inv.tenant_id))} — £${Math.round(Number(inv.amount)).toLocaleString(
+        "en-GB"
+      )} open ${ageDays}d${overdue ? " · <strong>OVERDUE</strong>" : ""}`
+    );
+  }
+  for (const s of pastDue ?? []) {
+    moneyLines.push(
+      `${esc(nameOf(s.tenant_id))} — ${esc(String(s.plan))} plan collection failing (£${Math.round(
+        Number(s.mrr)
+      )}/mo) · <strong>PAST DUE</strong>`
+    );
+  }
+  const moneySection = moneyLines.length
+    ? `<h3 style="margin:20px 0 4px;">Money — chase list (yours to action, nothing auto-sent)</h3><ul style="margin:0 0 8px;padding-left:18px;">${moneyLines
+        .map((l) => `<li>${l}</li>`)
+        .join("")}</ul>`
+    : "";
+
+  if (!sections.length && !moneySection) {
     return NextResponse.json({ ok: true, sent: false, reason: "nothing to report" });
   }
 
   const html = wrap(
-    `<h2 style="margin:0 0 8px;">Friday pulse</h2><p style="margin:0 0 12px;">Per-client digest of the week — review, then send each client their version (or forward as-is).</p>${sections.join("")}`,
+    `<h2 style="margin:0 0 8px;">Friday pulse</h2><p style="margin:0 0 12px;">Per-client digest of the week — review, then send each client their version (or forward as-is).</p>${sections.join("")}${moneySection}`,
     "Your weekly per-client digest is ready"
   );
 

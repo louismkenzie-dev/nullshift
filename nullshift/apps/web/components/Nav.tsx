@@ -44,6 +44,9 @@ export function Nav() {
   const [ready, setReady] = useState(false);
   // null = unknown (don't render the chip yet, avoids a flash); true/false once resolved.
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  // Staff are routed to the admin hub, clients to the portal (server enforces
+  // real access either way — this only picks the right front door).
+  const [isStaff, setIsStaff] = useState(false);
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -54,11 +57,24 @@ export function Nav() {
     let unsub: (() => void) | undefined;
     try {
       const supabase = createClient();
+      const checkStaff = (hasSession: boolean) => {
+        if (!hasSession) {
+          if (active) setIsStaff(false);
+          return;
+        }
+        supabase.rpc("is_internal_staff").then(({ data: staff }) => {
+          if (active) setIsStaff(staff === true);
+        });
+      };
       supabase.auth.getSession().then(({ data }) => {
-        if (active) setSignedIn(!!data.session);
+        if (!active) return;
+        setSignedIn(!!data.session);
+        checkStaff(!!data.session);
       });
       const { data } = supabase.auth.onAuthStateChange((_e, session) => {
-        if (active) setSignedIn(!!session);
+        if (!active) return;
+        setSignedIn(!!session);
+        checkStaff(!!session);
       });
       unsub = () => data.subscription.unsubscribe();
     } catch {
@@ -191,7 +207,7 @@ export function Nav() {
             {/* Signed-in / signed-out indicator (links into the client portal) */}
             {signedIn !== null && (
               <Link
-                href={signedIn ? "/portal" : "/portal/login"}
+                href={signedIn ? (isStaff ? "/admin" : "/portal") : "/portal/login"}
                 className="hidden sm:inline-flex items-center gap-2"
                 style={{
                   ...mono,
@@ -199,7 +215,11 @@ export function Nav() {
                   textDecoration: "none",
                 }}
                 aria-label={
-                  signedIn ? "Signed in — open client portal" : "Sign in to client portal"
+                  signedIn
+                    ? isStaff
+                      ? "Signed in — open admin hub"
+                      : "Signed in — open client portal"
+                    : "Sign in to client portal"
                 }
               >
                 <span

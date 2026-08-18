@@ -936,7 +936,7 @@ export default async function BillingPage() {
                       {f.name}
                     </span>
                     <span>docs {f.documents}</span>
-                    <span>reqs {f.change_requests}</span>
+                    <span>issues {f.change_requests}</span>
                     <span>tasks {f.tasks}</span>
                     <span>audit {f.audit_rows}</span>
                     <span>{gbp(Number(f.mrr))}/mo</span>

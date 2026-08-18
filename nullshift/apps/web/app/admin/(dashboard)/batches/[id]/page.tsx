@@ -2,9 +2,11 @@ import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { SubmitButton } from "@/components/admin/SubmitButton";
-import { createClient } from "@nullshift/db";
+import { createClient, createServiceClient } from "@nullshift/db";
 import { requireStaff } from "@nullshift/auth/guards";
 import { logAudit } from "@nullshift/db/audit";
+import { sendEmail } from "@/lib/sendEmail";
+import { wrap, esc, C, FONT } from "@/lib/emailLayout";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
@@ -29,7 +31,13 @@ import { SEVERITY_META, STATUS_TONE, type IssueRow } from "@/lib/ops/issues";
 
 export const dynamic = "force-dynamic";
 
-type BatchStatus = "draft" | "compiled" | "dispatched" | "pr_open" | "shipped" | "cancelled";
+type BatchStatus =
+  | "draft"
+  | "compiled"
+  | "dispatched"
+  | "pr_open"
+  | "shipped"
+  | "cancelled";
 type BatchRow = {
   id: string;
   tenant_id: string;
@@ -72,7 +80,11 @@ async function dispatchBatch(formData: FormData) {
   const id = String(formData.get("id") || "");
   if (!id) return;
   const supabase = await createClient();
-  const { data: batchRow } = await supabase.from("fix_batches").select("*").eq("id", id).single();
+  const { data: batchRow } = await supabase
+    .from("fix_batches")
+    .select("*")
+    .eq("id", id)
+    .single();
   if (!batchRow) return;
   const batch = batchRow as BatchRow;
   if (batch.status !== "compiled" || !batch.prompt || !batch.project_id) return;
@@ -128,7 +140,11 @@ async function fireRoutineAction(formData: FormData) {
   const id = String(formData.get("id") || "");
   if (!id) return;
   const supabase = await createClient();
-  const { data: batchRow } = await supabase.from("fix_batches").select("*").eq("id", id).single();
+  const { data: batchRow } = await supabase
+    .from("fix_batches")
+    .select("*")
+    .eq("id", id)
+    .single();
   if (!batchRow) return;
   const batch = batchRow as BatchRow;
   if (batch.status !== "compiled" || !batch.prompt || !batch.project_id) return;
@@ -184,7 +200,11 @@ async function runManagedAgent(formData: FormData) {
   const id = String(formData.get("id") || "");
   if (!id) return;
   const supabase = await createClient();
-  const { data: batchRow } = await supabase.from("fix_batches").select("*").eq("id", id).single();
+  const { data: batchRow } = await supabase
+    .from("fix_batches")
+    .select("*")
+    .eq("id", id)
+    .single();
   if (!batchRow) return;
   const batch = batchRow as BatchRow;
   if (batch.status !== "compiled" || !batch.prompt || !batch.project_id) return;
@@ -245,7 +265,10 @@ async function recordPr(formData: FormData) {
   const url = String(formData.get("pr_url") || "").trim();
   if (!id || !url) return;
   const supabase = await createClient();
-  await supabase.from("fix_batches").update({ pr_url: url, status: "pr_open" }).eq("id", id);
+  await supabase
+    .from("fix_batches")
+    .update({ pr_url: url, status: "pr_open" })
+    .eq("id", id);
   await logAudit({
     action: "batch.pr_recorded",
     target: `batch:${id}`,
@@ -262,11 +285,18 @@ async function markShipped(formData: FormData) {
   const id = String(formData.get("id") || "");
   if (!id) return;
   const supabase = await createClient();
-  const { data: batchRow } = await supabase.from("fix_batches").select("*").eq("id", id).single();
+  const { data: batchRow } = await supabase
+    .from("fix_batches")
+    .select("*")
+    .eq("id", id)
+    .single();
   if (!batchRow) return;
   const batch = batchRow as BatchRow;
   if (batch.status === "shipped" || batch.status === "cancelled") return;
-  const { data: issueRows } = await supabase.from("issues").select("*").eq("batch_id", id);
+  const { data: issueRows } = await supabase
+    .from("issues")
+    .select("*")
+    .eq("batch_id", id);
   // Only issues still on the batch's happy path get shipped — anything moved
   // to awaiting_client/closed/etc. since batching is left alone rather than
   // force-marked "Fixed" (and never burns a credit it didn't earn).
@@ -321,6 +351,56 @@ async function markShipped(formData: FormData) {
     tenantId: batch.tenant_id,
     metadata: { issues: issues.length },
   });
+
+  // Close the loop with the client: one plain-English email listing what just
+  // went live for them (visible issues only). Best-effort — a mail hiccup
+  // must never fail the ship.
+  const visible = issues.filter((i) => i.client_visible);
+  if (visible.length > 0) {
+    try {
+      const service = createServiceClient();
+      const { data: membership } = await service
+        .from("memberships")
+        .select("user_id")
+        .eq("tenant_id", batch.tenant_id)
+        .eq("role", "client_admin")
+        .limit(1)
+        .maybeSingle();
+      let email: string | null = null;
+      if (membership?.user_id) {
+        const { data: u } = await service.auth.admin.getUserById(membership.user_id);
+        email = u.user?.email ?? null;
+      }
+      if (!email) {
+        const { data: t } = await service
+          .from("tenants")
+          .select("contact_email")
+          .eq("id", batch.tenant_id)
+          .maybeSingle();
+        email = t?.contact_email ?? null;
+      }
+      if (email) {
+        const rows = visible
+          .map(
+            (i) =>
+              `<li style="margin:0 0 8px;font-family:${FONT};font-size:14px;line-height:1.6;color:${C.fg}"><strong>${esc(i.title)}</strong>${i.resolution_note ? `<br/><span style="color:${C.muted}">${esc(i.resolution_note)}</span>` : ""}</li>`
+          )
+          .join("");
+        await sendEmail({
+          to: email,
+          subject: `Shipped: ${visible.length === 1 ? visible[0].title : `${visible.length} updates to your system`}`,
+          html: wrap(
+            `<tr><td style="padding:26px 32px"><h1 style="margin:0 0 12px;font-family:${FONT};font-size:20px;font-weight:700;color:${C.fg}">Just gone live</h1><ul style="margin:0;padding-left:18px">${rows}</ul><p style="margin:16px 0 0;font-family:${FONT};font-size:13px;color:${C.muted}">Full history is in your portal.</p></td></tr>`,
+            "Just gone live"
+          ),
+          text: `Just gone live:\n\n${visible.map((i) => `- ${i.title}${i.resolution_note ? ` — ${i.resolution_note}` : ""}`).join("\n")}`,
+        });
+      }
+    } catch (e) {
+      console.error("ship notification email failed (non-fatal):", e);
+    }
+  }
+
   revalidatePath(`/admin/batches/${id}`);
   revalidatePath("/admin/batches");
   revalidatePath("/admin/issues");
@@ -511,27 +591,38 @@ export default async function BatchDetailPage({
       <Reveal className="block" delay={0.08}>
         <Panel label="// ACTIONS" className="mt-5">
           <div className="flex flex-col gap-4">
-            {batch.status === "compiled" && profile?.repo_full_name && dispatchConfigured && (
-              <div className="flex items-center gap-3 flex-wrap">
-                <form action={dispatchBatch}>
-                  <input type="hidden" name="id" value={batch.id} />
-                  <SubmitButton
-                    style={btn("var(--k-accent)", "var(--k-on-accent)")}
-                    pendingLabel="Dispatching…"
+            {batch.status === "compiled" &&
+              profile?.repo_full_name &&
+              dispatchConfigured && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <form action={dispatchBatch}>
+                    <input type="hidden" name="id" value={batch.id} />
+                    <SubmitButton
+                      style={btn("var(--k-accent)", "var(--k-on-accent)")}
+                      pendingLabel="Dispatching…"
+                    >
+                      Dispatch to Claude
+                    </SubmitButton>
+                  </form>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "10px",
+                      color: "var(--k-faint)",
+                    }}
                   >
-                    Dispatch to Claude
-                  </SubmitButton>
-                </form>
-                <span
-                  style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
-                >
-                  Files a GitHub issue on {profile.repo_full_name} with an @claude mention.
-                </span>
-              </div>
-            )}
+                    Files a GitHub issue on {profile.repo_full_name} with an @claude
+                    mention.
+                  </span>
+                </div>
+              )}
             {!dispatchConfigured && (
               <p
-                style={{ fontFamily: T.sans, fontSize: "0.82rem", color: "var(--k-faint)" }}
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.82rem",
+                  color: "var(--k-faint)",
+                }}
               >
                 Add GITHUB_DISPATCH_TOKEN to enable one-click dispatch — until then, copy
                 the work order and paste it into a Claude Code session.
@@ -539,7 +630,11 @@ export default async function BatchDetailPage({
             )}
             {batch.status === "compiled" && !profile?.repo_full_name && (
               <p
-                style={{ fontFamily: T.sans, fontSize: "0.82rem", color: "var(--k-faint)" }}
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.82rem",
+                  color: "var(--k-faint)",
+                }}
               >
                 No repository on this system&apos;s passport — copy the work order
                 instead, or set repo_full_name on the system profile.
@@ -558,7 +653,11 @@ export default async function BatchDetailPage({
                   </SubmitButton>
                 </form>
                 <span
-                  style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    color: "var(--k-faint)",
+                  }}
                 >
                   Starts this system&apos;s Claude Code routine on Anthropic&apos;s cloud
                   with the work order attached — you get a live session link.
@@ -578,10 +677,14 @@ export default async function BatchDetailPage({
                   </SubmitButton>
                 </form>
                 <span
-                  style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    color: "var(--k-faint)",
+                  }}
                 >
-                  Anthropic-hosted sandbox session (beta): mounts {profile.repo_full_name},
-                  fixes the batch, pushes {maBranch} — no runner timeouts. API-metered.
+                  Anthropic-hosted sandbox session (beta): mounts {profile.repo_full_name}
+                  , fixes the batch, pushes {maBranch} — no runner timeouts. API-metered.
                 </span>
               </div>
             )}
@@ -624,7 +727,11 @@ export default async function BatchDetailPage({
                   </SubmitButton>
                 </form>
                 <span
-                  style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    color: "var(--k-faint)",
+                  }}
                 >
                   Shipping closes every issue, posts client updates and burns build
                   credits. Cancelling returns issues to the queue.
@@ -655,7 +762,11 @@ export default async function BatchDetailPage({
                   {maStatus?.status ?? "status unavailable"}
                 </StatusChip>
                 <span
-                  style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    color: "var(--k-faint)",
+                  }}
                 >
                   Refreshes on page load. Idle usually means the run finished — check the
                   summary below, then open the branch compare to review and open the PR.

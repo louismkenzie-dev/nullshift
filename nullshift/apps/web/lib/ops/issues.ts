@@ -46,6 +46,9 @@ export type IssueRow = {
   image_urls: string[];
   client_visible: boolean;
   quoted_price: number | null;
+  quote_note: string | null;
+  quote_accepted_at: string | null;
+  quote_declined_at: string | null;
   build_items: number | null;
   due_at: string | null;
   promised_at: string | null;
@@ -84,17 +87,19 @@ export function isUnreviewedDraft(i: {
 /**
  * Whether an issue may be compiled into a fix batch. Two gates:
  * 1. not an unreviewed draft (a human must have confirmed it exists), and
- * 2. billing is classified as covered/build_item — out_of_scope (billable,
- *    unapproved, unpaid) and unclassified work must never be built, shipped,
- *    and announced to a client before anyone agreed to pay for it.
+ * 2. the money question is settled — covered/build_item work is included in
+ *    the plan; out_of_scope (billable) work needs the client's recorded
+ *    acceptance of the quote before it can be built, shipped, and announced.
  */
 export function isBatchable(i: {
   status: IssueStatus;
   client_visible: boolean;
   billing: IssueBilling;
+  quote_accepted_at?: string | null;
 }): boolean {
   if (isUnreviewedDraft(i)) return false;
-  return i.billing === "covered" || i.billing === "build_item";
+  if (i.billing === "covered" || i.billing === "build_item") return true;
+  return i.billing === "out_of_scope" && !!i.quote_accepted_at;
 }
 
 export const KIND_LABEL: Record<IssueKind, string> = {

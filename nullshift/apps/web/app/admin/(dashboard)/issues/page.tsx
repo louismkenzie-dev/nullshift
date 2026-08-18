@@ -68,7 +68,9 @@ async function createIssue(formData: FormData) {
   const severityRaw = String(formData.get("severity") || "normal");
   const sourceRaw = String(formData.get("source") || "internal");
   const kind = (KINDS as string[]).includes(kindRaw) ? kindRaw : "bug";
-  const severity = (SEVERITIES as string[]).includes(severityRaw) ? severityRaw : "normal";
+  const severity = (SEVERITIES as string[]).includes(severityRaw)
+    ? severityRaw
+    : "normal";
   const source = (SOURCES as string[]).includes(sourceRaw) ? sourceRaw : "internal";
   const clientVisible = formData.get("client_visible") === "on";
   const supabase = await createClient();
@@ -110,7 +112,11 @@ async function triageIssue(formData: FormData) {
   const id = String(formData.get("id") || "");
   if (!id) return;
   const supabase = await createClient();
-  const { data: existing } = await supabase.from("issues").select("*").eq("id", id).single();
+  const { data: existing } = await supabase
+    .from("issues")
+    .select("*")
+    .eq("id", id)
+    .single();
   if (!existing) return;
   const cur = existing as IssueRow;
 
@@ -119,15 +125,15 @@ async function triageIssue(formData: FormData) {
   const billingRaw = String(formData.get("billing") || cur.billing);
   const statusRaw = String(formData.get("status") || cur.status);
   const kind = ((KINDS as string[]).includes(kindRaw) ? kindRaw : cur.kind) as IssueKind;
-  const severity = ((SEVERITIES as string[]).includes(severityRaw)
-    ? severityRaw
-    : cur.severity) as IssueSeverity;
-  const billing = ((BILLINGS as string[]).includes(billingRaw)
-    ? billingRaw
-    : cur.billing) as IssueBilling;
-  const status = ((ALL_STATUSES as string[]).includes(statusRaw)
-    ? statusRaw
-    : cur.status) as IssueStatus;
+  const severity = (
+    (SEVERITIES as string[]).includes(severityRaw) ? severityRaw : cur.severity
+  ) as IssueSeverity;
+  const billing = (
+    (BILLINGS as string[]).includes(billingRaw) ? billingRaw : cur.billing
+  ) as IssueBilling;
+  const status = (
+    (ALL_STATUSES as string[]).includes(statusRaw) ? statusRaw : cur.status
+  ) as IssueStatus;
 
   const buildItemsRaw = String(formData.get("build_items") || "").trim();
   const buildItems = buildItemsRaw ? Number(buildItemsRaw) : null;
@@ -153,6 +159,7 @@ async function triageIssue(formData: FormData) {
     promised_note: String(formData.get("promised_note") || "").trim() || null,
     client_visible: formData.get("client_visible") === "on",
     resolution_note: String(formData.get("resolution_note") || "").trim() || null,
+    quote_note: String(formData.get("quote_note") || "").trim() || null,
   };
   if (status === "fixed" || status === "shipped" || status === "closed") {
     update.resolved_at = cur.resolved_at ?? now;
@@ -202,6 +209,45 @@ async function queueIssue(formData: FormData) {
   await supabase.from("issues").update({ status: "queued" }).eq("id", id);
   await logAudit({ action: "issue.queued", target: `issue:${id}`, tenantId });
   revalidatePath("/admin/issues");
+}
+
+/**
+ * Put an out-of-scope quote in front of the client: price + the plain-English
+ * impact statement, visible on /portal/requests with Accept / Decline. Saves
+ * the triage row first (the button sits inside the triage form), then flips
+ * the issue to awaiting_client. Any previous decision is cleared — re-sending
+ * a revised quote restarts the approval.
+ */
+async function sendQuote(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const id = String(formData.get("id") || "");
+  const tenantId = String(formData.get("tenant_id") || "");
+  if (!id) return;
+  const supabase = await createClient();
+  const price = Number(String(formData.get("quoted_price") || "").trim());
+  const note = String(formData.get("quote_note") || "").trim();
+  if (!(price > 0) || !note) return; // a quote is a price AND its explanation
+  await supabase
+    .from("issues")
+    .update({
+      billing: "out_of_scope",
+      quoted_price: price,
+      quote_note: note,
+      quote_accepted_at: null,
+      quote_declined_at: null,
+      status: "awaiting_client",
+      client_visible: true,
+    })
+    .eq("id", id);
+  await logAudit({
+    action: "issue.quote_sent",
+    target: `issue:${id}`,
+    tenantId,
+    metadata: { quoted_price: price },
+  });
+  revalidatePath("/admin/issues");
+  revalidatePath("/portal/requests");
 }
 
 async function closeIssue(formData: FormData) {
@@ -317,7 +363,9 @@ export default async function IssuesPage({
             className="flex flex-wrap items-center gap-2 ml-auto max-md:ml-0 max-md:w-full"
           >
             {statusFilter && <input type="hidden" name="status" value={statusFilter} />}
-            {projectFilter && <input type="hidden" name="project" value={projectFilter} />}
+            {projectFilter && (
+              <input type="hidden" name="project" value={projectFilter} />
+            )}
             <select
               name="tenant"
               defaultValue={tenantFilter ?? ""}
@@ -376,7 +424,12 @@ export default async function IssuesPage({
               />
             </Field>
             <Field label="Kind">
-              <select name="kind" defaultValue="bug" className="max-md:w-full" style={inp}>
+              <select
+                name="kind"
+                defaultValue="bug"
+                className="max-md:w-full"
+                style={inp}
+              >
                 {KINDS.map((k) => (
                   <option key={k} value={k}>
                     {KIND_LABEL[k]}
@@ -385,7 +438,12 @@ export default async function IssuesPage({
               </select>
             </Field>
             <Field label="Severity">
-              <select name="severity" defaultValue="normal" className="max-md:w-full" style={inp}>
+              <select
+                name="severity"
+                defaultValue="normal"
+                className="max-md:w-full"
+                style={inp}
+              >
                 {SEVERITIES.map((s) => (
                   <option key={s} value={s}>
                     {SEVERITY_META[s].label}
@@ -394,7 +452,12 @@ export default async function IssuesPage({
               </select>
             </Field>
             <Field label="Source">
-              <select name="source" defaultValue="internal" className="max-md:w-full" style={inp}>
+              <select
+                name="source"
+                defaultValue="internal"
+                className="max-md:w-full"
+                style={inp}
+              >
                 {SOURCES.map((s) => (
                   <option key={s} value={s}>
                     {SOURCE_LABEL[s]}
@@ -437,13 +500,21 @@ export default async function IssuesPage({
                   {tenantName(p.tenant_id)}
                 </span>
                 <span
-                  style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.85rem",
+                    color: "var(--k-muted)",
+                  }}
                 >
                   {p.promised_note ?? p.title}
                 </span>
                 <span
                   className="ml-auto"
-                  style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    color: "var(--k-faint)",
+                  }}
                 >
                   {shortDate(p.promised_at as string)}
                 </span>
@@ -569,7 +640,11 @@ export default async function IssuesPage({
                   </span>
                   <span className="flex items-center gap-2 flex-wrap">
                     <span
-                      style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-muted)" }}
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "10px",
+                        color: "var(--k-muted)",
+                      }}
                     >
                       {ageDays(issue.created_at)}d
                       {issue.due_at ? ` · due ${shortDate(issue.due_at)}` : ""}
@@ -604,7 +679,12 @@ export default async function IssuesPage({
                   <form action={triageIssue} className="flex items-end gap-2 flex-wrap">
                     <input type="hidden" name="id" value={issue.id} />
                     <Field label="Kind">
-                      <select name="kind" defaultValue={issue.kind} className="max-md:w-full" style={inp}>
+                      <select
+                        name="kind"
+                        defaultValue={issue.kind}
+                        className="max-md:w-full"
+                        style={inp}
+                      >
                         {KINDS.map((k) => (
                           <option key={k} value={k}>
                             {KIND_LABEL[k]}
@@ -613,7 +693,12 @@ export default async function IssuesPage({
                       </select>
                     </Field>
                     <Field label="Severity">
-                      <select name="severity" defaultValue={issue.severity} className="max-md:w-full" style={inp}>
+                      <select
+                        name="severity"
+                        defaultValue={issue.severity}
+                        className="max-md:w-full"
+                        style={inp}
+                      >
                         {SEVERITIES.map((s) => (
                           <option key={s} value={s}>
                             {SEVERITY_META[s].label}
@@ -622,7 +707,12 @@ export default async function IssuesPage({
                       </select>
                     </Field>
                     <Field label="Billing">
-                      <select name="billing" defaultValue={issue.billing} className="max-md:w-full" style={inp}>
+                      <select
+                        name="billing"
+                        defaultValue={issue.billing}
+                        className="max-md:w-full"
+                        style={inp}
+                      >
                         {BILLINGS.map((b) => (
                           <option key={b} value={b}>
                             {BILLING_LABEL[b]}
@@ -631,7 +721,12 @@ export default async function IssuesPage({
                       </select>
                     </Field>
                     <Field label="Status">
-                      <select name="status" defaultValue={issue.status} className="max-md:w-full" style={inp}>
+                      <select
+                        name="status"
+                        defaultValue={issue.status}
+                        className="max-md:w-full"
+                        style={inp}
+                      >
                         {ALL_STATUSES.map((s) => (
                           <option key={s} value={s}>
                             {s.replace(/_/g, " ")}
@@ -661,6 +756,15 @@ export default async function IssuesPage({
                         style={inp}
                       />
                     </Field>
+                    <Field label="Impact statement (what the client reads with the quote)">
+                      <input
+                        name="quote_note"
+                        defaultValue={issue.quote_note ?? ""}
+                        placeholder="What we'd build, what it costs, how long, what it affects"
+                        className="w-full md:w-[280px]"
+                        style={inp}
+                      />
+                    </Field>
                     <Field label="Due">
                       <input
                         name="due_at"
@@ -670,8 +774,15 @@ export default async function IssuesPage({
                         style={{ ...inp, maxWidth: "100%" }}
                       />
                     </Field>
-                    <label className="flex items-center gap-2" style={{ ...check, height: 36 }}>
-                      <input type="checkbox" name="promised" defaultChecked={!!issue.promised_at} />
+                    <label
+                      className="flex items-center gap-2"
+                      style={{ ...check, height: 36 }}
+                    >
+                      <input
+                        type="checkbox"
+                        name="promised"
+                        defaultChecked={!!issue.promised_at}
+                      />
                       Promised
                     </label>
                     <Field label="Promised note">
@@ -683,7 +794,10 @@ export default async function IssuesPage({
                         style={inp}
                       />
                     </Field>
-                    <label className="flex items-center gap-2" style={{ ...check, height: 36 }}>
+                    <label
+                      className="flex items-center gap-2"
+                      style={{ ...check, height: 36 }}
+                    >
                       <input
                         type="checkbox"
                         name="client_visible"
@@ -703,6 +817,19 @@ export default async function IssuesPage({
                     <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
                       Save
                     </SubmitButton>
+                    <SubmitButton
+                      formAction={sendQuote}
+                      title="Requires a price and an impact statement — puts the quote in front of the client on the portal with Accept / Decline"
+                      style={btn("var(--k-bg)", T.warning, true)}
+                    >
+                      {issue.quote_accepted_at
+                        ? "Quote accepted ✓"
+                        : issue.quote_declined_at
+                          ? "Re-send quote"
+                          : issue.status === "awaiting_client" && issue.quoted_price
+                            ? "Quote with client…"
+                            : "Send quote"}
+                    </SubmitButton>
                   </form>
                   {OPEN_STATUSES.includes(issue.status) && (
                     <div className="flex flex-wrap items-center gap-2 mt-3">
@@ -710,7 +837,9 @@ export default async function IssuesPage({
                         <form action={queueIssue}>
                           <input type="hidden" name="id" value={issue.id} />
                           <input type="hidden" name="tenant_id" value={issue.tenant_id} />
-                          <SubmitButton style={btn("var(--k-bg)", "var(--k-accent)", true)}>
+                          <SubmitButton
+                            style={btn("var(--k-bg)", "var(--k-accent)", true)}
+                          >
                             Queue
                           </SubmitButton>
                         </form>
