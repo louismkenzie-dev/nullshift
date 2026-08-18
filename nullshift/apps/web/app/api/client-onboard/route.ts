@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { recordLead } from "@nullshift/db/leads";
+import { escapeLike, recordLead } from "@nullshift/db/leads";
 import { createServiceClient } from "@nullshift/db";
 
 /**
  * POST /api/client-onboard
  *
  * Called from the book-a-call flow before the auth account is created. Records a
- * canonical `leads` row (status='call_booked', with the requested slot) so the
+ * canonical `leads` row (status='qualified', with the requested slot — the lead
+ * only advances to 'call_booked' when an admin confirms the call) so the
  * booking lands in the admin Pipeline, and notifies the team. No legacy `clients`
  * row — the admin works off the multi-tenant Pipeline → client hub.
  */
@@ -129,7 +130,7 @@ export async function POST(request: Request) {
     const { data: prior } = await service
       .from("leads")
       .select("id")
-      .ilike("email", email.trim().toLowerCase())
+      .ilike("email", escapeLike(email.trim().toLowerCase()))
       .eq("source", "funnel")
       .limit(1);
     funnelCompleted = (prior?.length ?? 0) > 0;

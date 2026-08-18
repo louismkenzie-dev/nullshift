@@ -9,11 +9,7 @@ import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { compileBatchPrompt, type SystemProfileRow } from "@/lib/ops/batchCompiler";
-import {
-  QUEUEABLE_STATUSES,
-  type IssueRow,
-  type IssueSeverity,
-} from "@/lib/ops/issues";
+import { QUEUEABLE_STATUSES, type IssueRow, type IssueSeverity } from "@/lib/ops/issues";
 
 /**
  * Fix batches — compile a project's queueable issues into one context-complete
@@ -69,14 +65,19 @@ async function compileBatch(formData: FormData) {
     .eq("project_id", projectId)
     .in("status", QUEUEABLE_STATUSES);
   // Unreviewed inbox drafts (hidden + still 'new') stay out of work orders
-  // until they're confirmed on /admin/inbox.
+  // until they're confirmed on /admin/inbox. Billable work stays out until a
+  // human has classified it AND the client has agreed: an out_of_scope issue
+  // must not be built, shipped, and announced before anyone approved or paid —
+  // it becomes batchable only once triage flips it to covered/build_item
+  // (after client sign-off) or explicit queueing follows an agreed quote.
   const issues = ((issueRows ?? []) as IssueRow[])
     .filter((i) => !(i.status === "new" && !i.client_visible))
+    .filter((i) => i.billing !== "unclassified" && i.billing !== "out_of_scope")
     .sort(
-    (a, b) =>
-      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
-      a.created_at.localeCompare(b.created_at)
-  );
+      (a, b) =>
+        SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
+        a.created_at.localeCompare(b.created_at)
+    );
   if (issues.length === 0) return;
 
   const [{ data: project }, { data: profileRow }] = await Promise.all([
@@ -150,19 +151,20 @@ export default async function BatchesPage({
 }) {
   const { project: preselect } = await searchParams;
   const supabase = await createClient();
-  const [{ data: batchRows }, { data: tenantRows }, { data: projectRows }, { data: batchedIssues }] =
-    await Promise.all([
-      supabase
-        .from("fix_batches")
-        .select("id, tenant_id, project_id, title, status, created_at")
-        .order("created_at", { ascending: false }),
-      supabase.from("tenants").select("id, name").order("name"),
-      supabase
-        .from("projects")
-        .select("id, tenant_id, name, live_url")
-        .order("created_at"),
-      supabase.from("issues").select("id, batch_id").not("batch_id", "is", null),
-    ]);
+  const [
+    { data: batchRows },
+    { data: tenantRows },
+    { data: projectRows },
+    { data: batchedIssues },
+  ] = await Promise.all([
+    supabase
+      .from("fix_batches")
+      .select("id, tenant_id, project_id, title, status, created_at")
+      .order("created_at", { ascending: false }),
+    supabase.from("tenants").select("id, name").order("name"),
+    supabase.from("projects").select("id, tenant_id, name, live_url").order("created_at"),
+    supabase.from("issues").select("id, batch_id").not("batch_id", "is", null),
+  ]);
   const batches = (batchRows ?? []) as BatchRow[];
   const tenants = (tenantRows ?? []) as Tenant[];
   const projects = (projectRows ?? []) as Project[];
@@ -283,7 +285,11 @@ export default async function BatchesPage({
               </span>
               <span
                 className="truncate min-w-0 max-md:w-full"
-                style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.85rem",
+                  color: "var(--k-muted)",
+                }}
               >
                 {tenantName(b.tenant_id)}
               </span>
@@ -292,11 +298,15 @@ export default async function BatchesPage({
                   {b.status.replace(/_/g, " ")}
                 </StatusChip>
               </span>
-              <span style={{ fontFamily: T.mono, fontSize: "11px", color: "var(--k-muted)" }}>
+              <span
+                style={{ fontFamily: T.mono, fontSize: "11px", color: "var(--k-muted)" }}
+              >
                 {counts.get(b.id) ?? 0}
                 <span className="md:hidden"> issues</span>
               </span>
-              <span style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}>
+              <span
+                style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+              >
                 {new Date(b.created_at).toLocaleDateString("en-GB", {
                   day: "numeric",
                   month: "short",

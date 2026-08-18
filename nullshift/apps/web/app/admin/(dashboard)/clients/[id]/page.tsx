@@ -4,6 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { requireStaff } from "@nullshift/auth/guards";
+import { findUserByEmail } from "@nullshift/auth/confirmation-email";
+import { escapeLike } from "@nullshift/db/leads";
 import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
 import { CATALOG } from "@nullshift/content/catalog";
@@ -15,6 +17,7 @@ import { sendCareSubscriptionSignup } from "@/lib/careSubscription";
 import { getStripe, voidStripeInvoice } from "@nullshift/billing/stripe";
 import {
   cancelBillingRequest,
+  cancelGoCardlessSubscription,
   isGoCardlessConfigured,
   startCareDirectDebit,
 } from "@nullshift/billing/gocardless";
@@ -116,6 +119,24 @@ async function ensureProject(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
+/**
+ * The signed scope is a legal record: once a proposal is accepted its
+ * project_items are the contract baseline (the "signed" PDF re-renders from
+ * these rows), so module edits are refused after acceptance. Changes from that
+ * point go through change requests, not silent baseline edits.
+ */
+async function scopeIsLocked(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  projectId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("projects")
+    .select("proposal_status")
+    .eq("id", projectId)
+    .maybeSingle();
+  return data?.proposal_status === "accepted";
+}
+
 async function addItem(formData: FormData) {
   "use server";
   const tenantId = String(formData.get("tenant_id") || "");
@@ -124,6 +145,7 @@ async function addItem(formData: FormData) {
   const amount = Number(formData.get("amount") || 0);
   if (!projectId || !name) return;
   const supabase = await createClient();
+  if (await scopeIsLocked(supabase, projectId)) return;
   await supabase
     .from("project_items")
     .insert({ project_id: projectId, tenant_id: tenantId, name, amount });
@@ -140,8 +162,22 @@ async function removeItem(formData: FormData) {
   "use server";
   const tenantId = String(formData.get("tenant_id") || "");
   const id = String(formData.get("id") || "");
+  if (!id) return;
   const supabase = await createClient();
+  const { data: item } = await supabase
+    .from("project_items")
+    .select("id, project_id, name, amount")
+    .eq("id", id)
+    .maybeSingle();
+  if (!item) return;
+  if (await scopeIsLocked(supabase, item.project_id)) return;
   await supabase.from("project_items").delete().eq("id", id);
+  await logAudit({
+    action: "proposal.item_removed",
+    target: `project:${item.project_id}`,
+    tenantId,
+    metadata: { name: item.name, amount: item.amount },
+  });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -293,13 +329,18 @@ async function setStage(formData: FormData) {
     .from("projects")
     .update({ stage: stage as never })
     .eq("id", projectId);
-  if (error) console.error("setStage:", error.message);
-  else
-    await logAudit({
-      action: `project.stage.${stage}`,
-      target: `project:${projectId}`,
-      tenantId,
-    });
+  if (error) {
+    console.error("setStage:", error.message);
+    // The blocked stage must be visible to the admin, not just the server log —
+    // otherwise the select silently snaps back with no explanation.
+    revalidatePath(`/admin/clients/${tenantId}`);
+    redirect(`/admin/clients/${tenantId}?stage_blocked=${encodeURIComponent(stage)}`);
+  }
+  await logAudit({
+    action: `project.stage.${stage}`,
+    target: `project:${projectId}`,
+    tenantId,
+  });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -585,7 +626,7 @@ async function bookCall(formData: FormData) {
     await supabase
       .from("leads")
       .update({ status: "call_booked" })
-      .ilike("email", t.contact_email)
+      .ilike("email", escapeLike(t.contact_email))
       .neq("status", "won")
       .neq("status", "lost");
   }
@@ -762,12 +803,12 @@ async function cancelSubscription(formData: FormData) {
   const id = String(formData.get("id") || "");
   if (!id) return;
   const service = createServiceClient();
-  // Cancel the REAL Stripe subscription first so billing actually stops, then
+  // Cancel the REAL provider subscription first so billing actually stops, then
   // reflect it locally ('canceled' — the enum is American-spelled; the old
   // 'cancelled' was rejected and silently left the row active).
   const { data: sub } = await service
     .from("subscriptions")
-    .select("stripe_subscription_id")
+    .select("stripe_subscription_id, gc_subscription_id")
     .eq("id", id)
     .maybeSingle();
   if (sub?.stripe_subscription_id) {
@@ -778,6 +819,18 @@ async function cancelSubscription(formData: FormData) {
       } catch (e) {
         console.error("stripe subscription cancel failed:", e);
       }
+    }
+  }
+  if (sub?.gc_subscription_id) {
+    // A Direct Debit keeps charging until GoCardless itself is cancelled — if
+    // that fails, leave the row alone so the UI can't show a client as
+    // cancelled while their bank is still being debited.
+    try {
+      await cancelGoCardlessSubscription(sub.gc_subscription_id);
+    } catch (e) {
+      console.error("gocardless subscription cancel failed:", e);
+      revalidatePath(`/admin/clients/${tenantId}`);
+      return;
     }
   }
   const { error } = await service
@@ -813,8 +866,8 @@ async function createPortalAccount(formData: FormData) {
   const loginUrl = `${SITE_URL}/portal/login`;
 
   // Resolve any existing auth user with this email + whether they've signed in.
-  const { data: list } = await service.auth.admin.listUsers();
-  const existing = list?.users.find((u) => u.email?.toLowerCase() === email) ?? null;
+  // (Paginating lookup — a bare listUsers() only returns the first 50 users.)
+  const existing = await findUserByEmail(service, email);
   const hasLoggedIn = !!existing?.last_sign_in_at;
 
   let userId: string | null = existing?.id ?? null;
@@ -969,8 +1022,8 @@ async function deleteClient(formData: FormData) {
   // this the deleted client keeps showing on the pipeline / in the enquiries
   // inbox — and leaving them behind would be an incomplete erasure.
   for (const em of emails) {
-    await service.from("leads").delete().ilike("email", em);
-    await service.from("enquiries").delete().ilike("email", em);
+    await service.from("leads").delete().ilike("email", escapeLike(em));
+    await service.from("enquiries").delete().ilike("email", escapeLike(em));
   }
 
   // Remove the client's auth login(s). Resolve them BOTH ways: by membership
@@ -979,11 +1032,9 @@ async function deleteClient(formData: FormData) {
   // an admin issued a portal login. Without the email pass, such an account is
   // orphaned on delete and blocks re-registering with that email.
   const authIds = new Set<string>(userIds);
-  if (emails.size > 0) {
-    const { data: list } = await service.auth.admin.listUsers({ perPage: 1000 });
-    for (const u of list?.users ?? []) {
-      if (u.email && emails.has(u.email.trim().toLowerCase())) authIds.add(u.id);
-    }
+  for (const email of emails) {
+    const found = await findUserByEmail(service, email);
+    if (found) authIds.add(found.id);
   }
   // Delete each only if it no longer belongs to any tenant (don't nuke internal
   // staff or another client who still has a membership).
@@ -1099,8 +1150,15 @@ const btn = (bg: string, fg: string) => ({
   cursor: "pointer",
 });
 
-export default async function ClientHub({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientHub({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ stage_blocked?: string }>;
+}) {
   const { id: tenantId } = await params;
+  const { stage_blocked: stageBlocked } = await searchParams;
   const supabase = await createClient();
 
   // Stage 1 — one batch keyed on the tenant id: the tenant, its projects, and
@@ -1220,10 +1278,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
           lastSignInAt: u.user.last_sign_in_at ?? null,
         };
     } else if (t.contact_email) {
-      const { data: list } = await portalSvc.auth.admin.listUsers();
-      const found = list?.users.find(
-        (x) => x.email?.toLowerCase() === t.contact_email!.toLowerCase()
-      );
+      const found = await findUserByEmail(portalSvc, t.contact_email);
       if (found)
         portalUser = {
           email: found.email ?? t.contact_email,
@@ -1250,7 +1305,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       ? supabase
           .from("leads")
           .select("quiz_answers")
-          .ilike("email", t.contact_email)
+          .ilike("email", escapeLike(t.contact_email))
           .order("created_at", { ascending: false })
           .limit(10)
       : noRows,
@@ -1457,6 +1512,22 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     Set stage
                   </SubmitButton>
                 </form>
+              )}
+              {stageBlocked && (
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    color: T.danger,
+                    border: `1px solid color-mix(in oklab, ${T.danger} 32%, transparent)`,
+                    padding: "3px 8px",
+                  }}
+                >
+                  BLOCKED — can&apos;t set “{stageBlocked}”:
+                  {stageBlocked === "live"
+                    ? " the tenant DPA is not signed and logged."
+                    : " the database refused the change."}
+                </span>
               )}
             </>
           }
@@ -1688,73 +1759,92 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                       >
                         {gbp(Number(it.amount))}
                       </span>
-                      <form action={removeItem}>
-                        {htid}
-                        <input type="hidden" name="id" value={it.id} />
-                        <SubmitButton
-                          style={{
-                            ...btn("transparent", "var(--k-faint)"),
-                            height: 24,
-                            paddingInline: 8,
-                          }}
-                        >
-                          ✕
-                        </SubmitButton>
-                      </form>
+                      {!isAccepted && (
+                        <form action={removeItem}>
+                          {htid}
+                          <input type="hidden" name="id" value={it.id} />
+                          <SubmitButton
+                            style={{
+                              ...btn("transparent", "var(--k-faint)"),
+                              height: 24,
+                              paddingInline: 8,
+                            }}
+                          >
+                            ✕
+                          </SubmitButton>
+                        </form>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-              <form
-                action={addItem}
-                className="flex items-center gap-2 flex-wrap"
-                style={{ paddingTop: 12, borderTop: "1px solid var(--k-border)" }}
-              >
-                {htid}
-                {hpid}
-                <input
-                  name="name"
-                  placeholder="Module (e.g. Booking system)"
-                  required
-                  style={{ ...inp, width: 220 }}
-                />
-                <input
-                  name="amount"
-                  type="number"
-                  step="1"
-                  placeholder="£"
-                  required
-                  style={{ ...inp, width: 90 }}
-                />
-                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
-                  + Add
-                </SubmitButton>
-              </form>
-              <div className="flex flex-wrap gap-1.5" style={{ marginTop: 10 }}>
-                {CATALOG.map((m) => (
-                  <form key={m.key} action={addItem}>
+              {isAccepted ? (
+                <p
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    color: "var(--k-faint)",
+                    paddingTop: 12,
+                    borderTop: "1px solid var(--k-border)",
+                  }}
+                >
+                  SCOPE LOCKED — this is the signed baseline. Additions go through a
+                  change request.
+                </p>
+              ) : (
+                <>
+                  <form
+                    action={addItem}
+                    className="flex items-center gap-2 flex-wrap"
+                    style={{ paddingTop: 12, borderTop: "1px solid var(--k-border)" }}
+                  >
                     {htid}
                     {hpid}
-                    <input type="hidden" name="name" value={m.name} />
-                    <input type="hidden" name="amount" value={m.price} />
-                    <SubmitButton
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: 10,
-                        height: 24,
-                        paddingInline: 8,
-                        background: "transparent",
-                        color: "var(--k-muted)",
-                        border: "1px solid var(--k-border)",
-                        borderRadius: 0,
-                        cursor: "pointer",
-                      }}
-                    >
-                      + {m.name} {gbp(m.price)}
+                    <input
+                      name="name"
+                      placeholder="Module (e.g. Booking system)"
+                      required
+                      style={{ ...inp, width: 220 }}
+                    />
+                    <input
+                      name="amount"
+                      type="number"
+                      step="1"
+                      placeholder="£"
+                      required
+                      style={{ ...inp, width: 90 }}
+                    />
+                    <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                      + Add
                     </SubmitButton>
                   </form>
-                ))}
-              </div>
+                  <div className="flex flex-wrap gap-1.5" style={{ marginTop: 10 }}>
+                    {CATALOG.map((m) => (
+                      <form key={m.key} action={addItem}>
+                        {htid}
+                        {hpid}
+                        <input type="hidden" name="name" value={m.name} />
+                        <input type="hidden" name="amount" value={m.price} />
+                        <SubmitButton
+                          style={{
+                            fontFamily: T.mono,
+                            fontSize: 10,
+                            height: 24,
+                            paddingInline: 8,
+                            background: "transparent",
+                            color: "var(--k-muted)",
+                            border: "1px solid var(--k-border)",
+                            borderRadius: 0,
+                            cursor: "pointer",
+                          }}
+                        >
+                          + {m.name} {gbp(m.price)}
+                        </SubmitButton>
+                      </form>
+                    ))}
+                  </div>
+                </>
+              )}
               {/* Ongoing care plan — part of the proposal the client accepts. */}
               <div
                 className="flex items-center gap-2 flex-wrap"

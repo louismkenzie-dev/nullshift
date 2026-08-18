@@ -5,6 +5,7 @@ import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 import { carePlan } from "@/lib/carePlans";
+import { CLIENT_STATUS_LABEL, OPEN_STATUSES, type IssueStatus } from "@/lib/ops/issues";
 import { StageStepper } from "@/components/portal/StageStepper";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/Reveal";
@@ -57,10 +58,19 @@ const TONE: Record<string, Tone> = {
   triaged: "accent",
   awaiting_approval: "warning",
   rejected: "danger",
+  // Issue-bank statuses (the "what we're working on" list).
+  new: "accent",
+  queued: "accent",
+  batched: "accent",
+  awaiting_client: "warning",
+  fixed: "success",
+  closed: "muted",
 };
 
-function Pill({ s }: { s: string }) {
-  return <StatusChip tone={TONE[s] ?? "muted"}>{s.replace(/_/g, " ")}</StatusChip>;
+function Pill({ s, label }: { s: string; label?: string }) {
+  return (
+    <StatusChip tone={TONE[s] ?? "muted"}>{label ?? s.replace(/_/g, " ")}</StatusChip>
+  );
 }
 
 // ── server actions ─────────────────────────────────────────────
@@ -151,11 +161,15 @@ export default async function PortalProject({
     { data: subs },
     { count: docCount },
   ] = await Promise.all([
+    // "What we're working on" reads the issue bank — the tracker staff
+    // actually use — not the retired tasks board, and only client-visible
+    // rows with client-friendly status labels.
     supabase
-      .from("tasks")
+      .from("issues")
       .select("id, title, status")
       .eq("project_id", id)
-      .neq("status", "shipped")
+      .eq("client_visible", true)
+      .in("status", OPEN_STATUSES)
       .order("created_at", { ascending: false }),
     supabase
       .from("project_updates")
@@ -412,7 +426,10 @@ export default async function PortalProject({
                   >
                     {t.title}
                   </span>
-                  <Pill s={t.status} />
+                  <Pill
+                    s={t.status}
+                    label={CLIENT_STATUS_LABEL[t.status as IssueStatus]}
+                  />
                 </div>
               ))}
             </div>

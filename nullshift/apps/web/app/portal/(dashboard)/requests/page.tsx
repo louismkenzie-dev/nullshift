@@ -66,7 +66,8 @@ async function submitRequest(
     .eq("user_id", user.id)
     .limit(1)
     .maybeSingle();
-  if (!membership) return { ok: false, error: "We couldn't find your workspace — email us instead." };
+  if (!membership)
+    return { ok: false, error: "We couldn't find your workspace — email us instead." };
   const tenantId = membership.tenant_id as string;
 
   // Attach to their newest project.
@@ -147,7 +148,12 @@ async function submitRequest(
       const service = createServiceClient();
       await service
         .from("issues")
-        .update({ ai: c, kind: c.kind, severity: c.severity, due_at: dueAtFor(c.severity) })
+        .update({
+          ai: c,
+          kind: c.kind,
+          severity: c.severity,
+          due_at: dueAtFor(c.severity),
+        })
         .eq("id", issue.id);
     }
 
@@ -169,8 +175,8 @@ async function submitRequest(
   }
 
   revalidatePath("/portal/requests");
-  return { ok: true };
   revalidatePath("/portal");
+  return { ok: true };
 }
 
 export default async function PortalRequestsPage() {
@@ -208,8 +214,8 @@ export default async function PortalRequestsPage() {
               className="text-center py-7"
               style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}
             >
-              Nothing here yet — when you send us a request it&apos;ll appear here so
-              you can follow along.
+              Nothing here yet — when you send us a request it&apos;ll appear here so you
+              can follow along.
             </p>
           ) : (
             <div className="flex flex-col">

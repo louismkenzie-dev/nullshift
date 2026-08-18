@@ -118,6 +118,27 @@ async function ingestSource(formData: FormData) {
   revalidatePath("/admin/issues");
 }
 
+/**
+ * The inbox actions receive an issue id from a form post, so each re-verifies
+ * the row really is an unreviewed ingest draft before acting — the page query
+ * filters to drafts, but a crafted post must not be able to mutate (or,
+ * worse, hard-delete) an arbitrary issue via these actions.
+ */
+async function isIngestDraft(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("issues")
+    .select("id")
+    .eq("id", id)
+    .eq("client_visible", false)
+    .eq("status", "new")
+    .contains("ai", { from: "ingest" })
+    .maybeSingle();
+  return !!data;
+}
+
 async function confirmIssue(formData: FormData) {
   "use server";
   if (!(await requireStaff()).ok) return;
@@ -125,6 +146,7 @@ async function confirmIssue(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   if (!id) return;
   const supabase = await createClient();
+  if (!(await isIngestDraft(supabase, id))) return;
   await supabase.from("issues").update({ client_visible: true }).eq("id", id);
   await logAudit({ action: "issue.confirmed", target: `issue:${id}`, tenantId });
   revalidatePath("/admin/inbox");
@@ -138,6 +160,7 @@ async function confirmPrivate(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   if (!id) return;
   const supabase = await createClient();
+  if (!(await isIngestDraft(supabase, id))) return;
   await supabase.from("issues").update({ status: "triaged" }).eq("id", id);
   await logAudit({ action: "issue.confirmed_private", target: `issue:${id}`, tenantId });
   revalidatePath("/admin/inbox");
@@ -151,6 +174,7 @@ async function discardIssue(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   if (!id) return;
   const supabase = await createClient();
+  if (!(await isIngestDraft(supabase, id))) return;
   await supabase.from("issues").delete().eq("id", id);
   await logAudit({ action: "issue.discarded", target: `issue:${id}`, tenantId });
   revalidatePath("/admin/inbox");
@@ -251,10 +275,14 @@ export default async function InboxPage() {
               </SubmitButton>
               {!aiConfigured && (
                 <span
-                  style={{ fontFamily: T.sans, fontSize: "0.82rem", color: "var(--k-faint)" }}
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.82rem",
+                    color: "var(--k-faint)",
+                  }}
                 >
-                  Add ANTHROPIC_API_KEY to enable AI parsing — pasting currently files
-                  the raw text as a single issue.
+                  Add ANTHROPIC_API_KEY to enable AI parsing — pasting currently files the
+                  raw text as a single issue.
                 </span>
               )}
             </div>
@@ -310,7 +338,11 @@ export default async function InboxPage() {
                     {d.promised_at && <StatusChip tone="warning">promised</StatusChip>}
                     <span
                       className="ml-auto"
-                      style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "10px",
+                        color: "var(--k-faint)",
+                      }}
                     >
                       {tenantName(d.tenant_id)} · {SOURCE_LABEL[d.source]}
                     </span>
@@ -334,14 +366,18 @@ export default async function InboxPage() {
                     <form action={confirmIssue}>
                       <input type="hidden" name="id" value={d.id} />
                       <input type="hidden" name="tenant_id" value={d.tenant_id} />
-                      <SubmitButton style={btnSm("var(--k-accent)", "var(--k-on-accent)")}>
+                      <SubmitButton
+                        style={btnSm("var(--k-accent)", "var(--k-on-accent)")}
+                      >
                         Confirm
                       </SubmitButton>
                     </form>
                     <form action={confirmPrivate}>
                       <input type="hidden" name="id" value={d.id} />
                       <input type="hidden" name="tenant_id" value={d.tenant_id} />
-                      <SubmitButton style={btnSm("var(--k-surface)", "var(--k-fg)", true)}>
+                      <SubmitButton
+                        style={btnSm("var(--k-surface)", "var(--k-fg)", true)}
+                      >
                         Confirm private
                       </SubmitButton>
                     </form>

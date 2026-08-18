@@ -26,6 +26,7 @@ type DashIssue = Pick<
   | "promised_at"
   | "promised_note"
   | "created_at"
+  | "client_visible"
 >;
 type BatchRow = {
   id: string;
@@ -45,12 +46,13 @@ type CallRow = {
 };
 
 // Batch lifecycle → signal tone (draft is quiet, shipped/cancelled never shown here).
-const BATCH_TONE: Record<string, "accent" | "success" | "warning" | "danger" | "muted"> = {
-  draft: "muted",
-  compiled: "accent",
-  dispatched: "accent",
-  pr_open: "warning",
-};
+const BATCH_TONE: Record<string, "accent" | "success" | "warning" | "danger" | "muted"> =
+  {
+    draft: "muted",
+    compiled: "accent",
+    dispatched: "accent",
+    pr_open: "warning",
+  };
 
 const mono: React.CSSProperties = {
   fontFamily: T.mono,
@@ -67,35 +69,43 @@ export default async function MissionControlPage() {
   weekEnd.setDate(weekEnd.getDate() + 7);
   const weekEndStr = weekEnd.toLocaleDateString("en-CA", { timeZone: LONDON_TZ });
 
-  const [{ data: issuesRaw }, { data: batchesRaw }, { data: subsRaw }, { data: callsRaw }] =
-    await Promise.all([
-      supabase
-        .from("issues")
-        .select(
-          "id, tenant_id, project_id, severity, status, title, due_at, promised_at, promised_note, created_at"
-        )
-        .in("status", OPEN_STATUSES)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("fix_batches")
-        .select("id, tenant_id, project_id, title, status, created_at")
-        .not("status", "in", "(shipped,cancelled)")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("subscriptions")
-        .select("tenant_id, mrr, status")
-        .in("status", ["active", "trialing"]),
-      supabase
-        .from("calls")
-        .select("id, tenant_id, call_date, call_time, duration_min")
-        .eq("status", "confirmed")
-        .gte("call_date", todayStr)
-        .lte("call_date", weekEndStr)
-        .order("call_date")
-        .order("call_time"),
-    ]);
+  const [
+    { data: issuesRaw },
+    { data: batchesRaw },
+    { data: subsRaw },
+    { data: callsRaw },
+  ] = await Promise.all([
+    supabase
+      .from("issues")
+      .select(
+        "id, tenant_id, project_id, severity, status, title, due_at, promised_at, promised_note, created_at, client_visible"
+      )
+      .in("status", OPEN_STATUSES)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("fix_batches")
+      .select("id, tenant_id, project_id, title, status, created_at")
+      .not("status", "in", "(shipped,cancelled)")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("subscriptions")
+      .select("tenant_id, mrr, status")
+      .in("status", ["active", "trialing"]),
+    supabase
+      .from("calls")
+      .select("id, tenant_id, call_date, call_time, duration_min")
+      .eq("status", "confirmed")
+      .gte("call_date", todayStr)
+      .lte("call_date", weekEndStr)
+      .order("call_date")
+      .order("call_time"),
+  ]);
 
-  const issues = (issuesRaw ?? []) as DashIssue[];
+  // Unreviewed inbox drafts (hidden + still 'new') are not confirmed work —
+  // the batch compiler excludes them, and mission-control counts must match.
+  const issues = ((issuesRaw ?? []) as DashIssue[]).filter(
+    (i) => !(i.status === "new" && !i.client_visible)
+  );
   const batches = (batchesRaw ?? []) as BatchRow[];
   const subs = (subsRaw ?? []) as SubRow[];
   const calls = (callsRaw ?? []) as CallRow[];
@@ -129,8 +139,12 @@ export default async function MissionControlPage() {
 
   // Needs attention: critical + high first (critical before high), then anything
   // else that has blown past its due date.
-  const critHigh = issues.filter((i) => i.severity === "critical" || i.severity === "high");
-  critHigh.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "critical" ? -1 : 1));
+  const critHigh = issues.filter(
+    (i) => i.severity === "critical" || i.severity === "high"
+  );
+  critHigh.sort((a, b) =>
+    a.severity === b.severity ? 0 : a.severity === "critical" ? -1 : 1
+  );
   const overdueRest = issues.filter(
     (i) => i.severity !== "critical" && i.severity !== "high" && isOverdue(i)
   );
@@ -163,10 +177,30 @@ export default async function MissionControlPage() {
       {/* Stat row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8 mb-6">
         {[
-          { value: String(issues.length), label: "Open issues", sub: "Across every system", accent: false },
-          { value: String(critHigh.length), label: "Critical / high", sub: "Fix these first", accent: false },
-          { value: String(batches.length), label: "Batches in flight", sub: "Compiled → shipped", accent: false },
-          { value: money(mrr), label: "MRR", sub: "Active + trialing plans", accent: true },
+          {
+            value: String(issues.length),
+            label: "Open issues",
+            sub: "Across every system",
+            accent: false,
+          },
+          {
+            value: String(critHigh.length),
+            label: "Critical / high",
+            sub: "Fix these first",
+            accent: false,
+          },
+          {
+            value: String(batches.length),
+            label: "Batches in flight",
+            sub: "Compiled → shipped",
+            accent: false,
+          },
+          {
+            value: money(mrr),
+            label: "MRR",
+            sub: "Active + trialing plans",
+            accent: true,
+          },
         ].map((s, i) => (
           <Reveal key={s.label} delay={i * 0.05}>
             <StatCard value={s.value} label={s.label} sub={s.sub} accent={s.accent} />
@@ -349,11 +383,14 @@ export default async function MissionControlPage() {
                       <div style={{ ...mono, color: "var(--k-faint)", marginTop: 4 }}>
                         {tenantName.get(iss.tenant_id) ?? "—"} ·{" "}
                         <span style={{ color: "var(--k-accent)" }}>
-                          {new Date(iss.promised_at as string).toLocaleDateString("en-GB", {
-                            day: "numeric",
-                            month: "short",
-                            timeZone: LONDON_TZ,
-                          })}
+                          {new Date(iss.promised_at as string).toLocaleDateString(
+                            "en-GB",
+                            {
+                              day: "numeric",
+                              month: "short",
+                              timeZone: LONDON_TZ,
+                            }
+                          )}
                         </span>
                       </div>
                     </Link>

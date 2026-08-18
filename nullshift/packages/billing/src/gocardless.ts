@@ -57,8 +57,7 @@ async function gcPost<T>(
         ?.map((e) => (e.field ? `${e.field} ${e.message}` : e.message))
         .filter(Boolean)
         .join("; ");
-      message =
-        [payload.error?.message, details].filter(Boolean).join(": ") || message;
+      message = [payload.error?.message, details].filter(Boolean).join(": ") || message;
     } catch {
       // Non-JSON error body — keep the status line.
     }
@@ -87,15 +86,12 @@ export async function startCareDirectDebit(opts: {
 }): Promise<{ url: string; billingRequestId: string } | null> {
   if (!isGoCardlessConfigured()) return null;
 
-  const br = await gcPost<{ billing_requests: { id: string } }>(
-    "/billing_requests",
-    {
-      billing_requests: {
-        mandate_request: { scheme: "bacs", currency: "GBP", verify: "recommended" },
-        metadata: { tenant_id: opts.tenantId, plan: opts.plan },
-      },
-    }
-  );
+  const br = await gcPost<{ billing_requests: { id: string } }>("/billing_requests", {
+    billing_requests: {
+      mandate_request: { scheme: "bacs", currency: "GBP", verify: "recommended" },
+      metadata: { tenant_id: opts.tenantId, plan: opts.plan },
+    },
+  });
   const billingRequestId = br.billing_requests.id;
 
   // Prefill what we know so the client only confirms bank details. The stored
@@ -173,6 +169,27 @@ export async function cancelBillingRequest(id: string): Promise<boolean> {
   } catch (e) {
     console.warn(`cancelBillingRequest(${id}):`, (e as Error).message);
     return false;
+  }
+}
+
+/**
+ * Cancel a live GoCardless subscription so a Direct Debit client stops being
+ * charged. MUST be called whenever a subscriptions row with a
+ * gc_subscription_id is cancelled locally — flipping our row alone leaves the
+ * client paying monthly. Throws on API errors other than "already cancelled"
+ * (GoCardless 4xxes a repeat cancel, which callers can treat as done).
+ */
+export async function cancelGoCardlessSubscription(id: string): Promise<boolean> {
+  if (!isGoCardlessConfigured()) return false;
+  try {
+    await gcPost(`/subscriptions/${id}/actions/cancel`, { data: {} });
+    return true;
+  } catch (e) {
+    const message = (e as Error).message;
+    // Repeat cancels 4xx with an "already cancelled"-style validation error —
+    // the outcome we wanted, so report success.
+    if (/cancel/i.test(message) && /already|status/i.test(message)) return true;
+    throw e;
   }
 }
 

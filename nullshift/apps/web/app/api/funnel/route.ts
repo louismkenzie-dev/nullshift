@@ -7,11 +7,13 @@ import { scoreLead, type Answers } from "@/lib/funnel";
 import { scalingPlanEmail, ownerEmail } from "@/lib/funnelEmails";
 
 /* Public endpoint — the /start quiz funnel posts here on contact capture.
- *  Re-scores server-side (never trust the client), saves the lead to the
- *  `enquiries` table (source='funnel' + funnel_data/score/segment/utm), then
- *  sends two branded emails via Resend: a tailored, lead-generating email to
- *  the visitor, and a new-lead notification to Nullshift. Honeypot + time-trap
- *  drop obvious bots. Email + DB are independent best-effort steps. */
+ *  Re-scores server-side (never trust the client), upserts the canonical
+ *  `leads` row (recordLead: dedupe/merge by email, plan + plan_token stored,
+ *  agent consultation seeded), then sends two branded emails via Resend: a
+ *  tailored, lead-generating email to the visitor, and a new-lead notification
+ *  to Nullshift. Honeypot + time-trap drop obvious bots. Email + DB are
+ *  independent best-effort steps. NOTE: utm + phone are received but not yet
+ *  persisted on the lead (see docs/OPS-HUB-AUDIT-2026-08-18.md, Phase 1.5). */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

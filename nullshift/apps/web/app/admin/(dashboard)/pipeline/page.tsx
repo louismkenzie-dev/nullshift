@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
+import { escapeLike } from "@nullshift/db/leads";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
@@ -149,7 +150,7 @@ async function openLead(formData: FormData) {
       .from("tenants")
       .select("id")
       .eq("type", "client")
-      .ilike("contact_email", email)
+      .ilike("contact_email", escapeLike(email))
       .limit(1);
     tenantId = existing?.[0]?.id ?? null;
   }

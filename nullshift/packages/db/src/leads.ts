@@ -1,6 +1,15 @@
 import { createServiceClient } from "./server";
 
 /**
+ * Escape LIKE/ILIKE metacharacters in caller-supplied text. `%` and `_` are
+ * legal in email local parts, so every `.ilike(column, email)` match MUST go
+ * through this — an unescaped pattern can match (or update) the wrong rows.
+ */
+export function escapeLike(value: string): string {
+  return value.replace(/([\\%_])/g, "\\$1");
+}
+
+/**
  * Write a captured lead into the canonical multi-tenant `leads` table (under the
  * internal Nullshift tenant). Used by the marketing site's lead-capture routes
  * via the service role (RLS-bypassing, server-only). Best-effort: returns an
@@ -75,7 +84,7 @@ export async function recordLead(
         .from("leads")
         .select("id, status, quiz_answers")
         .eq("tenant_id", tenant.id)
-        .ilike("email", email)
+        .ilike("email", escapeLike(email))
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();

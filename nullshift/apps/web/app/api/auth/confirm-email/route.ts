@@ -32,7 +32,9 @@ export async function GET(req: NextRequest) {
   }
 
   const siteUrl = getSiteUrl(req.headers.get("origin"));
-  const defaultRedirect = `${siteUrl}/onboard`;
+  // The retired /onboard tier flow was the old default; the portal is where a
+  // confirmed client actually lands now.
+  const defaultRedirect = `${siteUrl}/portal/login`;
   const redirectTo =
     redirectParam && isAllowedRedirect(redirectParam, siteUrl)
       ? redirectParam

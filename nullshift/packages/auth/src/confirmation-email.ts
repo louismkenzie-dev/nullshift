@@ -48,7 +48,7 @@ export async function sendConfirmationEmail({
 
         <!-- Code display -->
         <div style="display:flex;gap:8px;margin-bottom:36px;">
-          ${digits.map(d => `<div style="width:48px;height:60px;background:#131316;border:1.5px solid #27272a;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;letter-spacing:0;color:#fafafa;text-align:center;line-height:60px;">${d}</div>`).join("")}
+          ${digits.map((d) => `<div style="width:48px;height:60px;background:#131316;border:1.5px solid #27272a;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;letter-spacing:0;color:#fafafa;text-align:center;line-height:60px;">${d}</div>`).join("")}
         </div>
 
         <p style="color:#3d3d42;font-size:12px;line-height:1.6;margin:0;">
@@ -79,9 +79,7 @@ export async function findUserByEmail(
     });
     if (error) throw error;
 
-    const user = data.users.find(
-      (u: User) => u.email?.toLowerCase() === normalized
-    );
+    const user = data.users.find((u: User) => u.email?.toLowerCase() === normalized);
     if (user) return user;
     if (data.users.length < perPage) return null;
     page += 1;
@@ -102,8 +100,4 @@ export function isAllowedRedirect(url: string, siteUrl: string): boolean {
   } catch {
     return false;
   }
-}
-
-export function buildOnboardRedirect(siteUrl: string, plan: string): string {
-  return `${siteUrl}/onboard?plan=${encodeURIComponent(plan.toLowerCase())}`;
 }
