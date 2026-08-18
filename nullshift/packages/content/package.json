@@ -10,7 +10,8 @@
     "./catalog": "./src/catalog.ts",
     "./savings": "./src/savings.ts",
     "./blueprint": "./src/blueprint.ts",
-    "./scalingPlan": "./src/scalingPlan.ts"
+    "./scalingPlan": "./src/scalingPlan.ts",
+    "./pricing": "./src/pricing.ts"
   },
   "devDependencies": {
     "typescript": "^5"

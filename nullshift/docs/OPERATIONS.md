@@ -27,12 +27,19 @@ and **billing events** automatically.
 
 ## Retainer tiers (single source of truth: `apps/web/lib/carePlans.ts`)
 
-| Plan id       | Label         | £/mo | Includes |
-|---------------|---------------|------|----------|
-| `hosting`     | Hosting       | 40   | Hosting, paid Supabase, backups, security patches, bug fixes |
-| `hosting_api` | Hosting + API | 80   | + Resend + OpenAI usage included |
-| `build_3`     | Build 3       | 120  | + 3 build items per month |
-| `build_10`    | Build 10      | 180  | + 10 build items per month |
+| Plan id       | Label      | £/mo | Public "from" | Includes |
+|---------------|------------|------|---------------|----------|
+| `hosting`     | Core       | 40   | £30           | Hosting, paid Supabase, backups, security patches, bug fixes |
+| `hosting_api` | Pro        | 80   | £60           | + Resend + OpenAI usage included |
+| `build_3`     | Max        | 120  | £120          | + 3 build items per month |
+| `build_10`    | Enterprise | 180  | POA           | + 10 build items per month, SLA, quarterly roadmap |
+
+Plan **ids** are DB values (`subscriptions_plan_check`) and keep their original
+names; the **labels** are what staff and clients see. `£/mo` is the standard
+contracted amount we bill. The **public "from"** column is what
+`/pricing` advertises (`packages/content/src/pricing.ts`) — a floor, so a quote
+is always at or above it. Enterprise is quoted per client; 180 is its default
+starting point.
 
 **Build allowance:** plans with build items get a monthly meter. Consumption is recorded in
 `build_credit_events` (negative delta) automatically when a `build_item` issue ships; top-ups

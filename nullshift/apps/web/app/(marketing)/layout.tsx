@@ -5,7 +5,7 @@ import { IntroSplash } from "@/components/IntroSplash";
 import { PageTransition } from "@/components/PageTransition";
 import { ScrollProgress } from "@/components/ScrollProgress";
 import { LEGAL_ENTITY } from "@nullshift/content/legalEntity";
-import { CARE_PLANS } from "@/lib/carePlans";
+import { PRICING_TIERS } from "@nullshift/content/pricing";
 
 const SITE_URL = "https://nullshift.co.uk";
 const TITLE = "Nullshift — Websites, Systems & Automations";
@@ -114,14 +114,23 @@ const jsonLd = {
                 "Custom-built business systems — booking, payments, client portals, automation — owned outright by the client: code, data and accounts.",
             },
           },
-          ...CARE_PLANS.map((p) => ({
+          // The public ladder, "from" prices and all. Enterprise carries no
+          // price node at all — it is quoted per client, and inventing a
+          // figure here would contradict the page.
+          ...PRICING_TIERS.map((t) => ({
             "@type": "Offer",
-            price: String(p.mrr),
-            priceCurrency: "GBP",
+            ...(t.priceFrom !== null && {
+              priceSpecification: {
+                "@type": "UnitPriceSpecification",
+                minPrice: String(t.priceFrom),
+                priceCurrency: "GBP",
+                unitCode: "MON",
+              },
+            }),
             itemOffered: {
               "@type": "Service",
-              name: `${p.label} care plan`,
-              description: p.blurb,
+              name: `${t.name} plan`,
+              description: t.summary,
             },
           })),
         ],

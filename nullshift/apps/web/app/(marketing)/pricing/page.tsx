@@ -6,6 +6,8 @@ import { Parallax } from "@/components/Parallax";
 import { NeuralField } from "@/components/NeuralField";
 import { T } from "@nullshift/ui/tokens";
 import { PROOF_PILLARS, BRAND_LINE, CLINIC } from "@nullshift/content/marketing";
+import { PRICING_FAQS, PRICING_FROM } from "@nullshift/content/pricing";
+import { PricingTiers } from "@/components/marketing/PricingTiers";
 import { ClipReveal } from "@/components/anim/ClipReveal";
 import {
   Reveal,
@@ -25,14 +27,13 @@ import {
 export const metadata: Metadata = {
   title: "Pricing — Nullshift",
   description:
-    "One build to own your website and systems outright, then a simple care plan that covers your running costs and keeps everything online. No per-seat fees, cancel anytime.",
+    "One build to own your website and systems outright, then a monthly plan from \u00a330 that covers your running costs and keeps everything online. Four tiers \u2014 Core, Pro, Max and Enterprise \u2014 no per-seat fees, cancel any month.",
   alternates: { canonical: "/pricing" },
 };
 
-const faqs: FAQItem[] = CLINIC.faqs.map((f: { q: string; a: string }) => ({
-  q: f.q,
-  a: f.a,
-}));
+const faqs: FAQItem[] = [...PRICING_FAQS, ...CLINIC.faqs].map(
+  (f: { q: string; a: string }) => ({ q: f.q, a: f.a })
+);
 
 const BUILD = [
   "Custom website, designed & built from scratch",
@@ -43,13 +44,13 @@ const BUILD = [
   "Live in 2–4 weeks",
 ];
 
-const CARE = [
-  "Hosting, storage & email (we cover Vercel, Resend & co.)",
-  "Domain & SSL kept live",
-  "Security patches & updates",
-  "Daily backups & monitoring",
-  "Our liability cover",
-  "Cancel anytime — keep everything",
+const OWNERSHIP = [
+  "Every account in your name — hosting, domain, database, email, AI",
+  "The full source code, in your repository",
+  "Your data, exportable any time, in a standard format",
+  "A signed DPA before anything goes live",
+  "Payments through your own Stripe — no 2\u20133% skim",
+  "Cancel the monthly plan and keep the whole system",
 ];
 
 function PriceCard({
@@ -207,9 +208,10 @@ export default function PricingPage() {
 
             <Reveal delay={0.1}>
               <Lead className="mt-7" style={{ maxWidth: "58ch", fontSize: "1.125rem" }}>
-                One build to own your website and systems outright. Then a simple care
-                plan covers the running costs — hosting, storage, email and servers — and
-                keeps everything online. No per-seat fees, and you can cancel anytime.
+                One build to own your website and systems outright — quoted to your scope,
+                never off a price list. Then a monthly plan from {PRICING_FROM} covers the
+                running costs and keeps everything online. Four tiers, no per-seat fees,
+                cancel any month.
               </Lead>
             </Reveal>
 
@@ -259,6 +261,29 @@ export default function PricingPage() {
           </Container>
         </section>
 
+        {/* ═══════════════ MONTHLY TIERS (dark) ═══════════════ */}
+        <Section theme="dark" pad="lg" topBorder>
+          <Reveal>
+            <SectionHeader
+              index="01"
+              label="Monthly plans"
+              title={
+                <>
+                  Four tiers.{" "}
+                  <span style={{ color: "var(--k-muted)" }}>Pick your pace.</span>
+                </>
+              }
+              lead="Every tier is month-to-month — move up, drop down or cancel any month and keep everything. The figures below are where each tier starts; what you pay is set by the size of the system we run for you. Open “what this adds” on any card to see exactly what it gets you over the tier below."
+              maxLead="68ch"
+            />
+          </Reveal>
+          <Reveal delay={0.08}>
+            <div className="mt-12">
+              <PricingTiers />
+            </div>
+          </Reveal>
+        </Section>
+
         {/* ═══════════════ PROOF PILLARS (cream) ═══════════════ */}
         <Section theme="cream" pad="none" topBorder bare>
           <div
@@ -295,14 +320,15 @@ export default function PricingPage() {
           </div>
         </Section>
 
-        {/* ═══════════════ BUILD + CARE (dark) ═══════════════ */}
+        {/* ═══════════════ THE BUILD (dark) ═══════════════ */}
         <Section theme="dark" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
-              index="01"
-              label="Two things, no surprises"
-              title="Build it. Own it. We run it."
-              lead="One build to own everything outright, then a care plan that covers what it costs to keep it online. No tiers to decode, no per-seat fees — every project is scoped and quoted to you."
+              index="02"
+              label="Before the monthly"
+              title="Build it once. Own it outright."
+              lead="The monthly tiers start once your system is live. The build that gets it there is a one-off, quoted to your scope — a booking form and a multi-site operations platform are not the same job, so neither are their prices. You get a fixed figure up front, and it only moves if you ask for something new."
+              maxLead="66ch"
             />
           </Reveal>
           <Reveal delay={0.08}>
@@ -315,24 +341,24 @@ export default function PricingPage() {
             >
               <PriceCard
                 name="One-off build"
-                price="You own it"
-                unit="outright"
-                desc="We design, build and migrate your website and systems. When it's done, it's yours — for good. Priced to your scope, never off-the-shelf."
+                price="Quoted"
+                unit="to your scope"
+                desc="We design, build and migrate your website and systems. Fixed price agreed before we start, live in 2–4 weeks, and when it's done it's yours — for good."
                 items={BUILD}
                 featured
               />
               <PriceCard
-                name="Care plan"
-                price="Monthly"
-                unit="we run it"
-                desc="Not rent on something you own — us covering your running costs and liability, and keeping everything online, secure and up to date."
-                items={CARE}
+                name="On handover"
+                price="All yours"
+                unit="from day one"
+                desc="Ownership isn't a promise we make at the end — it's how the build is set up from the first commit. Nothing sits in our name that you'd have to buy back."
+                items={OWNERSHIP}
               />
             </div>
           </Reveal>
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
             <Link href="/start" className="kb kb-primary k-dark">
-              Get a tailored plan
+              Get a fixed quote
               <span className="k-arrow" aria-hidden>
                 →
               </span>
@@ -355,7 +381,7 @@ export default function PricingPage() {
         <Section theme="cream" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
-              index="02"
+              index="03"
               label="Straight answers"
               title={
                 <>
@@ -375,7 +401,7 @@ export default function PricingPage() {
         <div style={{ borderTop: "1px solid var(--k-border)" }}>
           <CTABand
             theme="dark"
-            index="03"
+            index="04"
             label="Not sure yet"
             title={
               <>

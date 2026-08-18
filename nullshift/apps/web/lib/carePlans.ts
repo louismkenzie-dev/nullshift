@@ -5,7 +5,14 @@
  * (showing + accepting it) and the Stripe subscription flow.
  *
  * Plan ids are stored in subscriptions.plan (text, checked by
- * subscriptions_plan_check in migration 0014).
+ * subscriptions_plan_check in migration 0014) — they are DB values, so they
+ * keep their original names even though the tiers are now sold as Core / Pro /
+ * Max / Enterprise.
+ *
+ * `mrr` here is the STANDARD CONTRACTED amount we charge and bill on. The
+ * public ladder in packages/content/src/pricing.ts advertises the "from"
+ * floor for each tier, which is at or below these figures; Enterprise is
+ * quoted per client, and `mrr` is its default starting point.
  */
 export type CarePlan = {
   id: string;
@@ -24,7 +31,7 @@ export type RetainerPlan = CarePlan;
 export const CARE_PLANS: CarePlan[] = [
   {
     id: "hosting",
-    label: "Hosting",
+    label: "Core",
     mrr: 40,
     buildAllowance: 0,
     blurb: "Keeps your system online, secure and backed up.",
@@ -38,12 +45,12 @@ export const CARE_PLANS: CarePlan[] = [
   },
   {
     id: "hosting_api",
-    label: "Hosting + API",
+    label: "Pro",
     mrr: 80,
     buildAllowance: 0,
-    blurb: "Everything in Hosting, with your system's API usage included.",
+    blurb: "Everything in Core, with your system's API usage included.",
     features: [
-      "Everything in Hosting",
+      "Everything in Core",
       "Transactional email sending (Resend) included",
       "AI usage (OpenAI) included",
       "Third-party API monitoring & key management",
@@ -52,27 +59,29 @@ export const CARE_PLANS: CarePlan[] = [
   },
   {
     id: "build_3",
-    label: "Build 3",
+    label: "Max",
     mrr: 120,
     buildAllowance: 3,
-    blurb: "Hosting + API, plus 3 build items delivered every month.",
+    blurb: "Everything in Pro, plus 3 design and build revisions every month.",
     features: [
-      "Everything in Hosting + API",
-      "3 build items included each month",
+      "Everything in Pro",
+      "3 design and build revisions each month",
       "Priority turnaround on requests",
       "Improvements proposed from your system's real usage",
     ],
   },
   {
     id: "build_10",
-    label: "Build 10",
+    label: "Enterprise",
     mrr: 180,
     buildAllowance: 10,
-    blurb: "Our top tier — 10 build items a month keeps your system evolving.",
+    blurb:
+      "Our top tier — dedicated capacity, contracted response times and a roadmap we run to.",
     features: [
-      "Everything in Hosting + API",
-      "10 build items included each month",
-      "Priority turnaround on requests",
+      "Everything in Max",
+      "10 design and build revisions each month",
+      "Dedicated build capacity, scoped to you",
+      "Contracted response times (SLA)",
       "Direct line for urgent issues",
       "Quarterly roadmap review",
     ],

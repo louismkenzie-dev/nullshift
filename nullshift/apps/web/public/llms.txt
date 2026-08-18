@@ -33,11 +33,22 @@ that share the name.
   flows — built to be owned outright by the client.
 - Agentic AI automation: end-to-end AI workflows that carry out real
   operational tasks, not just chat.
-- Ongoing care plans (monthly, cancel any time):
-  - Hosting Care — £40/month: managed hosting and infrastructure.
-  - Hosting + API Care — £80/month: adds managed API usage (email, AI).
-  - Build 3 — £120/month: includes 3 build items per month.
-  - Build 10 — £180/month: includes 10 build items per month.
+- Ongoing plans (monthly, cancel any time). Prices are "from" figures;
+  the quoted amount depends on the size of the system:
+  - Core — from £30/month: managed hosting, dedicated database, daily
+    backups, security patches and fixes. For start-ups and micro
+    businesses that need their site or system live and looked after.
+  - Pro — from £60/month: everything in Core, plus the system's API
+    usage — transactional email and AI — included, with a monthly usage
+    report. For growing businesses whose system does real work.
+  - Max — from £120/month: everything in Pro, plus design and build
+    revisions every month, priority turnaround and the original
+    developers on standby. For systems that keep changing.
+  - Enterprise — price on application: everything in Max, plus dedicated
+    build capacity, contracted response times (SLA), a direct line and a
+    quarterly roadmap review. For multi-site, regulated or high-volume
+    operations.
+- The one-off build is quoted to scope, not sold from a price list.
 - Security & compliance: UK/EU hosting, encryption in transit and at
   rest, audit trails, and a signed Data Processing Agreement before any
   system goes live. Nullshift is ICO-registered (ZC214743).
