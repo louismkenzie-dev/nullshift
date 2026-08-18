@@ -47,8 +47,28 @@ Set `NEXT_PUBLIC_SITE_URL=https://nullshift.co.uk`. Secrets are pasted by you
 **Server / secret:**
 `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_EMAILS`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`,
 `RESEND_AUDIENCE_ID`, `ENQUIRY_NOTIFY_EMAIL`, `ENQUIRY_FROM_EMAIL`,
-`FUNNEL_RESOURCE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-`STRIPE_CONNECT_CLIENT_ID`
+`FUNNEL_RESOURCE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+
+**AI (Agent Consultation on /plan, inbox ingest, issue triage, fix-batch dispatch):**
+`ANTHROPIC_API_KEY` — without it the funnel falls back to the templated plan and
+the ops AI features degrade to manual. Optional: `ANTHROPIC_WORKSPACE_SLUG`
+(Managed Agent links), `GITHUB_DISPATCH_TOKEN` (fix-batch → GitHub @claude issues).
+
+**GoCardless Direct Debit (care plans):**
+`GOCARDLESS_ACCESS_TOKEN`, `GOCARDLESS_WEBHOOK_SECRET`,
+`GOCARDLESS_ENVIRONMENT` (`live` or unset for sandbox)
+
+**Xero mirror sync (invoices):**
+`XERO_CLIENT_ID`, `XERO_CLIENT_SECRET` — optional tuning:
+`XERO_SALES_ACCOUNT_CODE`, `XERO_PAYMENT_ACCOUNT_CODE`, `XERO_TAX_TYPE`
+
+**Cron:**
+`CRON_SECRET` — gates `/api/cron/weekly-pulse` (the Friday client-pulse digest).
+Unset, the cron 403s forever with no visible signal — set it or the ritual
+silently stops.
+
+> `STRIPE_CONNECT_CLIENT_ID` (previously listed here) belongs to the dormant
+> Stripe Connect clinic scaffold — not needed until that feature ships.
 
 > **`ADMIN_EMAILS` gates `/admin`.** It must contain the email you log in with
 > (e.g. `louis@nullshift.co.uk`); without it the ops hub returns "NOT AUTHORISED".
