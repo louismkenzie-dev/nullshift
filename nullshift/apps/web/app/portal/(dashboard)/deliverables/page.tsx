@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@nullshift/db";
+import { getPortalClient } from "@/lib/clientPreview";
 import { signDeliverableUrl } from "@nullshift/db/documents";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader } from "@/components/app/AppKit";
@@ -23,7 +23,7 @@ type Doc = {
 type Project = { id: string; name: string };
 
 export default async function DeliverablesPage() {
-  const supabase = await createClient();
+  const { supabase } = await getPortalClient();
   const [{ data: docs }, { data: projects }] = await Promise.all([
     supabase
       .from("documents")

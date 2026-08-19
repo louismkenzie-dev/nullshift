@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
+import { isClientPreview } from "@/lib/clientPreview";
 import { logAudit } from "@nullshift/db/audit";
 import {
   cancelBillingRequest,
@@ -18,6 +19,9 @@ import { CARE_PLANS, carePlan } from "@/lib/carePlans";
  * choice for the admin to complete billing setup.
  */
 export async function choosePlan(formData: FormData): Promise<void> {
+  // Staff view-as-client preview is read-only — never record a choice or
+  // start a Direct Debit on the client's behalf.
+  if (await isClientPreview()) return;
   const choice = String(formData.get("plan") || "");
   const valid = choice === "none" || CARE_PLANS.some((p) => p.id === choice);
   if (!valid) return;

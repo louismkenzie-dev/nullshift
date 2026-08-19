@@ -35,6 +35,7 @@ import {
 import { ProposalDocsForm } from "@/components/admin/ProposalDocsForm";
 import { dpaReadyToSend } from "@/lib/dpa";
 import { PageHeader } from "@/components/app/AppKit";
+import { startClientPreview } from "@/lib/clientPreviewActions";
 import { Reveal } from "@/components/kyma";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
@@ -1545,6 +1546,15 @@ export default async function ClientHub({
           }
           actions={
             <>
+              <form action={startClientPreview}>
+                <input type="hidden" name="tenant_id" value={tenantId} />
+                <SubmitButton
+                  title="Open this client's portal exactly as they see it — read-only"
+                  style={btn("var(--k-surface)", "var(--k-accent)")}
+                >
+                  View portal as client →
+                </SubmitButton>
+              </form>
               {project && <Badge s={project.stage} />}
               {project && <Badge s={project.proposal_status} />}
               {project && (

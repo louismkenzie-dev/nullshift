@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@nullshift/db";
+import { getPortalClient } from "@/lib/clientPreview";
 import { T } from "@nullshift/ui/tokens";
 import { carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
 import {
@@ -74,7 +74,7 @@ export default async function PortalHome({
   searchParams: Promise<{ care?: string }>;
 }) {
   const { care } = await searchParams;
-  const supabase = await createClient();
+  const { supabase } = await getPortalClient();
   const [
     { data: tenants },
     { data: projects },

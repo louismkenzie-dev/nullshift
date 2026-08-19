@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@nullshift/db";
+import { getPortalClient } from "@/lib/clientPreview";
 import { T } from "@nullshift/ui/tokens";
 import { carePlan } from "@/lib/carePlans";
 import { CLIENT_STATUS_LABEL, OPEN_STATUSES, type IssueStatus } from "@/lib/ops/issues";
@@ -72,7 +72,7 @@ export default async function PortalProject({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const { supabase } = await getPortalClient();
 
   const { data: project } = await supabase
     .from("projects")

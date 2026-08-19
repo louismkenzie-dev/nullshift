@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
+import { getPortalClient, isClientPreview } from "@/lib/clientPreview";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 import { clientRef, invoiceRef } from "@nullshift/ui/format";
@@ -62,6 +63,9 @@ const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 
 async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   "use server";
+  // Staff view-as-client preview is read-only — a preview click must never
+  // sign the client's agreement.
+  if (await isClientPreview()) return { ok: false };
   const projectId = String(formData.get("project_id") || "");
   const signature = String(formData.get("signature") || "").trim();
   if (!projectId || !signature) return { ok: false };
@@ -230,6 +234,7 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
 
 async function declineProposal(formData: FormData) {
   "use server";
+  if (await isClientPreview()) return;
   const projectId = String(formData.get("project_id") || "");
   if (!projectId) return;
   const supabase = await createClient();
@@ -273,7 +278,7 @@ function Badge({ s }: { s: string }) {
 }
 
 export default async function PortalProposal() {
-  const supabase = await createClient();
+  const { supabase } = await getPortalClient();
   const [{ data: projects }, { data: items }, { data: invoices }, { data: invItems }] =
     await Promise.all([
       supabase

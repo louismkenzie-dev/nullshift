@@ -1,4 +1,4 @@
-import { createClient } from "@nullshift/db";
+import { getPortalClient } from "@/lib/clientPreview";
 import { T } from "@nullshift/ui/tokens";
 import { CARE_PLANS, carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
@@ -72,7 +72,7 @@ export default async function PortalPlanPage({
   searchParams: Promise<{ dd?: string }>;
 }) {
   const { dd } = await searchParams;
-  const supabase = await createClient();
+  const { supabase } = await getPortalClient();
   const [{ data: subs }, { data: credits }, { data: invoices }, { data: tenants }] =
     await Promise.all([
       supabase

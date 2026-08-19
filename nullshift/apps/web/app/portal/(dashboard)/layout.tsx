@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@nullshift/db";
+import { getPortalClient } from "@/lib/clientPreview";
+import { PreviewBanner } from "@/components/portal/PreviewBanner";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
 import { PageHeader, Panel } from "@/components/app/AppKit";
 import { PortalHeader } from "./PortalHeader";
@@ -18,10 +19,10 @@ export default async function PortalLayout({ children }: { children: React.React
     return <>{children}</>;
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Staff carrying the preview cookie get a tenant-scoped read-only client —
+  // the portal renders exactly as that client sees it. Everyone else gets the
+  // normal RLS client.
+  const { supabase, user, preview } = await getPortalClient();
 
   if (!user) {
     redirect("/portal/login");
@@ -30,7 +31,9 @@ export default async function PortalLayout({ children }: { children: React.React
   // A client who books a call only has a `leads` row — provision their workspace
   // (tenant + project + membership) on first landing so the DPA gate has a
   // project to attach to. Idempotent + a no-op for internal staff.
-  await ensureClientWorkspace({ userId: user.id, email: user.email ?? null });
+  if (!preview) {
+    await ensureClientWorkspace({ userId: user.id, email: user.email ?? null });
+  }
 
   // The client's primary project (RLS scopes to their own tenant). Before they
   // can use the portal they MUST declare their Data Processing Agreement details
@@ -64,9 +67,13 @@ export default async function PortalLayout({ children }: { children: React.React
     project.proposal_status !== "declined" &&
     !dpaReadyToSend(project);
 
+  // Preview never gets trapped behind the client's own DPA gate — staff need
+  // to see every page. The banner says the gate is what the client hits first.
+  const showGate = needsDpa && !preview;
+
   return (
     <div
-      className="relative"
+      className={preview ? "relative ns-preview-inert" : "relative"}
       style={{
         minHeight: "100vh",
         background: "var(--k-bg)",
@@ -88,8 +95,18 @@ export default async function PortalLayout({ children }: { children: React.React
         className="k-vgrid fixed inset-0 pointer-events-none"
         style={{ zIndex: -1, opacity: 0.35 }}
       />
-      <PortalHeader email={user.email!} />
-      {needsDpa && project ? (
+      {preview && (
+        <PreviewBanner
+          preview={preview}
+          gateNote={
+            needsDpa
+              ? `On first login ${preview.contactName ?? "the client"} must complete the agreement-details (DPA) form before seeing anything below — you're seeing past that gate.`
+              : null
+          }
+        />
+      )}
+      <PortalHeader email={preview?.contactEmail ?? user.email!} />
+      {showGate && project ? (
         <main
           className="px-4 sm:px-6"
           style={{

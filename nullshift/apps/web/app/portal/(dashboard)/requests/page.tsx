@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
+import { getPortalClient, isClientPreview } from "@/lib/clientPreview";
 import { logAudit } from "@nullshift/db/audit";
 import { requireTenantMember } from "@nullshift/auth/guards";
 import { generateQuoteInvoice } from "@/lib/quoteInvoice";
@@ -72,6 +73,9 @@ async function submitRequest(
   formData: FormData
 ): Promise<{ ok: boolean; error?: string }> {
   "use server";
+  // Staff view-as-client preview is read-only.
+  if (await isClientPreview())
+    return { ok: false, error: "Preview is view-only — requests are disabled." };
   const kindRaw = String(formData.get("kind") || "");
   const kind = PORTAL_KINDS.find((k) => k.id === kindRaw)?.id as IssueKind | undefined;
   const title = String(formData.get("title") || "")
@@ -216,6 +220,8 @@ async function submitRequest(
  */
 async function decideQuote(formData: FormData) {
   "use server";
+  // Staff view-as-client preview is read-only — never decide a quote.
+  if (await isClientPreview()) return;
   const id = String(formData.get("id") || "");
   const decision = String(formData.get("decision") || "");
   if (!id || (decision !== "accept" && decision !== "decline")) return;
@@ -301,7 +307,7 @@ async function decideQuote(formData: FormData) {
 }
 
 export default async function PortalRequestsPage() {
-  const supabase = await createClient();
+  const { supabase } = await getPortalClient();
   const { data: issues } = await supabase
     .from("issues")
     .select(

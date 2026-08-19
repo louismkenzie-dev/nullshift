@@ -1,4 +1,4 @@
-import { createClient } from "@nullshift/db";
+import { getPortalClient } from "@/lib/clientPreview";
 import { T } from "@nullshift/ui/tokens";
 import { invoiceRef } from "@nullshift/ui/format";
 import { carePlan } from "@/lib/carePlans";
@@ -65,7 +65,7 @@ const SUB_LABEL: Record<string, string> = {
 };
 
 export default async function PortalPaymentsPage() {
-  const supabase = await createClient();
+  const { supabase } = await getPortalClient();
   const [{ data: invoices }, { data: subs }] = await Promise.all([
     supabase
       .from("invoices")

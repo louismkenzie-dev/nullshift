@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient, createServiceClient } from "@nullshift/db";
+import { isClientPreview } from "@/lib/clientPreview";
 
 /**
  * The client declares their Data Processing Agreement details: business type,
@@ -11,6 +12,8 @@ import { createClient, createServiceClient } from "@nullshift/db";
  * dpa_client_submitted_at so the admin sees the client has provided their info.
  */
 export async function setEntityType(formData: FormData) {
+  // Staff view-as-client preview is read-only — never write the client's DPA.
+  if (await isClientPreview()) return;
   const projectId = String(formData.get("project_id") || "");
   const entityType = String(formData.get("entity_type") || "");
   // Throw on failure paths (rather than silently returning) so the client form
