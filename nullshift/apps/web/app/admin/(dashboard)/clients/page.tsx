@@ -1,9 +1,57 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@nullshift/db";
+import { logAudit } from "@nullshift/db/audit";
+import { requireStaff } from "@nullshift/auth/guards";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader } from "@/components/app/AppKit";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { Reveal } from "@/components/kyma";
 import { OPEN_STATUSES, isUnreviewedDraft, type IssueStatus } from "@/lib/ops/issues";
+
+/**
+ * Manual client creation — completely fresh, no funnel, no template. For the
+ * client who was won on a call or a handshake: business name + contact makes
+ * the tenant and its discovery-stage build project, then lands you on the hub
+ * to record the rest (owners, modules, offline DPA, invoice, portal access).
+ */
+async function createClientTenant(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const name = String(formData.get("business_name") || "").trim();
+  const contactName = String(formData.get("contact_name") || "").trim() || null;
+  const contactEmail =
+    String(formData.get("contact_email") || "")
+      .trim()
+      .toLowerCase() || null;
+  if (!name) return;
+  const supabase = await createClient();
+  const { data: tenant, error } = await supabase
+    .from("tenants")
+    .insert({
+      name,
+      type: "client",
+      status: "active",
+      contact_name: contactName,
+      contact_email: contactEmail,
+    })
+    .select("id")
+    .single();
+  if (error || !tenant) {
+    console.error("createClientTenant:", error?.message);
+    return;
+  }
+  await supabase
+    .from("projects")
+    .insert({ tenant_id: tenant.id, name: `${name} — build`, stage: "discovery" });
+  await logAudit({
+    action: "tenant.created_manual",
+    target: `tenant:${tenant.id}`,
+    tenantId: tenant.id,
+    metadata: { via: "clients_page" },
+  });
+  redirect(`/admin/clients/${tenant.id}`);
+}
 
 /**
  * Clients — the list of every client, backed by `tenants` (type='client'). One row
@@ -151,6 +199,92 @@ export default async function ClientsPage({
           </span>
         }
       />
+
+      {/* New client — fresh, no funnel, no template */}
+      <Reveal>
+        <section
+          style={{
+            background: "var(--k-surface)",
+            border: "1px solid var(--k-border)",
+            padding: "16px 20px",
+            marginTop: 20,
+          }}
+        >
+          <div style={{ ...mono, color: "var(--k-faint)", marginBottom: 10 }}>
+            // NEW CLIENT — fresh start, no funnel, no template
+          </div>
+          <form action={createClientTenant} className="flex items-center gap-2 flex-wrap">
+            <input
+              name="business_name"
+              required
+              placeholder="Business name"
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.85rem",
+                height: 34,
+                padding: "0 10px",
+                width: 220,
+                background: "var(--k-bg)",
+                color: "var(--k-fg)",
+                border: "1px solid var(--k-border)",
+                borderRadius: 0,
+                outline: "none",
+              }}
+            />
+            <input
+              name="contact_name"
+              placeholder="Contact name"
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.85rem",
+                height: 34,
+                padding: "0 10px",
+                width: 170,
+                background: "var(--k-bg)",
+                color: "var(--k-fg)",
+                border: "1px solid var(--k-border)",
+                borderRadius: 0,
+                outline: "none",
+              }}
+            />
+            <input
+              name="contact_email"
+              type="email"
+              placeholder="Contact email (portal login keys off this)"
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.85rem",
+                height: 34,
+                padding: "0 10px",
+                width: 300,
+                background: "var(--k-bg)",
+                color: "var(--k-fg)",
+                border: "1px solid var(--k-border)",
+                borderRadius: 0,
+                outline: "none",
+              }}
+            />
+            <SubmitButton
+              style={{
+                fontFamily: T.mono,
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                height: 34,
+                paddingInline: 14,
+                background: "var(--k-accent)",
+                color: "var(--k-on-accent)",
+                border: "none",
+                borderRadius: 0,
+                cursor: "pointer",
+              }}
+            >
+              + Create client
+            </SubmitButton>
+          </form>
+        </section>
+      </Reveal>
 
       {tenants.length === 0 ? (
         <p
