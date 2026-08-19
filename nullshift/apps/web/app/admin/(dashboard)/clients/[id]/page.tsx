@@ -69,6 +69,8 @@ type Invoice = {
   id: string;
   amount: number;
   status: string;
+  /** 'build_milestone' | 'one_off' | … — the build panel keys off this. */
+  type: string | null;
   hosted_invoice_url: string | null;
   project_item_count: number | null;
   created_at: string;
@@ -520,6 +522,39 @@ async function generateInvoice(formData: FormData) {
       target: `project:${projectId}`,
       tenantId,
       metadata: { total: res.total },
+    });
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/**
+ * Raise the build invoice for a project that was agreed OUTSIDE the portal.
+ *
+ * The normal path drafts this invoice the moment the client signs, and the
+ * button above is gated on that signature — money follows the signature. But a
+ * project agreed offline (or one delivered before the portal existed) never
+ * gets a portal acceptance, so its balance had no way of ever being billed.
+ * This is the documented escape hatch: same invoice, same Stripe + email +
+ * Xero path, but it records WHY it was raised without a signature.
+ */
+async function generateInvoiceOffline(formData: FormData) {
+  "use server";
+  const staff = await requireStaff();
+  if (!staff.ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  const reason = String(formData.get("reason") || "").trim();
+  // A reason is the whole point of the override — without one this is just the
+  // gate removed, so refuse rather than silently billing.
+  if (!tenantId || !projectId || !reason) return;
+
+  const service = createServiceClient();
+  const res = await generateProjectInvoice(service, { tenantId, projectId });
+  if (res.ok)
+    await logAudit({
+      action: "invoice.generated_offline_agreement",
+      target: `project:${projectId}`,
+      tenantId,
+      metadata: { total: res.total, reason, staff: staff.email },
     });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
@@ -1384,7 +1419,7 @@ export default async function ClientHub({
       ? supabase
           .from("invoices")
           .select(
-            "id, amount, status, hosted_invoice_url, project_item_count, created_at, paid_at, xero_invoice_id"
+            "id, amount, status, type, hosted_invoice_url, project_item_count, created_at, paid_at, xero_invoice_id"
           )
           .eq("project_id", projectId)
           .order("created_at", { ascending: false })
@@ -1485,11 +1520,24 @@ export default async function ClientHub({
   const modulesComplete = itemList.length > 0;
   const planSelected = !!project?.proposed_plan;
   const isAccepted = project?.proposal_status === "accepted";
-  // The active build invoice (ignore voided) + its lifecycle state, so the
+  // The active BUILD invoice (ignore voided) + its lifecycle state, so the
   // button/card reads: generate → sent, awaiting payment → paid.
-  const primaryInvoice = invoiceList.find((i) => i.status !== "void") ?? null;
+  //
+  // Type-scoped deliberately: a paid deposit or an accepted-quote invoice is
+  // also a live invoice on this project, and matching "any invoice" made the
+  // panel report the build as settled while the balance had never been billed
+  // at all — an unbilled balance hidden behind a green "Paid ✓".
+  const primaryInvoice =
+    invoiceList.find((i) => i.type === "build_milestone" && i.status !== "void") ?? null;
   const invoicePaid = primaryInvoice?.status === "paid";
   const invoiceSent = !!primaryInvoice && !invoicePaid;
+  // Everything else already billed on this project (deposits, accepted quotes).
+  const otherInvoices = invoiceList.filter(
+    (i) => i.id !== primaryInvoice?.id && i.status !== "void"
+  );
+  const depositPaid = otherInvoices
+    .filter((i) => i.status === "paid")
+    .reduce((sum, i) => sum + Number(i.amount), 0);
   // The client provides their DPA details in the portal; the docs can't be sent
   // until they have (drives the form gate + a header badge).
   const clientDpaReady = !!project && dpaReadyToSend(project);
@@ -2440,13 +2488,70 @@ export default async function ClientHub({
                 }}
               >
                 {invoicePaid
-                  ? "The client has paid this invoice — it's recorded against their account below."
+                  ? "The client has paid the build invoice — it's recorded against their account below."
                   : invoiceSent
                     ? "Sent to the client — they've been emailed a Stripe payment link. This flips to Paid automatically once the payment goes through."
                     : isAccepted
                       ? "Compiles the build modules above into an itemised Stripe invoice and emails the client a payment link."
-                      : "Available once the client has signed the proposal. An invoice is drafted automatically on signing."}
+                      : "The build invoice is drafted automatically when the client signs in the portal. Agreed offline instead? Raise it below."}
               </p>
+
+              {/* Money already taken on this project that ISN'T the build
+                  invoice — a deposit or an accepted quote. Stated plainly so a
+                  paid deposit is never read as "the build is settled". */}
+              {depositPaid > 0 && !invoicePaid && (
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.8rem",
+                    color: "var(--k-muted)",
+                    margin: "0 0 12px",
+                  }}
+                >
+                  {gbp(depositPaid)} already paid on this project (deposit / quotes).
+                  The build modules above net {gbp(total)}
+                  {total > 0 ? " — that is what the invoice will ask for." : "."}
+                </p>
+              )}
+
+              {/* Agreed outside the portal — the only way to bill a project
+                  that will never get a portal signature. Reason is required
+                  and recorded. */}
+              {!isAccepted && !invoicePaid && !invoiceSent && modulesComplete && (
+                <form
+                  action={generateInvoiceOffline}
+                  className="flex flex-wrap items-center gap-2"
+                  style={{
+                    margin: "0 0 12px",
+                    padding: "12px 14px",
+                    border: "1px dashed var(--k-border)",
+                  }}
+                >
+                  {htid}
+                  {hpid}
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 10,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--k-muted)",
+                      width: "100%",
+                    }}
+                  >
+                    Agreed offline — raise the invoice without a portal signature
+                  </span>
+                  <input
+                    name="reason"
+                    required
+                    placeholder="Why (recorded) — e.g. signed by email before the portal existed"
+                    style={{ ...inp, height: 30, flex: "1 1 260px" }}
+                  />
+                  <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                    Raise &amp; send invoice
+                  </SubmitButton>
+                </form>
+              )}
               {invoiceList.length > 0 && (
                 <div
                   className="flex items-center justify-between flex-wrap gap-2"
