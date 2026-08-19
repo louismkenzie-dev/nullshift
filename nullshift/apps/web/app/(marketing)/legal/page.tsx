@@ -12,6 +12,7 @@ import {
   CookiesDoc,
   TermsDoc,
   DpaDoc,
+  ServiceDoc,
 } from "./LegalDocs";
 
 const DOC_COMPONENTS: Record<DocKey, () => React.ReactElement> = {
@@ -19,6 +20,7 @@ const DOC_COMPONENTS: Record<DocKey, () => React.ReactElement> = {
   cookies: CookiesDoc,
   terms: TermsDoc,
   dpa: DpaDoc,
+  service: ServiceDoc,
 };
 
 export default function LegalPage() {

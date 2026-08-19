@@ -7,6 +7,12 @@ import { clientRef, invoiceRef } from "@nullshift/ui/format";
 import { carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
+import { ServiceTermsTemplate } from "@/components/legal/ServiceTermsTemplate";
+import { Contract } from "@/components/portal/Contract";
+import {
+  SERVICE_TERMS_ACKNOWLEDGEMENTS,
+  SERVICE_TERMS_VERSION,
+} from "@nullshift/content/serviceTerms";
 import { BankTransferDetails } from "@/components/portal/BankTransferDetails";
 import { ProposalDocument } from "@/components/portal/ProposalDocument";
 import { SignProposal } from "@/components/portal/SignProposal";
@@ -159,6 +165,25 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       },
     });
 
+    // The same signature accepts the Service & Support Terms — what the plan
+    // covers, what "support" means, that new capability is quoted separately,
+    // and that without a plan the client runs hosting and maintenance
+    // themselves. Recorded as its own compliance record with the version, so
+    // "which terms did they actually agree to?" has an answer years later.
+    await service.from("compliance_records").insert({
+      tenant_id: project.tenant_id,
+      kind: "service_terms_signed",
+      detail: {
+        signed_by: user.id,
+        signed_name: signature,
+        via: "portal",
+        version: SERVICE_TERMS_VERSION,
+        project_id: projectId,
+        care_plan: project.proposed_plan ?? null,
+        acknowledged: SERVICE_TERMS_ACKNOWLEDGEMENTS,
+      },
+    });
+
     await logAudit({
       action: "proposal.accepted",
       target: `project:${projectId}`,
@@ -168,6 +193,12 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       action: "dpa.signed",
       target: `tenant:${project.tenant_id}`,
       tenantId: project.tenant_id,
+    });
+    await logAudit({
+      action: "service_terms.signed",
+      target: `tenant:${project.tenant_id}`,
+      tenantId: project.tenant_id,
+      metadata: { version: SERVICE_TERMS_VERSION },
     });
 
     // The care plan is NOT auto-activated here — the admin sends the client a
@@ -349,6 +380,23 @@ export default async function PortalProposal() {
               present: !!project.dpa_special_category,
               detail: project.dpa_special_category_detail,
             }}
+            accepted={
+              project.accepted_at
+                ? { name: project.accepted_name ?? "", at: project.accepted_at }
+                : null
+            }
+          />
+        );
+        const termsDoc = (
+          <ServiceTermsTemplate
+            mode="proposal"
+            clientName={project.tenants?.name ?? null}
+            effectiveDate={
+              project.accepted_at
+                ? new Date(project.accepted_at).toLocaleDateString("en-GB")
+                : null
+            }
+            carePlanLabel={carePlan(project.proposed_plan)?.label ?? null}
             accepted={
               project.accepted_at
                 ? { name: project.accepted_name ?? "", at: project.accepted_at }
@@ -556,38 +604,39 @@ export default async function PortalProposal() {
                     />
                   </div>
 
-                  {/* Full DPA — limited companies only. Collapsible while pending,
-                    rendered in full once signed so it reads + saves to PDF. */}
-                  {limited &&
-                    (accepted ? (
-                      <div id={`dpa-document-${project.id}`} style={{ marginTop: 12 }}>
-                        {dpaDoc}
-                      </div>
-                    ) : (
-                      <details
-                        className="k-kard"
-                        style={{
-                          marginTop: 12,
-                          background: "var(--k-surface)",
-                          padding: "14px 18px",
-                        }}
-                      >
-                        <summary
-                          style={{
-                            cursor: "pointer",
-                            fontFamily: T.sans,
-                            fontWeight: 700,
-                            fontSize: "0.95rem",
-                            textTransform: "uppercase",
-                            letterSpacing: "-0.01em",
-                            color: "var(--k-fg)",
-                          }}
-                        >
-                          View the full Data Processing Agreement
-                        </summary>
-                        <div style={{ marginTop: 16 }}>{dpaDoc}</div>
-                      </details>
-                    ))}
+                  {/* Everything the signature binds, readable BEFORE signing.
+                    Collapsible while pending; rendered in full once signed so
+                    each reads cleanly and saves to PDF.
+
+                    The DPA is no longer limited-company-only: a sole trader is
+                    still a controller whose customers' data we process, and
+                    gating the document on an entity type the client hasn't
+                    declared yet meant nobody could read it before signing. */}
+                  <Contract
+                    id={`terms-document-${project.id}`}
+                    title="Service & Support Terms"
+                    summary="View the Service & Support Terms"
+                    blurb="What your monthly fee covers, what counts as support, how new work is quoted, and what happens if you don't take a plan."
+                    accepted={accepted}
+                    href={`/api/documents/terms/${project.id}`}
+                  >
+                    {termsDoc}
+                  </Contract>
+
+                  <Contract
+                    id={`dpa-document-${project.id}`}
+                    title="Data Processing Agreement"
+                    summary="View the full Data Processing Agreement"
+                    blurb={
+                      limited
+                        ? "How we handle personal data on your behalf, as your processor under UK GDPR."
+                        : "How we handle personal data on your behalf. The full agreement applies where you're a limited company; as a sole trader the same data-protection commitments apply to us as your processor."
+                    }
+                    accepted={accepted}
+                    href={`/api/documents/dpa/${project.id}`}
+                  >
+                    {dpaDoc}
+                  </Contract>
 
                   {/* Sign / decline — business details are captured above. */}
                   {project.proposal_status === "sent" && dpaReadyToSend(project) && (
@@ -595,7 +644,6 @@ export default async function PortalProposal() {
                       acceptAction={acceptProposal}
                       declineAction={declineProposal}
                       projectId={project.id}
-                      limited={limited}
                       carePlanLabel={carePlan(project.proposed_plan)?.label ?? null}
                     />
                   )}

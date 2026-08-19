@@ -6,12 +6,14 @@ import { clientRef } from "@nullshift/ui/format";
 import { carePlan } from "@/lib/carePlans";
 import { ProposalPdf } from "@/lib/pdf/ProposalPdf";
 import { DpaPdf } from "@/lib/pdf/DpaPdf";
+import { ServiceTermsPdf } from "@/lib/pdf/ServiceTermsPdf";
 
 /**
  * Server-rendered document downloads for the client portal:
  *
  *   GET /api/documents/proposal/{projectId} → formal A4 proposal PDF
- *   GET /api/documents/dpa/{projectId}      → formal A4 DPA PDF (limited cos only)
+ *   GET /api/documents/dpa/{projectId}      → formal A4 DPA PDF
+ *   GET /api/documents/terms/{projectId}    → formal A4 Service & Support Terms PDF
  *
  * Auth is the caller's own cookie session; the project is fetched with the
  * RLS-scoped client, so a client can only ever download their own tenant's
@@ -58,7 +60,7 @@ export async function GET(
   { params }: { params: Promise<{ kind: string; projectId: string }> }
 ) {
   const { kind, projectId } = await params;
-  if (kind !== "proposal" && kind !== "dpa")
+  if (kind !== "proposal" && kind !== "dpa" && kind !== "terms")
     return new Response("Not found", { status: 404 });
 
   const supabase = await createClient();
@@ -82,10 +84,6 @@ export async function GET(
   // actually sent (or the client has accepted) are downloadable, matching what
   // the portal UI shows.
   if (project.proposal_status !== "sent" && project.proposal_status !== "accepted")
-    return new Response("Not found", { status: 404 });
-
-  // The full DPA only exists for limited companies.
-  if (kind === "dpa" && project.client_entity_type !== "limited")
     return new Response("Not found", { status: 404 });
 
   const ref = clientRef(project.tenant_id);
@@ -145,6 +143,19 @@ export async function GET(
       paymentTerms: snap ? (snap.payment_terms ?? null) : project.payment_terms,
       accepted,
       dpaRequired,
+    }) as React.ReactElement<DocumentProps>;
+  } else if (kind === "terms") {
+    doc = createElement(ServiceTermsPdf, {
+      reference: ref,
+      date,
+      clientName: project.tenants?.name ?? null,
+      effectiveDate: project.accepted_at
+        ? new Date(project.accepted_at).toLocaleDateString("en-GB")
+        : null,
+      carePlanLabel:
+        carePlan(project.accepted_snapshot?.proposed_plan ?? project.proposed_plan)
+          ?.label ?? null,
+      accepted,
     }) as React.ReactElement<DocumentProps>;
   } else {
     doc = createElement(DpaPdf, {

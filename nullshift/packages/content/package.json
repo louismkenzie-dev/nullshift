@@ -11,7 +11,8 @@
     "./savings": "./src/savings.ts",
     "./blueprint": "./src/blueprint.ts",
     "./scalingPlan": "./src/scalingPlan.ts",
-    "./pricing": "./src/pricing.ts"
+    "./pricing": "./src/pricing.ts",
+    "./serviceTerms": "./src/serviceTerms.ts"
   },
   "devDependencies": {
     "typescript": "^5"
