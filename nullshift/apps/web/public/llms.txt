@@ -68,7 +68,8 @@ that share the name.
 
 - https://nullshift.co.uk/about — the company and founder
 - https://nullshift.co.uk/work — client work and case studies
-- https://nullshift.co.uk/pricing — build pricing and care plans
+- https://nullshift.co.uk/pricing — plan levels, scale pricing and the
+  support boundary
 - https://nullshift.co.uk/systems-lab — prototypes and templates
 - https://nullshift.co.uk/faq — detailed answers on ownership,
   liability, GDPR, pricing and process
@@ -82,5 +83,6 @@ that share the name.
 2. A fixed-price proposal signed in the client portal (with a DPA for
    limited companies).
 3. The build, with progress visible in the client portal.
-4. Optional monthly care plan for hosting, support and ongoing builds —
-   collected by Direct Debit, cancel any time.
+4. Optional monthly plan (Core, Pro, Max or Enterprise) covering the
+   platform, service level and technical partnership — collected by
+   Direct Debit, cancel any time. Feature work stays separately quoted.
