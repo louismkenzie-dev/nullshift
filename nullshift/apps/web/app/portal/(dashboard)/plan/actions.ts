@@ -11,6 +11,7 @@ import {
   startCareDirectDebit,
 } from "@nullshift/billing/gocardless";
 import { CARE_PLANS, carePlan } from "@/lib/carePlans";
+import { contractedMrr } from "@/lib/pricing/contracted";
 
 /**
  * Client-side care plan choice. "none" records an explicit no-plan decision
@@ -88,11 +89,13 @@ export async function choosePlan(formData: FormData): Promise<void> {
     /\/$/,
     ""
   );
+  // The client's contracted rate, not the catalogue base price.
+  const { mrr: chargeMrr } = await contractedMrr(tenantId, plan.id);
   const dd = await startCareDirectDebit({
     tenantId,
     plan: plan.id,
-    amountPence: Math.round(plan.mrr * 100),
-    description: `Nullshift ${plan.label} care plan`,
+    amountPence: Math.round(chargeMrr * 100),
+    description: `Nullshift ${plan.label} plan`,
     email: user.email ?? "",
     name: tenant?.name ?? tenant?.contact_name ?? null,
     origin,
@@ -126,7 +129,7 @@ export async function choosePlan(formData: FormData): Promise<void> {
   await service.from("subscriptions").insert({
     tenant_id: tenantId,
     plan: plan.id,
-    mrr: plan.mrr,
+    mrr: chargeMrr,
     status: "incomplete",
     provider: "gocardless",
     gc_billing_request_id: dd.billingRequestId,

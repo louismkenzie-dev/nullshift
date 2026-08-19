@@ -36,6 +36,7 @@ import { ProposalDocsForm } from "@/components/admin/ProposalDocsForm";
 import { dpaReadyToSend } from "@/lib/dpa";
 import { PageHeader } from "@/components/app/AppKit";
 import { startClientPreview } from "@/lib/clientPreviewActions";
+import { contractedMrr } from "@/lib/pricing/contracted";
 import { Reveal } from "@/components/kyma";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
@@ -772,11 +773,14 @@ async function sendDirectDebitSetup(formData: FormData) {
     /\/$/,
     ""
   );
+  // Bill the client's contracted rate (scale multiplier + margin floor), not
+  // the catalogue's base "from" price.
+  const { mrr: chargeMrr } = await contractedMrr(tenantId, meta.id);
   const dd = await startCareDirectDebit({
     tenantId,
     plan: meta.id,
-    amountPence: Math.round(meta.mrr * 100),
-    description: `Nullshift ${meta.label} care plan`,
+    amountPence: Math.round(chargeMrr * 100),
+    description: `Nullshift ${meta.label} plan`,
     email: tenant.contact_email,
     name: tenant.name ?? tenant.contact_name ?? null,
     origin,
@@ -803,7 +807,7 @@ async function sendDirectDebitSetup(formData: FormData) {
   await service.from("subscriptions").insert({
     tenant_id: tenantId,
     plan: meta.id,
-    mrr: meta.mrr,
+    mrr: chargeMrr,
     status: "incomplete",
     provider: "gocardless",
     gc_billing_request_id: dd.billingRequestId,
@@ -811,7 +815,7 @@ async function sendDirectDebitSetup(formData: FormData) {
   const mail = buildDirectDebitEmail({
     name: tenant.contact_name ?? tenant.name ?? "",
     planLabel: meta.label,
-    mrr: meta.mrr,
+    mrr: chargeMrr,
     url: dd.url,
   });
   await sendEmail({
@@ -1555,6 +1559,13 @@ export default async function ClientHub({
                   View portal as client →
                 </SubmitButton>
               </form>
+              <Link
+                href={`/admin/clients/${tenantId}/pricing`}
+                title="Score this client's scale band and set their recurring rate"
+                style={{ ...btn("var(--k-surface)", "var(--k-fg)"), textDecoration: "none" }}
+              >
+                Scale &amp; pricing →
+              </Link>
               {project && <Badge s={project.stage} />}
               {project && <Badge s={project.proposal_status} />}
               {project && (

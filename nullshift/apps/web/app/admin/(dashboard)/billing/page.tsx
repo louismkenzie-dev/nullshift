@@ -10,6 +10,7 @@ import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
+import { contractedMrr } from "@/lib/pricing/contracted";
 import {
   CARE_PLANS,
   CARE_PLAN_MRR,
@@ -148,7 +149,7 @@ async function cancelSubscription(formData: FormData) {
 
 /**
  * Record a retainer without Stripe — for clients who pay by standing order.
- * MRR comes from the plan table so the number can never drift from pricing.
+ * MRR resolves through the pricing engine so the number can never drift.
  */
 async function recordManualSubscription(formData: FormData) {
   "use server";
@@ -157,10 +158,13 @@ async function recordManualSubscription(formData: FormData) {
   const plan = String(formData.get("plan") || "");
   if (!tenantId || !(plan in CARE_PLAN_MRR)) return;
   const supabase = await createClient();
+  // The contracted rate for this tenant (scale multiplier + margin floor),
+  // falling back to the catalogue base when no assessment exists yet.
+  const { mrr } = await contractedMrr(tenantId, plan);
   const { error } = await supabase.from("subscriptions").insert({
     tenant_id: tenantId,
     plan,
-    mrr: CARE_PLAN_MRR[plan],
+    mrr,
     status: "active",
     started_at: new Date().toISOString(),
   });
@@ -169,7 +173,7 @@ async function recordManualSubscription(formData: FormData) {
       action: "subscription.recorded_manually",
       target: `tenant:${tenantId}`,
       tenantId,
-      metadata: { plan, mrr: CARE_PLAN_MRR[plan] },
+      metadata: { plan, mrr },
     });
   revalidatePath("/admin/billing");
 }

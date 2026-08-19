@@ -4,6 +4,7 @@ import {
 } from "@nullshift/billing/stripe";
 import { createServiceClient } from "@nullshift/db";
 import { carePlan } from "./carePlans";
+import { contractedMrr } from "./pricing/contracted";
 import { sendEmail } from "./sendEmail";
 import { subscriptionSignupEmail } from "./clientEmails";
 
@@ -91,12 +92,15 @@ export async function sendCareSubscriptionSignup(
       .is("stripe_customer_id", null);
   }
 
+  // Charge the client's contracted rate — base price × scale multiplier,
+  // floored by margin on vendor cost — never the catalogue "from" price.
+  const { mrr: chargeMrr } = await contractedMrr(opts.tenantId, plan.id);
   const checkout = await createSubscriptionCheckoutUrl({
     customerId,
     tenantId: opts.tenantId,
     planId: plan.id,
     planLabel: plan.label,
-    amountPence: Math.round(plan.mrr * 100),
+    amountPence: Math.round(chargeMrr * 100),
     successUrl: `${opts.siteUrl}/portal?care=active`,
     cancelUrl: `${opts.siteUrl}/portal`,
   });

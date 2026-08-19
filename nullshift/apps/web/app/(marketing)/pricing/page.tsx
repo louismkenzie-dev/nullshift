@@ -8,6 +8,7 @@ import { T } from "@nullshift/ui/tokens";
 import { PROOF_PILLARS, BRAND_LINE, CLINIC } from "@nullshift/content/marketing";
 import { PRICING_FAQS, PRICING_FROM } from "@nullshift/content/pricing";
 import { PricingTiers } from "@/components/marketing/PricingTiers";
+import { SupportBoundary } from "@/components/marketing/SupportBoundary";
 import { ClipReveal } from "@/components/anim/ClipReveal";
 import {
   Reveal,
@@ -209,8 +210,9 @@ export default function PricingPage() {
             <Reveal delay={0.1}>
               <Lead className="mt-7" style={{ maxWidth: "58ch", fontSize: "1.125rem" }}>
                 One build to own your website and systems outright — quoted to your scope,
-                never off a price list. Then a monthly plan from {PRICING_FROM} covers the
-                running costs and keeps everything online. Four tiers, no per-seat fees,
+                never off a price list. Then a monthly plan from {PRICING_FROM} keeps it
+                running: your plan sets the service your platform needs, and your rate
+                scales with the size and importance of the system. No per-seat fees,
                 cancel any month.
               </Lead>
             </Reveal>
@@ -273,7 +275,7 @@ export default function PricingPage() {
                   <span style={{ color: "var(--k-muted)" }}>Pick your pace.</span>
                 </>
               }
-              lead="Every tier is month-to-month — move up, drop down or cancel any month and keep everything. The figures below are where each tier starts; what you pay is set by the size of the system we run for you. Open “what this adds” on any card to see exactly what it gets you over the tier below."
+              lead="Your plan is based on the service your platform needs. Your monthly rate then scales with the size, usage, complexity and commercial importance of the system — so the figures below are where each level starts, and we tell you your rate before you commit. Every level is month-to-month. Open “what this adds” on any card to see what it gets you over the level below."
               maxLead="68ch"
             />
           </Reveal>
@@ -377,11 +379,34 @@ export default function PricingPage() {
           </div>
         </Section>
 
-        {/* ═══════════════ FAQ (cream) ═══════════════ */}
+        {/* ═══════════════ SUPPORT BOUNDARY (cream) ═══════════════ */}
         <Section theme="cream" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
               index="03"
+              label="What the monthly covers"
+              title={
+                <>
+                  Support, or a{" "}
+                  <span style={{ color: "var(--k-muted)" }}>new build?</span>
+                </>
+              }
+              lead="The honest version, up front. Your plan covers keeping what you have working, and configuring it within its design. Anything that changes what the product can do is a separate fixed-price project — scoped and priced in writing before we start."
+              maxLead="66ch"
+            />
+          </Reveal>
+          <Reveal delay={0.08}>
+            <div className="mt-12">
+              <SupportBoundary />
+            </div>
+          </Reveal>
+        </Section>
+
+        {/* ═══════════════ FAQ (cream) ═══════════════ */}
+        <Section theme="cream" pad="lg" topBorder>
+          <Reveal>
+            <SectionHeader
+              index="04"
               label="Straight answers"
               title={
                 <>
@@ -401,7 +426,7 @@ export default function PricingPage() {
         <div style={{ borderTop: "1px solid var(--k-border)" }}>
           <CTABand
             theme="dark"
-            index="04"
+            index="05"
             label="Not sure yet"
             title={
               <>

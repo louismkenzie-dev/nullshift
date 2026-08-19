@@ -5,6 +5,7 @@ import {
 } from "@nullshift/billing/gocardless";
 import { createServiceClient } from "@nullshift/db";
 import { carePlan } from "@/lib/carePlans";
+import { contractedMrr } from "@/lib/pricing/contracted";
 
 /**
  * GoCardless webhook (point the dashboard endpoint at /api/gocardless/webhook).
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
           }
           let { data: pending } = await supabase
             .from("subscriptions")
-            .select("id, tenant_id, plan, gc_subscription_id")
+            .select("id, tenant_id, plan, mrr, gc_subscription_id")
             .eq("gc_billing_request_id", billingRequestId)
             .maybeSingle();
           // Orphan rescue: our pending row was superseded (a newer link was
@@ -86,12 +87,12 @@ export async function POST(req: Request) {
               .insert({
                 tenant_id: tenantId,
                 plan: planId,
-                mrr: carePlan(planId)!.mrr,
+                mrr: (await contractedMrr(tenantId, planId)).mrr,
                 status: "incomplete",
                 provider: "gocardless",
                 gc_billing_request_id: billingRequestId,
               })
-              .select("id, tenant_id, plan, gc_subscription_id")
+              .select("id, tenant_id, plan, mrr, gc_subscription_id")
               .single();
             if (recreateErr || !recreated) {
               console.error("gocardless orphan-rescue insert failed:", recreateErr);
@@ -147,11 +148,14 @@ export async function POST(req: Request) {
           // Idempotency-Key = billing request id: a webhook re-delivery after
           // a crash replays the SAME GoCardless subscription instead of
           // creating a second one against the mandate.
+          // The pending row carries the client's contracted rate (scale
+          // multiplier + margin floor); the catalogue base is only a fallback.
+          const chargeMrr = Number(pending.mrr ?? 0) || plan.mrr;
           const created = await createCareSubscription({
             mandateId,
             plan: plan.id,
-            amountPence: plan.mrr * 100,
-            description: `Nullshift ${plan.label} care plan`,
+            amountPence: Math.round(chargeMrr * 100),
+            description: `Nullshift ${plan.label} plan`,
             idempotencyKey: billingRequestId,
           });
           if (!created) {
@@ -163,7 +167,7 @@ export async function POST(req: Request) {
             .update({
               status: "active",
               gc_subscription_id: created.subscriptionId,
-              mrr: plan.mrr,
+              mrr: chargeMrr,
               started_at: new Date().toISOString(),
             })
             .eq("id", pending.id);

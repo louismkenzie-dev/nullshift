@@ -6,6 +6,7 @@ import { T } from "@nullshift/ui/tokens";
 import {
   PRICING_TIERS,
   PRICING_CONSTANTS,
+  PRICING_SCALE_NOTE,
   type PricingTier,
 } from "@nullshift/content/pricing";
 
@@ -173,6 +174,18 @@ function TierCard({
       >
         {tier.cadence}
       </span>
+      <span
+        className="mt-4"
+        style={{
+          fontFamily: T.sans,
+          fontWeight: 700,
+          fontSize: "1rem",
+          letterSpacing: "-0.01em",
+          color: "var(--k-fg)",
+        }}
+      >
+        {tier.tagline}
+      </span>
 
       <span
         className="mt-6"
@@ -198,18 +211,54 @@ function TierCard({
           lineHeight: 1.55,
           color: "var(--k-muted)",
           margin: "10px 0 0",
+          // Four lines reserved so the response-target row and the feature
+          // lists sit level across all four cards at every breakpoint.
+          minHeight: "6.5em",
         }}
       >
         {tier.who}
       </p>
+
+      {/* ── Response target — the concrete promise on every tier ── */}
+      <div
+        className="flex items-baseline justify-between gap-3"
+        style={{
+          margin: "24px 0 0",
+          padding: "10px 0 0",
+          borderTop: "1px solid var(--k-border)",
+        }}
+      >
+        <span
+          style={{
+            fontFamily: T.mono,
+            fontSize: "0.62rem",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: "var(--k-faint)",
+          }}
+        >
+          Response target
+        </span>
+        <span
+          style={{
+            fontFamily: T.mono,
+            fontSize: "0.66rem",
+            letterSpacing: "0.04em",
+            color: "var(--k-accent)",
+            textAlign: "right",
+          }}
+        >
+          {tier.responseTarget}
+        </span>
+      </div>
 
       {/* ── What's in it ── */}
       <ul
         className="mt-7 flex flex-col gap-3"
         style={{
           listStyle: "none",
-          margin: "28px 0 0",
-          padding: "24px 0 0",
+          margin: "20px 0 0",
+          padding: "20px 0 0",
           borderTop: "1px solid var(--k-border)",
         }}
       >
@@ -330,9 +379,22 @@ export function PricingTiers() {
         ))}
       </div>
 
+      <p
+        style={{
+          fontFamily: T.sans,
+          fontSize: "0.88rem",
+          lineHeight: 1.6,
+          color: "var(--k-muted)",
+          margin: "22px 0 0",
+          maxWidth: "78ch",
+        }}
+      >
+        {PRICING_SCALE_NOTE}
+      </p>
+
       <ul
         className="mt-7 flex flex-wrap gap-x-7 gap-y-2.5"
-        style={{ listStyle: "none", margin: "28px 0 0", padding: 0 }}
+        style={{ listStyle: "none", margin: "20px 0 0", padding: 0 }}
       >
         {PRICING_CONSTANTS.map((c) => (
           <li
