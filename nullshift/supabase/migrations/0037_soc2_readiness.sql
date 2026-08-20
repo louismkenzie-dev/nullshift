@@ -344,7 +344,9 @@ begin
   return 'RSK-' || yr || '-' || lpad(n::text, 4, '0');
 end;
 $$;
-revoke all on function public.next_soc2_risk_ref() from public;
+-- Supabase grants EXECUTE to anon/authenticated via default privileges at
+-- creation, so revoking from PUBLIC alone is not enough (advisor lint 0028):
+revoke execute on function public.next_soc2_risk_ref() from public, anon, authenticated;
 
 -- Accepting a risk requires a named acceptor: risk acceptance is
 -- a management decision, not a status change.
@@ -641,7 +643,9 @@ begin
   return 'EXC-' || yr || '-' || lpad(n::text, 4, '0');
 end;
 $$;
-revoke all on function public.next_soc2_exception_ref() from public;
+-- Supabase grants EXECUTE to anon/authenticated via default privileges at
+-- creation, so revoking from PUBLIC alone is not enough (advisor lint 0028):
+revoke execute on function public.next_soc2_exception_ref() from public, anon, authenticated;
 
 -- The exception lifecycle's two hard gates:
 --   · closed        → needs resolution (who/what) AND independent
@@ -749,7 +753,9 @@ begin
   return 'INC-' || yr || '-' || lpad(n::text, 4, '0');
 end;
 $$;
-revoke all on function public.next_soc2_incident_ref() from public;
+-- Supabase grants EXECUTE to anon/authenticated via default privileges at
+-- creation, so revoking from PUBLIC alone is not enough (advisor lint 0028):
+revoke execute on function public.next_soc2_incident_ref() from public, anon, authenticated;
 
 -- Append-only incident timeline (detection → assessment →
 -- containment → investigation → recovery → communication).
@@ -809,7 +815,9 @@ begin
   return 'ACR-' || yr || '-' || lpad(n::text, 4, '0');
 end;
 $$;
-revoke all on function public.next_soc2_access_review_ref() from public;
+-- Supabase grants EXECUTE to anon/authenticated via default privileges at
+-- creation, so revoking from PUBLIC alone is not enough (advisor lint 0028):
+revoke execute on function public.next_soc2_access_review_ref() from public, anon, authenticated;
 
 create table if not exists public.soc2_access_review_items (
   id                  uuid primary key default gen_random_uuid(),
@@ -998,7 +1006,9 @@ begin
   return 'CHG-' || yr || '-' || lpad(n::text, 4, '0');
 end;
 $$;
-revoke all on function public.next_soc2_change_ref() from public;
+-- Supabase grants EXECUTE to anon/authenticated via default privileges at
+-- creation, so revoking from PUBLIC alone is not enough (advisor lint 0028):
+revoke execute on function public.next_soc2_change_ref() from public, anon, authenticated;
 
 -- ── Management reviews ──────────────────────────────────────
 -- The periodic management look at readiness, risks, incidents and
