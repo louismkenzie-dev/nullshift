@@ -19,8 +19,10 @@ import {
   type PlanId,
   type PlatformRole,
   type RiskFlags,
+  type ScaleBand,
   type ScaleInput,
 } from "@/lib/pricing/nsi";
+import { RebandPanel } from "./RebandPanel";
 
 /**
  * Client scale assessment — the Nullshift Scale Index in one screen.
@@ -737,6 +739,14 @@ export default async function ClientPricingPage({
       </Panel>
 
       {/* ── History ──────────────────────────────────────────────── */}
+      {/* §7: the monthly shadow score and the notice workflow that stands
+          between it and a changed bill. */}
+      <RebandPanel
+        tenantId={tenantId}
+        contractedBand={(latest?.scale_band as ScaleBand | null) ?? null}
+        currentMrr={effective === null ? null : Number(effective)}
+      />
+
       {history.length > 1 && (
         <div style={{ marginTop: 20 }}>
           <Panel label="// HISTORY" title="Previous assessments">

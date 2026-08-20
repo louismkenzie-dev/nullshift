@@ -123,6 +123,7 @@ export async function GET(request: Request) {
   );
 
   const sent = await sendEmail({
+    purpose: "transactional",
     to: process.env.ENQUIRY_NOTIFY_EMAIL || "louis@nullshift.co.uk",
     subject: `Friday pulse — ${sections.length} client${sections.length === 1 ? "" : "s"} with activity`,
     html,

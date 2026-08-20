@@ -196,6 +196,7 @@ async function submitRequest(
       <div style="padding:0 0 26px">${button(adminUrl, "Open the issue queue")}</div>
     </td></tr>`;
     await sendEmail({
+      purpose: "transactional",
       to: process.env.ENQUIRY_NOTIFY_EMAIL || "louis@nullshift.co.uk",
       subject: `[${tenantName}] New ${KIND_LABEL[kind]}: ${title}`,
       html: wrap(inner, `${tenantName} — ${title}`),
@@ -289,6 +290,7 @@ async function decideQuote(formData: FormData) {
   // Tell the team — a quote decision is a commercial event, not a portal ping.
   try {
     await sendEmail({
+      purpose: "transactional",
       to: process.env.ENQUIRY_NOTIFY_EMAIL || "louis@nullshift.co.uk",
       subject: `Quote ${decision === "accept" ? "ACCEPTED" : "declined"}: ${issue.title} (£${issue.quoted_price})`,
       html: wrap(

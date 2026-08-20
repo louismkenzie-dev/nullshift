@@ -9,6 +9,7 @@ import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { Reveal } from "@/components/kyma";
 import { LIFECYCLE_META, type AgentRow, type DepartmentRow } from "@/lib/aiw";
+import { AiFirstInteractionNotice, AiIndicator } from "@/components/legal/AiNotice";
 
 /** Agent Studio (Phase 3) — "Add agent" creates an AGENT PROPOSAL, never a live
  *  worker. The admin describes the need in plain language; the internal
@@ -204,7 +205,11 @@ export default async function StudioPage() {
         title="Propose a new agent"
         lead="Describing a need creates a draft proposal — never a live worker. The pipeline is fixed: draft → review → test evidence → a human activates."
         className="mb-8"
+        actions={<AiIndicator actionCapable />}
       />
+
+      {/* §13: the Designer that drafts these proposals is itself an AI. */}
+      <AiFirstInteractionNotice surface="agent-studio" actionCapable />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
         <Reveal className="block">

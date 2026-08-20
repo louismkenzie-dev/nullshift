@@ -145,6 +145,7 @@ export async function sendCareSubscriptionSignup(
     url: checkout.url,
   });
   const sent = await sendEmail({
+    purpose: "transactional",
     to: email,
     subject: mail.subject,
     html: mail.html,

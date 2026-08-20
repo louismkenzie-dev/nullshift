@@ -387,6 +387,9 @@ async function markShipped(formData: FormData) {
           )
           .join("");
         await sendEmail({
+          // Their system changed. They need to know because we have a live
+          // agreement, not because we want their attention.
+          purpose: "service_relationship",
           to: email,
           subject: `Shipped: ${visible.length === 1 ? visible[0].title : `${visible.length} updates to your system`}`,
           html: wrap(

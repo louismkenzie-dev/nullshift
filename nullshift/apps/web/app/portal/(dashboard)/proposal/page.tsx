@@ -249,6 +249,7 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       adminUrl: `${siteUrl}/admin/clients/${project.tenant_id}`,
     });
     await sendEmail({
+      purpose: "transactional",
       to: notify,
       subject: mail.subject,
       html: mail.html,

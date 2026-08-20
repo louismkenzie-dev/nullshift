@@ -23,6 +23,11 @@ import {
   assertCookieInventory,
 } from "@nullshift/content/legal/cookies";
 import { contentHash } from "@nullshift/content/legal/versions";
+import {
+  EMAIL_PURPOSES,
+  PURPOSE_RULE,
+  emailPurpose,
+} from "@nullshift/content/legal/email";
 
 /**
  * The test cases the implementation specification names in §21, expressed
@@ -330,5 +335,40 @@ describe("cookie consent (§10)", () => {
     const problems = assertCookieInventory(["Google Analytics"]);
     expect(problems.length).toBe(1);
     expect(problems[0]).toMatch(/not in the cookie inventory/i);
+  });
+});
+
+/* ── §15 Email purpose ─────────────────────────────────────────── */
+
+describe("email purpose (§15)", () => {
+  it("offers exactly the three purposes the spec names", () => {
+    expect(EMAIL_PURPOSES.map((p) => p.id)).toEqual([
+      "transactional",
+      "service_relationship",
+      "marketing",
+    ]);
+  });
+
+  it("only requires a recorded permission for marketing", () => {
+    expect(emailPurpose("transactional").needsMarketingPermission).toBe(false);
+    expect(emailPurpose("service_relationship").needsMarketingPermission).toBe(false);
+    expect(emailPurpose("marketing").needsMarketingPermission).toBe(true);
+  });
+
+  it("only requires an unsubscribe route for marketing", () => {
+    // A password reset with an unsubscribe link is a support ticket waiting to
+    // happen; a newsletter without one is unlawful.
+    expect(emailPurpose("transactional").needsUnsubscribe).toBe(false);
+    expect(emailPurpose("marketing").needsUnsubscribe).toBe(true);
+  });
+
+  it("puts a price change notice on the service-relationship side, not marketing", () => {
+    const service = emailPurpose("service_relationship");
+    expect(service.examples.some((e) => /price change/i.test(e))).toBe(true);
+    expect(service.basis).toMatch(/live agreement/i);
+  });
+
+  it("says plainly that an account is not marketing consent", () => {
+    expect(PURPOSE_RULE).toMatch(/not consent to be marketed to/i);
   });
 });

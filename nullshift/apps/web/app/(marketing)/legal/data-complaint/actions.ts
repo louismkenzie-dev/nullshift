@@ -83,6 +83,9 @@ export async function submitDataComplaint(
   let acknowledged = false;
   try {
     await sendEmail({
+      // They asked us something and this is the reply — transactional, and
+      // never something a person could unsubscribe themselves out of.
+      purpose: "transactional",
       to: email,
       subject: `We've received your data-protection complaint (${caseRef})`,
       html: `<p>Hello ${name},</p><p>We've received your data-protection complaint and logged it as <strong>${caseRef}</strong>.</p><p>We'll investigate and respond without undue delay, and we'll tell you the outcome. If you need to add anything, reply to this email quoting your case reference.</p><p>You also have the right to complain to the UK Information Commissioner's Office at ico.org.uk.</p><p>${legalConfig.entity.legalName}</p>`,
@@ -100,6 +103,7 @@ export async function submitDataComplaint(
   // Tell the team — an unread complaint inbox is how a 30-day deadline is missed.
   try {
     await sendEmail({
+      purpose: "transactional",
       to: legalConfig.contact.privacy,
       subject: `[${caseRef}] Data-protection complaint received`,
       html: `<p><strong>${caseRef}</strong></p><p>From: ${name} &lt;${email}&gt; (${relationship || "not stated"})</p><p>${nature.replace(/</g, "&lt;")}</p><p>Acknowledgement due within 30 days of receipt.</p>`,

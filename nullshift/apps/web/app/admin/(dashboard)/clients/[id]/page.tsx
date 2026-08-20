@@ -289,7 +289,13 @@ async function saveDocsAndSend(formData: FormData) {
         name: tenant?.contact_name ?? "there",
         portalUrl: `${SITE_URL}/portal`,
       });
-      await sendEmail({ to, subject: mail.subject, html: mail.html, text: mail.text });
+      await sendEmail({
+        purpose: "service_relationship",
+        to,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+      });
     }
   }
   revalidatePath(`/admin/clients/${tenantId}`);
@@ -854,6 +860,7 @@ async function sendDirectDebitSetup(formData: FormData) {
     url: dd.url,
   });
   await sendEmail({
+    purpose: "transactional",
     to: tenant.contact_email,
     subject: mail.subject,
     html: mail.html,
@@ -992,7 +999,13 @@ async function createPortalAccount(formData: FormData) {
   const mail = credentials
     ? portalReadyEmail({ name, email, password, loginUrl })
     : portalAccessEmail({ name, loginUrl });
-  await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text });
+  await sendEmail({
+    purpose: "transactional",
+    to: email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+  });
 
   revalidatePath(`/admin/clients/${tenantId}`);
 }
@@ -1025,7 +1038,13 @@ async function sendPasswordReset(formData: FormData) {
     return;
   }
   const mail = passwordResetEmail({ name, resetUrl: link });
-  await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text });
+  await sendEmail({
+    purpose: "transactional",
+    to: email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+  });
   await logAudit({
     action: "portal.password_reset_sent",
     target: `tenant:${tenantId}`,

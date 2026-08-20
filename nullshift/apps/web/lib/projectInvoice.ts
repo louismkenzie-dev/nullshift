@@ -167,6 +167,7 @@ export async function generateProjectInvoice(
         reference: invoiceRef(tenantId, invoice.id),
       });
       await sendEmail({
+        purpose: "transactional",
         to: email,
         subject: mail.subject,
         html: mail.html,
