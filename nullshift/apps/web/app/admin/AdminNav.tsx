@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Calendar,
   KeyRound,
+  FileCheck,
   Bot,
   Network,
   Users,
@@ -72,6 +73,7 @@ const groups: NavGroup[] = [
     section: "Admin",
     items: [
       { label: "Compliance", href: "/admin/compliance", Icon: ShieldCheck },
+      { label: "SOC 2 Readiness", href: "/admin/soc2", Icon: FileCheck },
       { label: "Calendar", href: "/admin/calendar", Icon: Calendar },
       { label: "Security", href: "/admin/security", Icon: KeyRound },
     ],

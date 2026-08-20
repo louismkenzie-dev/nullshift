@@ -9,7 +9,7 @@ import {
   type EngineConfig,
   type SweepSnapshot,
 } from "./rules";
-import type { ExceptionCandidate, ExceptionSeverity } from "./types";
+import type { ExceptionSeverity } from "./types";
 import { FREQUENCY_DAYS, addDays, runFireKey, toDateOnly, withinLeadWindow } from "./schedule";
 import { logSoc2Event } from "./events";
 import { detectActiveIntegrations } from "./seed";
@@ -267,11 +267,8 @@ export async function runSweep(trigger: "cron" | "manual", actor: string): Promi
     candidates: 0,
   };
 
-  /* 1 · Materialise evidence requests (scheduled control runs). */
-  const runKeys = new Set(
-    snapshot.controlRuns.map((r) => r.id) // placeholder; real dedupe is the unique fire_key index
-  );
-  void runKeys;
+  /* 1 · Materialise evidence requests (scheduled control runs). Dedupe is the
+     unique fire_key index — the upsert below is a no-op on a repeat. */
   for (const control of snapshot.controls) {
     if (control.status !== "active" || control.applicability !== "applicable") continue;
     if (!control.next_due_at) continue;
