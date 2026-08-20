@@ -6,7 +6,9 @@ import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { SubmitButton } from "@/components/admin/SubmitButton";
-import { requireSoc2, WRITE_ROLES } from "@/lib/soc2/guard";
+import { requireSoc2, WRITE_ROLES, programmeOwnerEmails } from "@/lib/soc2/guard";
+import { routeAlert } from "@/lib/soc2/rules";
+import { sendExceptionAlert } from "@/lib/soc2/sweep";
 import { logSoc2Event } from "@/lib/soc2/events";
 import type { ExceptionSeverity, ExceptionStatus } from "@/lib/soc2/types";
 import { OPEN_EXCEPTION_STATUSES } from "@/lib/soc2/types";
@@ -90,6 +92,30 @@ async function declareException(formData: FormData) {
     summary: `${created.ref} declared (${severity}): ${title.slice(0, 120)}`,
     actor: guard.email,
   });
+  // Declared exceptions follow the same severity routing as detected ones:
+  // critical/high alert immediately, medium/low queue.
+  let controlOwner: string | null = null;
+  if (controlId) {
+    const { data: control } = await db
+      .from("soc2_controls")
+      .select("owner_email")
+      .eq("id", controlId)
+      .maybeSingle();
+    controlOwner = control?.owner_email ?? null;
+  }
+  const route = routeAlert(severity, {
+    programmeOwners: await programmeOwnerEmails(),
+    controlOwner,
+  });
+  if (route.notifyNow.length > 0) {
+    await sendExceptionAlert(route.notifyNow, {
+      ref: created.ref,
+      title,
+      severity,
+      recommendedAction: recommended || "Triage under Exceptions.",
+      incidentCandidate: route.incidentCandidate,
+    });
+  }
   revalidatePath("/admin/soc2/exceptions");
 }
 

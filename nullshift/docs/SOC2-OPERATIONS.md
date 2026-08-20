@@ -90,9 +90,20 @@ period runs, policy index + version history, evidence index, exception
 register (incl. remediation/verification trail), vendor register, risk
 register, incident summaries and management reviews. The whole pack passes
 secret redaction, is hashed (sha256), stored in the private bucket, indexed
-in `soc2_audit_packs`, and logged. Auditor access = a time-limited (≤90 days,
-DB-enforced expiry) read-only programme role, granted and revoked on the same
-page.
+in `soc2_audit_packs`, and logged.
+
+**Auditor access posture — be precise about what the role does.** The
+recommended way to give an external auditor material is the generated pack
+(shared out-of-band; every download is a logged, signed, expiring URL) — an
+external auditor gets **no database or app account at all**. The `auditor`
+programme role exists for the case where an adviser HAS been given a staff
+login: it is time-limited (≤90 days, DB-enforced expiry), excluded from every
+write path in the app layer, and barred from restricted-classification
+evidence files. What it cannot change: anyone with an internal-tenant staff
+membership is `is_internal_staff()` to the DATABASE, so RLS itself does not
+distinguish an auditor from staff. Granting a staff login to an outsider is
+therefore itself a risk decision — record it in the risk register, and prefer
+the pack.
 
 ## AI Workspace under the programme
 

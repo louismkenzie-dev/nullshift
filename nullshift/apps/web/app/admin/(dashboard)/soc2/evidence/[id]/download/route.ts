@@ -23,10 +23,18 @@ export async function GET(
   const db = createServiceClient();
   const { data: item } = await db
     .from("soc2_evidence_items")
-    .select("id, title, file_path")
+    .select("id, title, file_path, classification")
     .eq("id", id)
     .maybeSingle();
   if (!item?.file_path) return new Response("Not found", { status: 404 });
+
+  // Auditor access is read-only over SELECTED evidence: restricted-
+  // classification files stay inside the team — an auditor works from the
+  // pack's evidence index and asks, rather than pulling restricted files.
+  const auditorOnly = guard.roles.length > 0 && guard.roles.every((r) => r === "auditor");
+  if (auditorOnly && item.classification === "restricted") {
+    return new Response("Restricted evidence is not available to auditor access", { status: 403 });
+  }
 
   const { data: signed, error } = await db.storage
     .from("soc2-evidence")

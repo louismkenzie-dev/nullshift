@@ -223,10 +223,24 @@ async function reopenException(formData: FormData) {
   const db = createServiceClient();
   const { data: row } = await db.from("soc2_exceptions").select("id, ref, status").eq("id", id).maybeSingle();
   if (!row || (row.status !== "resolved_pending_verification" && row.status !== "closed")) return;
-  const { error } = await db
-    .from("soc2_exceptions")
-    .update({ status: "in_remediation", verified_by: null, verified_at: null, verification_note: null })
-    .eq("id", id);
+  // Reopening a CLOSED rule exception can collide with the partial unique
+  // fire_key index when the sweep has since raised a fresh open one for the
+  // same condition. Keep the key where possible (it carries the dedupe
+  // history); only on an actual collision does the reopened record become
+  // human-tracked with its key dropped.
+  const reopenFields = {
+    status: "in_remediation",
+    verified_by: null,
+    verified_at: null,
+    verification_note: null,
+  };
+  let { error } = await db.from("soc2_exceptions").update(reopenFields).eq("id", id);
+  if (error && error.code === "23505") {
+    ({ error } = await db
+      .from("soc2_exceptions")
+      .update({ ...reopenFields, fire_key: null })
+      .eq("id", id));
+  }
   if (error) redirect(`${pagePath(id)}?err=${encodeURIComponent(error.message)}`);
   await logSoc2Event({
     recordType: "exception",

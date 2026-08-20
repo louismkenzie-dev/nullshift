@@ -26,6 +26,7 @@ export type SweepSnapshot = {
     review_due_at: string | null;
     requires_acknowledgement: boolean;
     current_version: number;
+    effective_date: string | null;
   }[];
   /** Emails of current staff (for acknowledgement coverage). */
   staffEmails: string[];
@@ -244,7 +245,14 @@ const policyReviewOverdue: Rule = (s) =>
 /** A · Required staff acknowledgement missing after the grace window. */
 const policyAckOverdue: Rule = (s, cfg) =>
   s.policies
-    .filter((p) => p.status === "approved" && p.requires_acknowledgement)
+    .filter(
+      (p) =>
+        p.status === "approved" &&
+        p.requires_acknowledgement &&
+        // The grace window is real: staff get ackGraceDays from the version
+        // taking effect before an outstanding acknowledgement is a finding.
+        (!p.effective_date || isOverdue(addDays(p.effective_date, cfg.ackGraceDays), s.today))
+    )
     .flatMap((p) => {
       const acked = new Set((s.acknowledgements[p.key] ?? []).map((e) => e.toLowerCase()));
       const missing = s.staffEmails.filter((e) => !acked.has(e.toLowerCase()));

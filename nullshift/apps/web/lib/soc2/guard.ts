@@ -53,7 +53,12 @@ export async function requireSoc2(
   const bootstrap = (count ?? 0) === 0;
 
   if (bootstrap) {
-    // Setup mode: staff may look and may appoint the first Programme Owner.
+    // Setup mode: staff may LOOK (and Settings lets them appoint the first
+    // Programme Owner via its own bootstrap-aware action). Anything that asks
+    // for a specific role — approvals, seeding, sweeps, closures — stays
+    // locked until that owner exists: bootstrap widens visibility, never
+    // authority.
+    if (anyOf.length > 0) return { ok: false, reason: "no_role" };
     return { ok: true, email: staff.email, userId: staff.userId, roles: [], bootstrap: true };
   }
   if (roles.length === 0) return { ok: false, reason: "no_role" };

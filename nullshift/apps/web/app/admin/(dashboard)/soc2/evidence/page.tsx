@@ -98,7 +98,12 @@ const ALLOWED_MIME = [
   "application/json",
   "text/markdown",
 ];
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
+// Server actions carry an 8mb body limit (next.config.ts serverActions
+// bodySizeLimit); 7 MB leaves room for the multipart envelope + form fields.
+const MAX_FILE_BYTES = 7 * 1024 * 1024;
+
+/** File types whose CONTENT can be meaningfully scanned for secrets. */
+const TEXT_MIME = ["text/plain", "text/csv", "application/json", "text/markdown"];
 
 const PAGE_PATH = "/admin/soc2/evidence";
 
@@ -142,7 +147,14 @@ async function createEvidence(formData: FormData) {
   // Secret gate — before any upload or insert. Credential-shaped content is
   // refused outright: nothing is stored, and an exception is raised so the
   // near-miss itself gets reviewed. The exception NEVER echoes the content.
-  const textFields = [title, sourceRef, notes].join("\n");
+  // Text-typed FILE CONTENT goes through the same detector as the metadata —
+  // a .txt full of keys is the likeliest way a credential reaches evidence.
+  // Binary formats (pdf/png/jpeg) cannot be meaningfully scanned; the policy
+  // makes their contents the uploader's responsibility.
+  const fileBuf = file ? Buffer.from(await file.arrayBuffer()) : null;
+  const scannableFileText =
+    file && fileBuf && TEXT_MIME.includes(file.type) ? fileBuf.toString("utf8") : "";
+  const textFields = [title, sourceRef, notes, scannableFileText].join("\n");
   if (JSON.stringify(redactSecrets(textFields)) !== JSON.stringify(textFields)) {
     const { data: ref } = await db.rpc("next_soc2_exception_ref");
     if (ref) {
@@ -154,9 +166,9 @@ async function createEvidence(formData: FormData) {
           rule_key: "iam.secret_in_evidence",
           severity: "critical",
           status: "triage_required",
-          title: "Secret-shaped content blocked in evidence metadata",
+          title: "Secret-shaped content blocked in an evidence submission",
           detail:
-            "An evidence submission was refused because a field matched a secret pattern. The content was not stored.",
+            "An evidence submission was refused because a field or text-file body matched a secret pattern. The content was not stored.",
           severity_rationale: "Credential material must never enter evidence records.",
           source: "manual",
           owner_email: guard.email,
@@ -176,7 +188,9 @@ async function createEvidence(formData: FormData) {
         });
       }
     }
-    errRedirect("Blocked: a field matched a secret pattern. Store references, never credentials.");
+    errRedirect(
+      "Blocked: a field or text file matched a secret pattern. Store references, never credentials."
+    );
   }
 
   // Upload the file (if any) only after the gate has passed.
@@ -184,15 +198,14 @@ async function createEvidence(formData: FormData) {
   let fileBytes: number | null = null;
   let fileMime: string | null = null;
   let sha256: string | null = null;
-  if (file) {
-    const buf = Buffer.from(await file.arrayBuffer());
-    sha256 = createHash("sha256").update(buf).digest("hex");
+  if (file && fileBuf) {
+    sha256 = createHash("sha256").update(fileBuf).digest("hex");
     filePath = `evidence/${randomUUID()}-${file.name
       .replace(/[^a-zA-Z0-9._-]+/g, "_")
       .slice(0, 80)}`;
     const { error: uploadError } = await db.storage
       .from("soc2-evidence")
-      .upload(filePath, buf, { contentType: file.type });
+      .upload(filePath, fileBuf, { contentType: file.type });
     if (uploadError) errRedirect(uploadError.message);
     fileBytes = file.size;
     fileMime = file.type;
@@ -531,13 +544,12 @@ export default async function EvidencePage({
                       </StatusChip>
                     </span>
                     {e.file_path ? (
-                      <Link
+                      <a
                         href={`${PAGE_PATH}/${e.id}/download`}
-                        prefetch={false}
                         style={{ ...faintMono, color: "var(--k-accent)", textDecoration: "none" }}
                       >
                         ↓ {mimeShort(e.file_mime)} · {kb(e.file_bytes)} KB
-                      </Link>
+                      </a>
                     ) : (
                       <span style={faintMono}>—</span>
                     )}
@@ -623,7 +635,6 @@ export default async function EvidencePage({
           >
             <form
               action={createEvidence}
-              encType="multipart/form-data"
               className="flex flex-col gap-3"
             >
               <div className="flex flex-wrap gap-3">
@@ -711,7 +722,7 @@ export default async function EvidencePage({
                 <textarea name="notes" style={textarea} maxLength={2000} />
               </Field>
 
-              <Field label="File (pdf, png, jpeg, txt, csv, json, md · max 10 MB)">
+              <Field label="File (pdf, png, jpeg, txt, csv, json, md · max 7 MB)">
                 <input
                   type="file"
                   name="file"

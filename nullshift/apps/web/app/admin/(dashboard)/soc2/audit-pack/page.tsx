@@ -1,6 +1,5 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
@@ -668,9 +667,8 @@ export default async function AuditPackPage({
                         </span>
                         <span>
                           {p.file_path ? (
-                            <Link
+                            <a
                               href={`/admin/soc2/audit-pack/${p.id}/download`}
-                              prefetch={false}
                               style={{
                                 ...actionBtn,
                                 display: "inline-flex",
@@ -679,7 +677,7 @@ export default async function AuditPackPage({
                               }}
                             >
                               ↓ Download
-                            </Link>
+                            </a>
                           ) : (
                             <StatusChip tone="warning">no file</StatusChip>
                           )}

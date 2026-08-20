@@ -3,6 +3,7 @@ import { sendEmail } from "@/lib/sendEmail";
 import { esc, wrap } from "@/lib/emailLayout";
 import {
   DEFAULT_ENGINE_CONFIG,
+  EVER_DEDUPE_RULES,
   runRules,
   routeAlert,
   shouldRaise,
@@ -91,7 +92,9 @@ export async function buildSnapshot(): Promise<SweepSnapshot> {
     db.from("soc2_scopes").select("id, version, status"),
     db
       .from("soc2_policies")
-      .select("id, key, title, status, review_due_at, requires_acknowledgement, current_version"),
+      .select(
+        "id, key, title, status, review_due_at, requires_acknowledgement, current_version, effective_date"
+      ),
     db.from("memberships").select("user_id, role, tenants!inner(type)").eq("tenants.type", "internal"),
     db.from("soc2_policy_acknowledgements").select("policy_version_id, user_email"),
     db.from("soc2_policy_versions").select("id, policy_id, version"),
@@ -390,6 +393,11 @@ export async function runSweep(trigger: "cron" | "manual", actor: string): Promi
       .eq("id", row.id)
       .maybeSingle();
     if (!full || !full.rule_key || full.status === "resolved_pending_verification") continue;
+    // One-shot rules (EVER_DEDUPE) reference an immutable past fact — a denial,
+    // a self-approved change. Their candidates naturally age out of the
+    // detection window, which is NOT the condition clearing: they stay open
+    // until a human works them.
+    if (EVER_DEDUPE_RULES.has(full.rule_key)) continue;
     const { error } = await db
       .from("soc2_exceptions")
       .update({
@@ -474,9 +482,10 @@ async function ownersFromRoles(db: ReturnType<typeof createServiceClient>): Prom
 /**
  * Alert email. Deliberately terse: ref, title, severity, next step. No log
  * contents, no secrets, no client personal data — the record itself lives
- * behind the staff-gated area.
+ * behind the staff-gated area. Exported so human-declared critical/high
+ * exceptions alert immediately too, not only rule-raised ones.
  */
-async function sendExceptionAlert(
+export async function sendExceptionAlert(
   to: string[],
   e: {
     ref: string;

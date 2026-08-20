@@ -433,10 +433,10 @@ describe("governance rules", () => {
     expect(found[0].severity).toBe("high");
   });
 
-  it("flags approved policies past review and outstanding acknowledgements", () => {
+  it("flags approved policies past review and outstanding acknowledgements past grace", () => {
     const s = base();
     s.policies = [
-      { id: "p1", key: "information_security", title: "Information Security Policy", status: "approved", review_due_at: "2026-08-01", requires_acknowledgement: true, current_version: 2 },
+      { id: "p1", key: "information_security", title: "Information Security Policy", status: "approved", review_due_at: "2026-08-01", requires_acknowledgement: true, current_version: 2, effective_date: "2026-07-01" },
     ];
     s.staffEmails = ["a@nullshift.co.uk", "b@nullshift.co.uk"];
     s.acknowledgements = { information_security: ["a@nullshift.co.uk"] };
@@ -445,6 +445,17 @@ describe("governance rules", () => {
     const acks = findRule(s, "governance.policy_ack_overdue");
     expect(acks).toHaveLength(1);
     expect(acks[0].affected.users).toEqual(["b@nullshift.co.uk"]);
+  });
+
+  it("gives staff the acknowledgement grace window before flagging", () => {
+    const s = base();
+    s.policies = [
+      { id: "p1", key: "acceptable_use", title: "Acceptable Use Policy", status: "approved", review_due_at: null, requires_acknowledgement: true, current_version: 1, effective_date: "2026-08-15" },
+    ];
+    s.staffEmails = ["a@nullshift.co.uk"];
+    s.acknowledgements = {};
+    // Effective 5 days ago; default grace is 14 days — no finding yet.
+    expect(findRule(s, "governance.policy_ack_overdue")).toHaveLength(0);
   });
 
   it("flags unowned in-scope assets and unowned controls", () => {
