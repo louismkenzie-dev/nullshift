@@ -183,6 +183,24 @@ function LoginForm() {
         </form>
 
         <div className="mt-6 text-center flex flex-col gap-3">
+          {/* A client whose password doesn't work must have a way back in that
+              doesn't involve emailing us. Without this, sign-in fails and
+              sign-up correctly says the account already exists — a dead end. */}
+          <Link
+            href="/portal/forgot"
+            style={{
+              fontFamily: T.mono,
+              fontSize: "0.68rem",
+              fontWeight: 500,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--k-muted)",
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
+          >
+            Forgot your password?
+          </Link>
           <Link
             href="/portal/signup"
             style={{
