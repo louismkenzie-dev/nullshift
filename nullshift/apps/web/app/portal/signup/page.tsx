@@ -275,6 +275,25 @@ function SignupFlow() {
                 {error}
               </p>
             )}
+            {/* "Your account already exists" is true but a dead end on its
+                own — it is exactly the moment someone needs the reset link. */}
+            {error?.toLowerCase().includes("already exists") && (
+              <Link
+                href="/portal/forgot"
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.68rem",
+                  fontWeight: 500,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--k-accent)",
+                  textDecoration: "underline",
+                  textUnderlineOffset: 3,
+                }}
+              >
+                Reset your password instead →
+              </Link>
+            )}
 
             <button
               type="submit"
