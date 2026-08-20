@@ -181,6 +181,15 @@ describe("prohibited marketing claims (§16)", () => {
     const { CARE_PLANS } = await import("@/lib/carePlans");
     const { SERVICE_TERMS_ACKNOWLEDGEMENTS } =
       await import("@nullshift/content/serviceTerms");
+    // The §8/§9 copy is customer-facing too: staff read the classifier rule
+    // and clients read the Change Order labels, so a stray "unlimited" there
+    // would be exactly as much of a promise as one on the pricing page.
+    const { WORK_CLASSIFICATIONS, CLASSIFIER_RULE, CHANGE_ORDER_LABEL } =
+      await import("@nullshift/content/legal/work");
+    const { EMAIL_PURPOSES, PURPOSE_RULE } =
+      await import("@nullshift/content/legal/email");
+    const { SUPPORT_BOUNDARY, SUPPORT_EXAMPLES } =
+      await import("@nullshift/content/pricing");
 
     const corpus = JSON.stringify({
       PRICING_TIERS,
@@ -189,6 +198,13 @@ describe("prohibited marketing claims (§16)", () => {
       CARE_PLANS,
       SERVICE_TERMS_ACKNOWLEDGEMENTS,
       PRICING_LEGAL_COPY,
+      WORK_CLASSIFICATIONS,
+      CLASSIFIER_RULE,
+      CHANGE_ORDER_LABEL,
+      EMAIL_PURPOSES,
+      PURPOSE_RULE,
+      SUPPORT_BOUNDARY,
+      SUPPORT_EXAMPLES,
     }).toLowerCase();
 
     for (const claim of PROHIBITED_CLAIMS) {
