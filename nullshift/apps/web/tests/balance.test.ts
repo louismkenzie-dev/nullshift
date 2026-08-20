@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { projectBalance, tenantBalance } from "@/lib/billing/balance";
+import { advanceOnly } from "@/lib/projectStage";
 
 /**
  * The bug this guards against: the client portal reported "£0 outstanding —
@@ -141,5 +142,28 @@ describe("a client with more than one project", () => {
       [{ project_id: "gone", amount: "400.00", status: "open", type: "one_off" }]
     );
     expect(b.outstandingTotal).toBe(400);
+  });
+});
+
+describe("signing must not undo delivery", () => {
+  it("opens onboarding for a project still in discovery", () => {
+    expect(advanceOnly("discovery", "onboarding")).toBe("onboarding");
+  });
+
+  it("leaves a live, cared-for project exactly where it is", () => {
+    // The Dance Exclusive: delivered, on `care`, signing retrospectively.
+    // Writing "onboarding" here would say her live system is a fresh build.
+    expect(advanceOnly("care", "onboarding")).toBeNull();
+    expect(advanceOnly("live", "onboarding")).toBeNull();
+    expect(advanceOnly("build", "onboarding")).toBeNull();
+  });
+
+  it("does not re-open a stage the project is already on", () => {
+    expect(advanceOnly("onboarding", "onboarding")).toBeNull();
+  });
+
+  it("treats an unknown stage as no evidence of progress", () => {
+    expect(advanceOnly(null, "onboarding")).toBe("onboarding");
+    expect(advanceOnly("something_else", "onboarding")).toBe("onboarding");
   });
 });
