@@ -19,6 +19,7 @@ import { SignProposal } from "@/components/portal/SignProposal";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 import { setEntityType } from "../dpa-actions";
 import { dpaReadyToSend } from "@/lib/dpa";
+import { advanceOnly } from "@/lib/projectStage";
 import { sendEmail } from "@/lib/sendEmail";
 import { proposalSignedEmail } from "@/lib/clientEmails";
 import { PageHeader, StatusChip } from "@/components/app/AppKit";
@@ -87,7 +88,7 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "id, tenant_id, proposal_status, proposed_plan, overview, payment_terms, client_entity_type, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at"
+      "id, tenant_id, proposal_status, proposed_plan, stage, overview, payment_terms, client_entity_type, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at"
     )
     .eq("id", projectId)
     .maybeSingle();
@@ -103,6 +104,14 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   // report failure instead of celebrating a sign that didn't take.
   const now = new Date().toISOString();
   const service = createServiceClient();
+  // Signing opens onboarding — the deposit invoice goes out now, and the move
+  // to 'build' is gated on payment (or a recorded staff override) in the admin
+  // stage control. Work is not committed before money moves.
+  //
+  // Forward only. A client who was delivered before the portal existed can sign
+  // retrospectively while sitting on `care`, and writing `onboarding` over that
+  // would tell everyone their live system is a fresh build.
+  const nextStage = advanceOnly(project.stage, "onboarding");
   const { data: updated, error: acceptErr } = await service
     .from("projects")
     .update({
@@ -110,10 +119,7 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       accepted_name: signature,
       accepted_signature: signature,
       accepted_at: now,
-      // Signing opens onboarding — the deposit invoice goes out now, and the
-      // move to 'build' is gated on payment (or a recorded staff override) in
-      // the admin stage control. Work is not committed before money moves.
-      stage: "onboarding",
+      ...(nextStage ? { stage: nextStage } : {}),
     })
     .eq("id", projectId)
     .eq("proposal_status", "sent")
