@@ -24,6 +24,12 @@ import {
   type IssueSource,
   type IssueStatus,
 } from "@/lib/ops/issues";
+import {
+  CLASSIFIER_RULE,
+  WORK_CLASSIFICATIONS,
+  requiresChangeOrder,
+  type WorkClassification,
+} from "@nullshift/content/legal/work";
 
 /**
  * Issue bank — the single intake for every bug, change request and question
@@ -49,6 +55,9 @@ const STATUS_FILTERS: IssueStatus[] = [
 ];
 const ALL_STATUSES: IssueStatus[] = [...STATUS_FILTERS, "closed"];
 const KINDS = Object.keys(KIND_LABEL) as IssueKind[];
+const CLASSIFICATIONS = WORK_CLASSIFICATIONS.map((w) => w.id);
+/** Statuses that mean work has been approved for build (spec §8). */
+const BUILD_STATUSES: IssueStatus[] = ["queued", "batched", "in_progress"];
 const SEVERITIES = Object.keys(SEVERITY_META) as IssueSeverity[];
 const BILLINGS = Object.keys(BILLING_LABEL) as IssueBilling[];
 const SOURCES = Object.keys(SOURCE_LABEL) as IssueSource[];
@@ -131,9 +140,38 @@ async function triageIssue(formData: FormData) {
   const billing = (
     (BILLINGS as string[]).includes(billingRaw) ? billingRaw : cur.billing
   ) as IssueBilling;
-  const status = (
+  let status = (
     (ALL_STATUSES as string[]).includes(statusRaw) ? statusRaw : cur.status
   ) as IssueStatus;
+
+  // §8. Restore/configure an existing agreed capability = support. Create or
+  // materially change one = additional development, and that must not be built
+  // off a support entitlement.
+  const classRaw = String(formData.get("classification") || "");
+  const classification = ((CLASSIFICATIONS as string[]).includes(classRaw)
+    ? classRaw
+    : (cur.classification ?? null)) as WorkClassification | null;
+
+  let buildBlocked = false;
+  if (requiresChangeOrder(classification) && BUILD_STATUSES.includes(status)) {
+    // The database enforces this too. Checking here as well means the admin
+    // sees the ticket refuse to move, rather than a save that silently no-ops.
+    let accepted = false;
+    if (cur.change_order_id) {
+      const { data: co } = await supabase
+        .from("change_orders")
+        .select("status")
+        .eq("id", cur.change_order_id)
+        .maybeSingle();
+      accepted = ["accepted", "in_build", "delivered", "accepted_complete"].includes(
+        String(co?.status)
+      );
+    }
+    if (!accepted) {
+      buildBlocked = true;
+      status = cur.status;
+    }
+  }
 
   const buildItemsRaw = String(formData.get("build_items") || "").trim();
   const buildItems = buildItemsRaw ? Number(buildItemsRaw) : null;
@@ -152,6 +190,9 @@ async function triageIssue(formData: FormData) {
     severity,
     billing,
     status,
+    classification,
+    classification_note:
+      String(formData.get("classification_note") || "").trim() || null,
     build_items: buildItems,
     quoted_price: quotedRaw ? Number(quotedRaw) : null,
     due_at: dueAt,
@@ -164,7 +205,19 @@ async function triageIssue(formData: FormData) {
   if (status === "fixed" || status === "shipped" || status === "closed") {
     update.resolved_at = cur.resolved_at ?? now;
   }
+  if (classification && classification !== cur.classification) {
+    update.classified_at = now;
+    update.classified_by = (await supabase.auth.getUser()).data.user?.id ?? null;
+  }
   await supabase.from("issues").update(update).eq("id", id);
+
+  if (buildBlocked)
+    await logAudit({
+      action: "issue.build_blocked_no_change_order",
+      target: `issue:${id}`,
+      tenantId: cur.tenant_id,
+      metadata: { classification, attempted: statusRaw },
+    });
 
   // A shipped build_item consumes a build credit — exactly once per issue.
   // Deliberately NOT gated on the transition into "shipped": billing is often
@@ -194,7 +247,7 @@ async function triageIssue(formData: FormData) {
     action: "issue.triaged",
     target: `issue:${id}`,
     tenantId: cur.tenant_id,
-    metadata: { kind, severity, billing, status },
+    metadata: { kind, severity, billing, status, classification },
   });
   revalidatePath("/admin/issues");
 }
@@ -206,6 +259,38 @@ async function queueIssue(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   if (!id) return;
   const supabase = await createClient();
+
+  // §8 again: queueing IS approving for build, so the same gate applies here
+  // as in triage. The database trigger would reject it anyway; refusing here
+  // keeps the failure legible instead of a silent no-op.
+  const { data: cur } = await supabase
+    .from("issues")
+    .select("classification, change_order_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (requiresChangeOrder(cur?.classification as WorkClassification | null)) {
+    const { data: co } = cur?.change_order_id
+      ? await supabase
+          .from("change_orders")
+          .select("status")
+          .eq("id", cur.change_order_id)
+          .maybeSingle()
+      : { data: null };
+    const accepted = ["accepted", "in_build", "delivered", "accepted_complete"].includes(
+      String(co?.status)
+    );
+    if (!accepted) {
+      await logAudit({
+        action: "issue.build_blocked_no_change_order",
+        target: `issue:${id}`,
+        tenantId,
+        metadata: { classification: cur?.classification, attempted: "queued" },
+      });
+      revalidatePath("/admin/issues");
+      return;
+    }
+  }
+
   await supabase.from("issues").update({ status: "queued" }).eq("id", id);
   await logAudit({ action: "issue.queued", target: `issue:${id}`, tenantId });
   revalidatePath("/admin/issues");
@@ -633,6 +718,13 @@ export default async function IssuesPage({
                       {BILLING_LABEL[issue.billing]}
                     </StatusChip>
                   </span>
+                  {/* §8: the ticket that cannot be scheduled yet, said out
+                      loud on the row rather than discovered on save. */}
+                  {requiresChangeOrder(issue.classification) && !issue.change_order_id && (
+                    <span>
+                      <StatusChip tone="warning">Needs Change Order</StatusChip>
+                    </span>
+                  )}
                   <span>
                     <StatusChip tone={STATUS_TONE[issue.status]}>
                       {issue.status.replace(/_/g, " ")}
@@ -719,6 +811,30 @@ export default async function IssuesPage({
                           </option>
                         ))}
                       </select>
+                    </Field>
+                    <Field label={CLASSIFIER_RULE}>
+                      <select
+                        name="classification"
+                        defaultValue={issue.classification ?? ""}
+                        className="max-md:w-full"
+                        style={inp}
+                      >
+                        <option value="">Unclassified</option>
+                        {WORK_CLASSIFICATIONS.map((w) => (
+                          <option key={w.id} value={w.id}>
+                            {w.label}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Why this classification">
+                      <input
+                        name="classification_note"
+                        defaultValue={issue.classification_note ?? ""}
+                        placeholder="One line, for the client's benefit and ours"
+                        className="w-full md:w-[240px]"
+                        style={inp}
+                      />
                     </Field>
                     <Field label="Status">
                       <select

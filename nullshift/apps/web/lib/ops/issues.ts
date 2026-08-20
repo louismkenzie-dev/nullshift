@@ -1,3 +1,5 @@
+import type { WorkClassification } from "@nullshift/content/legal/work";
+
 /**
  * Issue bank — shared constants, labels and tone maps for the ops system.
  * The issues table (migration 0014) is the single intake for every bug,
@@ -56,6 +58,15 @@ export type IssueRow = {
   ai: Record<string, unknown> | null;
   resolution_note: string | null;
   resolved_at: string | null;
+  /**
+   * Spec §8. `billing` answers who pays; this answers whether the work is a
+   * restoration at all — and it is the one the build gate reads.
+   */
+  classification: WorkClassification | null;
+  classified_by: string | null;
+  classified_at: string | null;
+  classification_note: string | null;
+  change_order_id: string | null;
   created_at: string;
   updated_at: string;
 };

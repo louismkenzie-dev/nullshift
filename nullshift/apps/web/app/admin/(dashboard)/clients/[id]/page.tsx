@@ -1614,6 +1614,13 @@ export default async function ClientHub({
               >
                 Scale &amp; pricing →
               </Link>
+              <Link
+                href={`/admin/clients/${tenantId}/agreement`}
+                title="Order Form, acceptance evidence and Change Orders"
+                style={{ ...btn("var(--k-surface)", "var(--k-fg)"), textDecoration: "none" }}
+              >
+                Agreement →
+              </Link>
               {project && <Badge s={project.stage} />}
               {project && <Badge s={project.proposal_status} />}
               {project && (

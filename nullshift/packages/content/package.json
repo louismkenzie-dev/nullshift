@@ -18,7 +18,8 @@
     "./legal/subprocessors": "./src/legal/subprocessors.ts",
     "./legal/cookies": "./src/legal/cookies.ts",
     "./legal/acceptance": "./src/legal/acceptance.ts",
-    "./legal/text": "./src/legal/text.ts"
+    "./legal/text": "./src/legal/text.ts",
+    "./legal/work": "./src/legal/work.ts"
   },
   "devDependencies": {
     "typescript": "^5"
