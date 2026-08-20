@@ -13,8 +13,9 @@ export const dynamic = "force-dynamic";
  * preview cookie is path-scoped there and can only be cleared from a request
  * that path matches.
  */
-export async function GET() {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk";
+export async function GET(req: Request) {
+  // Relative to the request — see the note in the route that starts a preview.
+  const base = req.url;
   const store = await cookies();
   const tenantId = store.get(PREVIEW_COOKIE)?.value;
 

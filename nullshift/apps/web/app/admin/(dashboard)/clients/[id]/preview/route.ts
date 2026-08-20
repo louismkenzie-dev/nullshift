@@ -23,11 +23,14 @@ export const dynamic = "force-dynamic";
  * in two hours — a read-only view toggle, not a mutation.
  */
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: tenantId } = await params;
-  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk";
+  // Relative to the request, never NEXT_PUBLIC_SITE_URL: on a Vercel preview
+  // deployment that env var points at production, and a staff member clicking
+  // "view as client" on a preview build would be thrown out to the live site.
+  const base = req.url;
 
   const staff = await requireStaff();
   if (!staff.ok) {
