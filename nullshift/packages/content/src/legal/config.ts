@@ -45,11 +45,12 @@ export const legalConfig = {
     registeredOffice:
       env("NEXT_PUBLIC_REGISTERED_OFFICE") ??
       "66 Paul Street, London, England, United Kingdom, EC2A 4NA",
-    // No default: publishing an invented VAT number, or implying registration
-    // that doesn't exist, is its own legal problem.
+    // Nullshift is not VAT registered (confirmed 20 August 2026). A VAT number
+    // is never invented: if registration happens, set both env vars together.
     vatNumber: env("NEXT_PUBLIC_VAT_NUMBER") ?? null,
     vatStatus:
-      (env("NEXT_PUBLIC_VAT_STATUS") as LegalEntityConfig["vatStatus"]) ?? "unverified",
+      (env("NEXT_PUBLIC_VAT_STATUS") as LegalEntityConfig["vatStatus"]) ??
+      "not_registered",
     icoRegistration: env("NEXT_PUBLIC_ICO_REGISTRATION") ?? "ZC214743",
   } as LegalEntityConfig,
 
@@ -67,11 +68,16 @@ export const legalConfig = {
     clientAgreementVersion: "MSA_2026_08_v1",
     pricingVersion: "NSI_v1_2026_08",
     /**
-     * Set only after solicitor review. Absent = the legal text is a DRAFT:
-     * public pages render with a draft notice and binding acceptance is
-     * disabled. There is deliberately no production fallback.
+     * The date the pack takes effect. Set to 20 August 2026 on the owner's
+     * express instruction — see LEGAL-RELEASE.md, which records that the
+     * solicitor review the source documents call for had not been completed
+     * at that point.
+     *
+     * Clearing this (or the env var) puts the whole pack back into DRAFT:
+     * public pages show a "not yet in force" notice and binding acceptance is
+     * disabled. That remains the switch for taking it out of force.
      */
-    effectiveDate: env("NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE") ?? null,
+    effectiveDate: env("NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE") ?? "20 August 2026",
     governingLaw: "England and Wales",
   },
 

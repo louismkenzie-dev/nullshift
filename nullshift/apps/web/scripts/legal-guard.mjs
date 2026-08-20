@@ -28,14 +28,14 @@ const entity = {
   registeredOffice:
     env("NEXT_PUBLIC_REGISTERED_OFFICE") ??
     "66 Paul Street, London, England, United Kingdom, EC2A 4NA",
-  vatStatus: env("NEXT_PUBLIC_VAT_STATUS") ?? "unverified",
+  vatStatus: env("NEXT_PUBLIC_VAT_STATUS") ?? "not_registered",
   vatNumber: env("NEXT_PUBLIC_VAT_NUMBER") ?? null,
 };
 const contact = {
   legal: env("NEXT_PUBLIC_LEGAL_EMAIL") ?? "louis@nullshift.co.uk",
   privacy: env("NEXT_PUBLIC_PRIVACY_EMAIL") ?? "louis@nullshift.co.uk",
 };
-const effectiveDate = env("NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE");
+const effectiveDate = env("NEXT_PUBLIC_LEGAL_EFFECTIVE_DATE") ?? "20 August 2026";
 
 const errors = [];
 const warnings = [];

@@ -123,3 +123,43 @@ export const CONSENT_DEFAULTS = {
   analytics: false,
   marketing: false,
 };
+
+/**
+ * Human copy for each category, used by the consent manager and the public
+ * cookie table. Kept beside the inventory so a new category cannot appear in
+ * the UI without a description of what agreeing to it actually means.
+ */
+export const CATEGORY_COPY: Record<
+  CookieCategory,
+  { label: string; description: string }
+> = {
+  necessary: {
+    label: "Strictly necessary",
+    description:
+      "Needed to run the site and the things you ask it to do — signing in, keeping your session, and remembering this choice. These cannot be switched off, and we do not ask consent for them.",
+  },
+  functional: {
+    label: "Functional",
+    description:
+      "Remember preferences you set, so the site behaves the way you left it. Off unless you turn them on.",
+  },
+  analytics: {
+    label: "Analytics",
+    description:
+      "Measure how the site is used so we can improve it. Off unless you turn them on, and nothing loads until you do.",
+  },
+  marketing: {
+    label: "Marketing",
+    description:
+      "Used to measure or target advertising. Off unless you turn them on, and nothing loads until you do.",
+  },
+};
+
+/**
+ * The categories a visitor can actually decide about. Empty today, because the
+ * build sets no non-necessary storage — which is why no consent banner is
+ * shown. Adding one analytics entry above turns the banner on everywhere at
+ * once; the UI is driven by the inventory, never the other way round.
+ */
+export const optionalCategories = (): CookieCategory[] =>
+  activeCategories().filter((c) => c !== "necessary");

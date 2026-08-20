@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { SmoothScroll } from "@/components/SmoothScroll";
-import { ConsentBanner } from "@/components/ConsentBanner";
+import { ConsentManager } from "@/components/legal/ConsentManager";
 import { IntroSplash } from "@/components/IntroSplash";
 import { PageTransition } from "@/components/PageTransition";
 import { ScrollProgress } from "@/components/ScrollProgress";
@@ -13,7 +13,7 @@ const DESCRIPTION =
   "Nullshift designs, builds and runs bespoke websites, custom systems and the automations behind them — owned outright by your business. No per-seat SaaS fees.";
 
 // Marketing-only layout: the public site's SEO metadata, smooth scrolling and
-// privacy consent banner live here, NOT in the root layout, so the internal
+// privacy consent manager live here, NOT in the root layout, so the internal
 // /admin and /portal surfaces are never wrapped by Lenis or the cookie banner.
 export const metadata: Metadata = {
   title: TITLE,
@@ -183,7 +183,7 @@ export default function MarketingLayout({
       <PageTransition />
       <ScrollProgress />
       <SmoothScroll>{children}</SmoothScroll>
-      <ConsentBanner />
+      <ConsentManager />
     </>
   );
 }

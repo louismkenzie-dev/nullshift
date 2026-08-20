@@ -1,5 +1,5 @@
 import React from "react";
-import { statutoryDisclosure } from "@nullshift/content/legal/config";
+import { legalConfig, statutoryDisclosure } from "@nullshift/content/legal/config";
 import Link from "next/link";
 import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
@@ -36,6 +36,9 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
       { label: "Website terms", href: "/legal/website-terms" },
       { label: "Subprocessors", href: "/legal/subprocessors" },
       { label: "Data complaint", href: "/legal/data-complaint" },
+      // Persistent withdrawal route (spec §10): consent must be as easy to
+      // take back as it was to give, from every page, without signing in.
+      { label: "Cookie settings", href: legalConfig.routes.cookieSettings },
     ],
   },
 ];
