@@ -1564,6 +1564,10 @@ export default async function ClientHub({
     }))
   );
 
+  // Billing setup is gated on the client having agreed — but a portal
+  // signature is only one form of that. A client who agreed offline and has
+  // PAID us has plainly agreed, and gating on the signature alone left them
+  // permanently unable to start a care plan. Money changing hands is evidence.
   const primaryInvoice =
     invoiceList.find((i) => i.type === "build_milestone" && i.status !== "void") ?? null;
   const invoicePaid = primaryInvoice?.status === "paid";
@@ -1575,6 +1579,8 @@ export default async function ClientHub({
   const depositPaid = otherInvoices
     .filter((i) => i.status === "paid")
     .reduce((sum, i) => sum + Number(i.amount), 0);
+
+  const billingAgreed = isAccepted || balance.paidTotal > 0;
   // The client provides their DPA details in the portal; the docs can't be sent
   // until they have (drives the form gate + a header badge).
   const clientDpaReady = !!project && dpaReadyToSend(project);
@@ -3406,14 +3412,14 @@ export default async function ClientHub({
                 {isGoCardlessConfigured() && (
                   <SubmitButton
                     formAction={sendDirectDebitSetup}
-                    disabled={!isAccepted}
+                    disabled={!billingAgreed}
                     style={{
                       ...btn(
-                        isAccepted ? "var(--k-accent)" : "var(--k-surface)",
-                        isAccepted ? "var(--k-on-accent)" : "var(--k-faint)"
+                        billingAgreed ? "var(--k-accent)" : "var(--k-surface)",
+                        billingAgreed ? "var(--k-on-accent)" : "var(--k-faint)"
                       ),
-                      cursor: isAccepted ? "pointer" : "not-allowed",
-                      opacity: isAccepted ? 1 : 0.7,
+                      cursor: billingAgreed ? "pointer" : "not-allowed",
+                      opacity: billingAgreed ? 1 : 0.7,
                     }}
                     title="Email the client a GoCardless Direct Debit authorisation for this plan"
                   >
@@ -3422,22 +3428,22 @@ export default async function ClientHub({
                 )}
                 <SubmitButton
                   formAction={sendSubscriptionSignup}
-                  disabled={!isAccepted}
+                  disabled={!billingAgreed}
                   style={{
                     ...btn(
                       isGoCardlessConfigured()
                         ? "var(--k-surface)"
-                        : isAccepted
+                        : billingAgreed
                           ? "var(--k-accent)"
                           : "var(--k-surface)",
                       isGoCardlessConfigured()
                         ? "var(--k-fg)"
-                        : isAccepted
+                        : billingAgreed
                           ? "var(--k-on-accent)"
                           : "var(--k-faint)"
                     ),
-                    cursor: isAccepted ? "pointer" : "not-allowed",
-                    opacity: isAccepted ? 1 : 0.7,
+                    cursor: billingAgreed ? "pointer" : "not-allowed",
+                    opacity: billingAgreed ? 1 : 0.7,
                   }}
                 >
                   {isGoCardlessConfigured()
@@ -3445,7 +3451,7 @@ export default async function ClientHub({
                     : "Send care-plan sign-up"}
                 </SubmitButton>
               </form>
-              {!isAccepted && (
+              {!billingAgreed && (
                 <p
                   style={{
                     fontFamily: T.sans,
@@ -3454,7 +3460,24 @@ export default async function ClientHub({
                     marginTop: 8,
                   }}
                 >
-                  Available once the client has signed the proposal.
+                  Available once the client has signed the proposal, or paid anything
+                  against it.
+                </p>
+              )}
+              {/* GoCardless unconfigured is not the same as "no Direct Debit
+                  offered" — say which, so a missing env var doesn't read as a
+                  product decision. */}
+              {!isGoCardlessConfigured() && (
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.78rem",
+                    color: T.warning,
+                    marginTop: 8,
+                  }}
+                >
+                  Direct Debit is unavailable — GOCARDLESS_ACCESS_TOKEN isn&apos;t set on
+                  this deployment, so only the Stripe card rail can be offered.
                 </p>
               )}
             </div>
