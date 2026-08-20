@@ -81,4 +81,10 @@ launch prep → live → care → complete.
 - `supabase/` — schema + BOTH migration series (apply order in its README).
 - `docs/OPS-HUB-AUDIT-2026-08-18.md` — current-state audit, phased backlog, and the
   open product decisions. `docs/OPERATIONS.md` — the operating playbook.
+- `/admin/soc2` — Security & SOC 2 Readiness area (role-restricted): controls, evidence,
+  exceptions, access reviews, incidents, vendors, audit pack. Engine in `apps/web/lib/soc2/`,
+  schema in `supabase/migrations/0037_soc2_readiness.sql`. Read
+  `docs/SOC2-READINESS-AUDIT-2026-08-20.md` (current state + scope proposal) and
+  `docs/SOC2-OPERATIONS.md` (operating guide). Readiness language only — an independent
+  SOC 2 auditor determines any report conclusion.
 - [DEPLOY.md](DEPLOY.md) — Vercel setup + full env reference.
