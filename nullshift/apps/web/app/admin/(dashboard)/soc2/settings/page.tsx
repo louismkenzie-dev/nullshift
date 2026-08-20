@@ -135,7 +135,15 @@ async function sweepAction() {
   "use server";
   const guard = await requireSoc2("programme_owner", "control_owner", "evidence_reviewer");
   if (!guard.ok) return;
-  const outcome = await runSweep("manual", guard.email);
+  let outcome;
+  try {
+    outcome = await runSweep("manual", guard.email);
+  } catch (e) {
+    // A snapshot failure deliberately aborts before anything is written.
+    redirect(
+      `/admin/soc2/settings?err=${encodeURIComponent(e instanceof Error ? e.message : "Sweep failed before running.")}`
+    );
+  }
   redirect(
     `/admin/soc2/settings?swept=${encodeURIComponent(
       `${outcome.runsScheduled} evidence requests scheduled, ${outcome.exceptionsRaised} exceptions raised, ${outcome.exceptionsAutoResolved} moved to pending-verification, ${outcome.alertsSent} alerts sent`

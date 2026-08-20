@@ -4,7 +4,8 @@
 -- Everything runs inside one transaction and rolls back at the end — the
 -- script leaves no rows behind. Each check prints "<id> PASS" or "<id> FAIL".
 -- Last full run: 2026-08-20 against the complete migration chain (schema.sql +
--- legacy series + migrations/0001–0037) on Postgres 16 — all checks PASS.
+-- legacy series + migrations/0001–0037, incl. the select-only RLS revision)
+-- on Postgres 16 — all 17 checks PASS.
 -- The final RLS block needs Supabase's default grants (authenticated role);
 -- on a bare local Postgres, grant all on public tables to authenticated first.
 \set QUIET on
@@ -140,6 +141,21 @@ begin
   reset role;
   if n > 0 then raise notice 'E2E-6b PASS (staff member sees soc2 rows)';
   else raise notice 'E2E-6b FAIL — staff member sees nothing'; end if;
+
+  -- Authenticated sessions are SELECT-only on soc2_* — even a staff login
+  -- cannot write these tables over raw REST; writes go through the service
+  -- role behind the app's programme-role guard.
+  begin
+    perform set_config('request.jwt.claim.sub', staff_user::text, true);
+    set local role authenticated;
+    insert into soc2_controls (key, tsc_category, name, objective)
+      values ('TST-WRITE', 'security', 'Direct write attempt', 'should be refused');
+    reset role;
+    raise notice 'E2E-6c FAIL — authenticated session wrote soc2_controls directly';
+  exception when insufficient_privilege or sqlstate '42501' then
+    reset role;
+    raise notice 'E2E-6c PASS (authenticated write refused; service role only)';
+  end;
 end $$;
 
 rollback;

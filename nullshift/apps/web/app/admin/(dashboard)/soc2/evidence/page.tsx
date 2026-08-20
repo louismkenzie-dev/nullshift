@@ -212,6 +212,20 @@ async function createEvidence(formData: FormData) {
   }
 
   // A chosen run must belong to the chosen control, else it is ignored.
+  // Optional closure-evidence linkage: only a real, still-open exception.
+  const exceptionIdRaw = String(formData.get("exception_id") || "");
+  let exceptionId: string | null = null;
+  if (exceptionIdRaw) {
+    const { data: exc } = await db
+      .from("soc2_exceptions")
+      .select("id, status")
+      .eq("id", exceptionIdRaw)
+      .maybeSingle();
+    if (exc && exc.status !== "closed" && exc.status !== "not_applicable") {
+      exceptionId = exc.id;
+    }
+  }
+
   let controlRunId: string | null = null;
   if (runId) {
     const { data: run } = await db
@@ -234,6 +248,7 @@ async function createEvidence(formData: FormData) {
     .insert({
       control_id: controlId || null,
       control_run_id: controlRunId,
+      exception_id: exceptionId,
       title,
       source,
       source_ref: sourceRef || null,
@@ -338,8 +353,12 @@ export default async function EvidencePage({
     : null;
 
   const supabase = await createClient();
-  const [{ data: evidenceRows }, { data: controlRows }, { data: runRows }] =
-    await Promise.all([
+  const [
+    { data: evidenceRows },
+    { data: controlRows },
+    { data: runRows },
+    { data: exceptionRows },
+  ] = await Promise.all([
       supabase
         .from("soc2_evidence_items")
         .select(
@@ -353,10 +372,17 @@ export default async function EvidencePage({
         .select("id, control_id, due_at, status")
         .in("status", ["scheduled", "in_progress"])
         .order("due_at"),
+      supabase
+        .from("soc2_exceptions")
+        .select("id, ref, title, status")
+        .not("status", "in", '("closed","not_applicable")')
+        .order("detected_at", { ascending: false })
+        .limit(100),
     ]);
   const items = (evidenceRows ?? []) as EvidenceItem[];
   const controls = (controlRows ?? []) as ControlRef[];
   const openRuns = (runRows ?? []) as OpenRun[];
+  const openExceptions = (exceptionRows ?? []) as { id: string; ref: string; title: string; status: string }[];
   const controlById = new Map(controls.map((c) => [c.id, c]));
 
   let list = items;
@@ -663,6 +689,16 @@ export default async function EvidencePage({
                     {openRuns.map((r) => (
                       <option key={r.id} value={r.id}>
                         {controlById.get(r.control_id)?.key ?? "?"} · due {shortDate(r.due_at)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Closure evidence for exception (optional)">
+                  <select name="exception_id" style={inp} defaultValue="">
+                    <option value="">— none —</option>
+                    {openExceptions.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.ref} — {x.title.slice(0, 60)}
                       </option>
                     ))}
                   </select>

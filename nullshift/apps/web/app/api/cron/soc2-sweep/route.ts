@@ -23,6 +23,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const outcome = await runSweep("cron", "system:cron");
-  return NextResponse.json({ ok: true, outcome });
+  try {
+    const outcome = await runSweep("cron", "system:cron");
+    return NextResponse.json({ ok: true, outcome });
+  } catch (e) {
+    // A snapshot failure aborts before anything is written — surface it as a
+    // 500 so the failed cron run is visible in Vercel, and tomorrow retries.
+    console.error("soc2-sweep failed:", e);
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "sweep failed" },
+      { status: 500 }
+    );
+  }
 }

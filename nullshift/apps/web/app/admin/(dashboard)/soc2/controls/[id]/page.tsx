@@ -384,10 +384,10 @@ async function skipRun(formData: FormData) {
   if (!run || (run.status !== "scheduled" && run.status !== "in_progress")) return;
   const { data: controlData } = await db
     .from("soc2_controls")
-    .select("id, key")
+    .select("id, key, frequency")
     .eq("id", run.control_id)
     .maybeSingle();
-  const control = controlData as { id: string; key: string } | null;
+  const control = controlData as { id: string; key: string; frequency: ControlFrequency } | null;
   if (!control) return;
 
   const { error } = await db
@@ -399,12 +399,20 @@ async function skipRun(formData: FormData) {
       `/admin/soc2/controls/${run.control_id}?err=${encodeURIComponent(error.message)}`
     );
 
+  // A skip is a recorded decision, not a scheduling dead-end: advance
+  // next_due_at exactly as a completion would, or the sweep re-derives the
+  // same fire key forever and the control silently stops being scheduled.
+  const nextDue = nextDueAfter(control.frequency, new Date().toISOString().slice(0, 10));
+  if (nextDue) {
+    await db.from("soc2_controls").update({ next_due_at: nextDue }).eq("id", control.id);
+  }
+
   await logSoc2Event({
     recordType: "control_run",
     recordId: runId,
     type: "skipped",
     summary: `Run for control ${control.key} skipped by ${guard.email}; reason recorded on the run.`,
-    detail: { status: "skipped" },
+    detail: { status: "skipped", next_due_at: nextDue },
     actor: guard.email,
   });
   revalidatePath(`/admin/soc2/controls/${run.control_id}`);

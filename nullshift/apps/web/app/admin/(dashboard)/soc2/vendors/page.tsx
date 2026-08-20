@@ -8,6 +8,7 @@ import { Reveal } from "@/components/kyma";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { requireSoc2, WRITE_ROLES } from "@/lib/soc2/guard";
 import { logSoc2Event } from "@/lib/soc2/events";
+import { completeOpenRunForControl } from "@/lib/soc2/runs";
 import { VENDOR_STATUS_TONE, type ChipTone } from "@/lib/soc2/ui";
 import { addDays, toDateOnly } from "@/lib/soc2/schedule";
 import {
@@ -345,10 +346,11 @@ async function recordReview(formData: FormData) {
   if (!id || !summary || !reviewDueAt) return;
 
   const db = createServiceClient();
-  const [{ data: vendor }, { data: control }] = await Promise.all([
-    db.from("soc2_vendors").select("id, name, status, notes").eq("id", id).maybeSingle(),
-    db.from("soc2_controls").select("id").eq("key", "VND-03").maybeSingle(),
-  ]);
+  const { data: vendor } = await db
+    .from("soc2_vendors")
+    .select("id, name, status, notes")
+    .eq("id", id)
+    .maybeSingle();
   if (!vendor || vendor.status === "offboarded") return;
 
   const today = toDateOnly(new Date());
@@ -361,11 +363,18 @@ async function recordReview(formData: FormData) {
     .eq("id", id);
   if (error) redirect(`${PAGE}?err=${encodeURIComponent(error.message)}`);
 
-  // Evidence of the periodic review, filed against VND-03 (skipped if the
-  // control library is not installed yet).
-  if (control) {
+  // A vendor review IS a performance of VND-03: complete its open scheduled
+  // run (so the sweep never flags "evidence overdue" for a control that just
+  // operated), advance the schedule, and file evidence against that run.
+  // Skipped if the control library is not installed yet.
+  const performed = await completeOpenRunForControl(db, "VND-03", {
+    performedBy: guard.email,
+    summary: `Vendor review recorded: ${vendor.name}.`,
+  });
+  if (performed) {
     await db.from("soc2_evidence_items").insert({
-      control_id: control.id,
+      control_id: performed.controlId,
+      control_run_id: performed.runId,
       title: `Vendor review: ${vendor.name}`,
       source: "vendor_review",
       source_ref: `soc2_vendors:${id}`,
@@ -382,7 +391,7 @@ async function recordReview(formData: FormData) {
     detail: {
       last_review_at: today,
       review_due_at: reviewDueAt,
-      evidence_filed: control ? "VND-03" : "skipped_control_unseeded",
+      evidence_filed: performed ? "VND-03" : "skipped_control_unseeded",
     },
     actor: guard.email,
   });

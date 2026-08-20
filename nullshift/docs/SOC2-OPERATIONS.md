@@ -97,13 +97,17 @@ recommended way to give an external auditor material is the generated pack
 (shared out-of-band; every download is a logged, signed, expiring URL) — an
 external auditor gets **no database or app account at all**. The `auditor`
 programme role exists for the case where an adviser HAS been given a staff
-login: it is time-limited (≤90 days, DB-enforced expiry), excluded from every
-write path in the app layer, and barred from restricted-classification
-evidence files. What it cannot change: anyone with an internal-tenant staff
-membership is `is_internal_staff()` to the DATABASE, so RLS itself does not
-distinguish an auditor from staff. Granting a staff login to an outsider is
-therefore itself a risk decision — record it in the risk register, and prefer
-the pack.
+login: it is time-limited (expiry mandatory at the DB, the ≤90-day cap
+app-enforced), excluded from every write path in the app layer, and barred
+from restricted-classification evidence files. The data layer backs this up:
+every `soc2_*` table is **select-only for authenticated sessions** — all
+writes go through the application's service role after its programme-role
+guard (the one deliberate session-write is the actor-stamped `soc2_events`
+trail insert) — so even raw REST access with a staff login cannot modify SOC
+2 records. What remains app-side: an authenticated staff login can still
+READ these tables after an auditor role expires, until the staff membership
+itself is removed. Granting a staff login to an outsider is therefore still
+a recorded risk decision — prefer the pack.
 
 ## AI Workspace under the programme
 

@@ -1078,18 +1078,23 @@ drop policy if exists soc2_evidence_select on storage.objects;
 create policy soc2_evidence_select on storage.objects for select to authenticated
   using (bucket_id = 'soc2-evidence' and is_internal_staff());
 
+-- No insert/update/delete policies for authenticated: uploads and
+-- retention deletion run through the service role after the app's
+-- guard; evidence objects are replaced by new uploads, never
+-- edited in place.
 drop policy if exists soc2_evidence_insert on storage.objects;
-create policy soc2_evidence_insert on storage.objects for insert to authenticated
-  with check (bucket_id = 'soc2-evidence' and is_internal_staff());
-
--- No update/delete policy: evidence objects are replaced by new
--- uploads, never edited in place (service role handles retention
--- deletion when retention_until passes).
 
 -- ── RLS ─────────────────────────────────────────────────────
--- Internal security records: staff-only, both directions. Client
--- portal users must never see any of this — there is deliberately
--- no is_member_of() path on any soc2_* table.
+-- Internal security records: staff may READ; writes happen only
+-- through the application's service role after its programme-role
+-- guard (requireSoc2 + WRITE_ROLES). Keeping the authenticated
+-- role select-only means a person whose only in-app standing is a
+-- read-only auditor login cannot write these tables even with raw
+-- REST access — the app layer's read-only promise holds at the
+-- data layer too. The two deliberate user-session write paths are
+-- soc2_events inserts (the actor-stamped trail) and nothing else.
+-- Client portal users must never see any of this — there is
+-- deliberately no is_member_of() path on any soc2_* table.
 alter table public.soc2_programme_roles       enable row level security;
 alter table public.soc2_scopes                enable row level security;
 alter table public.soc2_scope_items           enable row level security;
@@ -1116,103 +1121,122 @@ alter table public.soc2_audit_packs           enable row level security;
 alter table public.soc2_events                enable row level security;
 
 drop policy if exists soc2_programme_roles_staff on public.soc2_programme_roles;
-create policy soc2_programme_roles_staff on public.soc2_programme_roles
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_programme_roles_select on public.soc2_programme_roles;
+create policy soc2_programme_roles_select on public.soc2_programme_roles
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_scopes_staff on public.soc2_scopes;
-create policy soc2_scopes_staff on public.soc2_scopes
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_scopes_select on public.soc2_scopes;
+create policy soc2_scopes_select on public.soc2_scopes
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_scope_items_staff on public.soc2_scope_items;
-create policy soc2_scope_items_staff on public.soc2_scope_items
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_scope_items_select on public.soc2_scope_items;
+create policy soc2_scope_items_select on public.soc2_scope_items
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_assets_staff on public.soc2_assets;
-create policy soc2_assets_staff on public.soc2_assets
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_assets_select on public.soc2_assets;
+create policy soc2_assets_select on public.soc2_assets
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_vendors_staff on public.soc2_vendors;
-create policy soc2_vendors_staff on public.soc2_vendors
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_vendors_select on public.soc2_vendors;
+create policy soc2_vendors_select on public.soc2_vendors
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_policies_staff on public.soc2_policies;
-create policy soc2_policies_staff on public.soc2_policies
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_policies_select on public.soc2_policies;
+create policy soc2_policies_select on public.soc2_policies
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_policy_versions_staff on public.soc2_policy_versions;
-create policy soc2_policy_versions_staff on public.soc2_policy_versions
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_policy_versions_select on public.soc2_policy_versions;
+create policy soc2_policy_versions_select on public.soc2_policy_versions
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_policy_acknowledgements_staff on public.soc2_policy_acknowledgements;
-create policy soc2_policy_acknowledgements_staff on public.soc2_policy_acknowledgements
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_policy_acknowledgements_select on public.soc2_policy_acknowledgements;
+create policy soc2_policy_acknowledgements_select on public.soc2_policy_acknowledgements
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_risks_staff on public.soc2_risks;
-create policy soc2_risks_staff on public.soc2_risks
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_risks_select on public.soc2_risks;
+create policy soc2_risks_select on public.soc2_risks
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_controls_staff on public.soc2_controls;
-create policy soc2_controls_staff on public.soc2_controls
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_controls_select on public.soc2_controls;
+create policy soc2_controls_select on public.soc2_controls
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_control_runs_staff on public.soc2_control_runs;
-create policy soc2_control_runs_staff on public.soc2_control_runs
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_control_runs_select on public.soc2_control_runs;
+create policy soc2_control_runs_select on public.soc2_control_runs
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_evidence_items_staff on public.soc2_evidence_items;
-create policy soc2_evidence_items_staff on public.soc2_evidence_items
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_evidence_items_select on public.soc2_evidence_items;
+create policy soc2_evidence_items_select on public.soc2_evidence_items
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_exceptions_staff on public.soc2_exceptions;
-create policy soc2_exceptions_staff on public.soc2_exceptions
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_exceptions_select on public.soc2_exceptions;
+create policy soc2_exceptions_select on public.soc2_exceptions
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_incidents_staff on public.soc2_incidents;
-create policy soc2_incidents_staff on public.soc2_incidents
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_incidents_select on public.soc2_incidents;
+create policy soc2_incidents_select on public.soc2_incidents
+  for select to authenticated using (is_internal_staff());
 
--- Incident timeline + domain trail: append-only for humans —
--- insert and read, no update, no delete. (Service role bypasses
--- RLS by design; that is the platform trust boundary, same as
--- audit_log.)
+-- Incident timeline: staff read; the app writes entries through
+-- the service role. (Service role bypasses RLS by design; that is
+-- the platform trust boundary, same as audit_log.)
 drop policy if exists soc2_incident_events_insert on public.soc2_incident_events;
-create policy soc2_incident_events_insert on public.soc2_incident_events
-  for insert to authenticated with check (is_internal_staff());
 drop policy if exists soc2_incident_events_select on public.soc2_incident_events;
 create policy soc2_incident_events_select on public.soc2_incident_events
   for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_access_reviews_staff on public.soc2_access_reviews;
-create policy soc2_access_reviews_staff on public.soc2_access_reviews
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_access_reviews_select on public.soc2_access_reviews;
+create policy soc2_access_reviews_select on public.soc2_access_reviews
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_access_review_items_staff on public.soc2_access_review_items;
-create policy soc2_access_review_items_staff on public.soc2_access_review_items
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_access_review_items_select on public.soc2_access_review_items;
+create policy soc2_access_review_items_select on public.soc2_access_review_items
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_access_changes_staff on public.soc2_access_changes;
-create policy soc2_access_changes_staff on public.soc2_access_changes
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_access_changes_select on public.soc2_access_changes;
+create policy soc2_access_changes_select on public.soc2_access_changes
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_break_glass_events_staff on public.soc2_break_glass_events;
-create policy soc2_break_glass_events_staff on public.soc2_break_glass_events
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_break_glass_events_select on public.soc2_break_glass_events;
+create policy soc2_break_glass_events_select on public.soc2_break_glass_events
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_change_records_staff on public.soc2_change_records;
-create policy soc2_change_records_staff on public.soc2_change_records
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_change_records_select on public.soc2_change_records;
+create policy soc2_change_records_select on public.soc2_change_records
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_management_reviews_staff on public.soc2_management_reviews;
-create policy soc2_management_reviews_staff on public.soc2_management_reviews
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_management_reviews_select on public.soc2_management_reviews;
+create policy soc2_management_reviews_select on public.soc2_management_reviews
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_review_periods_staff on public.soc2_review_periods;
-create policy soc2_review_periods_staff on public.soc2_review_periods
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_review_periods_select on public.soc2_review_periods;
+create policy soc2_review_periods_select on public.soc2_review_periods
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_audit_packs_staff on public.soc2_audit_packs;
-create policy soc2_audit_packs_staff on public.soc2_audit_packs
-  for all to authenticated using (is_internal_staff()) with check (is_internal_staff());
+drop policy if exists soc2_audit_packs_select on public.soc2_audit_packs;
+create policy soc2_audit_packs_select on public.soc2_audit_packs
+  for select to authenticated using (is_internal_staff());
 
 drop policy if exists soc2_events_insert on public.soc2_events;
 create policy soc2_events_insert on public.soc2_events

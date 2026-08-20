@@ -7,6 +7,7 @@ import { Reveal } from "@/components/kyma";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { requireSoc2, WRITE_ROLES } from "@/lib/soc2/guard";
 import { logSoc2Event } from "@/lib/soc2/events";
+import { completeOpenRunForControl } from "@/lib/soc2/runs";
 import type { ChipTone } from "@/lib/soc2/ui";
 import { toDateOnly } from "@/lib/soc2/schedule";
 import {
@@ -254,18 +255,20 @@ async function completeReview(formData: FormData) {
   // The DB refuses completion with undecided or unactioned items — show why.
   if (error) redirect(`${pagePath(id)}?err=${encodeURIComponent(error.message)}`);
 
-  // File the completion record as evidence against IAM-05 (skip silently if
-  // the control library has not been seeded yet).
-  const { data: ctl } = await db
-    .from("soc2_controls")
-    .select("id")
-    .eq("key", "IAM-05")
-    .maybeSingle();
-  if (ctl) {
+  // Completing the review IS a performance of IAM-05: complete the open
+  // scheduled run (so the sweep never flags "evidence overdue" for a control
+  // that just operated), advance its schedule, and file the evidence against
+  // that run. Skips silently if the library has not been seeded yet.
+  const performed = await completeOpenRunForControl(db, "IAM-05", {
+    performedBy: guard.email,
+    summary: `Access review ${review.ref} completed.`,
+  });
+  if (performed) {
     const { data: evidence } = await db
       .from("soc2_evidence_items")
       .insert({
-        control_id: ctl.id,
+        control_id: performed.controlId,
+        control_run_id: performed.runId,
         title: `Access review ${review.ref} completed`,
         source: "access_review",
         source_ref: `soc2_access_reviews:${id}`,

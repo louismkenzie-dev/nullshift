@@ -151,13 +151,58 @@ export async function buildSnapshot(): Promise<SweepSnapshot> {
     db.from("soc2_exceptions").select("fire_key, status").not("fire_key", "is", null),
   ]);
 
+  // A failed query must ABORT the sweep, not read as an empty table: an
+  // empty-looking snapshot would suppress every candidate and step 5 would
+  // "auto-resolve" live exceptions off the back of a network blip.
+  const sections: { name: string; error: { message: string } | null }[] = [
+    { name: "soc2_scopes", error: scopes.error },
+    { name: "soc2_policies", error: policies.error },
+    { name: "memberships", error: staffRows.error },
+    { name: "soc2_policy_acknowledgements", error: ackRows.error },
+    { name: "soc2_policy_versions", error: versionRows.error },
+    { name: "soc2_assets", error: assets.error },
+    { name: "soc2_risks", error: risks.error },
+    { name: "soc2_controls", error: controls.error },
+    { name: "soc2_control_runs", error: controlRuns.error },
+    { name: "soc2_evidence_items", error: evidence.error },
+    { name: "soc2_vendors", error: vendors.error },
+    { name: "soc2_access_reviews", error: accessReviews.error },
+    { name: "soc2_access_review_items", error: accessReviewItems.error },
+    { name: "soc2_break_glass_events", error: breakGlassEvents.error },
+    { name: "soc2_change_records", error: changeRecords.error },
+    { name: "soc2_incidents", error: incidents.error },
+    { name: "soc2_management_reviews", error: managementReviews.error },
+    { name: "projects", error: sensitiveProjectRows.error },
+    { name: "agents", error: aiAgents.error },
+    { name: "agent_escalations", error: aiEscalations.error },
+    { name: "ai_tool_invocations", error: aiRefusals.error },
+    { name: "agent_events", error: aiPolicyDenials.error },
+    { name: "soc2_exceptions", error: allExceptionKeys.error },
+  ];
+  const failed = sections.filter((sec) => sec.error);
+  if (failed.length > 0) {
+    throw new Error(
+      `SOC 2 sweep aborted — snapshot query failed for ${failed
+        .map((sec) => `${sec.name} (${sec.error!.message})`)
+        .join("; ")}. Nothing was detected, resolved or alerted.`
+    );
+  }
+
   // Staff emails via profiles (memberships drive access; profiles mirror email).
   const staffIds = (staffRows.data ?? [])
     .filter((m) => m.role === "staff" || m.role === "owner")
     .map((m) => m.user_id);
   let staffEmails: string[] = [];
   if (staffIds.length > 0) {
-    const { data: profs } = await db.from("profiles").select("id, email").in("id", staffIds);
+    const { data: profs, error: profsError } = await db
+      .from("profiles")
+      .select("id, email")
+      .in("id", staffIds);
+    if (profsError) {
+      throw new Error(
+        `SOC 2 sweep aborted — snapshot query failed for profiles (${profsError.message}). Nothing was detected, resolved or alerted.`
+      );
+    }
     staffEmails = (profs ?? []).map((p) => p.email).filter((e): e is string => !!e);
   }
 
