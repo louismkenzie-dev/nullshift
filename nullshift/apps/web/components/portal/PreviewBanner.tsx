@@ -1,5 +1,4 @@
 import { T } from "@nullshift/ui/tokens";
-import { exitClientPreview } from "@/lib/clientPreviewActions";
 import type { PortalPreview } from "@/lib/clientPreview";
 
 /**
@@ -24,7 +23,7 @@ export function PreviewBanner({
       {/* Forms inert during preview; the exit form opts itself back in. */}
       <style>{`
         .ns-preview-inert main form { pointer-events: none; opacity: 0.55; }
-        form.ns-preview-exit { pointer-events: auto !important; opacity: 1 !important; }
+        .ns-preview-exit { pointer-events: auto !important; opacity: 1 !important; }
       `}</style>
       <div
         style={{
@@ -51,25 +50,28 @@ export function PreviewBanner({
           >
             View-only preview · seeing the portal as {who}
           </span>
-          <form action={exitClientPreview} className="ns-preview-exit">
-            <button
-              type="submit"
-              style={{
-                fontFamily: T.mono,
-                fontSize: "0.64rem",
-                fontWeight: 500,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: T.warning,
-                background: "transparent",
-                border: `1px solid ${T.warning}66`,
-                padding: "4px 12px",
-                cursor: "pointer",
-              }}
-            >
-              Exit preview →
-            </button>
-          </form>
+          {/* A link, not a form: a staff member must never be stranded inside
+              a read-only portal by an unhydrated button. */}
+          <a
+            href="/portal/exit-preview"
+            className="ns-preview-exit"
+            style={{
+              fontFamily: T.mono,
+              fontSize: "0.64rem",
+              fontWeight: 500,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: T.warning,
+              background: "transparent",
+              border: `1px solid ${T.warning}66`,
+              padding: "4px 12px",
+              cursor: "pointer",
+              textDecoration: "none",
+              display: "inline-block",
+            }}
+          >
+            Exit preview →
+          </a>
         </div>
         {gateNote && (
           <div

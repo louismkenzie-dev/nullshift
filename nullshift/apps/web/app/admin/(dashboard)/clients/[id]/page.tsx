@@ -35,7 +35,6 @@ import {
 import { ProposalDocsForm } from "@/components/admin/ProposalDocsForm";
 import { dpaReadyToSend } from "@/lib/dpa";
 import { PageHeader } from "@/components/app/AppKit";
-import { startClientPreview } from "@/lib/clientPreviewActions";
 import { contractedMrr } from "@/lib/pricing/contracted";
 import { Reveal } from "@/components/kyma";
 
@@ -1617,15 +1616,22 @@ export default async function ClientHub({
           }
           actions={
             <>
-              <form action={startClientPreview}>
-                <input type="hidden" name="tenant_id" value={tenantId} />
-                <SubmitButton
-                  title="Open this client's portal exactly as they see it — read-only"
-                  style={btn("var(--k-surface)", "var(--k-accent)")}
-                >
-                  View portal as client →
-                </SubmitButton>
-              </form>
+              {/* A plain link, not a form + server action: the button that
+                  did this as a form was reported as unpressable, and a link
+                  cannot silently no-op — it works without hydration and every
+                  refusal in the route redirects somewhere that says why. */}
+              <Link
+                href={`/admin/clients/${tenantId}/preview`}
+                title="Open this client's portal exactly as they see it — read-only"
+                style={{
+                  ...btn("var(--k-surface)", "var(--k-accent)"),
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                }}
+              >
+                View portal as client →
+              </Link>
               <Link
                 href={`/admin/clients/${tenantId}/pricing`}
                 title="Score this client's scale band and set their recurring rate"

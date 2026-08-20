@@ -42,7 +42,12 @@ type Tenant = {
 
 const GRID = "1.4fr 1.6fr 110px 90px 90px";
 
-export default async function ClientsPage() {
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview_error?: string }>;
+}) {
+  const { preview_error: previewError } = await searchParams;
   const supabase = await createClient();
   const { data: tenantsRaw } = await supabase
     .from("tenants")
@@ -116,6 +121,24 @@ export default async function ClientsPage() {
 
   return (
     <div>
+      {/* The one way a "view portal as client" click can legitimately land
+          back here: the tenant no longer exists. Said out loud, because a
+          silent bounce is indistinguishable from a broken button. */}
+      {previewError === "unknown_client" && (
+        <p
+          style={{
+            ...mono,
+            fontSize: 12,
+            color: T.warning,
+            border: `1px solid ${T.warning}55`,
+            padding: "10px 14px",
+            marginBottom: 16,
+          }}
+        >
+          Couldn&apos;t open that portal preview — the client record no longer exists.
+        </p>
+      )}
+
       <PageHeader
         index="01"
         label="Clients"

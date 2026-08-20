@@ -5,6 +5,7 @@ import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
+import { SubprocessorNotices } from "./SubprocessorNotices";
 import { Reveal } from "@/components/kyma";
 
 /**
@@ -88,6 +89,10 @@ export default async function CompliancePage() {
         title="Compliance centre"
         lead="UK GDPR controls per client. A clinic can't go live until its DPA is signed and logged."
       />
+
+      <div style={{ marginTop: 28 }}>
+        <SubprocessorNotices />
+      </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 28 }}>
         {tenantList.map((tenant, ti) => {
