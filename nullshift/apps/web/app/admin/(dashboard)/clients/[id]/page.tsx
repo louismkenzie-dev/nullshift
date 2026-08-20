@@ -36,6 +36,7 @@ import { ProposalDocsForm } from "@/components/admin/ProposalDocsForm";
 import { dpaReadyToSend } from "@/lib/dpa";
 import { PageHeader } from "@/components/app/AppKit";
 import { contractedMrr } from "@/lib/pricing/contracted";
+import { tenantBalance } from "@/lib/billing/balance";
 import { Reveal } from "@/components/kyma";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
@@ -1545,6 +1546,24 @@ export default async function ClientHub({
   // also a live invoice on this project, and matching "any invoice" made the
   // panel report the build as settled while the balance had never been billed
   // at all — an unbilled balance hidden behind a green "Paid ✓".
+  // What the client actually owes, agreed-but-unbilled included. The portal
+  // shows the same figure from the same helper, so the two screens cannot
+  // disagree about whether a client owes anything.
+  const balance = tenantBalance(
+    project ? [{ id: project.id, proposal_status: project.proposal_status }] : [],
+    itemList.map((i) => ({
+      project_id: projectId,
+      amount: i.amount,
+      status: i.status,
+    })),
+    invoiceList.map((i) => ({
+      project_id: projectId,
+      amount: i.amount,
+      status: i.status,
+      type: i.type,
+    }))
+  );
+
   const primaryInvoice =
     invoiceList.find((i) => i.type === "build_milestone" && i.status !== "void") ?? null;
   const invoicePaid = primaryInvoice?.status === "paid";
@@ -1739,6 +1758,79 @@ export default async function ClientHub({
           }
         />
       </div>
+
+      {/* Money the client owes that nobody has billed. This used to be a dashed
+          form buried inside the invoice panel, and the result was a client
+          sitting at "£0 outstanding — all settled" with a thousand pounds of
+          built work never invoiced. An un-raised bill is the loudest thing on
+          the page now. */}
+      {balance.unbilledTotal > 0 && project && (
+        <Reveal>
+          <section
+            style={{
+              ...card,
+              borderColor: `color-mix(in oklab, ${T.warning} 45%, transparent)`,
+              background: `color-mix(in oklab, ${T.warning} 6%, var(--k-surface))`,
+            }}
+          >
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 style={h2}>{gbp(balance.unbilledTotal)} agreed but not invoiced</h2>
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 10,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: T.warning,
+                  border: `1px solid color-mix(in oklab, ${T.warning} 32%, transparent)`,
+                  padding: "3px 8px",
+                }}
+              >
+                CLIENT CANNOT PAY THIS YET
+              </span>
+            </div>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.88rem",
+                lineHeight: 1.65,
+                color: "var(--k-muted)",
+                marginTop: 8,
+                maxWidth: "70ch",
+              }}
+            >
+              The portal shows this as outstanding, but there is no invoice behind it —
+              so there is no card link and no due date. Raising it creates the Stripe
+              hosted invoice, emails {t.contact_name ?? "the client"} a payment link and
+              bank details, and mirrors it to Xero.
+              {!isAccepted &&
+                " This project has no portal signature, so a reason is recorded against the override."}
+            </p>
+            <form
+              action={isAccepted ? generateInvoice : generateInvoiceOffline}
+              className="flex flex-wrap items-center gap-2"
+              style={{ marginTop: 12 }}
+            >
+              {htid}
+              {hpid}
+              {!isAccepted && (
+                <input
+                  name="reason"
+                  required
+                  placeholder="Why (recorded) — e.g. agreed and signed by email before the portal existed"
+                  style={{ ...inp, height: 32, flex: "1 1 320px" }}
+                />
+              )}
+              <SubmitButton
+                style={btn("var(--k-accent)", "var(--k-on-accent)")}
+                pendingLabel="Raising…"
+              >
+                Raise &amp; send {gbp(balance.unbilledTotal)} invoice
+              </SubmitButton>
+            </form>
+          </section>
+        </Reveal>
+      )}
 
       {/* Ownership & next action — who holds this project, and what happens next */}
       {project && (
