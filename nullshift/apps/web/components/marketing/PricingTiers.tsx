@@ -6,9 +6,9 @@ import { T } from "@nullshift/ui/tokens";
 import {
   PRICING_TIERS,
   PRICING_CONSTANTS,
-  PRICING_SCALE_NOTE,
   type PricingTier,
 } from "@nullshift/content/pricing";
+import { PRICING_LEGAL_COPY } from "@nullshift/content/legal/text";
 
 /* ════════════════════════════════════════════════════════════════
    PRICING LADDER — four monthly tiers, hairline-divided.
@@ -327,6 +327,21 @@ function TierCard({
         )}
       </div>
 
+      {hi && (
+        <p
+          className="mt-4"
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.78rem",
+            lineHeight: 1.6,
+            color: "var(--k-faint)",
+            margin: "16px 0 0",
+          }}
+        >
+          {PRICING_LEGAL_COPY.max}
+        </p>
+      )}
+
       <Link
         href={tier.cta.href}
         className={`kb ${hi ? "kb-primary" : "kb-outline"} mt-7`}
@@ -389,7 +404,7 @@ export function PricingTiers() {
           maxWidth: "78ch",
         }}
       >
-        {PRICING_SCALE_NOTE}
+        {PRICING_LEGAL_COPY.main}
       </p>
 
       <ul

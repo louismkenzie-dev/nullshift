@@ -1,4 +1,5 @@
 import React from "react";
+import { statutoryDisclosure } from "@nullshift/content/legal/config";
 import Link from "next/link";
 import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
@@ -29,10 +30,12 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Legal",
     links: [
-      { label: "Privacy", href: "/legal" },
-      { label: "Cookies", href: "/legal" },
-      { label: "Terms", href: "/legal" },
-      { label: "DPA", href: "/legal" },
+      { label: "Legal Centre", href: "/legal" },
+      { label: "Privacy", href: "/legal/privacy" },
+      { label: "Cookies", href: "/legal/cookies" },
+      { label: "Website terms", href: "/legal/website-terms" },
+      { label: "Subprocessors", href: "/legal/subprocessors" },
+      { label: "Data complaint", href: "/legal/data-complaint" },
     ],
   },
 ];
@@ -156,8 +159,25 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
+        {/* Statutory company disclosure — generated from the central legal
+            config so it can never drift from the legal pages. */}
+        <p
+          className="mt-8"
+          style={{
+            fontFamily: T.mono,
+            fontSize: "0.66rem",
+            lineHeight: 1.7,
+            color: "var(--k-faint)",
+            borderTop: "1px solid var(--k-border)",
+            paddingTop: 20,
+            maxWidth: "90ch",
+          }}
+        >
+          {statutoryDisclosure()}
+        </p>
+
         <div
-          className="mt-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+          className="mt-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
           style={{ borderTop: "1px solid var(--k-border)", paddingTop: 22 }}
         >
           <span

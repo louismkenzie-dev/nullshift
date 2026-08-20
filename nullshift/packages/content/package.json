@@ -12,7 +12,13 @@
     "./blueprint": "./src/blueprint.ts",
     "./scalingPlan": "./src/scalingPlan.ts",
     "./pricing": "./src/pricing.ts",
-    "./serviceTerms": "./src/serviceTerms.ts"
+    "./serviceTerms": "./src/serviceTerms.ts",
+    "./legal/config": "./src/legal/config.ts",
+    "./legal/versions": "./src/legal/versions.ts",
+    "./legal/subprocessors": "./src/legal/subprocessors.ts",
+    "./legal/cookies": "./src/legal/cookies.ts",
+    "./legal/acceptance": "./src/legal/acceptance.ts",
+    "./legal/text": "./src/legal/text.ts"
   },
   "devDependencies": {
     "typescript": "^5"

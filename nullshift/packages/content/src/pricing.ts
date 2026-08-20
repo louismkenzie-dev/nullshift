@@ -263,10 +263,6 @@ export const PRICING_CONSTANTS = [
   "Payments run through your own Stripe",
 ];
 
-/** The scaling note that must sit under the cards — required by the strategy. */
-export const PRICING_SCALE_NOTE =
-  "Recurring pricing scales with platform usage, complexity, organisation size and service requirements. Enterprise systems are quoted individually.";
-
 /** The lowest monthly figure on the ladder — used in hero copy and metadata. */
 export const PRICING_FROM = PRICING_TIERS[0].price;
 
@@ -363,7 +359,7 @@ export const PRICING_FAQS = [
   },
   {
     q: "Does Max include development work?",
-    a: "No — and we'd rather be straight about that than sell you an “unlimited changes” plan nobody can honour. Max buys continuity, context, priority and free scoping: a named developer who knows your system, a four-hour response target, monthly health reviews, and feature proposals without a consultancy fee. The builds themselves are quoted as fixed-price projects, with Max clients scheduled first.",
+    a: "No — and we'd rather say so plainly than sell you a plan that promises development nobody could honour. Max buys continuity, context, priority and free scoping: a named developer who knows your system, a four-hour response target, monthly health reviews, and feature proposals without a consultancy fee. The builds themselves are quoted as fixed-price projects, with Max clients scheduled first.",
   },
   {
     q: "Can I move between tiers?",
