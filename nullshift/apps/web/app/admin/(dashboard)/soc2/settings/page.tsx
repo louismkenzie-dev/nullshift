@@ -329,7 +329,8 @@ export default async function Soc2SettingsPage({
               Engine SLAs (ops_settings.soc2_engine): acknowledgement grace {config.ackGraceDays}d ·
               revoke action {config.revokeActionSlaDays}d · incident ack {config.incidentAckSlaHours}h ·
               post-incident review {config.postIncidentReviewGraceDays}d · management review cadence{" "}
-              {config.managementReviewCadenceDays}d · AI heartbeat stale {config.aiStaleHours}h
+              {config.managementReviewCadenceDays}d · AI heartbeat stale {config.aiStaleHours}h ·
+              deploy annotation grace {config.changeAnnotationGraceDays}d
             </p>
             {guard.ok && !bootstrap ? (
               <form action={sweepAction} style={{ marginTop: 12 }}>

@@ -109,6 +109,40 @@ READ these tables after an auditor role expires, until the staff membership
 itself is removed. Granting a staff login to an outsider is therefore still
 a recorded risk decision — prefer the pack.
 
+## Mirroring Claude Code work into the change register
+
+Most production change at Null Shift is authored by Claude Code sessions and
+lands via GitHub → Vercel. The change register mirrors that pipeline instead
+of relying on anyone remembering to log it:
+
+- **Every commit a Claude Code session pushes carries a `Claude-Session:`
+  trailer** — a URL that opens the full session transcript: every command,
+  file edit and decision behind the change. That is the pull-it-apart link.
+- **The Vercel deploy webhook** (`/api/vercel/deploy-hook`, secret in
+  `VERCEL_DEPLOY_HOOK_SECRET`) turns every `deployment.succeeded` with
+  `target=production` — across the whole Vercel team, so the Ops platform AND
+  every hosted client system — into a `soc2_change_records` row: commit link,
+  author, branch, deployment id (the idempotency key, unique index from
+  migration 0038), prefilled Vercel-instant-rollback plan, and the
+  Claude-Session trailer as the ticket reference.
+- **Reviewer, approval and test evidence stay human.** A mirrored deployment
+  has `changeAnnotationGraceDays` (default 2) to be annotated on
+  `/admin/soc2/changes`; after that the sweep raises the high-severity
+  change-control exception. An unreviewed production change surfacing loudly
+  is the control operating, not noise — annotate it or roll it back.
+
+One-time setup: Vercel → Team Settings → Webhooks → add endpoint
+`https://nullshift.co.uk/api/vercel/deploy-hook`, event
+`deployment.succeeded`, all projects; copy the generated secret into the
+`VERCEL_DEPLOY_HOOK_SECRET` env var and redeploy.
+
+What this does not capture: database DDL applied directly (tracked in the
+Supabase migrations ledger — the commit that ships the SQL file is mirrored
+via its deployment, and direct applies get a manual change record), and
+Claude Code sessions that never push (no production change, nothing to
+register). AI Workspace activity is mirrored separately through
+`agent_runs`/`ai_tool_invocations` and the exception rules.
+
 ## AI Workspace under the programme
 
 Controls AIW-01/AIW-02 govern the AI estate. The sweep consumes the

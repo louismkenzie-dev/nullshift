@@ -184,6 +184,11 @@ export type EngineConfig = {
   postIncidentReviewGraceDays: number;
   managementReviewCadenceDays: number;
   aiStaleHours: number;
+  /** Days a deployed change may sit without reviewer/approval/test evidence
+   *  before it becomes an exception. Auto-mirrored deployments (the Vercel
+   *  webhook) land annotation-empty by design; this is the window to fill
+   *  them in before the sweep calls it a control gap. */
+  changeAnnotationGraceDays: number;
 };
 
 export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
@@ -193,6 +198,7 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
   postIncidentReviewGraceDays: 14,
   managementReviewCadenceDays: 100,
   aiStaleHours: 72,
+  changeAnnotationGraceDays: 2,
 };
 
 /* ── rule implementations ──────────────────────────────────────── */
@@ -489,7 +495,7 @@ const breakGlassUnreviewed: Rule = (s) =>
     );
 
 /** C · Deployed change without review/approval/test/rollback, or self-approved. */
-const changeControlFindings: Rule = (s) => {
+const changeControlFindings: Rule = (s, cfg) => {
   const out: ExceptionCandidate[] = [];
   for (const c of s.changeRecords) {
     if (c.status !== "deployed") continue;
@@ -499,7 +505,12 @@ const changeControlFindings: Rule = (s) => {
     if (!c.approved_by) gaps.push("no approval");
     if (!c.test_evidence) gaps.push("no test evidence");
     if (!c.rollback_plan) gaps.push("no rollback plan");
-    if (gaps.length > 0) {
+    // Auto-mirrored deployments arrive annotation-empty by design; the grace
+    // window is the time to fill them in, not a pass on ever doing so.
+    const withinGrace =
+      c.deployed_at &&
+      daysBetween(c.deployed_at.slice(0, 10), s.today) < cfg.changeAnnotationGraceDays;
+    if (gaps.length > 0 && !withinGrace) {
       out.push(
         candidate({
           ruleKey: "change.unlinked_production_change",

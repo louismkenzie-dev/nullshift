@@ -147,13 +147,33 @@ describe("scenario 3 — production deployment without linked review/test/approv
         test_evidence: null,
         rollback_plan: null,
         ticket_ref: null,
-        deployed_at: "2026-08-19T10:00:00Z",
+        deployed_at: "2026-08-10T10:00:00Z", // past the annotation grace
       },
     ];
     const found = findRule(s, "change.unlinked_production_change");
     expect(found).toHaveLength(1);
     expect(found[0].severity).toBe("high");
     expect(found[0].controlKey).toBe("DEV-02");
+  });
+
+  it("gives a freshly mirrored deployment the annotation grace before flagging", () => {
+    const s = base();
+    s.changeRecords = [
+      {
+        id: "c3",
+        ref: "CHG-2026-0003",
+        title: "[nullshift] auto-mirrored deploy",
+        status: "deployed",
+        requested_by: "noreply@anthropic.com",
+        reviewed_by: null,
+        approved_by: null,
+        test_evidence: null,
+        rollback_plan: "Vercel instant rollback.",
+        ticket_ref: "https://claude.ai/code/session_x",
+        deployed_at: "2026-08-19T10:00:00Z", // yesterday — inside the 2-day grace
+      },
+    ];
+    expect(findRule(s, "change.unlinked_production_change")).toHaveLength(0);
   });
 
   it("flags a complete-but-self-approved change separately, at medium", () => {
