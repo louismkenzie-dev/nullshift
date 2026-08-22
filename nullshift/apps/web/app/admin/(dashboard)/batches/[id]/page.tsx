@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { requireStaff } from "@nullshift/auth/guards";
+import { logSoc2Event } from "@/lib/soc2/events";
 import { logAudit } from "@nullshift/db/audit";
 import { sendEmail } from "@/lib/sendEmail";
 import { wrap, esc, C, FONT } from "@/lib/emailLayout";
@@ -418,10 +419,11 @@ async function cancelBatch(formData: FormData) {
   const supabase = await createClient();
   const { data: batchRow } = await supabase
     .from("fix_batches")
-    .select("status")
+    .select("status, title")
     .eq("id", id)
     .single();
   const batchStatus = (batchRow?.status as BatchStatus | undefined) ?? null;
+  const batchTitle = (batchRow?.title as string | undefined) ?? "untitled";
   if (!batchStatus || batchStatus === "shipped" || batchStatus === "cancelled") return;
   // Release only issues still riding the batch — shipped/closed ones keep
   // their state (their ledger debits and client updates already happened).
@@ -431,6 +433,23 @@ async function cancelBatch(formData: FormData) {
     .eq("batch_id", id)
     .in("status", ["batched", "in_progress"]);
   await supabase.from("issues").update({ batch_id: null }).eq("batch_id", id);
+
+  // A cancelled batch was some exceptions' remediation vehicle — say so in
+  // their append-only trail, so an auditor never sees a silent dead end.
+  const { data: excJoins } = await supabase
+    .from("fix_batch_exceptions")
+    .select("exception_id, exception_ref")
+    .eq("batch_id", id);
+  for (const j of (excJoins ?? []) as { exception_id: string; exception_ref: string }[]) {
+    await logSoc2Event({
+      recordType: "exception",
+      recordId: j.exception_id,
+      type: "batch_cancelled",
+      summary: `${j.exception_ref}'s batch "${batchTitle}" was cancelled — the exception still needs a remediation route.`,
+      detail: { batch_id: id },
+      actor: "staff",
+    });
+  }
   await supabase.from("fix_batches").update({ status: "cancelled" }).eq("id", id);
   await logAudit({ action: "batch.cancelled", target: `batch:${id}`, tenantId });
   revalidatePath(`/admin/batches/${id}`);
@@ -455,7 +474,14 @@ export default async function BatchDetailPage({
   if (!batchRow) notFound();
   const batch = batchRow as BatchRow;
 
-  const [{ data: issueRows }, { data: tenant }, { data: project }, { data: profileRow }] =
+  const [
+    { data: issueRows },
+    { data: tenant },
+    { data: project },
+    { data: profileRow },
+    { data: moduleJoins },
+    { data: exceptionJoins },
+  ] =
     await Promise.all([
       supabase.from("issues").select("*").eq("batch_id", id).order("created_at"),
       supabase.from("tenants").select("id, name").eq("id", batch.tenant_id).single(),
@@ -475,8 +501,23 @@ export default async function BatchDetailPage({
             .eq("project_id", batch.project_id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
+      supabase
+        .from("fix_batch_modules")
+        .select("module_id, module_key, title, position")
+        .eq("batch_id", id)
+        .order("position"),
+      supabase
+        .from("fix_batch_exceptions")
+        .select("exception_id, exception_ref")
+        .eq("batch_id", id),
     ]);
   const issues = (issueRows ?? []) as IssueRow[];
+  const batchModules = (moduleJoins ?? []) as {
+    module_id: string | null; module_key: string; title: string; position: number;
+  }[];
+  const batchExceptions = (exceptionJoins ?? []) as {
+    exception_id: string; exception_ref: string;
+  }[];
   const profile = (profileRow as ProfileWithDispatch | null) ?? null;
   const active = batch.status !== "shipped" && batch.status !== "cancelled";
   const dispatchConfigured = Boolean(process.env.GITHUB_DISPATCH_TOKEN);
@@ -850,6 +891,56 @@ export default async function BatchDetailPage({
           )}
         </Panel>
       </Reveal>
+
+      {(batchModules.length > 0 || batchExceptions.length > 0) && (
+        <Reveal className="block" delay={0.12}>
+          <Panel label="// ALSO IN THIS BATCH" pad={false} className="mt-5">
+            {batchModules.map((m, i) => (
+              <div
+                key={m.module_key}
+                className="flex items-center gap-3 flex-wrap"
+                style={{ padding: "11px 18px", borderTop: i ? "1px solid var(--k-border)" : "none" }}
+              >
+                <StatusChip tone="accent">module</StatusChip>
+                {m.module_id ? (
+                  <Link
+                    href={`/admin/modules/${m.module_id}`}
+                    style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.87rem", color: "var(--k-fg)" }}
+                  >
+                    {m.title}
+                  </Link>
+                ) : (
+                  <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.87rem", color: "var(--k-fg)" }}>
+                    {m.title}
+                  </span>
+                )}
+                <span style={{ fontFamily: T.mono, fontSize: "11px", color: "var(--k-faint)" }}>{m.module_key}</span>
+              </div>
+            ))}
+            {batchExceptions.map((e, i) => (
+              <div
+                key={e.exception_id}
+                className="flex items-center gap-3 flex-wrap"
+                style={{
+                  padding: "11px 18px",
+                  borderTop: i + batchModules.length ? "1px solid var(--k-border)" : "none",
+                }}
+              >
+                <StatusChip tone="warning">soc 2 exception</StatusChip>
+                <Link
+                  href={`/admin/soc2/exceptions/${e.exception_id}`}
+                  style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.87rem", color: "var(--k-fg)" }}
+                >
+                  {e.exception_ref}
+                </Link>
+                <span style={{ fontFamily: T.sans, fontSize: "0.8rem", color: "var(--k-faint)" }}>
+                  resolved &amp; verified by humans in /admin/soc2 after the fix ships
+                </span>
+              </div>
+            ))}
+          </Panel>
+        </Reveal>
+      )}
     </div>
   );
 }

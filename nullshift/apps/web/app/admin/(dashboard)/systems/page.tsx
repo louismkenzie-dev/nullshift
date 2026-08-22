@@ -54,6 +54,21 @@ export default async function SystemsPage() {
     .from("tenants")
     .select("id, name, status, contact_name")
     .eq("type", "client");
+  // The platform itself is a system too — Null Shift Ops lives under the
+  // internal tenant and gets the same cockpit as every client system.
+  const { data: internalRaw } = await supabase
+    .from("tenants")
+    .select("id, name")
+    .eq("type", "internal");
+  const internalIds = ((internalRaw ?? []) as { id: string; name: string }[]).map((t) => t.id);
+  const { data: internalProjectsRaw } = internalIds.length
+    ? await supabase
+        .from("projects")
+        .select("id, tenant_id, name, stage")
+        .in("tenant_id", internalIds)
+        .order("created_at", { ascending: false })
+    : { data: [] };
+  const internalProjects = (internalProjectsRaw ?? []) as Project[];
   const allTenants = (tenantsRaw ?? []) as Tenant[];
   // Prospects sit apart from the active fleet: real relationships, not yet
   // paying — parked below, one click from onboarding.
@@ -69,7 +84,7 @@ export default async function SystemsPage() {
         .order("created_at", { ascending: false })
     : { data: [] };
   const projects = (projectsRaw ?? []) as Project[];
-  const projectIds = projects.map((p) => p.id);
+  const projectIds = [...projects, ...internalProjects].map((p) => p.id);
 
   const [{ data: profilesRaw }, { data: issuesRaw }, { data: subsRaw }] =
     projectIds.length
@@ -175,6 +190,44 @@ export default async function SystemsPage() {
           </span>
         }
       />
+
+      {internalProjects.length > 0 && (
+        <div style={{ border: "1px solid var(--k-border)", marginTop: 24 }}>
+          <div
+            className="px-5 py-2.5"
+            style={{ background: "var(--k-surface)", borderBottom: "1px solid var(--k-border)" }}
+          >
+            <span style={{ ...mono, color: "var(--k-muted)" }}>{"// THE PLATFORM"}</span>
+          </div>
+          {internalProjects.map((p, i) => {
+            const profile = profileByProject.get(p.id);
+            const open = openByProject.get(p.id) ?? 0;
+            return (
+              <Reveal key={p.id} delay={i * 0.04}>
+                <Link
+                  href={`/admin/systems/${p.id}`}
+                  className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-5 py-3.5 hover:bg-[var(--k-surface)] transition-colors"
+                  style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}
+                >
+                  <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.95rem", color: "var(--k-fg)" }}>
+                    {p.name}
+                  </span>
+                  <StatusChip tone="accent">internal</StatusChip>
+                  <span style={{ ...mono, color: "var(--k-muted)" }}>{p.stage}</span>
+                  {open > 0 && (
+                    <span style={{ ...mono, color: T.warning }}>
+                      {open} open issue{open === 1 ? "" : "s"}
+                    </span>
+                  )}
+                  <span className="ml-auto" style={{ ...mono, fontSize: 11, color: "var(--k-faint)" }}>
+                    {profile?.repo_full_name ?? "no repo"} · cockpit →
+                  </span>
+                </Link>
+              </Reveal>
+            );
+          })}
+        </div>
+      )}
 
       {projects.length === 0 ? (
         <p

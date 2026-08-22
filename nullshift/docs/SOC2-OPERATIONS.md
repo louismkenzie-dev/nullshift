@@ -166,6 +166,19 @@ alone the free transport is equivalent.
 Whichever is used, the register records what actually reached production —
 not what someone remembered to log.
 
+### Working an exception through a batch
+
+Besides the copy-paste work order on the exception page, an open exception can
+be compiled into a **batch** on the Null Shift Ops system (`/admin/batches` —
+tick it under "SOC 2 exceptions to remediate"). That needs a live programme
+role, writes a `queued_into_batch` trail entry, and embeds the exception's
+substance (control, trail, no-suppression done-when) in the batch work order.
+The batch rides the normal dispatch transports; the exception's own lifecycle
+is untouched — a human still triages, resolves, and a different human
+verifies and closes it in `/admin/soc2/exceptions` after the fix ships.
+Exceptions only compile onto the internal platform system: their fixes live
+in this repo, never a client's.
+
 What this does not capture: production deployments of OTHER repos while the
 GitHub Actions transport is the only one configured (each repo needs the
 workflow, or the team webhook), database DDL applied directly (tracked in the

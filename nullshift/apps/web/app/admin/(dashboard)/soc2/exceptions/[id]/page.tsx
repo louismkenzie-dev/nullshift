@@ -319,7 +319,7 @@ export default async function ExceptionDetailPage({
   const { id } = await params;
   const { err } = await searchParams;
   const supabase = await createClient();
-  const [{ data: row }, { data: events }, { data: evidence }] = await Promise.all([
+  const [{ data: row }, { data: events }, { data: evidence }, { data: batchJoins }] = await Promise.all([
     supabase.from("soc2_exceptions").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("soc2_events")
@@ -330,6 +330,10 @@ export default async function ExceptionDetailPage({
     supabase
       .from("soc2_evidence_items")
       .select("id, title, capture_date, review_result")
+      .eq("exception_id", id),
+    supabase
+      .from("fix_batch_exceptions")
+      .select("batch_id, fix_batches(id, title, status)")
       .eq("exception_id", id),
   ]);
   if (!row) notFound();
@@ -344,6 +348,13 @@ export default async function ExceptionDetailPage({
     control = (c as ControlFull | null) ?? null;
   }
   const eventList = (events ?? []) as EventRow[];
+  // PostgREST joined relations come back object-or-array; normalise.
+  const batches = ((batchJoins ?? []) as { batch_id: string; fix_batches: unknown }[])
+    .map((j) => {
+      const b = Array.isArray(j.fix_batches) ? j.fix_batches[0] : j.fix_batches;
+      return b as { id: string; title: string; status: string } | null;
+    })
+    .filter((b): b is { id: string; title: string; status: string } => Boolean(b));
   const evidenceList = (evidence ?? []) as EvidenceRef[];
   const open = e.status !== "closed" && e.status !== "not_applicable";
   const affectedEntries = Object.entries(e.affected ?? {}).filter(([, v]) => (v ?? []).length > 0);
@@ -504,6 +515,19 @@ export default async function ExceptionDetailPage({
                   <span style={monoLabel}>not applicable · </span>
                   {e.na_reason}
                 </p>
+              )}
+              {batches.length > 0 && (
+                <div>
+                  <span style={monoLabel}>queued in batch</span>
+                  {batches.map((b) => (
+                    <p key={b.id} style={{ ...faintMono, marginTop: 4 }}>
+                      <Link href={`/admin/batches/${b.id}`} style={{ color: "var(--k-accent)" }}>
+                        {b.title}
+                      </Link>{" "}
+                      · {b.status.replace(/_/g, " ")}
+                    </p>
+                  ))}
+                </div>
               )}
               {evidenceList.length > 0 && (
                 <div>

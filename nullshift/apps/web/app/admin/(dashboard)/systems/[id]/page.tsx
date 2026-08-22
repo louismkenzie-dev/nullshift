@@ -10,7 +10,7 @@ import { SubmitButton } from "@/components/admin/SubmitButton";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
-import { OPEN_STATUSES, SEVERITY_META, STATUS_TONE, type IssueRow } from "@/lib/ops/issues";
+import { OPEN_STATUSES, QUEUEABLE_STATUSES, isBatchable, SEVERITY_META, STATUS_TONE, type IssueRow } from "@/lib/ops/issues";
 
 /**
  * System passport — everything a teammate (human or Claude session) needs to
@@ -45,8 +45,12 @@ type ProfileRow = {
   health: string;
   routine_fire_url: string | null;
   routine_token: string | null;
+  build_goal: string | null;
 };
-type PassportIssue = Pick<IssueRow, "id" | "title" | "severity" | "status" | "created_at">;
+type PassportIssue = Pick<
+  IssueRow,
+  "id" | "title" | "severity" | "status" | "created_at" | "billing" | "client_visible" | "quote_accepted_at"
+>;
 type BatchRow = { id: string; title: string; status: string; created_at: string };
 type UpdateRow = { id: string; title: string; type: string; created_at: string };
 type SubRow = { plan: string | null; mrr: number | null };
@@ -86,6 +90,7 @@ async function saveProfile(formData: FormData) {
   if (formData.has("health")) patch.health = String(formData.get("health") || "unknown");
   if (formData.has("runbook")) patch.runbook = str("runbook");
   if (formData.has("quirks")) patch.quirks = str("quirks");
+  if (formData.has("build_goal")) patch.build_goal = str("build_goal");
   if (formData.has("routine_fire_url")) patch.routine_fire_url = str("routine_fire_url");
   // Write-only secret: only overwrite when a new value is pasted — the stored
   // token is never sent back to the browser, so an empty field means "keep".
@@ -228,18 +233,19 @@ export default async function SystemPassportPage({
     { data: updatesRaw },
     { data: subRaw },
     { data: creditsRaw },
+    { data: plansRaw },
   ] = await Promise.all([
     supabase.from("tenants").select("id, name").eq("id", project.tenant_id).maybeSingle(),
     supabase
       .from("system_profiles")
       .select(
-        "project_id, tenant_id, repo_full_name, default_branch, vercel_project, supabase_ref, stack, env_checklist, features, runbook, quirks, health, routine_fire_url, routine_token"
+        "project_id, tenant_id, repo_full_name, default_branch, vercel_project, supabase_ref, stack, env_checklist, features, runbook, quirks, health, routine_fire_url, routine_token, build_goal"
       )
       .eq("project_id", id)
       .maybeSingle(),
     supabase
       .from("issues")
-      .select("id, title, severity, status, created_at")
+      .select("id, title, severity, status, created_at, billing, client_visible, quote_accepted_at")
       .eq("project_id", id)
       .in("status", OPEN_STATUSES)
       .order("created_at", { ascending: false }),
@@ -266,6 +272,12 @@ export default async function SystemPassportPage({
       .select("delta")
       .eq("tenant_id", project.tenant_id)
       .eq("period", currentPeriodStart()),
+    supabase
+      .from("build_plans")
+      .select("id, status, created_at")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
   const tenant = tenantRaw as { id: string; name: string } | null;
@@ -280,6 +292,32 @@ export default async function SystemPassportPage({
     0
   );
   const remaining = remainingAllowance(plan, deltaSum);
+  const plans = (plansRaw ?? []) as { id: string; status: string; created_at: string }[];
+
+  // "What needs doing next" — one honest line derived from live state, in
+  // priority order: an in-flight batch always beats starting something new.
+  const activeBatch = batches.find((b) =>
+    ["compiled", "dispatched", "pr_open"].includes(b.status)
+  );
+  const draftPlan = plans.find((pl) => pl.status === "draft");
+  // Only issues compileBatch would actually accept — "compile a fix batch"
+  // must never point at a compile that will refuse.
+  const batchable = issues.filter(
+    (i) => QUEUEABLE_STATUSES.includes(i.status) && isBatchable(i as IssueRow)
+  ).length;
+  const nextUp: { text: string; href: string; cta: string } = activeBatch
+    ? activeBatch.status === "pr_open"
+      ? { text: `A PR is open for "${activeBatch.title}" — review and merge it.`, href: `/admin/batches/${activeBatch.id}`, cta: "Open batch →" }
+      : activeBatch.status === "dispatched"
+        ? { text: `Claude is working "${activeBatch.title}" — check the session.`, href: `/admin/batches/${activeBatch.id}`, cta: "Open batch →" }
+        : { text: `"${activeBatch.title}" is compiled and waiting — dispatch it to Claude.`, href: `/admin/batches/${activeBatch.id}`, cta: "Dispatch →" }
+    : draftPlan
+      ? { text: "A draft build plan is waiting for your review — hand it off when it reads right.", href: `/admin/systems/${project.id}/plan`, cta: "Review plan →" }
+      : !profile?.build_goal
+        ? { text: "Write the build goal below — the AI planner won't plan without knowing what this system is for.", href: "#build-goal", cta: "Write goal ↓" }
+        : batchable > 0
+          ? { text: `${batchable} batchable issue${batchable === 1 ? "" : "s"} banked — compile a fix batch.`, href: `/admin/batches?project=${project.id}`, cta: "Compile →" }
+          : { text: "All quiet — plan the next build from the goal.", href: `/admin/systems/${project.id}/plan`, cta: "Plan a build →" };
 
   const features = (profile?.features ?? []).map((f, idx) => ({ ...f, idx }));
   const envChecklist = profile?.env_checklist ?? [];
@@ -313,6 +351,43 @@ export default async function SystemPassportPage({
           </Link>
         }
       />
+
+      {/* ── Build cockpit ───────────────────────────────── */}
+      <Reveal delay={0.03}>
+        <Panel
+          label="// BUILD WITH CLAUDE"
+          className="mt-8"
+          actions={
+            <Link href={nextUp.href} style={{ ...mono, fontSize: 11, color: "var(--k-accent)" }}>
+              {nextUp.cta}
+            </Link>
+          }
+        >
+          <div className="flex flex-col gap-3">
+            <p style={{ fontFamily: T.sans, fontSize: "0.92rem", color: "var(--k-fg)" }}>
+              <span style={{ ...mono, color: "var(--k-accent)", marginRight: 10 }}>next up</span>
+              {nextUp.text}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href={`/admin/systems/${project.id}/plan`} style={cockpitBtn}>
+                Plan a build with AI
+              </Link>
+              <Link href={`/admin/batches?project=${project.id}`} style={cockpitBtn}>
+                Compile a batch
+              </Link>
+              {activeBatch && (
+                <Link href={`/admin/batches/${activeBatch.id}`} style={cockpitBtn}>
+                  Latest batch: {activeBatch.status.replace(/_/g, " ")}
+                </Link>
+              )}
+              <span style={{ fontFamily: T.sans, fontSize: "0.8rem", color: "var(--k-faint)" }}>
+                Plans and batches compile into one Claude Code work order — dispatch from the
+                batch page, or copy-paste into a session.
+              </span>
+            </div>
+          </div>
+        </Panel>
+      </Reveal>
 
       <div className="grid gap-6 lg:grid-cols-2 items-start mt-8">
         {/* ── Left column ─────────────────────────────────── */}
@@ -445,6 +520,35 @@ export default async function SystemPassportPage({
                 </div>
               </form>
             </Panel>
+          </Reveal>
+
+          {/* Build goal */}
+          <Reveal delay={0.08}>
+            <div id="build-goal">
+              <Panel label="// BUILD GOAL" title="What are we actually building?">
+                <form action={saveProfile} className="flex flex-col gap-3">
+                  <input type="hidden" name="project_id" value={project.id} />
+                  <input type="hidden" name="tenant_id" value={project.tenant_id} />
+                  <Field label="The goal, in your words — the AI planner reads this verbatim">
+                    <textarea
+                      name="build_goal"
+                      rows={4}
+                      style={textarea}
+                      defaultValue={profile?.build_goal ?? ""}
+                      placeholder="e.g. A booking system for dance classes: parents book and pay online, staff manage schedules, waivers are signed digitally…"
+                    />
+                  </Field>
+                  <div className="flex items-center gap-3">
+                    <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
+                      Save goal
+                    </SubmitButton>
+                    <span style={{ fontFamily: T.sans, fontSize: "0.8rem", color: "var(--k-faint)" }}>
+                      Feeds “Plan a build with AI” — the better the goal, the better the plan.
+                    </span>
+                  </div>
+                </form>
+              </Panel>
+            </div>
           </Reveal>
 
           {/* Runbook + quirks */}
@@ -841,6 +945,20 @@ function EmptyState({ text }: { text: string }) {
     </div>
   );
 }
+
+const cockpitBtn: React.CSSProperties = {
+  fontFamily: T.mono,
+  fontSize: "11px",
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  height: 32,
+  display: "inline-flex",
+  alignItems: "center",
+  paddingInline: 12,
+  background: "var(--k-surface)",
+  color: "var(--k-accent)",
+  border: "1px solid var(--k-border)",
+};
 
 const mono: React.CSSProperties = {
   fontFamily: T.mono,

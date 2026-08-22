@@ -8,6 +8,12 @@
  * and docs live — so "open a session about this" is one copy-paste (or one
  * dispatch, where a transport is configured).
  *
+ * Two shapes share the same facts:
+ * - composeExceptionWorkOrder: a complete standalone session prompt.
+ * - composeExceptionBatchSection: a compact section for embedding inside a
+ *   compiled batch work order (the batch supplies repo pointers and ground
+ *   rules once, so the section carries only this exception's substance).
+ *
  * The loop closes itself: the session's commits carry a Claude-Session
  * trailer, the deploy webhook mirrors the deployment into the change
  * register with that trailer attached, and the human then resolves the
@@ -38,19 +44,15 @@ export type WorkOrderExceptionInput = {
   trail: string[];
 };
 
-export function composeExceptionWorkOrder(e: WorkOrderExceptionInput): string {
-  const affected = Object.entries(e.affected ?? {})
+const affectedBlock = (e: WorkOrderExceptionInput): string =>
+  Object.entries(e.affected ?? {})
     .filter(([, v]) => (v ?? []).length > 0)
     .map(([k, v]) => `  - ${k}: ${v.join(", ")}`)
     .join("\n");
 
+const substanceLines = (e: WorkOrderExceptionInput): (string | null)[] => {
+  const affected = affectedBlock(e);
   return [
-    `You are working in the Null Shift Ops monorepo (louismkenzie-dev/nullshift, app in nullshift/).`,
-    `Your task is to remediate SOC 2 readiness exception ${e.ref} and leave the trail an auditor can follow.`,
-    ``,
-    `## The exception`,
-    `- Ref: ${e.ref} (${e.severity}, currently "${e.status.replace(/_/g, " ")}")`,
-    `- Title: ${e.title}`,
     e.detail ? `- Detail: ${e.detail}` : null,
     e.ruleKey ? `- Raised by rule: ${e.ruleKey}` : null,
     e.triggerRef ? `- Trigger: ${e.triggerRef}` : null,
@@ -58,20 +60,35 @@ export function composeExceptionWorkOrder(e: WorkOrderExceptionInput): string {
     e.recommendedAction ? `- Recommended action: ${e.recommendedAction}` : null,
     e.remediationPlan ? `- Agreed remediation plan: ${e.remediationPlan}` : null,
     affected ? `- Affected records (ids):\n${affected}` : null,
+  ];
+};
+
+const controlLines = (e: WorkOrderExceptionInput): string =>
+  e.control
+    ? [
+        `- ${e.control.key} — ${e.control.name}`,
+        `- Objective: ${e.control.objective}`,
+        e.control.testProcedure ? `- How it is tested: ${e.control.testProcedure}` : null,
+        e.control.evidenceRequirements
+          ? `- Evidence it needs: ${e.control.evidenceRequirements}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    : `- No control linked; treat the exception text as the requirement.`;
+
+export function composeExceptionWorkOrder(e: WorkOrderExceptionInput): string {
+  return [
+    `You are working in the Null Shift Ops monorepo (louismkenzie-dev/nullshift, app in nullshift/).`,
+    `Your task is to remediate SOC 2 readiness exception ${e.ref} and leave the trail an auditor can follow.`,
+    ``,
+    `## The exception`,
+    `- Ref: ${e.ref} (${e.severity}, currently "${e.status.replace(/_/g, " ")}")`,
+    `- Title: ${e.title}`,
+    ...substanceLines(e),
     ``,
     `## The control it protects`,
-    e.control
-      ? [
-          `- ${e.control.key} — ${e.control.name}`,
-          `- Objective: ${e.control.objective}`,
-          e.control.testProcedure ? `- How it is tested: ${e.control.testProcedure}` : null,
-          e.control.evidenceRequirements
-            ? `- Evidence it needs: ${e.control.evidenceRequirements}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join("\n")
-      : `- No control linked; treat the exception text as the requirement.`,
+    controlLines(e),
     ``,
     `## Recent trail`,
     e.trail.length ? e.trail.map((t) => `- ${t}`).join("\n") : `- (no trail entries yet)`,
@@ -88,6 +105,28 @@ export function composeExceptionWorkOrder(e: WorkOrderExceptionInput): string {
     `3. Run the repo's checks before any push: corepack pnpm --filter @nullshift/web typecheck && lint && test.`,
     `4. Commit with the standard Claude-Session trailer; the deploy webhook mirrors your deployment into the change register with the session linked, so the remediation is traceable end to end.`,
     `5. When done, report exactly what changed and what evidence a human should attach — the exception itself is resolved and verified by people in /admin/soc2, not by you.`,
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
+}
+
+/**
+ * Compact per-exception section for embedding in a compiled batch work order.
+ * The batch supplies the repo, working rules, and the SOC 2 ground rules once
+ * — this carries only the exception's substance, its control, and its trail.
+ */
+export function composeExceptionBatchSection(e: WorkOrderExceptionInput): string {
+  return [
+    `- Status: currently "${e.status.replace(/_/g, " ")}" — humans resolve and verify it in /admin/soc2/exceptions after your fix ships.`,
+    ...substanceLines(e),
+    ``,
+    `**The control it protects:**`,
+    controlLines(e),
+    e.trail.length
+      ? `\n**Recent trail:**\n${e.trail.map((t) => `- ${t}`).join("\n")}`
+      : null,
+    ``,
+    `**Done when:** the root cause is fixed so the rule that raised ${e.ref} has nothing left to flag — never by suppressing the rule or relaxing a gate.`,
   ]
     .filter((line): line is string => line !== null)
     .join("\n");

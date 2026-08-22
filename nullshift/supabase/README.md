@@ -25,12 +25,12 @@ contract for any fresh/staging environment.
    `migrations/0001` (same enum/table names, different shapes) — **skip 006 entirely,
    and skip `007` with it** (007 only ALTERs 006's dead table; on a fresh DB it
    errors with `relation "subscriptions" does not exist`).
-3. **4-digit series, in order: `migrations/0001` → `migrations/0037`.**
+3. **4-digit series, in order: `migrations/0001` → `migrations/0039`.**
 
 **Fresh-replay order, verified end-to-end on Postgres 16 (2026-08-20):**
 `clients` table first (schema.sql's own FK defect) → rest of `schema.sql` →
 legacy `002`–`013` (skip `006`+`007`) → `migrations/0001` → legacy `014`–`020` →
-`migrations/0002` → `0037`. Two more replay hazards found in that run:
+`migrations/0002` → `0039`. Two more replay hazards found in that run:
 legacy `014` fails before `migrations/0001` (`relation "public.tenants" does not
 exist`), and `migrations/0020_ai_workspace_phases2_5.sql`'s routine seeds
 reference agents (`operations-manager`, `finance-assistant`,
