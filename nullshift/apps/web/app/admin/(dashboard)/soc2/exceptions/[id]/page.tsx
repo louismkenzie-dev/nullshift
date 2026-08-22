@@ -10,6 +10,8 @@ import { requireSoc2, WRITE_ROLES } from "@/lib/soc2/guard";
 import { logSoc2Event } from "@/lib/soc2/events";
 import type { ExceptionSeverity, ExceptionStatus } from "@/lib/soc2/types";
 import { SEVERITY_TONE, EXCEPTION_STATUS_TONE, EXCEPTION_STATUS_LABEL } from "@/lib/soc2/ui";
+import { composeExceptionWorkOrder } from "@/lib/soc2/workOrder";
+import { CopyButton } from "@/components/app/CopyButton";
 import { inp, textarea, primaryBtn, actionBtn, dangerBtn, Field, shortDate, faintMono, bodyText, monoLabel } from "../../shared";
 
 /**
@@ -55,7 +57,14 @@ type ExceptionFull = {
   risk_id: string | null;
   incident_id: string | null;
 };
-type ControlRef = { id: string; key: string; name: string };
+type ControlFull = {
+  id: string;
+  key: string;
+  name: string;
+  objective: string;
+  test_procedure: string | null;
+  evidence_requirements: string | null;
+};
 type EventRow = { id: string; type: string; summary: string; actor: string | null; created_at: string };
 type EvidenceRef = { id: string; title: string; capture_date: string; review_result: string | null };
 
@@ -325,19 +334,47 @@ export default async function ExceptionDetailPage({
   ]);
   if (!row) notFound();
   const e = row as ExceptionFull;
-  let control: ControlRef | null = null;
+  let control: ControlFull | null = null;
   if (e.control_id) {
     const { data: c } = await supabase
       .from("soc2_controls")
-      .select("id, key, name")
+      .select("id, key, name, objective, test_procedure, evidence_requirements")
       .eq("id", e.control_id)
       .maybeSingle();
-    control = (c as ControlRef) ?? null;
+    control = (c as ControlFull | null) ?? null;
   }
   const eventList = (events ?? []) as EventRow[];
   const evidenceList = (evidence ?? []) as EvidenceRef[];
   const open = e.status !== "closed" && e.status !== "not_applicable";
   const affectedEntries = Object.entries(e.affected ?? {}).filter(([, v]) => (v ?? []).length > 0);
+
+  // Compiled, context-complete prompt for a Claude Code session — the same
+  // affordance fix batches have, pointed at this remediation.
+  const workOrder = composeExceptionWorkOrder({
+    ref: e.ref,
+    title: e.title,
+    severity: e.severity,
+    status: e.status,
+    detail: e.detail,
+    ruleKey: e.rule_key,
+    triggerRef: e.trigger_ref,
+    recommendedAction: e.recommended_action,
+    severityRationale: e.severity_rationale,
+    remediationPlan: e.remediation_plan,
+    affected: e.affected ?? {},
+    control: control
+      ? {
+          key: control.key,
+          name: control.name,
+          objective: control.objective,
+          testProcedure: control.test_procedure,
+          evidenceRequirements: control.evidence_requirements,
+        }
+      : null,
+    trail: eventList.map(
+      (ev) => `${ev.created_at.slice(0, 10)} · ${ev.type} · ${ev.summary}`
+    ),
+  });
 
   return (
     <div>
@@ -586,6 +623,43 @@ export default async function ExceptionDetailPage({
                 </div>
               </Panel>
             )}
+          </div>
+        </Reveal>
+      )}
+
+      {/* Work order — hand the remediation to a Claude Code session */}
+      {open && (
+        <Reveal delay={0.09}>
+          <div style={{ marginTop: 18 }}>
+            <Panel
+              label="// WORK THIS IN CLAUDE CODE"
+              title="Pre-populated session prompt"
+              actions={<CopyButton text={workOrder} label="Copy work order" />}
+            >
+              <div className="flex flex-col gap-2.5">
+                <p style={bodyText}>
+                  Copy the work order and paste it as the first message of a new session at
+                  claude.ai/code (or the CLI). It carries everything the session needs: the
+                  exception, its control, the recent trail, and the ground rules. The
+                  session&apos;s commits carry a Claude-Session link, so the deploy mirror
+                  attaches the resulting production change back into the change register —
+                  a human still resolves and verifies this exception here.
+                </p>
+                <pre
+                  style={{
+                    ...faintMono,
+                    whiteSpace: "pre-wrap",
+                    maxHeight: 260,
+                    overflowY: "auto",
+                    border: "1px solid var(--k-border)",
+                    padding: "10px 12px",
+                    margin: 0,
+                  }}
+                >
+                  {workOrder}
+                </pre>
+              </div>
+            </Panel>
           </div>
         </Reveal>
       )}
