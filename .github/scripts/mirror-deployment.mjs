@@ -127,9 +127,32 @@ async function collect() {
   return out;
 }
 
+const SHA = /^[0-9a-f]{40}$/i;
+let defaultBranch = null;
+
+/**
+ * Vercel's GitHub deployments carry the commit SHA as their `ref`, so the
+ * branch has to be resolved — a SHA sitting in a field labelled "branch" is
+ * simply wrong data in an audit trail. Where the commit is no longer any
+ * branch's head (normal for older deployments on a replay) this returns null:
+ * "unknown" is honest, a guess is not. Never fails the mirror over a label.
+ */
+async function resolveBranch(ref, sha) {
+  if (ref && !SHA.test(ref)) return ref;
+  try {
+    const heads = await gh(`/repos/${owner}/${repo}/commits/${sha}/branches-where-head`);
+    if (!heads.length) return null;
+    defaultBranch ??= (await gh(`/repos/${owner}/${repo}`)).default_branch;
+    return (heads.find((b) => b.name === defaultBranch) ?? heads[0]).name;
+  } catch {
+    return null;
+  }
+}
+
 /** Build the exact payload shape mirrorFromWebhook() expects. */
 async function toEvent(d) {
   const commit = await gh(`/repos/${owner}/${repo}/commits/${d.sha}`);
+  const branch = await resolveBranch(d.ref, d.sha);
   return {
     type: "deployment.succeeded",
     createdAt: new Date(d.at ?? Date.now()).getTime(),
@@ -143,7 +166,7 @@ async function toEvent(d) {
           githubCommitSha: d.sha,
           githubCommitOrg: owner,
           githubCommitRepo: repo,
-          githubCommitRef: d.ref,
+          githubCommitRef: branch,
           githubCommitAuthorEmail: commit.commit?.author?.email ?? null,
           githubCommitAuthorLogin: commit.author?.login ?? null,
         },
