@@ -1,0 +1,53 @@
+name: SOC 2 change mirror
+
+# Vercel's team webhooks are a paid-plan feature. This does the same job for
+# free: every successful PRODUCTION deployment of this repo is posted to
+# /api/vercel/deploy-hook, signed with the shared secret, and lands in the
+# SOC 2 change register with its commit, author and Claude-Session trailer.
+#
+# Setup (one value, two places):
+#   1. Vercel → Project → Settings → Environment Variables:
+#        VERCEL_DEPLOY_HOOK_SECRET = <any long random string>
+#   2. GitHub → Settings → Secrets and variables → Actions → New secret:
+#        SOC2_DEPLOY_HOOK_SECRET   = <the same string>
+#   Optional: repository variable SOC2_MIRROR_ENDPOINT to point elsewhere.
+
+on:
+  # Fires seconds after Vercel reports a deployment succeeded.
+  deployment_status:
+  # Nightly catch-up so a missed event never leaves a silent gap in the
+  # register. Runs before the 06:30 sweep that raises change exceptions.
+  schedule:
+    - cron: "5 6 * * *"
+  workflow_dispatch:
+    inputs:
+      lookback:
+        description: "How many recent production deployments to replay"
+        default: "20"
+
+permissions:
+  contents: read
+  deployments: read
+
+concurrency:
+  group: soc2-change-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    # deployment_status also fires for previews and for pending/failed states;
+    # the script re-checks, this just avoids spinning a runner for them.
+    if: >-
+      github.event_name != 'deployment_status' ||
+      github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mirror production deployments into the change register
+        env:
+          MIRROR_ENDPOINT: ${{ vars.SOC2_MIRROR_ENDPOINT || 'https://nullshift.co.uk/api/vercel/deploy-hook' }}
+          MIRROR_SECRET: ${{ secrets.SOC2_DEPLOY_HOOK_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LOOKBACK: ${{ inputs.lookback || '20' }}
+        run: node .github/scripts/mirror-deployment.mjs

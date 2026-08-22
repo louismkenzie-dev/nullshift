@@ -6,21 +6,27 @@ import { logSoc2Event } from "@/lib/soc2/events";
 export const dynamic = "force-dynamic";
 
 /**
- * Vercel deploy webhook → SOC 2 change register mirror.
+ * Deploy event → SOC 2 change register mirror.
  *
- * Configure once, team-wide (Vercel → Team Settings → Webhooks): event
- * `deployment.succeeded`, URL https://nullshift.co.uk/api/vercel/deploy-hook,
- * and put the generated secret in VERCEL_DEPLOY_HOOK_SECRET. From then on
- * every PRODUCTION deployment in the team — this platform and every hosted
- * client system — lands as a soc2_change_records row: commit link, author,
- * branch, deployment id, and the Claude-Session trailer when a Claude Code
- * session authored the commit. Reviewer/approval/test evidence stay human;
- * the sweep flags records still missing them after the annotation grace.
+ * Every PRODUCTION deployment lands here as a soc2_change_records row: commit
+ * link, author, branch, deployment id, and the Claude-Session trailer when a
+ * Claude Code session authored the commit. Reviewer/approval/test evidence
+ * stay human; the sweep flags records still missing them after the annotation
+ * grace window.
  *
- * Idempotent: deploy_ref carries a partial unique index (0038), so Vercel's
- * retries and duplicate events cannot double-create a record. Rollback plan
- * is prefilled because on Vercel it is always true: instant rollback to the
- * previous deployment.
+ * Two transports can feed it, and the route is deliberately indifferent to
+ * which — it authenticates the SIGNATURE, not the sender:
+ *  - GitHub Actions (.github/workflows/soc2-change-mirror.yml), free on a
+ *    public repo, signing with SOC2_DEPLOY_HOOK_SECRET. Covers this repo, and
+ *    replays nightly so a missed event never leaves a silent gap.
+ *  - The Vercel team webhook (paid plans): Team Settings → Webhooks, event
+ *    `deployment.succeeded`. Covers every project in the team at once.
+ * Either way the shared value lives in VERCEL_DEPLOY_HOOK_SECRET here.
+ *
+ * Idempotent: deploy_ref carries a partial unique index (0038) and the commit
+ * is checked too, so retries, replays and both transports at once cannot
+ * double-create a record. Rollback plan is prefilled because on Vercel it is
+ * always true: instant rollback to the previous deployment.
  */
 export async function POST(request: Request) {
   const secret = process.env.VERCEL_DEPLOY_HOOK_SECRET;
@@ -46,12 +52,25 @@ export async function POST(request: Request) {
   if (!mirrored) return NextResponse.json({ ok: true, mirrored: false });
 
   const db = createServiceClient();
-  const { data: existing } = await db
-    .from("soc2_change_records")
-    .select("id")
-    .eq("deploy_ref", mirrored.deployRef)
-    .maybeSingle();
-  if (existing) return NextResponse.json({ ok: true, mirrored: false, duplicate: true });
+  // Dedupe on the deployment AND on the commit. Two transports can feed this
+  // endpoint — the Vercel team webhook (which keys a deployment by its dpl_
+  // id) and the free GitHub Actions mirror (which keys it by the deployment
+  // hostname) — so without the commit check a repo running both would
+  // register every release twice. Redeploying an unchanged commit is likewise
+  // not a new change to the system.
+  const alreadyRegistered = async (column: "deploy_ref" | "change_ref", value: string) => {
+    const { data } = await db
+      .from("soc2_change_records")
+      .select("id")
+      .eq(column, value)
+      .limit(1)
+      .maybeSingle();
+    return Boolean(data);
+  };
+  const duplicate =
+    (await alreadyRegistered("deploy_ref", mirrored.deployRef)) ||
+    (mirrored.changeRef ? await alreadyRegistered("change_ref", mirrored.changeRef) : false);
+  if (duplicate) return NextResponse.json({ ok: true, mirrored: false, duplicate: true });
 
   const { data: ref } = await db.rpc("next_soc2_change_ref");
   if (!ref) {

@@ -118,25 +118,53 @@ of relying on anyone remembering to log it:
 - **Every commit a Claude Code session pushes carries a `Claude-Session:`
   trailer** — a URL that opens the full session transcript: every command,
   file edit and decision behind the change. That is the pull-it-apart link.
-- **The Vercel deploy webhook** (`/api/vercel/deploy-hook`, secret in
-  `VERCEL_DEPLOY_HOOK_SECRET`) turns every `deployment.succeeded` with
-  `target=production` — across the whole Vercel team, so the Ops platform AND
-  every hosted client system — into a `soc2_change_records` row: commit link,
-  author, branch, deployment id (the idempotency key, unique index from
-  migration 0038), prefilled Vercel-instant-rollback plan, and the
-  Claude-Session trailer as the ticket reference.
+- **The deploy mirror** (`/api/vercel/deploy-hook`, shared secret in
+  `VERCEL_DEPLOY_HOOK_SECRET`) turns every successful **production**
+  deployment into a `soc2_change_records` row: commit link, author, branch,
+  deployment id (the idempotency key, unique index from migration 0038),
+  prefilled Vercel-instant-rollback plan, and the Claude-Session trailer as
+  the ticket reference. The route authenticates the signature, not the
+  sender, so either transport below feeds it — and the commit is checked as
+  well as the deployment id, so running both cannot double-register a
+  release.
 - **Reviewer, approval and test evidence stay human.** A mirrored deployment
   has `changeAnnotationGraceDays` (default 2) to be annotated on
   `/admin/soc2/changes`; after that the sweep raises the high-severity
   change-control exception. An unreviewed production change surfacing loudly
   is the control operating, not noise — annotate it or roll it back.
 
-One-time setup: Vercel → Team Settings → Webhooks → add endpoint
-`https://nullshift.co.uk/api/vercel/deploy-hook`, event
-`deployment.succeeded`, all projects; copy the generated secret into the
-`VERCEL_DEPLOY_HOOK_SECRET` env var and redeploy.
+### Choosing a transport
 
-What this does not capture: database DDL applied directly (tracked in the
+**GitHub Actions (free, in use).** `.github/workflows/soc2-change-mirror.yml`
+posts each production deployment of this repo to the endpoint, signed with the
+`SOC2_DEPLOY_HOOK_SECRET` repository secret. It fires on `deployment_status`
+(seconds after Vercel reports success) and replays the last 20 production
+deployments nightly at 06:05, before the 06:30 sweep — so a missed event
+self-heals instead of leaving a silent gap. It fails the workflow, loudly,
+if the secret is missing, the endpoint is unconfigured, or no production
+deployments are visible at all.
+
+One-time setup: pick a long random string; set it as `VERCEL_DEPLOY_HOOK_SECRET`
+in the Vercel project's environment variables, and as the
+`SOC2_DEPLOY_HOOK_SECRET` repository secret under GitHub → Settings → Secrets
+and variables → Actions. Redeploy. Run the workflow once by hand
+(Actions → SOC 2 change mirror → Run workflow) to backfill.
+
+**Vercel team webhook (paid plans).** Vercel → Team Settings → Webhooks →
+endpoint `https://nullshift.co.uk/api/vercel/deploy-hook`, event
+`deployment.succeeded`, all projects; the generated secret goes in the same
+`VERCEL_DEPLOY_HOOK_SECRET`. The advantage over the Actions transport is
+breadth: one webhook covers **every project in the Vercel team**, including
+hosted client systems whose repos have no workflow. Worth the upgrade only
+when hosted client systems need to be in the register too; for this platform
+alone the free transport is equivalent.
+
+Whichever is used, the register records what actually reached production —
+not what someone remembered to log.
+
+What this does not capture: production deployments of OTHER repos while the
+GitHub Actions transport is the only one configured (each repo needs the
+workflow, or the team webhook), database DDL applied directly (tracked in the
 Supabase migrations ledger — the commit that ships the SQL file is mirrored
 via its deployment, and direct applies get a manual change record), and
 Claude Code sessions that never push (no production change, nothing to

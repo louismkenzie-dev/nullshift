@@ -67,11 +67,21 @@ the ops AI features degrade to manual. Optional: `ANTHROPIC_WORKSPACE_SLUG`
 Unset, the cron 403s forever with no visible signal — set it or the ritual
 silently stops.
 
-`VERCEL_DEPLOY_HOOK_SECRET` — verifies the team-wide Vercel webhook
-(`deployment.succeeded` → `/api/vercel/deploy-hook`) that mirrors every
+`VERCEL_DEPLOY_HOOK_SECRET` — the shared secret verifying deploy events
+(`deployment.succeeded` → `/api/vercel/deploy-hook`), which mirror every
 production deployment into the SOC 2 change register (`/admin/soc2/changes`).
-Create the webhook under Vercel → Team Settings → Webhooks, paste its secret
-here. Unset, the route answers 503 and deployments are not mirrored.
+Set it to any long random string, then give the SAME value to whichever
+transport sends the events:
+
+- **GitHub Actions (free):** repository secret `SOC2_DEPLOY_HOOK_SECRET`
+  (Settings → Secrets and variables → Actions). The
+  `SOC 2 change mirror` workflow signs and posts each production deployment
+  of this repo, and replays nightly so nothing is silently missed.
+- **Vercel team webhook (paid plans):** Team Settings → Webhooks → endpoint
+  `/api/vercel/deploy-hook`, event `deployment.succeeded`. Covers every
+  project in the team, not just this repo.
+
+Unset here, the route answers 503 and deployments are not mirrored.
 
 > `STRIPE_CONNECT_CLIENT_ID` (previously listed here) belongs to the dormant
 > Stripe Connect clinic scaffold — not needed until that feature ships.
