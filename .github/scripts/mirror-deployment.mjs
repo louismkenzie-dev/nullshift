@@ -81,8 +81,14 @@ async function collect() {
     const event = JSON.parse(await readFile(eventPath, "utf8"));
     const status = event.deployment_status ?? {};
     const deployment = event.deployment ?? {};
-    if (status.state !== "success") return [];
-    if (!isProduction(deployment.environment ?? status.environment)) return [];
+    const environment = deployment.environment ?? status.environment;
+    if (status.state !== "success" || !isProduction(environment)) {
+      // Say WHY, with the real values: if Vercel ever labelled production
+      // deployments differently, a silent "nothing to do" would hide a gap in
+      // the register. The nightly replay is the backstop, this is the hint.
+      console.log(`· skipped — state "${status.state}", environment "${environment}"`);
+      return [];
+    }
     return [
       {
         sha: deployment.sha,
@@ -93,24 +99,29 @@ async function collect() {
     ];
   }
 
-  // Scheduled catch-up: the most recent production deployments, newest first.
-  const deployments = await gh(
-    `/repos/${owner}/${repo}/deployments?environment=Production&per_page=${lookback}`
-  );
+  // Scheduled catch-up: recent deployments, newest first. The environment is
+  // filtered here rather than in the query so the label's exact casing is not
+  // a silent dependency — and so the labels actually seen can be reported.
+  const deployments = await gh(`/repos/${owner}/${repo}/deployments?per_page=${lookback * 3}`);
+  const seen = new Set();
   const out = [];
   for (const d of deployments) {
+    seen.add(String(d.environment));
+    if (!isProduction(d.environment)) continue;
     const statuses = await gh(`/repos/${owner}/${repo}/deployments/${d.id}/statuses?per_page=10`);
     const ok = statuses.find((s) => s.state === "success");
     if (!ok) continue;
     out.push({ sha: d.sha, ref: d.ref, targetUrl: ok.target_url, at: ok.created_at });
+    if (out.length >= lookback) break;
   }
   if (out.length === 0) {
     die(
-      "No successful production deployments found via the GitHub Deployments API. " +
-        "If Vercel is not creating GitHub deployment records for this repo, this " +
-        "transport cannot see production releases and the change register will be " +
-        "incomplete — check Vercel → Project → Settings → Git, or configure the " +
-        "Vercel team webhook instead."
+      "No successful production deployments found via the GitHub Deployments API " +
+        `(environments seen: ${[...seen].join(", ") || "none"}). If Vercel is not ` +
+        "creating GitHub deployment records for this repo, this transport cannot " +
+        "see production releases and the change register would be incomplete — " +
+        "check Vercel → Project → Settings → Git, or configure the Vercel team " +
+        "webhook instead."
     );
   }
   return out;
