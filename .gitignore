@@ -8,3 +8,6 @@ diagram-whiz-hub/
 nullshift/KYMA - AI Automation Agency Template for Framer.html
 nullshift/KYMA - AI Automation Agency Template for Framer_files/
 nullshift/Reference HTML/
+# The pnpm workspace lives in nullshift/ — a root lockfile is always an accident
+# (pnpm invoked from the repo root recreates it).
+/pnpm-lock.yaml
