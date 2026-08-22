@@ -82,6 +82,22 @@ const BATCH_TONE: Record<string, "accent" | "success" | "warning" | "danger" | "
     pr_open: "warning",
   };
 
+/** Primary/secondary action button in the build band. */
+const heroBtn = (primary: boolean): React.CSSProperties => ({
+  fontFamily: T.mono,
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  height: 34,
+  display: "inline-flex",
+  alignItems: "center",
+  paddingInline: 14,
+  background: primary ? "var(--k-accent)" : "var(--k-surface)",
+  color: primary ? "var(--k-on-accent)" : "var(--k-fg)",
+  border: `1px solid ${primary ? "transparent" : "var(--k-border)"}`,
+});
+
 const mono: React.CSSProperties = {
   fontFamily: T.mono,
   fontSize: 10,
@@ -105,6 +121,7 @@ export default async function MissionControlPage() {
     { data: crsRaw },
     { data: invoicesRaw },
     { data: activityRaw },
+    { data: draftPlansRaw },
   ] = await Promise.all([
     supabase
       .from("issues")
@@ -145,6 +162,7 @@ export default async function MissionControlPage() {
       .select("id, tenant_id, action, target, created_at")
       .order("created_at", { ascending: false })
       .limit(10),
+    supabase.from("build_plans").select("id, project_id").eq("status", "draft"),
   ]);
 
   // Unreviewed inbox drafts (hidden + still 'new') are not confirmed work —
@@ -156,34 +174,27 @@ export default async function MissionControlPage() {
   const crs = (crsRaw ?? []) as CrRow[];
   const openInvoices = (invoicesRaw ?? []) as InvoiceRow[];
   const activity = (activityRaw ?? []) as ActivityRow[];
+  const draftPlans = (draftPlansRaw ?? []) as { id: string; project_id: string }[];
 
   // Join issues/batches/calls to tenants + projects in memory (bulk + fold).
-  const tenantIds = [
-    ...new Set(
-      [...issues, ...batches, ...calls, ...crs, ...openInvoices]
-        .map((r) => r.tenant_id)
-        .concat(activity.map((a) => a.tenant_id).filter((t): t is string => !!t))
-    ),
-  ];
-  const projectIds = [
-    ...new Set(
-      [...issues, ...batches].map((r) => r.project_id).filter((p): p is string => !!p)
-    ),
-  ];
+  // Projects/tenants are fetched in full (not just the ids referenced above):
+  // the build strip lists every system, including quiet ones with nothing
+  // banked — those are exactly the ones you go to PLAN something new on.
   const [{ data: tenantsRaw }, { data: projectsRaw }] = await Promise.all([
-    tenantIds.length
-      ? supabase.from("tenants").select("id, name").in("id", tenantIds)
-      : Promise.resolve({ data: [] }),
-    projectIds.length
-      ? supabase.from("projects").select("id, name").in("id", projectIds)
-      : Promise.resolve({ data: [] }),
+    supabase.from("tenants").select("id, name"),
+    supabase.from("projects").select("id, tenant_id, name").order("created_at", {
+      ascending: false,
+    }),
   ]);
   const tenantName = new Map(
     ((tenantsRaw ?? []) as { id: string; name: string }[]).map((t) => [t.id, t.name])
   );
-  const projectName = new Map(
-    ((projectsRaw ?? []) as { id: string; name: string }[]).map((p) => [p.id, p.name])
-  );
+  const allProjects = (projectsRaw ?? []) as {
+    id: string;
+    tenant_id: string;
+    name: string;
+  }[];
+  const projectName = new Map(allProjects.map((p) => [p.id, p.name]));
 
   const now = Date.now();
   const isOverdue = (i: DashIssue) => !!i.due_at && new Date(i.due_at).getTime() < now;
@@ -218,6 +229,58 @@ export default async function MissionControlPage() {
     (c) => !["submitted", "triaged", "awaiting_approval"].includes(c.status)
   );
 
+  // ── Build cockpit rail ──────────────────────────────────────
+  // The most-used road out of this page: from any system into a Claude Code
+  // session. Each system carries the one thing waiting on you, worst first,
+  // so the strip is a work queue rather than a menu.
+  const planByProject = new Map(draftPlans.map((pl) => [pl.project_id, pl.id]));
+  const batchByProject = new Map<string, BatchRow>();
+  for (const b of batches) {
+    if (!b.project_id) continue;
+    const held = batchByProject.get(b.project_id);
+    // Worst-first: a PR waiting to merge beats a live session beats a
+    // compiled batch nobody has dispatched.
+    const rank = (st: string) =>
+      st === "pr_open" ? 0 : st === "dispatched" ? 1 : st === "compiled" ? 2 : 3;
+    if (!held || rank(b.status) < rank(held.status)) batchByProject.set(b.project_id, b);
+  }
+  const issueCountByProject = new Map<string, number>();
+  for (const i of issues) {
+    if (!i.project_id) continue;
+    issueCountByProject.set(i.project_id, (issueCountByProject.get(i.project_id) ?? 0) + 1);
+  }
+
+  type BuildTone = "accent" | "success" | "warning" | "danger" | "muted";
+  const buildRail = allProjects
+    .map((proj) => {
+      const batch = batchByProject.get(proj.id);
+      const planId = planByProject.get(proj.id);
+      const openCount = issueCountByProject.get(proj.id) ?? 0;
+      let rank = 5;
+      let note = "Plan a build";
+      let tone: BuildTone = "muted";
+      let href = `/admin/systems/${proj.id}/plan`;
+      if (batch?.status === "pr_open") {
+        rank = 0; note = "PR to review"; tone = "warning"; href = `/admin/batches/${batch.id}`;
+      } else if (batch?.status === "dispatched") {
+        rank = 1; note = "Claude working"; tone = "accent"; href = `/admin/batches/${batch.id}`;
+      } else if (batch?.status === "compiled") {
+        rank = 2; note = "Ready to dispatch"; tone = "accent"; href = `/admin/batches/${batch.id}`;
+      } else if (planId) {
+        rank = 3; note = "Plan to review"; tone = "warning"; href = `/admin/systems/${proj.id}/plan`;
+      } else if (openCount > 0) {
+        rank = 4;
+        note = `${openCount} issue${openCount === 1 ? "" : "s"} to batch`;
+        tone = "muted";
+        href = `/admin/batches?project=${proj.id}`;
+      }
+      return { proj, rank, note, tone, href };
+    })
+    .sort((a, b) => a.rank - b.rank || a.proj.name.localeCompare(b.proj.name));
+
+  const readyToDispatch = batches.filter((b) => b.status === "compiled").length;
+  const sessionsLive = batches.filter((b) => b.status === "dispatched").length;
+
   return (
     <div>
       <PageHeader
@@ -238,8 +301,136 @@ export default async function MissionControlPage() {
         }
       />
 
+      {/* ── Build with Claude — the road out of this page ── */}
+      <Reveal delay={0.04}>
+        <div
+          className="mt-8"
+          style={{
+            border: "1px solid var(--k-border)",
+            borderLeft: "2px solid var(--k-accent)",
+            background:
+              "linear-gradient(90deg, rgba(16,185,129,0.07) 0%, var(--k-surface) 55%)",
+          }}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4 px-5 pt-4 pb-3">
+            <div className="min-w-0">
+              <span style={{ ...mono, color: "var(--k-accent)" }}>
+                {"// BUILD WITH CLAUDE"}
+              </span>
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontWeight: 600,
+                  fontSize: "1.05rem",
+                  color: "var(--k-fg)",
+                  marginTop: 6,
+                }}
+              >
+                Turn anything into a Claude Code session
+              </p>
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.85rem",
+                  color: "var(--k-muted)",
+                  marginTop: 3,
+                }}
+              >
+                Client requests, cached build modules, SOC 2 remediations — or an
+                AI-drafted plan from a system&apos;s goal. Pick a system below, or start
+                straight from a batch.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href="/admin/systems" style={heroBtn(true)}>
+                Plan a build
+              </Link>
+              <Link href="/admin/batches" style={heroBtn(false)}>
+                Compile a batch
+              </Link>
+              <Link href="/admin/modules" style={heroBtn(false)}>
+                Module library
+              </Link>
+            </div>
+          </div>
+
+          {(readyToDispatch > 0 || sessionsLive > 0 || draftPlans.length > 0) && (
+            <div
+              className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-5 pb-3"
+              style={{ ...mono, color: "var(--k-faint)" }}
+            >
+              <span style={{ color: "var(--k-muted)" }}>waiting on you</span>
+              {readyToDispatch > 0 && (
+                <span style={{ color: "var(--k-accent)" }}>
+                  {readyToDispatch} batch{readyToDispatch === 1 ? "" : "es"} ready to
+                  dispatch
+                </span>
+              )}
+              {draftPlans.length > 0 && (
+                <span style={{ color: T.warning }}>
+                  {draftPlans.length} plan{draftPlans.length === 1 ? "" : "s"} to review
+                </span>
+              )}
+              {sessionsLive > 0 && (
+                <span>
+                  {sessionsLive} session{sessionsLive === 1 ? "" : "s"} in flight
+                </span>
+              )}
+            </div>
+          )}
+
+          {buildRail.length > 0 && (
+            <div style={{ borderTop: "1px solid var(--k-border)" }}>
+              {buildRail.slice(0, 6).map((row, i) => (
+                <Link
+                  key={row.proj.id}
+                  href={row.href}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-2.5 hover:bg-[var(--k-bg)]"
+                  style={{
+                    borderTop: i ? "1px solid var(--k-border)" : "none",
+                    transition: "background-color 0.15s ease",
+                  }}
+                >
+                  <span
+                    className="min-w-0"
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: 600,
+                      fontSize: "0.88rem",
+                      color: "var(--k-fg)",
+                    }}
+                  >
+                    {row.proj.name}
+                  </span>
+                  <span style={{ ...mono, color: "var(--k-faint)" }}>
+                    {tenantName.get(row.proj.tenant_id) ?? "—"}
+                  </span>
+                  <span className="ml-auto flex items-center gap-2">
+                    <StatusChip tone={row.tone}>{row.note}</StatusChip>
+                    <span style={{ ...mono, color: "var(--k-accent)" }}>→</span>
+                  </span>
+                </Link>
+              ))}
+              {buildRail.length > 6 && (
+                <Link
+                  href="/admin/systems"
+                  className="block px-5 py-2.5"
+                  style={{
+                    ...mono,
+                    color: "var(--k-accent)",
+                    borderTop: "1px solid var(--k-border)",
+                  }}
+                >
+                  All {buildRail.length} systems →
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+      </Reveal>
+
       {/* Stat row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 mb-6">
         {[
           {
             value: String(issues.length),
