@@ -147,8 +147,12 @@ deployments are visible at all.
 One-time setup: pick a long random string; set it as `VERCEL_DEPLOY_HOOK_SECRET`
 in the Vercel project's environment variables, and as the
 `SOC2_DEPLOY_HOOK_SECRET` repository secret under GitHub → Settings → Secrets
-and variables → Actions. Redeploy. Run the workflow once by hand
-(Actions → SOC 2 change mirror → Run workflow) to backfill.
+and variables → Actions. **Then redeploy** — Vercel bakes environment
+variables into a deployment at build time, so the deployment already serving
+production cannot see a variable added afterwards, and the mirror answers 503
+until a new one goes out. Finally, run the workflow once by hand
+(Actions → SOC 2 change mirror → Run workflow) to backfill; a green run that
+reports records mirrored or already registered confirms both sides agree.
 
 **Vercel team webhook (paid plans).** Vercel → Team Settings → Webhooks →
 endpoint `https://nullshift.co.uk/api/vercel/deploy-hook`, event

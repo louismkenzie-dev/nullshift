@@ -83,6 +83,12 @@ transport sends the events:
 
 Unset here, the route answers 503 and deployments are not mirrored.
 
+> **Adding the variable is not enough on its own — redeploy.** Vercel
+> snapshots environment variables into a deployment when it is built, so the
+> deployment already serving production cannot see a variable added after it
+> was built. Until you redeploy, the mirror keeps answering 503 and the
+> workflow keeps failing with exactly that message.
+
 > `STRIPE_CONNECT_CLIENT_ID` (previously listed here) belongs to the dormant
 > Stripe Connect clinic scaffold — not needed until that feature ships.
 
