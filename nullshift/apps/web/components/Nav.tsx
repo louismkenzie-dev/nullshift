@@ -451,7 +451,11 @@ export function Nav() {
             </div>
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <Link
-                href="/portal"
+                // Same routing as the status chip: staff → admin hub, signed-in
+                // clients → portal, everyone else → the login page (which also
+                // knows to send staff to /admin). Never a bare /portal — that
+                // is how an admin ends up inside a client-shaped page.
+                href={signedIn ? (isStaff ? "/admin" : "/portal") : "/portal/login"}
                 onClick={() => setOpen(false)}
                 className="kb kb-outline k-cream"
               >

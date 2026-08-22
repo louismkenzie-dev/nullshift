@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isAdminEmail } from "@nullshift/auth/admin";
 import { getPortalClient } from "@/lib/clientPreview";
 import { PreviewBanner } from "@/components/portal/PreviewBanner";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
@@ -26,6 +27,19 @@ export default async function PortalLayout({ children }: { children: React.React
 
   if (!user) {
     redirect("/portal/login");
+  }
+
+  // Staff do not belong in the client portal. Their cross-tenant RLS read
+  // means the "primary project" query below would surface an arbitrary
+  // CLIENT'S project to them dressed up as their own portal — so an internal
+  // session is bounced to Mission Control here, server-side, whatever link
+  // brought them in. The one sanctioned staff path into the portal is the
+  // preview cookie (getPortalClient), which is tenant-scoped and read-only.
+  if (!preview) {
+    const { data: isStaff } = await supabase.rpc("is_internal_staff");
+    if (isStaff === true || isAdminEmail(user.email)) {
+      redirect("/admin");
+    }
   }
 
   // A client who books a call only has a `leads` row — provision their workspace
