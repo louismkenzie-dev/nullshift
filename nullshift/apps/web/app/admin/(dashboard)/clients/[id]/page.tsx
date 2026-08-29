@@ -26,7 +26,7 @@ import { isXeroConfigured } from "@nullshift/billing/xero";
 import { syncInvoiceToXero, syncInvoicePaymentToXero } from "@/lib/xeroSync";
 import { sendEmail } from "@/lib/sendEmail";
 import {
-  portalReadyEmail,
+  portalInviteEmail,
   documentsReadyEmail,
   portalAccessEmail,
   passwordResetEmail,
@@ -938,7 +938,6 @@ async function createPortalAccount(formData: FormData) {
   const email = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
-  const password = String(formData.get("password") || "");
   const name = String(formData.get("name") || "").trim() || "there";
   if (!tenantId || !email) return;
   const service = createServiceClient();
@@ -950,27 +949,44 @@ async function createPortalAccount(formData: FormData) {
   const hasLoggedIn = !!existing?.last_sign_in_at;
 
   let userId: string | null = existing?.id ?? null;
-  let credentials = false; // whether we set + email the reference password
+  // The single-use link the client uses to choose their own password. Null
+  // once they already have one — we never reset a working password.
+  let inviteUrl: string | null = null;
 
+  // We no longer generate a password and email it. A password in an inbox is a
+  // password in an inbox forever: one spam filter from being lost, one
+  // forwarded thread from being leaked. `generateLink` returns the link
+  // WITHOUT sending Supabase's own email, so the client gets our branded one
+  // and we never learn what they choose.
   if (!existing) {
-    if (password.length < 8) return;
-    const { data: created } = await service.auth.admin.createUser({
+    // `invite` creates the user and returns the link in one call.
+    const { data: invited, error: inviteErr } = await service.auth.admin.generateLink({
+      type: "invite",
       email,
-      password,
-      email_confirm: true,
+      options: { redirectTo: `${SITE_URL}/portal/reset` },
     });
-    userId = created?.user?.id ?? null;
-    credentials = true;
+    if (inviteErr || !invited?.properties?.action_link) {
+      console.error("createPortalAccount: invite link failed:", inviteErr?.message);
+      return;
+    }
+    userId = invited.user?.id ?? null;
+    inviteUrl = invited.properties.action_link;
   } else if (!hasLoggedIn) {
-    // Unused admin-issued account — (re)issue the reference password.
-    if (password.length < 8) return;
-    await service.auth.admin.updateUserById(existing.id, {
-      password,
-      email_confirm: true,
+    // The account exists but has never been used — almost always an invite
+    // that went astray. Issue a fresh link rather than a second account.
+    const { data: recovered, error: recErr } = await service.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: `${SITE_URL}/portal/reset` },
     });
-    credentials = true;
+    if (recErr || !recovered?.properties?.action_link) {
+      console.error("createPortalAccount: recovery link failed:", recErr?.message);
+      return;
+    }
+    inviteUrl = recovered.properties.action_link;
   }
-  // else: client has their own password — link membership only, no reset.
+  // else: the client has their own working password — link the membership and
+  // point them at the portal. Never reset a password that works.
 
   if (!userId) {
     console.error("createPortalAccount: could not resolve user for", email);
@@ -993,11 +1009,13 @@ async function createPortalAccount(formData: FormData) {
     action: "portal.account_created",
     target: `tenant:${tenantId}`,
     tenantId,
-    metadata: { email, credentials },
+    // `invited` replaces the old `credentials` flag. No password is ever
+    // generated, emailed, or recorded here.
+    metadata: { email, invited: !!inviteUrl },
   });
 
-  const mail = credentials
-    ? portalReadyEmail({ name, email, password, loginUrl })
+  const mail = inviteUrl
+    ? portalInviteEmail({ name, inviteUrl })
     : portalAccessEmail({ name, loginUrl });
   await sendEmail({
     purpose: "transactional",
@@ -3559,8 +3577,8 @@ export default async function ClientHub({
                 }}
               >
                 {hasPortal
-                  ? "A login was issued but the client hasn't signed in yet. You can re-issue and re-email their reference password below."
-                  : "Create the client's portal login. They'll be able to sign in at /portal to fill in their company details, review & sign the proposal + DPA, and submit change requests."}
+                  ? "An invite was sent but the client hasn't signed in yet. Send a fresh link below — the old one stops working."
+                  : "Invite the client to their portal. They choose their own password, then sign in at /portal to fill in their company details, review & sign the proposal + DPA, and submit change requests."}
               </p>
               <form
                 action={createPortalAccount}
@@ -3576,19 +3594,8 @@ export default async function ClientHub({
                   defaultValue={portalEmail || (t.contact_email ?? "")}
                   style={{ ...inp, width: 230 }}
                 />
-                <input
-                  name="password"
-                  type="text"
-                  required
-                  minLength={8}
-                  placeholder="Password (8+ chars)"
-                  defaultValue={clientRef(tenantId)}
-                  style={{ ...inp, width: 200 }}
-                />
                 <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
-                  {hasPortal
-                    ? "Re-issue & resend login email"
-                    : "Create portal login & email it"}
+                  {hasPortal ? "Send a fresh invite" : "Send portal invite"}
                 </SubmitButton>
               </form>
               <p
@@ -3599,9 +3606,10 @@ export default async function ClientHub({
                   marginTop: 8,
                 }}
               >
-                The password defaults to their reference (shown only because they
-                haven&apos;t set their own yet). On submit we email the client their login
-                (username = email, password as shown).
+                We email a single-use link and they choose their own password — no
+                password is ever generated, sent or stored. If the link expires, they
+                can use &ldquo;Forgot your password?&rdquo; on the sign-in page without
+                needing us.
               </p>
             </>
           )}

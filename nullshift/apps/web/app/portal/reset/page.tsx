@@ -11,11 +11,15 @@ import { Eyebrow, Display } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
 
 /**
- * Set-a-new-password page. The admin sends a branded recovery email whose link
- * lands here with a recovery session in the URL — the Supabase browser client
- * picks it up automatically (detectSessionInUrl), then the client sets a new
- * password via updateUser. Used only for clients who've already signed in and
- * forgotten their password (admin can't re-issue a login once they're active).
+ * Choose-your-password page. Two links land here and both work the same way:
+ * the INVITE a new client gets (they have never had a password) and the
+ * RECOVERY link from "Forgot your password?" or the admin hub. Either drops a
+ * session in the URL, the Supabase browser client picks it up automatically
+ * (detectSessionInUrl), and the client sets their password via updateUser.
+ *
+ * The copy deliberately says "choose", not "reset" — for an invited client
+ * there is no old password to reset, and telling them there is would be
+ * confusing at the exact moment they are trying to get in for the first time.
  */
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -122,9 +126,9 @@ function ResetForm() {
         </div>
 
         <div className="mb-7 flex flex-col items-center gap-3 text-center">
-          <Eyebrow index="01" label="Account Recovery" align="center" />
+          <Eyebrow index="01" label="Portal Access" align="center" />
           <Display as="h1" size="md">
-            Set a new password
+            Choose your password
           </Display>
         </div>
 

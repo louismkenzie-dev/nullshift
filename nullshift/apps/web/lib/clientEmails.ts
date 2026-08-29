@@ -1,7 +1,7 @@
 /**
  * Transactional client emails (pure builders → { subject, html, text }):
- *   • portalReadyEmail — sent when an admin creates the client's portal login;
- *     gives them their username (email) + password (their reference) + a login link.
+ *   • portalInviteEmail — the invite that replaced emailing a generated
+ *     password: a single-use link the client uses to set their own.
  *   • documentsReadyEmail — sent when an admin sends the proposal; prompts the
  *     client to review + sign their documents in the portal.
  *   • passwordResetEmail — sent when an admin triggers a password reset for a
@@ -12,58 +12,44 @@
 import { C, FONT, esc, button, wrap } from "./emailLayout";
 import { BANK_DETAILS } from "@nullshift/content/legalEntity";
 
-export function portalReadyEmail(opts: {
+/**
+ * The invite that replaced emailing a generated password.
+ *
+ * A password in an inbox is a password in an inbox forever — one spam filter,
+ * one forwarded thread or one stale archive away from being either lost or
+ * leaked. This sends a single-use link instead: the client sets their own
+ * password, we never know it, and the link expires.
+ */
+export function portalInviteEmail(opts: {
   name: string;
-  email: string;
-  password: string;
-  loginUrl: string;
+  inviteUrl: string;
 }): { subject: string; html: string; text: string } {
-  const { name, email, password, loginUrl } = opts;
+  const { name, inviteUrl } = opts;
   const first = name.split(" ")[0] || name || "there";
-  const subject = "Your Nullshift client portal is ready";
-
-  const cred = (label: string, value: string) =>
-    `<tr>
-      <td style="padding:11px 0;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${C.faint};white-space:nowrap;vertical-align:middle;width:38%">${esc(label)}</td>
-      <td style="padding:11px 0 11px 16px;border-bottom:1px solid ${C.border};font-family:${FONT};font-size:15px;color:${C.fg};vertical-align:middle"><span style="font-family:ui-monospace,Menlo,Consolas,monospace">${esc(value)}</span></td>
-    </tr>`;
+  const subject = "Set up your Nullshift client portal";
 
   const inner = `
     <tr><td style="padding:22px 32px 0">
       <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Portal access</p>
-      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Your client portal is ready</h1>
-      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, your Nullshift portal is set up. Sign in to track your project, review &amp; sign documents, see your invoices, and submit requests.</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Set up your client portal</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, your Nullshift portal is ready. Choose a password using the link below and you're in — you'll be able to track your project, review and sign documents, see your invoices and raise requests.</p>
     </td></tr>
-    <tr><td style="padding:20px 32px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:0">
-        <tr><td style="padding:6px 20px 6px">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-            ${cred("Sign-in link", loginUrl)}
-            ${cred("Username", email)}
-            ${cred("Password", password)}
-          </table>
-        </td></tr>
-      </table>
-      <p style="margin:12px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">For your security, please change your password after your first sign-in.</p>
-    </td></tr>
-    <tr><td style="padding:20px 32px 6px">${button(loginUrl, "Sign in to your portal →")}</td></tr>
-    <tr><td style="padding:0 32px 8px"></td></tr>`;
+    <tr><td style="padding:22px 32px 6px">${button(inviteUrl, "Choose your password →")}</td></tr>
+    <tr><td style="padding:6px 32px 8px">
+      <p style="margin:0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">This link is single-use and expires. If it has run out, use &ldquo;Forgot your password?&rdquo; on the sign-in page and we&rsquo;ll send a fresh one. We never see or store your password.</p>
+    </td></tr>`;
 
-  const html = wrap(
-    inner,
-    "Your Nullshift client portal is ready — sign in to get started."
-  );
+  const html = wrap(inner, "Set up your Nullshift client portal.");
   const text = `Hi ${first},
 
-Your Nullshift client portal is ready.
+Your Nullshift portal is ready. Choose a password here:
 
-Sign-in link: ${loginUrl}
-Username: ${email}
-Password: ${password}
+${inviteUrl}
 
-Please change your password after your first sign-in.
+This link is single-use and expires. If it has run out, use "Forgot your password?" on the sign-in page and we'll send a fresh one. We never see or store your password.
 
 — Nullshift`;
+
   return { subject, html, text };
 }
 
