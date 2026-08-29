@@ -182,6 +182,20 @@ function LoginForm() {
 
         <div className="mt-6 text-center flex flex-col gap-3">
           <Link
+            href="/portal/forgot"
+            style={{
+              fontFamily: T.mono,
+              fontSize: "0.68rem",
+              fontWeight: 500,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--k-accent)",
+              textDecoration: "none",
+            }}
+          >
+            Forgot your password? Reset it →
+          </Link>
+          <Link
             href="/portal/signup"
             style={{
               fontFamily: T.mono,
