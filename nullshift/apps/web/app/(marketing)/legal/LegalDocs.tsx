@@ -2,6 +2,7 @@
 
 import React from "react";
 import { T } from "@nullshift/ui/tokens";
+import { ServiceTermsTemplate } from "@/components/legal/ServiceTermsTemplate";
 import { LEGAL_ENTITY } from "@nullshift/content/legalEntity";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
 
@@ -32,6 +33,7 @@ export const LEGAL_DOCS = [
   { key: "cookies", label: "Cookie Policy" },
   { key: "terms", label: "Terms of Use" },
   { key: "dpa", label: "Data Processing" },
+  { key: "service", label: "Service & Support" },
 ] as const;
 
 export type DocKey = (typeof LEGAL_DOCS)[number]["key"];
@@ -687,4 +689,13 @@ export function DpaDoc() {
       <DpaTemplate mode="template" />
     </div>
   );
+}
+
+/**
+ * Service & Support Terms — the same document a client signs with their
+ * proposal, published so anyone can read the commercial terms before they are
+ * ever asked to agree to them.
+ */
+export function ServiceDoc() {
+  return <ServiceTermsTemplate mode="template" />;
 }

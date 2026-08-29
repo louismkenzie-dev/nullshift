@@ -54,6 +54,7 @@ export async function classifyIssue(input: {
 
 ${planContext}`,
     prompt: `System: ${input.systemName}\nTitle: ${input.title}\nDescription: ${input.description ?? "(none)"}`,
+    logAs: "ops.classify",
     schema: SCHEMA as unknown as Record<string, unknown>,
     effort: "low",
     maxTokens: 8000,

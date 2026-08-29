@@ -9,6 +9,7 @@ import {
   Bug,
   Zap,
   Inbox,
+  Puzzle,
   Funnel,
   Building2,
   Receipt,
@@ -16,6 +17,14 @@ import {
   ShieldCheck,
   Calendar,
   KeyRound,
+  FileCheck,
+  Bot,
+  Network,
+  Users,
+  ListChecks,
+  CheckSquare,
+  Timer,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@nullshift/db/client";
@@ -37,7 +46,20 @@ const groups: NavGroup[] = [
       { label: "Systems", href: "/admin/systems", Icon: Boxes },
       { label: "Issues", href: "/admin/issues", Icon: Bug },
       { label: "Batches", href: "/admin/batches", Icon: Zap },
+      { label: "Modules", href: "/admin/modules", Icon: Puzzle },
       { label: "Inbox", href: "/admin/inbox", Icon: Inbox },
+    ],
+  },
+  {
+    section: "AI Office",
+    items: [
+      { label: "AI Workspace", href: "/admin/ai", Icon: Bot },
+      { label: "Office map", href: "/admin/ai/map", Icon: Network },
+      { label: "Agents", href: "/admin/ai/agents", Icon: Users },
+      { label: "Agent tasks", href: "/admin/ai/tasks", Icon: ListChecks },
+      { label: "Approvals", href: "/admin/ai/approvals", Icon: CheckSquare },
+      { label: "Routines", href: "/admin/ai/routines", Icon: Timer },
+      { label: "Agent Studio", href: "/admin/ai/studio", Icon: Sparkles },
     ],
   },
   {
@@ -53,6 +75,7 @@ const groups: NavGroup[] = [
     section: "Admin",
     items: [
       { label: "Compliance", href: "/admin/compliance", Icon: ShieldCheck },
+      { label: "SOC 2 Readiness", href: "/admin/soc2", Icon: FileCheck },
       { label: "Calendar", href: "/admin/calendar", Icon: Calendar },
       { label: "Security", href: "/admin/security", Icon: KeyRound },
     ],

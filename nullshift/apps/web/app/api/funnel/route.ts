@@ -2,22 +2,32 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@nullshift/db";
 import { recordLead } from "@nullshift/db/leads";
+import { rateLimitAllow, requestIp } from "@nullshift/db/rateLimit";
 import { buildScalingPlan } from "@nullshift/content/scalingPlan";
 import { scoreLead, type Answers } from "@/lib/funnel";
 import { scalingPlanEmail, ownerEmail } from "@/lib/funnelEmails";
 
 /* Public endpoint — the /start quiz funnel posts here on contact capture.
- *  Re-scores server-side (never trust the client), saves the lead to the
- *  `enquiries` table (source='funnel' + funnel_data/score/segment/utm), then
- *  sends two branded emails via Resend: a tailored, lead-generating email to
- *  the visitor, and a new-lead notification to Nullshift. Honeypot + time-trap
- *  drop obvious bots. Email + DB are independent best-effort steps. */
+ *  Re-scores server-side (never trust the client), upserts the canonical
+ *  `leads` row (recordLead: dedupe/merge by email, plan + plan_token stored,
+ *  agent consultation seeded), then sends two branded emails via Resend: a
+ *  tailored, lead-generating email to the visitor, and a new-lead notification
+ *  to Nullshift. Honeypot + time-trap drop obvious bots. Email + DB are
+ *  independent best-effort steps. Phone + UTM are persisted on the lead
+ *  (migration 0023) so callbacks and attribution survive capture. */
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Body = {
   answers?: Answers;
-  contact?: { name?: string; business?: string; email?: string; phone?: string };
+  contact?: {
+    name?: string;
+    business?: string;
+    email?: string;
+    phone?: string;
+    /** Their real website (optional) — researched by the Agent Consultation. */
+    siteUrl?: string;
+  };
   utm?: Record<string, string>;
   planToken?: string; // client-minted token for the permanent /plan link
   website?: string; // honeypot
@@ -39,11 +49,28 @@ export async function POST(request: Request) {
   if (typeof body.elapsedMs === "number" && body.elapsedMs < 1500)
     return NextResponse.json({ ok: true });
 
+  // Durable rate limit (0026): each funnel submission mints a lead, sends two
+  // Resend emails, and can trigger three Opus calls on /plan — a scripted
+  // client bypasses the honeypot trivially, so the brake is per-IP and real.
+  if (!(await rateLimitAllow("funnel", requestIp(request), 5, 3600)))
+    return NextResponse.json({ ok: true }); // indistinguishable from success
+
   const name = body.contact?.name?.trim();
   const business = body.contact?.business?.trim() || null;
   const email = body.contact?.email?.trim().toLowerCase();
   const phone = body.contact?.phone?.trim() || null;
-  const answers = body.answers ?? {};
+  // Fold their website into the answer set (key: website_url) so it flows into
+  // quiz_answers and the agent's research without schema changes. Normalised +
+  // sanity-capped; never trusted beyond being a URL to look at.
+  const rawSite = body.contact?.siteUrl?.trim() ?? "";
+  const siteUrl =
+    rawSite && rawSite.length <= 200 && !/\s/.test(rawSite)
+      ? /^https?:\/\//i.test(rawSite)
+        ? rawSite
+        : `https://${rawSite}`
+      : null;
+  const answers: Answers = { ...(body.answers ?? {}) };
+  if (siteUrl) answers.website_url = siteUrl;
 
   if (!name || !email || !EMAIL_RE.test(email)) {
     return NextResponse.json(
@@ -65,29 +92,15 @@ export async function POST(request: Request) {
       ? body.planToken
       : randomUUID();
 
-  // ── Save to Supabase (best-effort — never blocks the emails) ──
-  try {
-    const supabase = createServiceClient();
-    const { error } = await supabase.from("enquiries").insert({
-      source: "funnel",
-      name,
-      email,
-      phone,
-      message: null,
-      funnel_data: { answers, recommendation },
-      lead_score: score,
-      segment,
-      utm: body.utm && Object.keys(body.utm).length ? body.utm : null,
-      status: "new",
-    });
-    if (error) console.error("Funnel insert error:", error.message);
-  } catch (e) {
-    console.error("Supabase not configured:", e);
+  // ── Write the canonical multi-tenant `leads` row. (The old dual-write to
+  //    `enquiries` is gone — the pipeline reads `leads`; `enquiries` now only
+  //    carries contact/booking/brief messages.) ──
+  // UTM: keep only sane string pairs (attribution data, not a dumping ground).
+  const utm: Record<string, string> = {};
+  for (const [k, v] of Object.entries(body.utm ?? {})) {
+    if (typeof v === "string" && k.length <= 40 && v.length <= 200) utm[k] = v;
   }
 
-  // ── Also write the canonical multi-tenant `leads` row (Phase 1 schema). The
-  //    enquiries write above stays during the transition so the legacy admin
-  //    keeps showing leads until the ops hub reads `leads` directly (Phase 3). ──
   const lead = await recordLead({
     name,
     email,
@@ -98,8 +111,24 @@ export async function POST(request: Request) {
     status: segment === "qualified" ? "qualified" : "new",
     planToken,
     plan: { scalingPlan, businessName: business, name, segment },
+    phone,
+    utm,
   });
   if (!lead.ok) console.error("Lead insert error:", lead.error);
+
+  // ── Seed the Agent Consultation row (pending) so the /plan page generates
+  //    the tailored plan + live mockup on first view. Best-effort. ──
+  try {
+    const supabase = createServiceClient();
+    await supabase
+      .from("agent_consultations")
+      .upsert(
+        { plan_token: planToken },
+        { onConflict: "plan_token", ignoreDuplicates: true }
+      );
+  } catch (e) {
+    console.error("agent_consultations seed failed (non-fatal):", e);
+  }
 
   // ── Branded emails via Resend (best-effort) ──
   try {

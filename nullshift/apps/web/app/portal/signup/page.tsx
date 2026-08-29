@@ -8,7 +8,7 @@ import { T } from "@nullshift/ui/tokens";
 import { LogoMark } from "@nullshift/ui/components/Logo";
 import { Eyebrow, Display } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
-import { useOperationPending } from "@/components/app/operationOverlay";
+import { useOperationPending } from "@/components/app/operationState";
 
 type Step = "form" | "verify";
 
@@ -274,6 +274,25 @@ function SignupFlow() {
               >
                 {error}
               </p>
+            )}
+            {/* "Your account already exists" is true but a dead end on its
+                own — it is exactly the moment someone needs the reset link. */}
+            {error?.toLowerCase().includes("already exists") && (
+              <Link
+                href="/portal/forgot"
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: "0.68rem",
+                  fontWeight: 500,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--k-accent)",
+                  textDecoration: "underline",
+                  textUnderlineOffset: 3,
+                }}
+              >
+                Reset your password instead →
+              </Link>
             )}
 
             <button

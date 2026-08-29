@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { recordLead } from "@nullshift/db/leads";
+import { escapeLike, recordLead } from "@nullshift/db/leads";
+import { rateLimitAllow, requestIp } from "@nullshift/db/rateLimit";
 import { createServiceClient } from "@nullshift/db";
 
 /**
  * POST /api/client-onboard
  *
  * Called from the book-a-call flow before the auth account is created. Records a
- * canonical `leads` row (status='call_booked', with the requested slot) so the
+ * canonical `leads` row (status='qualified', with the requested slot — the lead
+ * only advances to 'call_booked' when an admin confirms the call) so the
  * booking lands in the admin Pipeline, and notifies the team. No legacy `clients`
  * row — the admin works off the multi-tenant Pipeline → client hub.
  */
@@ -18,6 +20,13 @@ export async function POST(request: Request) {
     requested_date?: string;
     requested_time?: string;
   };
+
+  // Durable per-IP brake (0026): each post inserts a lead and emails the team.
+  if (!(await rateLimitAllow("client-onboard", requestIp(request), 5, 3600)))
+    return NextResponse.json(
+      { error: "Too many requests — please try again later." },
+      { status: 429 }
+    );
 
   try {
     body = await request.json();
@@ -129,7 +138,7 @@ export async function POST(request: Request) {
     const { data: prior } = await service
       .from("leads")
       .select("id")
-      .ilike("email", email.trim().toLowerCase())
+      .ilike("email", escapeLike(email.trim().toLowerCase()))
       .eq("source", "funnel")
       .limit(1);
     funnelCompleted = (prior?.length ?? 0) > 0;

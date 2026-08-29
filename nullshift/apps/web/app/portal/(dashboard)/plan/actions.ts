@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
+import { isClientPreview } from "@/lib/clientPreview";
 import { logAudit } from "@nullshift/db/audit";
 import {
   cancelBillingRequest,
@@ -10,6 +11,7 @@ import {
   startCareDirectDebit,
 } from "@nullshift/billing/gocardless";
 import { CARE_PLANS, carePlan } from "@/lib/carePlans";
+import { contractedMrr } from "@/lib/pricing/contracted";
 
 /**
  * Client-side care plan choice. "none" records an explicit no-plan decision
@@ -18,6 +20,9 @@ import { CARE_PLANS, carePlan } from "@/lib/carePlans";
  * choice for the admin to complete billing setup.
  */
 export async function choosePlan(formData: FormData): Promise<void> {
+  // Staff view-as-client preview is read-only — never record a choice or
+  // start a Direct Debit on the client's behalf.
+  if (await isClientPreview()) return;
   const choice = String(formData.get("plan") || "");
   const valid = choice === "none" || CARE_PLANS.some((p) => p.id === choice);
   if (!valid) return;
@@ -84,11 +89,13 @@ export async function choosePlan(formData: FormData): Promise<void> {
     /\/$/,
     ""
   );
+  // The client's contracted rate, not the catalogue base price.
+  const { mrr: chargeMrr } = await contractedMrr(tenantId, plan.id);
   const dd = await startCareDirectDebit({
     tenantId,
     plan: plan.id,
-    amountPence: Math.round(plan.mrr * 100),
-    description: `Nullshift ${plan.label} care plan`,
+    amountPence: Math.round(chargeMrr * 100),
+    description: `Nullshift ${plan.label} plan`,
     email: user.email ?? "",
     name: tenant?.name ?? tenant?.contact_name ?? null,
     origin,
@@ -122,7 +129,7 @@ export async function choosePlan(formData: FormData): Promise<void> {
   await service.from("subscriptions").insert({
     tenant_id: tenantId,
     plan: plan.id,
-    mrr: plan.mrr,
+    mrr: chargeMrr,
     status: "incomplete",
     provider: "gocardless",
     gc_billing_request_id: dd.billingRequestId,

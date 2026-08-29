@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { NullshiftLoader } from "./NullshiftLoader";
-import { subscribeOperations, resetOperations } from "./operationOverlay";
+import { subscribeOperations, resetOperations } from "./operationState";
 
 /**
  * Full-bleed loading overlay for pressed operations — mounted once in the

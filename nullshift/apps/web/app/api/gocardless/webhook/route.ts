@@ -5,6 +5,7 @@ import {
 } from "@nullshift/billing/gocardless";
 import { createServiceClient } from "@nullshift/db";
 import { carePlan } from "@/lib/carePlans";
+import { contractedMrr } from "@/lib/pricing/contracted";
 
 /**
  * GoCardless webhook (point the dashboard endpoint at /api/gocardless/webhook).
@@ -14,7 +15,8 @@ import { carePlan } from "@/lib/carePlans";
  *     subscriptions row (matched by gc_billing_request_id) to active.
  *   • mandates cancelled/expired/failed → subscription row → canceled.
  *   • subscriptions cancelled/finished  → subscription row → canceled.
- *   • payments failed → logged only (the Friday pulse picks it up).
+ *   • payments failed → subscription row → past_due (recovers to active on a
+ *     later confirmed/paid_out payment).
  * HMAC signature-verified. Verified events always get a 200 — even when no row
  * matched (logged) — so GoCardless doesn't retry forever; a processing error
  * returns 500 so it does retry (the writes are re-delivery safe).
@@ -62,7 +64,7 @@ export async function POST(req: Request) {
           }
           let { data: pending } = await supabase
             .from("subscriptions")
-            .select("id, tenant_id, plan, gc_subscription_id")
+            .select("id, tenant_id, plan, mrr, gc_subscription_id")
             .eq("gc_billing_request_id", billingRequestId)
             .maybeSingle();
           // Orphan rescue: our pending row was superseded (a newer link was
@@ -85,12 +87,12 @@ export async function POST(req: Request) {
               .insert({
                 tenant_id: tenantId,
                 plan: planId,
-                mrr: carePlan(planId)!.mrr,
+                mrr: (await contractedMrr(tenantId, planId)).mrr,
                 status: "incomplete",
                 provider: "gocardless",
                 gc_billing_request_id: billingRequestId,
               })
-              .select("id, tenant_id, plan, gc_subscription_id")
+              .select("id, tenant_id, plan, mrr, gc_subscription_id")
               .single();
             if (recreateErr || !recreated) {
               console.error("gocardless orphan-rescue insert failed:", recreateErr);
@@ -146,11 +148,14 @@ export async function POST(req: Request) {
           // Idempotency-Key = billing request id: a webhook re-delivery after
           // a crash replays the SAME GoCardless subscription instead of
           // creating a second one against the mandate.
+          // The pending row carries the client's contracted rate (scale
+          // multiplier + margin floor); the catalogue base is only a fallback.
+          const chargeMrr = Number(pending.mrr ?? 0) || plan.mrr;
           const created = await createCareSubscription({
             mandateId,
             plan: plan.id,
-            amountPence: plan.mrr * 100,
-            description: `Nullshift ${plan.label} care plan`,
+            amountPence: Math.round(chargeMrr * 100),
+            description: `Nullshift ${plan.label} plan`,
             idempotencyKey: billingRequestId,
           });
           if (!created) {
@@ -162,7 +167,7 @@ export async function POST(req: Request) {
             .update({
               status: "active",
               gc_subscription_id: created.subscriptionId,
-              mrr: plan.mrr,
+              mrr: chargeMrr,
               started_at: new Date().toISOString(),
             })
             .eq("id", pending.id);
@@ -220,12 +225,28 @@ export async function POST(req: Request) {
           break;
         }
         case "payments": {
-          // No DB write — the Friday pulse picks this out of the logs.
-          if (event.action === "failed")
-            console.error(
-              "gocardless payment failed for subscription",
-              event.links?.subscription ?? "(no subscription link)"
-            );
+          // A failed collection flips the row to past_due so it surfaces on
+          // the billing page's past-due rail and the dashboard Money panel —
+          // console.error alone reached no human. GoCardless retries per its
+          // own schedule; a later successful payment re-activates below.
+          const gcSubId = event.links?.subscription ?? null;
+          if (!gcSubId) break;
+          if (event.action === "failed") {
+            const { error } = await supabase
+              .from("subscriptions")
+              .update({ status: "past_due" })
+              .eq("gc_subscription_id", gcSubId)
+              .eq("status", "active");
+            if (error) console.error("gocardless payments.failed update failed:", error);
+          } else if (event.action === "confirmed" || event.action === "paid_out") {
+            const { error } = await supabase
+              .from("subscriptions")
+              .update({ status: "active" })
+              .eq("gc_subscription_id", gcSubId)
+              .eq("status", "past_due");
+            if (error)
+              console.error("gocardless payments recovery update failed:", error);
+          }
           break;
         }
         default:

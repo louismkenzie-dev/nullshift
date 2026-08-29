@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useOperationPending } from "@/components/app/operationOverlay";
+import { useOperationPending } from "@/components/app/operationState";
 import { useRouter } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
 import { SignatureField } from "./SignatureField";
@@ -17,13 +17,11 @@ export function SignProposal({
   acceptAction,
   declineAction,
   projectId,
-  limited,
   carePlanLabel,
 }: {
   acceptAction: (fd: FormData) => Promise<{ ok: boolean }>;
   declineAction: (fd: FormData) => Promise<void> | void;
   projectId: string;
-  limited: boolean;
   carePlanLabel: string | null;
 }) {
   const router = useRouter();
@@ -165,7 +163,7 @@ export function SignProposal({
             animation: "ns-tick-fade 0.5s 0.7s both",
           }}
         >
-          Your proposal{limited ? " and DPA are" : " is"} signed
+          Your agreement is signed
           {carePlanLabel ? ` and your ${carePlanLabel} care plan is active` : ""}. Your
           invoice is on its way, and we&apos;ll be in touch to get the build moving.
         </p>
@@ -189,15 +187,53 @@ export function SignProposal({
           fontSize: "0.9rem",
           color: "var(--k-muted)",
           lineHeight: 1.6,
-          marginBottom: 16,
+          marginBottom: 12,
         }}
       >
-        Please review the {limited ? "proposal and DPA" : "proposal"} above. Signing
-        accepts the scope and price
-        {carePlanLabel ? ` and the ${carePlanLabel} care plan` : ""}
-        {limited ? ", and the Data Processing Agreement," : ""} so we can begin — this is
-        final and can&apos;t be undone. We&apos;ll email your invoice straight away.
+        Please read all three documents above before signing. One signature accepts the
+        scope and price
+        {carePlanLabel ? `, the ${carePlanLabel} plan` : ""}, the Service &amp; Support
+        Terms and the Data Processing Agreement, so we can begin — this is final and
+        can&apos;t be undone. We&apos;ll email your invoice straight away.
       </p>
+
+      {/* The three things people most often assume differently. Spelled out at
+          the point of signature, not buried in the document they may not open. */}
+      <ul
+        style={{
+          listStyle: "none",
+          margin: "0 0 16px",
+          padding: "12px 14px",
+          border: "1px solid var(--k-border)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        {[
+          "Support keeps what you have working. New features are quoted separately as fixed-price projects.",
+          carePlanLabel
+            ? `Your ${carePlanLabel} plan is a separate agreement — cancelling it never affects what you own.`
+            : "Without a plan you take on hosting, backups, security updates and running costs yourself.",
+          "Published “from” prices are starting points; your rate is the figure in this proposal.",
+        ].map((t) => (
+          <li
+            key={t}
+            className="flex items-start gap-2.5"
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.82rem",
+              lineHeight: 1.5,
+              color: "var(--k-fg)",
+            }}
+          >
+            <span aria-hidden style={{ color: "var(--k-accent)", marginTop: 1 }}>
+              ▸
+            </span>
+            {t}
+          </li>
+        ))}
+      </ul>
       <form onSubmit={onAccept}>
         <SignatureField />
         {error && (

@@ -11,8 +11,6 @@
     "./routes/client-signup": "./src/routes/client-signup.ts",
     "./routes/resend-confirmation": "./src/routes/resend-confirmation.ts",
     "./routes/verify-code": "./src/routes/verify-code.ts",
-    "./routes/request-reset": "./src/routes/request-reset.ts",
-    "./routes/reset-with-code": "./src/routes/reset-with-code.ts",
     "./routes/signout": "./src/routes/signout.ts"
   },
   "dependencies": {

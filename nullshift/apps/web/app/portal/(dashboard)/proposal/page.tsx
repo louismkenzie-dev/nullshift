@@ -1,17 +1,25 @@
 import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
+import { getPortalClient, isClientPreview } from "@/lib/clientPreview";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
-import { clientRef } from "@nullshift/ui/format";
+import { clientRef, invoiceRef } from "@nullshift/ui/format";
 import { carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { DpaTemplate } from "@/components/legal/DpaTemplate";
+import { ServiceTermsTemplate } from "@/components/legal/ServiceTermsTemplate";
+import { Contract } from "@/components/portal/Contract";
+import {
+  SERVICE_TERMS_ACKNOWLEDGEMENTS,
+  SERVICE_TERMS_VERSION,
+} from "@nullshift/content/serviceTerms";
 import { BankTransferDetails } from "@/components/portal/BankTransferDetails";
 import { ProposalDocument } from "@/components/portal/ProposalDocument";
 import { SignProposal } from "@/components/portal/SignProposal";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 import { setEntityType } from "../dpa-actions";
 import { dpaReadyToSend } from "@/lib/dpa";
+import { advanceOnly } from "@/lib/projectStage";
 import { sendEmail } from "@/lib/sendEmail";
 import { proposalSignedEmail } from "@/lib/clientEmails";
 import { PageHeader, StatusChip } from "@/components/app/AppKit";
@@ -62,6 +70,9 @@ const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 
 async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   "use server";
+  // Staff view-as-client preview is read-only — a preview click must never
+  // sign the client's agreement.
+  if (await isClientPreview()) return { ok: false };
   const projectId = String(formData.get("project_id") || "");
   const signature = String(formData.get("signature") || "").trim();
   if (!projectId || !signature) return { ok: false };
@@ -77,7 +88,7 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   const { data: project } = await supabase
     .from("projects")
     .select(
-      "id, tenant_id, proposal_status, proposed_plan, client_entity_type, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at"
+      "id, tenant_id, proposal_status, proposed_plan, stage, overview, payment_terms, client_entity_type, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at"
     )
     .eq("id", projectId)
     .maybeSingle();
@@ -93,6 +104,14 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   // report failure instead of celebrating a sign that didn't take.
   const now = new Date().toISOString();
   const service = createServiceClient();
+  // Signing opens onboarding — the deposit invoice goes out now, and the move
+  // to 'build' is gated on payment (or a recorded staff override) in the admin
+  // stage control. Work is not committed before money moves.
+  //
+  // Forward only. A client who was delivered before the portal existed can sign
+  // retrospectively while sitting on `care`, and writing `onboarding` over that
+  // would tell everyone their live system is a fresh build.
+  const nextStage = advanceOnly(project.stage, "onboarding");
   const { data: updated, error: acceptErr } = await service
     .from("projects")
     .update({
@@ -100,8 +119,7 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       accepted_name: signature,
       accepted_signature: signature,
       accepted_at: now,
-      // Signing kicks the project into the build stage and unlocks build edits.
-      stage: "build",
+      ...(nextStage ? { stage: nextStage } : {}),
     })
     .eq("id", projectId)
     .eq("proposal_status", "sent")
@@ -111,6 +129,34 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   // Everything past here is best-effort — the proposal IS accepted, so a hiccup
   // in a downstream step must never turn the client's success into an error.
   try {
+    // Freeze the accepted agreement (migration 0025): the exact modules,
+    // overview, payment terms and care plan at the moment of signature. The
+    // signed PDF renders from THIS — scope edits after acceptance can never
+    // change what the legal record says was agreed.
+    const { data: snapItems } = await service
+      .from("project_items")
+      .select("name, amount")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: true });
+    const snapshotItems = ((snapItems ?? []) as { name: string; amount: number }[]).map(
+      (i) => ({ name: i.name, amount: Number(i.amount) })
+    );
+    await service
+      .from("projects")
+      .update({
+        accepted_snapshot: {
+          items: snapshotItems,
+          total: snapshotItems.reduce((s, i) => s + i.amount, 0),
+          overview: project.overview ?? null,
+          payment_terms: project.payment_terms ?? null,
+          proposed_plan: project.proposed_plan ?? null,
+          client_entity_type: project.client_entity_type ?? null,
+          accepted_name: signature,
+          accepted_at: now,
+        },
+      })
+      .eq("id", projectId);
+
     // Record the data-processing acceptance (satisfies the DPA-before-live gate
     // for both: a full DPA for limited companies, standard terms for sole traders).
     await service.from("compliance_records").insert({
@@ -125,6 +171,25 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       },
     });
 
+    // The same signature accepts the Service & Support Terms — what the plan
+    // covers, what "support" means, that new capability is quoted separately,
+    // and that without a plan the client runs hosting and maintenance
+    // themselves. Recorded as its own compliance record with the version, so
+    // "which terms did they actually agree to?" has an answer years later.
+    await service.from("compliance_records").insert({
+      tenant_id: project.tenant_id,
+      kind: "service_terms_signed",
+      detail: {
+        signed_by: user.id,
+        signed_name: signature,
+        via: "portal",
+        version: SERVICE_TERMS_VERSION,
+        project_id: projectId,
+        care_plan: project.proposed_plan ?? null,
+        acknowledged: SERVICE_TERMS_ACKNOWLEDGEMENTS,
+      },
+    });
+
     await logAudit({
       action: "proposal.accepted",
       target: `project:${projectId}`,
@@ -134,6 +199,12 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       action: "dpa.signed",
       target: `tenant:${project.tenant_id}`,
       tenantId: project.tenant_id,
+    });
+    await logAudit({
+      action: "service_terms.signed",
+      target: `tenant:${project.tenant_id}`,
+      tenantId: project.tenant_id,
+      metadata: { version: SERVICE_TERMS_VERSION },
     });
 
     // The care plan is NOT auto-activated here — the admin sends the client a
@@ -184,6 +255,7 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       adminUrl: `${siteUrl}/admin/clients/${project.tenant_id}`,
     });
     await sendEmail({
+      purpose: "transactional",
       to: notify,
       subject: mail.subject,
       html: mail.html,
@@ -200,6 +272,7 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
 
 async function declineProposal(formData: FormData) {
   "use server";
+  if (await isClientPreview()) return;
   const projectId = String(formData.get("project_id") || "");
   if (!projectId) return;
   const supabase = await createClient();
@@ -243,7 +316,7 @@ function Badge({ s }: { s: string }) {
 }
 
 export default async function PortalProposal() {
-  const supabase = await createClient();
+  const { supabase } = await getPortalClient();
   const [{ data: projects }, { data: items }, { data: invoices }, { data: invItems }] =
     await Promise.all([
       supabase
@@ -314,6 +387,23 @@ export default async function PortalProposal() {
               present: !!project.dpa_special_category,
               detail: project.dpa_special_category_detail,
             }}
+            accepted={
+              project.accepted_at
+                ? { name: project.accepted_name ?? "", at: project.accepted_at }
+                : null
+            }
+          />
+        );
+        const termsDoc = (
+          <ServiceTermsTemplate
+            mode="proposal"
+            clientName={project.tenants?.name ?? null}
+            effectiveDate={
+              project.accepted_at
+                ? new Date(project.accepted_at).toLocaleDateString("en-GB")
+                : null
+            }
+            carePlanLabel={carePlan(project.proposed_plan)?.label ?? null}
             accepted={
               project.accepted_at
                 ? { name: project.accepted_name ?? "", at: project.accepted_at }
@@ -490,10 +580,7 @@ export default async function PortalProposal() {
                         ↓ Proposal PDF
                       </a>
                       {limited && (
-                        <a
-                          href={`/api/documents/dpa/${project.id}`}
-                          className="kb kb-sm"
-                        >
+                        <a href={`/api/documents/dpa/${project.id}`} className="kb kb-sm">
                           ↓ DPA PDF
                         </a>
                       )}
@@ -524,38 +611,39 @@ export default async function PortalProposal() {
                     />
                   </div>
 
-                  {/* Full DPA — limited companies only. Collapsible while pending,
-                    rendered in full once signed so it reads + saves to PDF. */}
-                  {limited &&
-                    (accepted ? (
-                      <div id={`dpa-document-${project.id}`} style={{ marginTop: 12 }}>
-                        {dpaDoc}
-                      </div>
-                    ) : (
-                      <details
-                        className="k-kard"
-                        style={{
-                          marginTop: 12,
-                          background: "var(--k-surface)",
-                          padding: "14px 18px",
-                        }}
-                      >
-                        <summary
-                          style={{
-                            cursor: "pointer",
-                            fontFamily: T.sans,
-                            fontWeight: 700,
-                            fontSize: "0.95rem",
-                            textTransform: "uppercase",
-                            letterSpacing: "-0.01em",
-                            color: "var(--k-fg)",
-                          }}
-                        >
-                          View the full Data Processing Agreement
-                        </summary>
-                        <div style={{ marginTop: 16 }}>{dpaDoc}</div>
-                      </details>
-                    ))}
+                  {/* Everything the signature binds, readable BEFORE signing.
+                    Collapsible while pending; rendered in full once signed so
+                    each reads cleanly and saves to PDF.
+
+                    The DPA is no longer limited-company-only: a sole trader is
+                    still a controller whose customers' data we process, and
+                    gating the document on an entity type the client hasn't
+                    declared yet meant nobody could read it before signing. */}
+                  <Contract
+                    id={`terms-document-${project.id}`}
+                    title="Service & Support Terms"
+                    summary="View the Service & Support Terms"
+                    blurb="What your monthly fee covers, what counts as support, how new work is quoted, and what happens if you don't take a plan."
+                    accepted={accepted}
+                    href={`/api/documents/terms/${project.id}`}
+                  >
+                    {termsDoc}
+                  </Contract>
+
+                  <Contract
+                    id={`dpa-document-${project.id}`}
+                    title="Data Processing Agreement"
+                    summary="View the full Data Processing Agreement"
+                    blurb={
+                      limited
+                        ? "How we handle personal data on your behalf, as your processor under UK GDPR."
+                        : "How we handle personal data on your behalf. The full agreement applies where you're a limited company; as a sole trader the same data-protection commitments apply to us as your processor."
+                    }
+                    accepted={accepted}
+                    href={`/api/documents/dpa/${project.id}`}
+                  >
+                    {dpaDoc}
+                  </Contract>
 
                   {/* Sign / decline — business details are captured above. */}
                   {project.proposal_status === "sent" && dpaReadyToSend(project) && (
@@ -563,7 +651,6 @@ export default async function PortalProposal() {
                       acceptAction={acceptProposal}
                       declineAction={declineProposal}
                       projectId={project.id}
-                      limited={limited}
                       carePlanLabel={carePlan(project.proposed_plan)?.label ?? null}
                     />
                   )}
@@ -680,7 +767,7 @@ export default async function PortalProposal() {
                           </a>
                         )}
                         <BankTransferDetails
-                          reference={clientRef(project.tenant_id)}
+                          reference={invoiceRef(project.tenant_id, inv.id)}
                           amount={Number(inv.amount)}
                           only={!inv.hosted_invoice_url}
                         />

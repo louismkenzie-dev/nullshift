@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useFormStatus } from "react-dom";
-import { beginOperation, endOperation } from "./operationOverlay";
+import { beginOperation, endOperation } from "./operationState";
 
 /**
  * Invisible marker dropped INSIDE a server-action <form>: while the form's

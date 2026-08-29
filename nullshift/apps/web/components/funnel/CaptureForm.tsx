@@ -10,6 +10,8 @@ export type CaptureContact = {
   business: string;
   email: string;
   phone: string;
+  /** Their real website — the agent researches it. (NOT `website`: that's the honeypot.) */
+  siteUrl: string;
   website: string; // honeypot
   elapsedMs: number; // time-trap
 };
@@ -28,6 +30,7 @@ export function CaptureForm({
   const [business, setBusiness] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [siteUrl, setSiteUrl] = useState("");
   const [website, setWebsite] = useState(""); // honeypot
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
   const [busy, setBusy] = useState(false);
@@ -46,6 +49,7 @@ export function CaptureForm({
       business: business.trim(),
       email: email.trim(),
       phone: phone.trim(),
+      siteUrl: siteUrl.trim(),
       website,
       elapsedMs: Date.now() - mountedAt.current,
     });
@@ -150,6 +154,18 @@ export function CaptureForm({
           />
         </Field>
 
+        <Field label="Your website" note="optional — your agent researches it">
+          <input
+            className="brief-input"
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            value={siteUrl}
+            onChange={(e) => setSiteUrl(e.target.value)}
+            placeholder="e.g. riversidephysio.co.uk"
+          />
+        </Field>
+
         <Field label="Email address" error={errors.email}>
           <input
             className={`brief-input${errors.email ? " brief-input-err" : ""}`}
@@ -192,7 +208,7 @@ export function CaptureForm({
             boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18)`,
           }}
         >
-          {busy ? "Revealing…" : "See my recommendation →"}
+          {busy ? "Waking your agent…" : "Start my agent consultation →"}
         </button>
 
         <p style={{ fontFamily: T.sans, fontSize: "0.75rem", color: T.faint }}>

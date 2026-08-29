@@ -1,4 +1,5 @@
 import { createServiceClient } from "@nullshift/db";
+import { escapeLike } from "@nullshift/db/leads";
 
 type LeadPlan = { businessName?: string | null };
 type LeadAnswers = { business_name?: string | null };
@@ -42,14 +43,14 @@ export async function ensureClientWorkspace(opts: {
       .from("tenants")
       .select("id")
       .eq("type", "client")
-      .ilike("contact_email", email)
+      .ilike("contact_email", escapeLike(email))
       .limit(1);
     tenantId = existing?.[0]?.id ?? null;
 
     const { data: lead } = await service
       .from("leads")
       .select("name, vertical, quiz_answers, plan")
-      .ilike("email", email)
+      .ilike("email", escapeLike(email))
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

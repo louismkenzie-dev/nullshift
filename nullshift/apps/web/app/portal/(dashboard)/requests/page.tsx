@@ -1,6 +1,10 @@
 import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
+import { getPortalClient, isClientPreview } from "@/lib/clientPreview";
 import { logAudit } from "@nullshift/db/audit";
+import { requireTenantMember } from "@nullshift/auth/guards";
+import { generateQuoteInvoice } from "@/lib/quoteInvoice";
+import { SubmitButton } from "@/components/admin/SubmitButton";
 import { T } from "@nullshift/ui/tokens";
 import { carePlan } from "@/lib/carePlans";
 import { classifyIssue } from "@/lib/ops/classify";
@@ -31,8 +35,32 @@ export const dynamic = "force-dynamic";
 
 type PortalIssue = Pick<
   IssueRow,
-  "id" | "title" | "kind" | "status" | "created_at" | "due_at"
+  | "id"
+  | "title"
+  | "kind"
+  | "status"
+  | "created_at"
+  | "due_at"
+  | "quoted_price"
+  | "quote_note"
+  | "quote_accepted_at"
+  | "quote_declined_at"
+  | "billing"
+  | "tenant_id"
+  | "project_id"
 >;
+
+/** A quote the client still has to decide on. */
+function isPendingQuote(i: PortalIssue): boolean {
+  return (
+    i.status === "awaiting_client" &&
+    i.billing === "out_of_scope" &&
+    !!i.quoted_price &&
+    !!i.quote_note &&
+    !i.quote_accepted_at &&
+    !i.quote_declined_at
+  );
+}
 
 const dateGB = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", {
@@ -45,6 +73,9 @@ async function submitRequest(
   formData: FormData
 ): Promise<{ ok: boolean; error?: string }> {
   "use server";
+  // Staff view-as-client preview is read-only.
+  if (await isClientPreview())
+    return { ok: false, error: "Preview is view-only — requests are disabled." };
   const kindRaw = String(formData.get("kind") || "");
   const kind = PORTAL_KINDS.find((k) => k.id === kindRaw)?.id as IssueKind | undefined;
   const title = String(formData.get("title") || "")
@@ -66,7 +97,8 @@ async function submitRequest(
     .eq("user_id", user.id)
     .limit(1)
     .maybeSingle();
-  if (!membership) return { ok: false, error: "We couldn't find your workspace — email us instead." };
+  if (!membership)
+    return { ok: false, error: "We couldn't find your workspace — email us instead." };
   const tenantId = membership.tenant_id as string;
 
   // Attach to their newest project.
@@ -147,7 +179,12 @@ async function submitRequest(
       const service = createServiceClient();
       await service
         .from("issues")
-        .update({ ai: c, kind: c.kind, severity: c.severity, due_at: dueAtFor(c.severity) })
+        .update({
+          ai: c,
+          kind: c.kind,
+          severity: c.severity,
+          due_at: dueAtFor(c.severity),
+        })
         .eq("id", issue.id);
     }
 
@@ -159,6 +196,7 @@ async function submitRequest(
       <div style="padding:0 0 26px">${button(adminUrl, "Open the issue queue")}</div>
     </td></tr>`;
     await sendEmail({
+      purpose: "transactional",
       to: process.env.ENQUIRY_NOTIFY_EMAIL || "louis@nullshift.co.uk",
       subject: `[${tenantName}] New ${KIND_LABEL[kind]}: ${title}`,
       html: wrap(inner, `${tenantName} — ${title}`),
@@ -169,17 +207,117 @@ async function submitRequest(
   }
 
   revalidatePath("/portal/requests");
-  return { ok: true };
   revalidatePath("/portal");
+  return { ok: true };
+}
+
+/**
+ * The client's decision on a billable quote — the step that makes scope
+ * changes explicit, approved, and payable before work begins. Accept stamps
+ * the approval, queues the work, and generates the invoice; decline closes
+ * the request as not-proceeding. RLS-scoped read proves the issue belongs to
+ * the caller's tenant before the guarded service-role write (same pattern as
+ * the decisions feed).
+ */
+async function decideQuote(formData: FormData) {
+  "use server";
+  // Staff view-as-client preview is read-only — never decide a quote.
+  if (await isClientPreview()) return;
+  const id = String(formData.get("id") || "");
+  const decision = String(formData.get("decision") || "");
+  if (!id || (decision !== "accept" && decision !== "decline")) return;
+
+  const supabase = await createClient();
+  const { data: issue } = await supabase
+    .from("issues")
+    .select(
+      "id, tenant_id, project_id, title, status, billing, quoted_price, quote_note, quote_accepted_at, quote_declined_at"
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (
+    !issue ||
+    issue.status !== "awaiting_client" ||
+    issue.billing !== "out_of_scope" ||
+    !issue.quoted_price ||
+    issue.quote_accepted_at ||
+    issue.quote_declined_at
+  )
+    return;
+
+  const guard = await requireTenantMember(issue.tenant_id);
+  if (!guard.ok) return;
+
+  const service = createServiceClient();
+  const now = new Date().toISOString();
+  if (decision === "accept") {
+    await service
+      .from("issues")
+      .update({ quote_accepted_at: now, status: "queued" })
+      .eq("id", id);
+    await logAudit({
+      action: "issue.quote_accepted",
+      target: `issue:${id}`,
+      tenantId: issue.tenant_id,
+      metadata: { quoted_price: issue.quoted_price },
+    });
+    // Money follows the yes: the invoice goes out the moment the client
+    // agrees, so approved work is never built on an unbilled promise.
+    try {
+      await generateQuoteInvoice(service, {
+        tenantId: issue.tenant_id,
+        projectId: issue.project_id,
+        issueId: id,
+        title: issue.title,
+        amount: Number(issue.quoted_price),
+      });
+    } catch (e) {
+      console.error("quote invoice generation failed:", e);
+    }
+  } else {
+    await service
+      .from("issues")
+      .update({ quote_declined_at: now, status: "closed", resolved_at: now })
+      .eq("id", id);
+    await logAudit({
+      action: "issue.quote_declined",
+      target: `issue:${id}`,
+      tenantId: issue.tenant_id,
+      metadata: { quoted_price: issue.quoted_price },
+    });
+  }
+
+  // Tell the team — a quote decision is a commercial event, not a portal ping.
+  try {
+    await sendEmail({
+      purpose: "transactional",
+      to: process.env.ENQUIRY_NOTIFY_EMAIL || "louis@nullshift.co.uk",
+      subject: `Quote ${decision === "accept" ? "ACCEPTED" : "declined"}: ${issue.title} (£${issue.quoted_price})`,
+      html: wrap(
+        `<tr><td style="padding:26px 32px"><p style="margin:0;font-family:${FONT};font-size:15px;color:${C.fg}">The client ${decision === "accept" ? "accepted" : "declined"} the quote for “${esc(issue.title)}” (£${issue.quoted_price}).${decision === "accept" ? " The invoice has been generated and the work is queued." : ""}</p></td></tr>`,
+        `Quote ${decision}`
+      ),
+      text: `Quote ${decision}: ${issue.title} (£${issue.quoted_price})`,
+    });
+  } catch (e) {
+    console.error("quote decision email failed (non-fatal):", e);
+  }
+
+  revalidatePath("/portal/requests");
+  revalidatePath("/portal");
+  revalidatePath("/admin/issues");
 }
 
 export default async function PortalRequestsPage() {
-  const supabase = await createClient();
+  const { supabase } = await getPortalClient();
   const { data: issues } = await supabase
     .from("issues")
-    .select("id, title, kind, status, created_at, due_at")
+    .select(
+      "id, tenant_id, project_id, title, kind, status, created_at, due_at, billing, quoted_price, quote_note, quote_accepted_at, quote_declined_at"
+    )
     .order("created_at", { ascending: false });
   const issueList = (issues ?? []) as PortalIssue[];
+  const pendingQuotes = issueList.filter(isPendingQuote);
 
   return (
     <div
@@ -201,6 +339,119 @@ export default async function PortalRequestsPage() {
         </Reveal>
       </div>
 
+      {pendingQuotes.length > 0 && (
+        <div style={{ margin: "0 0 20px" }}>
+          <Reveal>
+            <Panel label="// FOR YOUR APPROVAL" title="Quotes waiting on you">
+              <div className="flex flex-col">
+                {pendingQuotes.map((q, i) => (
+                  <div
+                    key={q.id}
+                    className="flex flex-col gap-2"
+                    style={{
+                      padding: "14px 0",
+                      borderTop: i ? "1px solid var(--k-border)" : "none",
+                    }}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+                      <span
+                        className="min-w-0 break-words"
+                        style={{
+                          fontFamily: T.sans,
+                          fontWeight: 600,
+                          fontSize: "0.92rem",
+                          color: "var(--k-fg)",
+                        }}
+                      >
+                        {q.title}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: T.display,
+                          fontWeight: 700,
+                          fontSize: "1.05rem",
+                          color: "var(--k-fg)",
+                        }}
+                      >
+                        £{Math.round(Number(q.quoted_price)).toLocaleString("en-GB")}
+                      </span>
+                    </div>
+                    <p
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.86rem",
+                        lineHeight: 1.55,
+                        color: "var(--k-muted)",
+                        margin: 0,
+                      }}
+                    >
+                      {q.quote_note}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <form action={decideQuote}>
+                        <input type="hidden" name="id" value={q.id} />
+                        <input type="hidden" name="decision" value="accept" />
+                        <SubmitButton
+                          style={{
+                            fontFamily: T.mono,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                            height: 34,
+                            paddingInline: 16,
+                            background: "var(--k-accent)",
+                            color: "var(--k-on-accent)",
+                            border: "1px solid transparent",
+                            borderRadius: 0,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Accept — go ahead
+                        </SubmitButton>
+                      </form>
+                      <form action={decideQuote}>
+                        <input type="hidden" name="id" value={q.id} />
+                        <input type="hidden" name="decision" value="decline" />
+                        <SubmitButton
+                          style={{
+                            fontFamily: T.mono,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                            height: 34,
+                            paddingInline: 16,
+                            background: "transparent",
+                            color: "var(--k-muted)",
+                            border: "1px solid var(--k-border)",
+                            borderRadius: 0,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Decline
+                        </SubmitButton>
+                      </form>
+                      <span
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: "0.6rem",
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          color: "var(--k-faint)",
+                        }}
+                      >
+                        Accepting sends the invoice and queues the work
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          </Reveal>
+        </div>
+      )}
+
       <Reveal>
         <Panel label="// YOUR REQUESTS">
           {issueList.length === 0 ? (
@@ -208,8 +459,8 @@ export default async function PortalRequestsPage() {
               className="text-center py-7"
               style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}
             >
-              Nothing here yet — when you send us a request it&apos;ll appear here so
-              you can follow along.
+              Nothing here yet — when you send us a request it&apos;ll appear here so you
+              can follow along.
             </p>
           ) : (
             <div className="flex flex-col">

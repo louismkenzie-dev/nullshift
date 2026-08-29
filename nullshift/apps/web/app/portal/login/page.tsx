@@ -9,7 +9,8 @@ import { LogoMark } from "@nullshift/ui/components/Logo";
 import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
 import { Eyebrow, Display } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
-import { useOperationPending } from "@/components/app/operationOverlay";
+import { useOperationPending } from "@/components/app/operationState";
+import { resolveDestination } from "@/lib/authDestination";
 
 /* ── Shared input style (KYMA — square, hairline, emerald focus) ── */
 const inputStyle: React.CSSProperties = {
@@ -59,8 +60,9 @@ function LoginForm() {
   useEffect(() => {
     if (!hasSupabaseBrowserConfig()) return;
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.replace(next);
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      // Already signed in: staff belong in the admin hub, clients in the portal.
+      if (user) router.replace(await resolveDestination(supabase, next));
     });
   }, [next, router]);
 
@@ -75,7 +77,7 @@ function LoginForm() {
         password,
       });
       if (signInError) throw signInError;
-      router.replace(next);
+      router.replace(await resolveDestination(supabase, next));
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed.");
@@ -181,6 +183,9 @@ function LoginForm() {
         </form>
 
         <div className="mt-6 text-center flex flex-col gap-3">
+          {/* A client whose password doesn't work must have a way back in that
+              doesn't involve emailing us. Without this, sign-in fails and
+              sign-up correctly says the account already exists — a dead end. */}
           <Link
             href="/portal/forgot"
             style={{
@@ -189,11 +194,12 @@ function LoginForm() {
               fontWeight: 500,
               letterSpacing: "0.08em",
               textTransform: "uppercase",
-              color: "var(--k-accent)",
-              textDecoration: "none",
+              color: "var(--k-muted)",
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
             }}
           >
-            Forgot your password? Reset it →
+            Forgot your password?
           </Link>
           <Link
             href="/portal/signup"

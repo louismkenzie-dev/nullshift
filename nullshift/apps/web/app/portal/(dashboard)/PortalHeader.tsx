@@ -24,6 +24,7 @@ const NAV = [
   { n: "05", href: "/portal/updates", label: "Updates" },
   { n: "06", href: "/portal/plan", label: "Plan" },
   { n: "07", href: "/portal/deliverables", label: "Documents" },
+  { n: "08", href: "/portal/legal", label: "Legal" },
 ];
 
 /**

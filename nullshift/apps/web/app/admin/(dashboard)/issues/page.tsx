@@ -24,6 +24,12 @@ import {
   type IssueSource,
   type IssueStatus,
 } from "@/lib/ops/issues";
+import {
+  CLASSIFIER_RULE,
+  WORK_CLASSIFICATIONS,
+  requiresChangeOrder,
+  type WorkClassification,
+} from "@nullshift/content/legal/work";
 
 /**
  * Issue bank — the single intake for every bug, change request and question
@@ -49,6 +55,9 @@ const STATUS_FILTERS: IssueStatus[] = [
 ];
 const ALL_STATUSES: IssueStatus[] = [...STATUS_FILTERS, "closed"];
 const KINDS = Object.keys(KIND_LABEL) as IssueKind[];
+const CLASSIFICATIONS = WORK_CLASSIFICATIONS.map((w) => w.id);
+/** Statuses that mean work has been approved for build (spec §8). */
+const BUILD_STATUSES: IssueStatus[] = ["queued", "batched", "in_progress"];
 const SEVERITIES = Object.keys(SEVERITY_META) as IssueSeverity[];
 const BILLINGS = Object.keys(BILLING_LABEL) as IssueBilling[];
 const SOURCES = Object.keys(SOURCE_LABEL) as IssueSource[];
@@ -68,7 +77,9 @@ async function createIssue(formData: FormData) {
   const severityRaw = String(formData.get("severity") || "normal");
   const sourceRaw = String(formData.get("source") || "internal");
   const kind = (KINDS as string[]).includes(kindRaw) ? kindRaw : "bug";
-  const severity = (SEVERITIES as string[]).includes(severityRaw) ? severityRaw : "normal";
+  const severity = (SEVERITIES as string[]).includes(severityRaw)
+    ? severityRaw
+    : "normal";
   const source = (SOURCES as string[]).includes(sourceRaw) ? sourceRaw : "internal";
   const clientVisible = formData.get("client_visible") === "on";
   const supabase = await createClient();
@@ -110,7 +121,11 @@ async function triageIssue(formData: FormData) {
   const id = String(formData.get("id") || "");
   if (!id) return;
   const supabase = await createClient();
-  const { data: existing } = await supabase.from("issues").select("*").eq("id", id).single();
+  const { data: existing } = await supabase
+    .from("issues")
+    .select("*")
+    .eq("id", id)
+    .single();
   if (!existing) return;
   const cur = existing as IssueRow;
 
@@ -119,15 +134,44 @@ async function triageIssue(formData: FormData) {
   const billingRaw = String(formData.get("billing") || cur.billing);
   const statusRaw = String(formData.get("status") || cur.status);
   const kind = ((KINDS as string[]).includes(kindRaw) ? kindRaw : cur.kind) as IssueKind;
-  const severity = ((SEVERITIES as string[]).includes(severityRaw)
-    ? severityRaw
-    : cur.severity) as IssueSeverity;
-  const billing = ((BILLINGS as string[]).includes(billingRaw)
-    ? billingRaw
-    : cur.billing) as IssueBilling;
-  const status = ((ALL_STATUSES as string[]).includes(statusRaw)
-    ? statusRaw
-    : cur.status) as IssueStatus;
+  const severity = (
+    (SEVERITIES as string[]).includes(severityRaw) ? severityRaw : cur.severity
+  ) as IssueSeverity;
+  const billing = (
+    (BILLINGS as string[]).includes(billingRaw) ? billingRaw : cur.billing
+  ) as IssueBilling;
+  let status = (
+    (ALL_STATUSES as string[]).includes(statusRaw) ? statusRaw : cur.status
+  ) as IssueStatus;
+
+  // §8. Restore/configure an existing agreed capability = support. Create or
+  // materially change one = additional development, and that must not be built
+  // off a support entitlement.
+  const classRaw = String(formData.get("classification") || "");
+  const classification = ((CLASSIFICATIONS as string[]).includes(classRaw)
+    ? classRaw
+    : (cur.classification ?? null)) as WorkClassification | null;
+
+  let buildBlocked = false;
+  if (requiresChangeOrder(classification) && BUILD_STATUSES.includes(status)) {
+    // The database enforces this too. Checking here as well means the admin
+    // sees the ticket refuse to move, rather than a save that silently no-ops.
+    let accepted = false;
+    if (cur.change_order_id) {
+      const { data: co } = await supabase
+        .from("change_orders")
+        .select("status")
+        .eq("id", cur.change_order_id)
+        .maybeSingle();
+      accepted = ["accepted", "in_build", "delivered", "accepted_complete"].includes(
+        String(co?.status)
+      );
+    }
+    if (!accepted) {
+      buildBlocked = true;
+      status = cur.status;
+    }
+  }
 
   const buildItemsRaw = String(formData.get("build_items") || "").trim();
   const buildItems = buildItemsRaw ? Number(buildItemsRaw) : null;
@@ -146,6 +190,9 @@ async function triageIssue(formData: FormData) {
     severity,
     billing,
     status,
+    classification,
+    classification_note:
+      String(formData.get("classification_note") || "").trim() || null,
     build_items: buildItems,
     quoted_price: quotedRaw ? Number(quotedRaw) : null,
     due_at: dueAt,
@@ -153,11 +200,24 @@ async function triageIssue(formData: FormData) {
     promised_note: String(formData.get("promised_note") || "").trim() || null,
     client_visible: formData.get("client_visible") === "on",
     resolution_note: String(formData.get("resolution_note") || "").trim() || null,
+    quote_note: String(formData.get("quote_note") || "").trim() || null,
   };
   if (status === "fixed" || status === "shipped" || status === "closed") {
     update.resolved_at = cur.resolved_at ?? now;
   }
+  if (classification && classification !== cur.classification) {
+    update.classified_at = now;
+    update.classified_by = (await supabase.auth.getUser()).data.user?.id ?? null;
+  }
   await supabase.from("issues").update(update).eq("id", id);
+
+  if (buildBlocked)
+    await logAudit({
+      action: "issue.build_blocked_no_change_order",
+      target: `issue:${id}`,
+      tenantId: cur.tenant_id,
+      metadata: { classification, attempted: statusRaw },
+    });
 
   // A shipped build_item consumes a build credit — exactly once per issue.
   // Deliberately NOT gated on the transition into "shipped": billing is often
@@ -187,7 +247,7 @@ async function triageIssue(formData: FormData) {
     action: "issue.triaged",
     target: `issue:${id}`,
     tenantId: cur.tenant_id,
-    metadata: { kind, severity, billing, status },
+    metadata: { kind, severity, billing, status, classification },
   });
   revalidatePath("/admin/issues");
 }
@@ -199,9 +259,80 @@ async function queueIssue(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   if (!id) return;
   const supabase = await createClient();
+
+  // §8 again: queueing IS approving for build, so the same gate applies here
+  // as in triage. The database trigger would reject it anyway; refusing here
+  // keeps the failure legible instead of a silent no-op.
+  const { data: cur } = await supabase
+    .from("issues")
+    .select("classification, change_order_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (requiresChangeOrder(cur?.classification as WorkClassification | null)) {
+    const { data: co } = cur?.change_order_id
+      ? await supabase
+          .from("change_orders")
+          .select("status")
+          .eq("id", cur.change_order_id)
+          .maybeSingle()
+      : { data: null };
+    const accepted = ["accepted", "in_build", "delivered", "accepted_complete"].includes(
+      String(co?.status)
+    );
+    if (!accepted) {
+      await logAudit({
+        action: "issue.build_blocked_no_change_order",
+        target: `issue:${id}`,
+        tenantId,
+        metadata: { classification: cur?.classification, attempted: "queued" },
+      });
+      revalidatePath("/admin/issues");
+      return;
+    }
+  }
+
   await supabase.from("issues").update({ status: "queued" }).eq("id", id);
   await logAudit({ action: "issue.queued", target: `issue:${id}`, tenantId });
   revalidatePath("/admin/issues");
+}
+
+/**
+ * Put an out-of-scope quote in front of the client: price + the plain-English
+ * impact statement, visible on /portal/requests with Accept / Decline. Saves
+ * the triage row first (the button sits inside the triage form), then flips
+ * the issue to awaiting_client. Any previous decision is cleared — re-sending
+ * a revised quote restarts the approval.
+ */
+async function sendQuote(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const id = String(formData.get("id") || "");
+  const tenantId = String(formData.get("tenant_id") || "");
+  if (!id) return;
+  const supabase = await createClient();
+  const price = Number(String(formData.get("quoted_price") || "").trim());
+  const note = String(formData.get("quote_note") || "").trim();
+  if (!(price > 0) || !note) return; // a quote is a price AND its explanation
+  await supabase
+    .from("issues")
+    .update({
+      billing: "out_of_scope",
+      quoted_price: price,
+      quote_note: note,
+      quote_accepted_at: null,
+      quote_declined_at: null,
+      status: "awaiting_client",
+      client_visible: true,
+    })
+    .eq("id", id);
+  await logAudit({
+    action: "issue.quote_sent",
+    target: `issue:${id}`,
+    tenantId,
+    metadata: { quoted_price: price },
+  });
+  revalidatePath("/admin/issues");
+  revalidatePath("/portal/requests");
 }
 
 async function closeIssue(formData: FormData) {
@@ -317,7 +448,9 @@ export default async function IssuesPage({
             className="flex flex-wrap items-center gap-2 ml-auto max-md:ml-0 max-md:w-full"
           >
             {statusFilter && <input type="hidden" name="status" value={statusFilter} />}
-            {projectFilter && <input type="hidden" name="project" value={projectFilter} />}
+            {projectFilter && (
+              <input type="hidden" name="project" value={projectFilter} />
+            )}
             <select
               name="tenant"
               defaultValue={tenantFilter ?? ""}
@@ -376,7 +509,12 @@ export default async function IssuesPage({
               />
             </Field>
             <Field label="Kind">
-              <select name="kind" defaultValue="bug" className="max-md:w-full" style={inp}>
+              <select
+                name="kind"
+                defaultValue="bug"
+                className="max-md:w-full"
+                style={inp}
+              >
                 {KINDS.map((k) => (
                   <option key={k} value={k}>
                     {KIND_LABEL[k]}
@@ -385,7 +523,12 @@ export default async function IssuesPage({
               </select>
             </Field>
             <Field label="Severity">
-              <select name="severity" defaultValue="normal" className="max-md:w-full" style={inp}>
+              <select
+                name="severity"
+                defaultValue="normal"
+                className="max-md:w-full"
+                style={inp}
+              >
                 {SEVERITIES.map((s) => (
                   <option key={s} value={s}>
                     {SEVERITY_META[s].label}
@@ -394,7 +537,12 @@ export default async function IssuesPage({
               </select>
             </Field>
             <Field label="Source">
-              <select name="source" defaultValue="internal" className="max-md:w-full" style={inp}>
+              <select
+                name="source"
+                defaultValue="internal"
+                className="max-md:w-full"
+                style={inp}
+              >
                 {SOURCES.map((s) => (
                   <option key={s} value={s}>
                     {SOURCE_LABEL[s]}
@@ -437,13 +585,21 @@ export default async function IssuesPage({
                   {tenantName(p.tenant_id)}
                 </span>
                 <span
-                  style={{ fontFamily: T.sans, fontSize: "0.85rem", color: "var(--k-muted)" }}
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.85rem",
+                    color: "var(--k-muted)",
+                  }}
                 >
                   {p.promised_note ?? p.title}
                 </span>
                 <span
                   className="ml-auto"
-                  style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-faint)" }}
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "10px",
+                    color: "var(--k-faint)",
+                  }}
                 >
                   {shortDate(p.promised_at as string)}
                 </span>
@@ -562,6 +718,13 @@ export default async function IssuesPage({
                       {BILLING_LABEL[issue.billing]}
                     </StatusChip>
                   </span>
+                  {/* §8: the ticket that cannot be scheduled yet, said out
+                      loud on the row rather than discovered on save. */}
+                  {requiresChangeOrder(issue.classification) && !issue.change_order_id && (
+                    <span>
+                      <StatusChip tone="warning">Needs Change Order</StatusChip>
+                    </span>
+                  )}
                   <span>
                     <StatusChip tone={STATUS_TONE[issue.status]}>
                       {issue.status.replace(/_/g, " ")}
@@ -569,7 +732,11 @@ export default async function IssuesPage({
                   </span>
                   <span className="flex items-center gap-2 flex-wrap">
                     <span
-                      style={{ fontFamily: T.mono, fontSize: "10px", color: "var(--k-muted)" }}
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "10px",
+                        color: "var(--k-muted)",
+                      }}
                     >
                       {ageDays(issue.created_at)}d
                       {issue.due_at ? ` · due ${shortDate(issue.due_at)}` : ""}
@@ -604,7 +771,12 @@ export default async function IssuesPage({
                   <form action={triageIssue} className="flex items-end gap-2 flex-wrap">
                     <input type="hidden" name="id" value={issue.id} />
                     <Field label="Kind">
-                      <select name="kind" defaultValue={issue.kind} className="max-md:w-full" style={inp}>
+                      <select
+                        name="kind"
+                        defaultValue={issue.kind}
+                        className="max-md:w-full"
+                        style={inp}
+                      >
                         {KINDS.map((k) => (
                           <option key={k} value={k}>
                             {KIND_LABEL[k]}
@@ -613,7 +785,12 @@ export default async function IssuesPage({
                       </select>
                     </Field>
                     <Field label="Severity">
-                      <select name="severity" defaultValue={issue.severity} className="max-md:w-full" style={inp}>
+                      <select
+                        name="severity"
+                        defaultValue={issue.severity}
+                        className="max-md:w-full"
+                        style={inp}
+                      >
                         {SEVERITIES.map((s) => (
                           <option key={s} value={s}>
                             {SEVERITY_META[s].label}
@@ -622,7 +799,12 @@ export default async function IssuesPage({
                       </select>
                     </Field>
                     <Field label="Billing">
-                      <select name="billing" defaultValue={issue.billing} className="max-md:w-full" style={inp}>
+                      <select
+                        name="billing"
+                        defaultValue={issue.billing}
+                        className="max-md:w-full"
+                        style={inp}
+                      >
                         {BILLINGS.map((b) => (
                           <option key={b} value={b}>
                             {BILLING_LABEL[b]}
@@ -630,8 +812,37 @@ export default async function IssuesPage({
                         ))}
                       </select>
                     </Field>
+                    <Field label={CLASSIFIER_RULE}>
+                      <select
+                        name="classification"
+                        defaultValue={issue.classification ?? ""}
+                        className="max-md:w-full"
+                        style={inp}
+                      >
+                        <option value="">Unclassified</option>
+                        {WORK_CLASSIFICATIONS.map((w) => (
+                          <option key={w.id} value={w.id}>
+                            {w.label}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Why this classification">
+                      <input
+                        name="classification_note"
+                        defaultValue={issue.classification_note ?? ""}
+                        placeholder="One line, for the client's benefit and ours"
+                        className="w-full md:w-[240px]"
+                        style={inp}
+                      />
+                    </Field>
                     <Field label="Status">
-                      <select name="status" defaultValue={issue.status} className="max-md:w-full" style={inp}>
+                      <select
+                        name="status"
+                        defaultValue={issue.status}
+                        className="max-md:w-full"
+                        style={inp}
+                      >
                         {ALL_STATUSES.map((s) => (
                           <option key={s} value={s}>
                             {s.replace(/_/g, " ")}
@@ -661,6 +872,15 @@ export default async function IssuesPage({
                         style={inp}
                       />
                     </Field>
+                    <Field label="Impact statement (what the client reads with the quote)">
+                      <input
+                        name="quote_note"
+                        defaultValue={issue.quote_note ?? ""}
+                        placeholder="What we'd build, what it costs, how long, what it affects"
+                        className="w-full md:w-[280px]"
+                        style={inp}
+                      />
+                    </Field>
                     <Field label="Due">
                       <input
                         name="due_at"
@@ -670,8 +890,15 @@ export default async function IssuesPage({
                         style={{ ...inp, maxWidth: "100%" }}
                       />
                     </Field>
-                    <label className="flex items-center gap-2" style={{ ...check, height: 36 }}>
-                      <input type="checkbox" name="promised" defaultChecked={!!issue.promised_at} />
+                    <label
+                      className="flex items-center gap-2"
+                      style={{ ...check, height: 36 }}
+                    >
+                      <input
+                        type="checkbox"
+                        name="promised"
+                        defaultChecked={!!issue.promised_at}
+                      />
                       Promised
                     </label>
                     <Field label="Promised note">
@@ -683,7 +910,10 @@ export default async function IssuesPage({
                         style={inp}
                       />
                     </Field>
-                    <label className="flex items-center gap-2" style={{ ...check, height: 36 }}>
+                    <label
+                      className="flex items-center gap-2"
+                      style={{ ...check, height: 36 }}
+                    >
                       <input
                         type="checkbox"
                         name="client_visible"
@@ -703,6 +933,19 @@ export default async function IssuesPage({
                     <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
                       Save
                     </SubmitButton>
+                    <SubmitButton
+                      formAction={sendQuote}
+                      title="Requires a price and an impact statement — puts the quote in front of the client on the portal with Accept / Decline"
+                      style={btn("var(--k-bg)", T.warning, true)}
+                    >
+                      {issue.quote_accepted_at
+                        ? "Quote accepted ✓"
+                        : issue.quote_declined_at
+                          ? "Re-send quote"
+                          : issue.status === "awaiting_client" && issue.quoted_price
+                            ? "Quote with client…"
+                            : "Send quote"}
+                    </SubmitButton>
                   </form>
                   {OPEN_STATUSES.includes(issue.status) && (
                     <div className="flex flex-wrap items-center gap-2 mt-3">
@@ -710,7 +953,9 @@ export default async function IssuesPage({
                         <form action={queueIssue}>
                           <input type="hidden" name="id" value={issue.id} />
                           <input type="hidden" name="tenant_id" value={issue.tenant_id} />
-                          <SubmitButton style={btn("var(--k-bg)", "var(--k-accent)", true)}>
+                          <SubmitButton
+                            style={btn("var(--k-bg)", "var(--k-accent)", true)}
+                          >
                             Queue
                           </SubmitButton>
                         </form>

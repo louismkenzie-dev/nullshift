@@ -4,6 +4,9 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { requireStaff } from "@nullshift/auth/guards";
+import { findUserByEmail } from "@nullshift/auth/confirmation-email";
+import { escapeLike } from "@nullshift/db/leads";
+import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
 import { logAudit } from "@nullshift/db/audit";
 import { uploadDeliverable } from "@nullshift/db/documents";
 import { CATALOG } from "@nullshift/content/catalog";
@@ -15,6 +18,7 @@ import { sendCareSubscriptionSignup } from "@/lib/careSubscription";
 import { getStripe, voidStripeInvoice } from "@nullshift/billing/stripe";
 import {
   cancelBillingRequest,
+  cancelGoCardlessSubscription,
   isGoCardlessConfigured,
   startCareDirectDebit,
 } from "@nullshift/billing/gocardless";
@@ -31,6 +35,8 @@ import {
 import { ProposalDocsForm } from "@/components/admin/ProposalDocsForm";
 import { dpaReadyToSend } from "@/lib/dpa";
 import { PageHeader } from "@/components/app/AppKit";
+import { contractedMrr } from "@/lib/pricing/contracted";
+import { tenantBalance } from "@/lib/billing/balance";
 import { Reveal } from "@/components/kyma";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
@@ -63,6 +69,8 @@ type Invoice = {
   id: string;
   amount: number;
   status: string;
+  /** 'build_milestone' | 'one_off' | … — the build panel keys off this. */
+  type: string | null;
   hosted_invoice_url: string | null;
   project_item_count: number | null;
   created_at: string;
@@ -88,7 +96,18 @@ type Sub = {
 };
 
 const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
-const STAGES = ["discovery", "build", "review", "live", "care"];
+// Full delivery lifecycle (migration 0024): signed work lands in onboarding,
+// launch_prep is the real pre-live gate, complete closes a project out.
+const STAGES = [
+  "discovery",
+  "onboarding",
+  "build",
+  "review",
+  "launch_prep",
+  "live",
+  "care",
+  "complete",
+];
 /** Time-of-day the client picked when booking → a readable label + a sensible
  *  default exact time to prefill (still confirmed with them). */
 const TIME_BUCKETS: Record<string, { label: string; time: string }> = {
@@ -116,6 +135,24 @@ async function ensureProject(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
+/**
+ * The signed scope is a legal record: once a proposal is accepted its
+ * project_items are the contract baseline (the "signed" PDF re-renders from
+ * these rows), so module edits are refused after acceptance. Changes from that
+ * point go through change requests, not silent baseline edits.
+ */
+async function scopeIsLocked(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  projectId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("projects")
+    .select("proposal_status")
+    .eq("id", projectId)
+    .maybeSingle();
+  return data?.proposal_status === "accepted";
+}
+
 async function addItem(formData: FormData) {
   "use server";
   const tenantId = String(formData.get("tenant_id") || "");
@@ -124,6 +161,7 @@ async function addItem(formData: FormData) {
   const amount = Number(formData.get("amount") || 0);
   if (!projectId || !name) return;
   const supabase = await createClient();
+  if (await scopeIsLocked(supabase, projectId)) return;
   await supabase
     .from("project_items")
     .insert({ project_id: projectId, tenant_id: tenantId, name, amount });
@@ -140,8 +178,22 @@ async function removeItem(formData: FormData) {
   "use server";
   const tenantId = String(formData.get("tenant_id") || "");
   const id = String(formData.get("id") || "");
+  if (!id) return;
   const supabase = await createClient();
+  const { data: item } = await supabase
+    .from("project_items")
+    .select("id, project_id, name, amount")
+    .eq("id", id)
+    .maybeSingle();
+  if (!item) return;
+  if (await scopeIsLocked(supabase, item.project_id)) return;
   await supabase.from("project_items").delete().eq("id", id);
+  await logAudit({
+    action: "proposal.item_removed",
+    target: `project:${item.project_id}`,
+    tenantId,
+    metadata: { name: item.name, amount: item.amount },
+  });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -237,7 +289,13 @@ async function saveDocsAndSend(formData: FormData) {
         name: tenant?.contact_name ?? "there",
         portalUrl: `${SITE_URL}/portal`,
       });
-      await sendEmail({ to, subject: mail.subject, html: mail.html, text: mail.text });
+      await sendEmail({
+        purpose: "service_relationship",
+        to,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+      });
     }
   }
   revalidatePath(`/admin/clients/${tenantId}`);
@@ -286,19 +344,76 @@ async function setStage(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   const projectId = String(formData.get("project_id") || "");
   const stage = String(formData.get("stage") || "");
+  const overrideReason = String(formData.get("override_reason") || "").trim();
   if (!STAGES.includes(stage)) return;
   const supabase = await createClient();
+
+  // Deposit-before-build gate: committed build work needs money to have moved
+  // (any paid invoice on the project — the acceptance invoice qualifies).
+  // Manual exceptions are allowed but must carry a recorded reason.
+  if (stage === "build" && !overrideReason) {
+    const { data: paid } = await supabase
+      .from("invoices")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("status", "paid")
+      .limit(1);
+    if (!paid || paid.length === 0) {
+      revalidatePath(`/admin/clients/${tenantId}`);
+      redirect(`/admin/clients/${tenantId}?stage_blocked=build`);
+    }
+  }
+
   // The DPA-before-live DB trigger blocks stage='live' until a DPA is logged.
   const { error } = await supabase
     .from("projects")
     .update({ stage: stage as never })
     .eq("id", projectId);
-  if (error) console.error("setStage:", error.message);
-  else
+  if (error) {
+    console.error("setStage:", error.message);
+    // The blocked stage must be visible to the admin, not just the server log —
+    // otherwise the select silently snaps back with no explanation.
+    revalidatePath(`/admin/clients/${tenantId}`);
+    redirect(`/admin/clients/${tenantId}?stage_blocked=${encodeURIComponent(stage)}`);
+  }
+  await logAudit({
+    action: `project.stage.${stage}`,
+    target: `project:${projectId}`,
+    tenantId,
+    ...(overrideReason ? { metadata: { override_reason: overrideReason } } : {}),
+  });
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/**
+ * Named ownership + the single next action — the brief's rule that a partner
+ * should answer "whose is this and what happens next?" from the record, not
+ * WhatsApp. One person may hold several roles; the names just have to be
+ * written down.
+ */
+async function saveOwnership(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  if (!projectId) return;
+  const clean = (k: string) => String(formData.get(k) || "").trim() || null;
+  const patch = {
+    account_owner: clean("account_owner"),
+    delivery_owner: clean("delivery_owner"),
+    technical_owner: clean("technical_owner"),
+    finance_owner: clean("finance_owner"),
+    next_action: clean("next_action"),
+    next_action_owner: clean("next_action_owner"),
+  };
+  const supabase = await createClient();
+  const { error } = await supabase.from("projects").update(patch).eq("id", projectId);
+  if (!error)
     await logAudit({
-      action: `project.stage.${stage}`,
+      action: "project.ownership_updated",
       target: `project:${projectId}`,
       tenantId,
+      metadata: patch,
     });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
@@ -418,6 +533,39 @@ async function generateInvoice(formData: FormData) {
 }
 
 /**
+ * Raise the build invoice for a project that was agreed OUTSIDE the portal.
+ *
+ * The normal path drafts this invoice the moment the client signs, and the
+ * button above is gated on that signature — money follows the signature. But a
+ * project agreed offline (or one delivered before the portal existed) never
+ * gets a portal acceptance, so its balance had no way of ever being billed.
+ * This is the documented escape hatch: same invoice, same Stripe + email +
+ * Xero path, but it records WHY it was raised without a signature.
+ */
+async function generateInvoiceOffline(formData: FormData) {
+  "use server";
+  const staff = await requireStaff();
+  if (!staff.ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  const projectId = String(formData.get("project_id") || "");
+  const reason = String(formData.get("reason") || "").trim();
+  // A reason is the whole point of the override — without one this is just the
+  // gate removed, so refuse rather than silently billing.
+  if (!tenantId || !projectId || !reason) return;
+
+  const service = createServiceClient();
+  const res = await generateProjectInvoice(service, { tenantId, projectId });
+  if (res.ok)
+    await logAudit({
+      action: "invoice.generated_offline_agreement",
+      target: `project:${projectId}`,
+      tenantId,
+      metadata: { total: res.total, reason, staff: staff.email },
+    });
+  revalidatePath(`/admin/clients/${tenantId}`);
+}
+
+/**
  * Void the current build invoice and regenerate it as a LIVE invoice — used to
  * replace a stale test-mode invoice (whose "Pay now" link points at the Stripe
  * sandbox) now that live keys are in place. Voids in Stripe + locally so the
@@ -502,39 +650,7 @@ async function markInvoicePaid(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   const invoiceId = String(formData.get("invoice_id") || "");
   if (!tenantId || !invoiceId) return;
-  const service = createServiceClient();
-  const { data: inv } = await service
-    .from("invoices")
-    .select("id, status, stripe_invoice_id")
-    .eq("id", invoiceId)
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-  if (!inv || inv.status === "paid" || inv.status === "void") return;
-  const stripe = getStripe();
-  if (stripe && inv.stripe_invoice_id) {
-    try {
-      await stripe.invoices.pay(inv.stripe_invoice_id, { paid_out_of_band: true });
-    } catch (e) {
-      // Best-effort — the local record is the source of truth for "invested".
-      console.error("markInvoicePaid: Stripe out-of-band pay failed", e);
-    }
-  }
-  // Compare-and-set: the Stripe roundtrip above leaves a window where another
-  // staff action (e.g. "Regenerate live") could void this invoice — only flip
-  // the row if it's still in the state we checked.
-  await service
-    .from("invoices")
-    .update({ status: "paid", paid_at: new Date().toISOString() })
-    .eq("id", invoiceId)
-    .eq("status", inv.status);
-  await logAudit({
-    action: "invoice.marked_paid",
-    target: `invoice:${invoiceId}`,
-    tenantId,
-    metadata: { via: "bank_transfer" },
-  });
-  // Mirror the payment into Xero (best-effort — logged + swallowed inside).
-  await syncInvoicePaymentToXero(service, invoiceId);
+  await markInvoicePaidOutOfBand({ tenantId, invoiceId });
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -585,7 +701,7 @@ async function bookCall(formData: FormData) {
     await supabase
       .from("leads")
       .update({ status: "call_booked" })
-      .ilike("email", t.contact_email)
+      .ilike("email", escapeLike(t.contact_email))
       .neq("status", "won")
       .neq("status", "lost");
   }
@@ -698,11 +814,14 @@ async function sendDirectDebitSetup(formData: FormData) {
     /\/$/,
     ""
   );
+  // Bill the client's contracted rate (scale multiplier + margin floor), not
+  // the catalogue's base "from" price.
+  const { mrr: chargeMrr } = await contractedMrr(tenantId, meta.id);
   const dd = await startCareDirectDebit({
     tenantId,
     plan: meta.id,
-    amountPence: Math.round(meta.mrr * 100),
-    description: `Nullshift ${meta.label} care plan`,
+    amountPence: Math.round(chargeMrr * 100),
+    description: `Nullshift ${meta.label} plan`,
     email: tenant.contact_email,
     name: tenant.name ?? tenant.contact_name ?? null,
     origin,
@@ -729,7 +848,7 @@ async function sendDirectDebitSetup(formData: FormData) {
   await service.from("subscriptions").insert({
     tenant_id: tenantId,
     plan: meta.id,
-    mrr: meta.mrr,
+    mrr: chargeMrr,
     status: "incomplete",
     provider: "gocardless",
     gc_billing_request_id: dd.billingRequestId,
@@ -737,10 +856,11 @@ async function sendDirectDebitSetup(formData: FormData) {
   const mail = buildDirectDebitEmail({
     name: tenant.contact_name ?? tenant.name ?? "",
     planLabel: meta.label,
-    mrr: meta.mrr,
+    mrr: chargeMrr,
     url: dd.url,
   });
   await sendEmail({
+    purpose: "transactional",
     to: tenant.contact_email,
     subject: mail.subject,
     html: mail.html,
@@ -762,12 +882,12 @@ async function cancelSubscription(formData: FormData) {
   const id = String(formData.get("id") || "");
   if (!id) return;
   const service = createServiceClient();
-  // Cancel the REAL Stripe subscription first so billing actually stops, then
+  // Cancel the REAL provider subscription first so billing actually stops, then
   // reflect it locally ('canceled' — the enum is American-spelled; the old
   // 'cancelled' was rejected and silently left the row active).
   const { data: sub } = await service
     .from("subscriptions")
-    .select("stripe_subscription_id")
+    .select("stripe_subscription_id, gc_subscription_id")
     .eq("id", id)
     .maybeSingle();
   if (sub?.stripe_subscription_id) {
@@ -778,6 +898,18 @@ async function cancelSubscription(formData: FormData) {
       } catch (e) {
         console.error("stripe subscription cancel failed:", e);
       }
+    }
+  }
+  if (sub?.gc_subscription_id) {
+    // A Direct Debit keeps charging until GoCardless itself is cancelled — if
+    // that fails, leave the row alone so the UI can't show a client as
+    // cancelled while their bank is still being debited.
+    try {
+      await cancelGoCardlessSubscription(sub.gc_subscription_id);
+    } catch (e) {
+      console.error("gocardless subscription cancel failed:", e);
+      revalidatePath(`/admin/clients/${tenantId}`);
+      return;
     }
   }
   const { error } = await service
@@ -813,8 +945,8 @@ async function createPortalAccount(formData: FormData) {
   const loginUrl = `${SITE_URL}/portal/login`;
 
   // Resolve any existing auth user with this email + whether they've signed in.
-  const { data: list } = await service.auth.admin.listUsers();
-  const existing = list?.users.find((u) => u.email?.toLowerCase() === email) ?? null;
+  // (Paginating lookup — a bare listUsers() only returns the first 50 users.)
+  const existing = await findUserByEmail(service, email);
   const hasLoggedIn = !!existing?.last_sign_in_at;
 
   let userId: string | null = existing?.id ?? null;
@@ -867,7 +999,13 @@ async function createPortalAccount(formData: FormData) {
   const mail = credentials
     ? portalReadyEmail({ name, email, password, loginUrl })
     : portalAccessEmail({ name, loginUrl });
-  await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text });
+  await sendEmail({
+    purpose: "transactional",
+    to: email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+  });
 
   revalidatePath(`/admin/clients/${tenantId}`);
 }
@@ -900,7 +1038,13 @@ async function sendPasswordReset(formData: FormData) {
     return;
   }
   const mail = passwordResetEmail({ name, resetUrl: link });
-  await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text });
+  await sendEmail({
+    purpose: "transactional",
+    to: email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+  });
   await logAudit({
     action: "portal.password_reset_sent",
     target: `tenant:${tenantId}`,
@@ -969,8 +1113,8 @@ async function deleteClient(formData: FormData) {
   // this the deleted client keeps showing on the pipeline / in the enquiries
   // inbox — and leaving them behind would be an incomplete erasure.
   for (const em of emails) {
-    await service.from("leads").delete().ilike("email", em);
-    await service.from("enquiries").delete().ilike("email", em);
+    await service.from("leads").delete().ilike("email", escapeLike(em));
+    await service.from("enquiries").delete().ilike("email", escapeLike(em));
   }
 
   // Remove the client's auth login(s). Resolve them BOTH ways: by membership
@@ -979,11 +1123,9 @@ async function deleteClient(formData: FormData) {
   // an admin issued a portal login. Without the email pass, such an account is
   // orphaned on delete and blocks re-registering with that email.
   const authIds = new Set<string>(userIds);
-  if (emails.size > 0) {
-    const { data: list } = await service.auth.admin.listUsers({ perPage: 1000 });
-    for (const u of list?.users ?? []) {
-      if (u.email && emails.has(u.email.trim().toLowerCase())) authIds.add(u.id);
-    }
+  for (const email of emails) {
+    const found = await findUserByEmail(service, email);
+    if (found) authIds.add(found.id);
   }
   // Delete each only if it no longer belongs to any tenant (don't nuke internal
   // staff or another client who still has a membership).
@@ -1099,8 +1241,15 @@ const btn = (bg: string, fg: string) => ({
   cursor: "pointer",
 });
 
-export default async function ClientHub({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientHub({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ stage_blocked?: string }>;
+}) {
   const { id: tenantId } = await params;
+  const { stage_blocked: stageBlocked } = await searchParams;
   const supabase = await createClient();
 
   // Stage 1 — one batch keyed on the tenant id: the tenant, its projects, and
@@ -1124,7 +1273,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
     supabase
       .from("projects")
       .select(
-        "id, name, stage, proposal_status, proposed_plan, overview, payment_terms, client_entity_type, dpa_client_country, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at, accepted_name, accepted_at, live_url"
+        "id, name, stage, proposal_status, proposed_plan, overview, payment_terms, client_entity_type, dpa_client_country, dpa_client_company_name, dpa_client_company_number, dpa_client_registered_address, dpa_personal_data, dpa_special_category, dpa_special_category_detail, dpa_client_submitted_at, accepted_name, accepted_at, live_url, account_owner, delivery_owner, technical_owner, finance_owner, next_action, next_action_owner"
       )
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false }),
@@ -1190,6 +1339,12 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
         accepted_name: string | null;
         accepted_at: string | null;
         live_url: string | null;
+        account_owner: string | null;
+        delivery_owner: string | null;
+        technical_owner: string | null;
+        finance_owner: string | null;
+        next_action: string | null;
+        next_action_owner: string | null;
       }
     | undefined;
   const projectId = project?.id ?? null;
@@ -1220,10 +1375,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
           lastSignInAt: u.user.last_sign_in_at ?? null,
         };
     } else if (t.contact_email) {
-      const { data: list } = await portalSvc.auth.admin.listUsers();
-      const found = list?.users.find(
-        (x) => x.email?.toLowerCase() === t.contact_email!.toLowerCase()
-      );
+      const found = await findUserByEmail(portalSvc, t.contact_email);
       if (found)
         portalUser = {
           email: found.email ?? t.contact_email,
@@ -1249,8 +1401,8 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
     t.contact_email
       ? supabase
           .from("leads")
-          .select("quiz_answers")
-          .ilike("email", t.contact_email)
+          .select("quiz_answers, agent_enrichment, phone, lead_score, source")
+          .ilike("email", escapeLike(t.contact_email))
           .order("created_at", { ascending: false })
           .limit(10)
       : noRows,
@@ -1286,7 +1438,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       ? supabase
           .from("invoices")
           .select(
-            "id, amount, status, hosted_invoice_url, project_item_count, created_at, paid_at, xero_invoice_id"
+            "id, amount, status, type, hosted_invoice_url, project_item_count, created_at, paid_at, xero_invoice_id"
           )
           .eq("project_id", projectId)
           .order("created_at", { ascending: false })
@@ -1296,9 +1448,17 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   // The client's preferred call slot, carried over from the lead they created
   // when they booked (stored on quiz_answers.requested_date/_time). Used to
   // prefill + annotate the call booking below — we still confirm the exact time.
+  type LeadRow = {
+    quiz_answers: unknown;
+    agent_enrichment: unknown;
+    phone: string | null;
+    lead_score: number | null;
+    source: string | null;
+  };
+  const leadList = (leadRows ?? []) as LeadRow[];
   let preferredDate: string | null = null;
   let preferredTime: string | null = null;
-  for (const lr of (leadRows ?? []) as { quiz_answers: unknown }[]) {
+  for (const lr of leadList) {
     const qa = (lr.quiz_answers ?? {}) as Record<string, unknown>;
     if (typeof qa.requested_date === "string" && qa.requested_date) {
       preferredDate = qa.requested_date;
@@ -1306,6 +1466,47 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
       break;
     }
   }
+
+  // Discovery evidence carried from the funnel + AI consultation: the answers
+  // the prospect gave and what the research agent concluded — so the proposal
+  // is built from what they actually said, not memory.
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const funnelLead = leadList.find((l) => {
+    const qa = (l.quiz_answers ?? {}) as Record<string, unknown>;
+    return !!(qa.answers && typeof qa.answers === "object");
+  });
+  const funnelAnswers = (
+    (funnelLead?.quiz_answers ?? {}) as { answers?: Record<string, unknown> }
+  ).answers as Record<string, unknown> | undefined;
+  const enrichment = leadList
+    .map((l) => l.agent_enrichment as Record<string, unknown> | null)
+    .find((e) => e && typeof e === "object");
+  const leadPhone = leadList.map((l) => l.phone).find((p) => !!p) ?? null;
+  const discoveryFacts: [string, string][] = [];
+  if (funnelAnswers) {
+    for (const [key, label] of [
+      ["industry", "Industry"],
+      ["need", "What they want"],
+      ["budget", "Budget"],
+      ["timeline", "Timeline"],
+      ["software_spend", "Current software spend"],
+      ["admin_pain", "Biggest admin pain"],
+      ["provider", "Current provider"],
+      ["website_url", "Website"],
+    ] as const) {
+      const v = str(funnelAnswers[key]);
+      if (v) discoveryFacts.push([label, v]);
+    }
+  }
+  if (leadPhone) discoveryFacts.push(["Phone", leadPhone]);
+  const enrichSummary = str(enrichment?.summary);
+  const enrichDraftReply = str(enrichment?.draftReply);
+  const enrichPains = Array.isArray(enrichment?.painPoints)
+    ? (enrichment?.painPoints as unknown[]).filter(
+        (p): p is string => typeof p === "string"
+      )
+    : [];
+  const hasDiscovery = discoveryFacts.length > 0 || !!enrichSummary || !!enrichDraftReply;
 
   const itemList = (items ?? []) as Item[];
   const crList = (crs ?? []) as CR[];
@@ -1338,11 +1539,48 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
   const modulesComplete = itemList.length > 0;
   const planSelected = !!project?.proposed_plan;
   const isAccepted = project?.proposal_status === "accepted";
-  // The active build invoice (ignore voided) + its lifecycle state, so the
+  // The active BUILD invoice (ignore voided) + its lifecycle state, so the
   // button/card reads: generate → sent, awaiting payment → paid.
-  const primaryInvoice = invoiceList.find((i) => i.status !== "void") ?? null;
+  //
+  // Type-scoped deliberately: a paid deposit or an accepted-quote invoice is
+  // also a live invoice on this project, and matching "any invoice" made the
+  // panel report the build as settled while the balance had never been billed
+  // at all — an unbilled balance hidden behind a green "Paid ✓".
+  // What the client actually owes, agreed-but-unbilled included. The portal
+  // shows the same figure from the same helper, so the two screens cannot
+  // disagree about whether a client owes anything.
+  const balance = tenantBalance(
+    project ? [{ id: project.id, proposal_status: project.proposal_status }] : [],
+    itemList.map((i) => ({
+      project_id: projectId,
+      amount: i.amount,
+      status: i.status,
+    })),
+    invoiceList.map((i) => ({
+      project_id: projectId,
+      amount: i.amount,
+      status: i.status,
+      type: i.type,
+    }))
+  );
+
+  // Billing setup is gated on the client having agreed — but a portal
+  // signature is only one form of that. A client who agreed offline and has
+  // PAID us has plainly agreed, and gating on the signature alone left them
+  // permanently unable to start a care plan. Money changing hands is evidence.
+  const primaryInvoice =
+    invoiceList.find((i) => i.type === "build_milestone" && i.status !== "void") ?? null;
   const invoicePaid = primaryInvoice?.status === "paid";
   const invoiceSent = !!primaryInvoice && !invoicePaid;
+  // Everything else already billed on this project (deposits, accepted quotes).
+  const otherInvoices = invoiceList.filter(
+    (i) => i.id !== primaryInvoice?.id && i.status !== "void"
+  );
+  const depositPaid = otherInvoices
+    .filter((i) => i.status === "paid")
+    .reduce((sum, i) => sum + Number(i.amount), 0);
+
+  const billingAgreed = isAccepted || balance.paidTotal > 0;
   // The client provides their DPA details in the portal; the docs can't be sent
   // until they have (drives the form gate + a header badge).
   const clientDpaReady = !!project && dpaReadyToSend(project);
@@ -1403,6 +1641,36 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
           }
           actions={
             <>
+              {/* A plain link, not a form + server action: the button that
+                  did this as a form was reported as unpressable, and a link
+                  cannot silently no-op — it works without hydration and every
+                  refusal in the route redirects somewhere that says why. */}
+              <Link
+                href={`/admin/clients/${tenantId}/preview`}
+                title="Open this client's portal exactly as they see it — read-only"
+                style={{
+                  ...btn("var(--k-surface)", "var(--k-accent)"),
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                }}
+              >
+                View portal as client →
+              </Link>
+              <Link
+                href={`/admin/clients/${tenantId}/pricing`}
+                title="Score this client's scale band and set their recurring rate"
+                style={{ ...btn("var(--k-surface)", "var(--k-fg)"), textDecoration: "none" }}
+              >
+                Scale &amp; pricing →
+              </Link>
+              <Link
+                href={`/admin/clients/${tenantId}/agreement`}
+                title="Order Form, acceptance evidence and Change Orders"
+                style={{ ...btn("var(--k-surface)", "var(--k-fg)"), textDecoration: "none" }}
+              >
+                Agreement →
+              </Link>
               {project && <Badge s={project.stage} />}
               {project && <Badge s={project.proposal_status} />}
               {project && (
@@ -1458,10 +1726,364 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                   </SubmitButton>
                 </form>
               )}
+              {stageBlocked && (
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    color: T.danger,
+                    border: `1px solid color-mix(in oklab, ${T.danger} 32%, transparent)`,
+                    padding: "3px 8px",
+                  }}
+                >
+                  BLOCKED — can&apos;t set “{stageBlocked}”:
+                  {stageBlocked === "live"
+                    ? " the tenant DPA is not signed and logged."
+                    : stageBlocked === "build"
+                      ? " no paid invoice on this project yet."
+                      : " the database refused the change."}
+                </span>
+              )}
+              {stageBlocked === "build" && project && (
+                <form action={setStage} className="flex items-center gap-1">
+                  {htid}
+                  {hpid}
+                  <input type="hidden" name="stage" value="build" />
+                  <input
+                    name="override_reason"
+                    required
+                    placeholder="Reason to start build unpaid"
+                    style={{ ...inp, height: 28, width: 220 }}
+                  />
+                  <SubmitButton style={btn("transparent", "var(--k-muted)")}>
+                    Override
+                  </SubmitButton>
+                </form>
+              )}
             </>
           }
         />
       </div>
+
+      {/* Money the client owes that nobody has billed. This used to be a dashed
+          form buried inside the invoice panel, and the result was a client
+          sitting at "£0 outstanding — all settled" with a thousand pounds of
+          built work never invoiced. An un-raised bill is the loudest thing on
+          the page now. */}
+      {balance.unbilledTotal > 0 && project && (
+        <Reveal>
+          <section
+            style={{
+              ...card,
+              borderColor: `color-mix(in oklab, ${T.warning} 45%, transparent)`,
+              background: `color-mix(in oklab, ${T.warning} 6%, var(--k-surface))`,
+            }}
+          >
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 style={h2}>{gbp(balance.unbilledTotal)} agreed but not invoiced</h2>
+              <span
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 10,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: T.warning,
+                  border: `1px solid color-mix(in oklab, ${T.warning} 32%, transparent)`,
+                  padding: "3px 8px",
+                }}
+              >
+                CLIENT CANNOT PAY THIS YET
+              </span>
+            </div>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.88rem",
+                lineHeight: 1.65,
+                color: "var(--k-muted)",
+                marginTop: 8,
+                maxWidth: "70ch",
+              }}
+            >
+              The portal shows this as outstanding, but there is no invoice behind it —
+              so there is no card link and no due date. Raising it creates the Stripe
+              hosted invoice, emails {t.contact_name ?? "the client"} a payment link and
+              bank details, and mirrors it to Xero.
+              {!isAccepted &&
+                " This project has no portal signature, so a reason is recorded against the override."}
+            </p>
+            <form
+              action={isAccepted ? generateInvoice : generateInvoiceOffline}
+              className="flex flex-wrap items-center gap-2"
+              style={{ marginTop: 12 }}
+            >
+              {htid}
+              {hpid}
+              {!isAccepted && (
+                <input
+                  name="reason"
+                  required
+                  placeholder="Why (recorded) — e.g. agreed and signed by email before the portal existed"
+                  style={{ ...inp, height: 32, flex: "1 1 320px" }}
+                />
+              )}
+              <SubmitButton
+                style={btn("var(--k-accent)", "var(--k-on-accent)")}
+                pendingLabel="Raising…"
+              >
+                Raise &amp; send {gbp(balance.unbilledTotal)} invoice
+              </SubmitButton>
+            </form>
+          </section>
+        </Reveal>
+      )}
+
+      {/* Ownership & next action — who holds this project, and what happens next */}
+      {project && (
+        <Reveal>
+          <section style={card}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h2 style={h2}>Ownership &amp; next action</h2>
+              {project.next_action ? (
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--k-accent)",
+                    border:
+                      "1px solid color-mix(in oklab, var(--k-accent) 32%, transparent)",
+                    padding: "3px 8px",
+                  }}
+                >
+                  NEXT: {project.next_action}
+                  {project.next_action_owner ? ` — ${project.next_action_owner}` : ""}
+                </span>
+              ) : (
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: T.danger,
+                    border: `1px solid color-mix(in oklab, ${T.danger} 32%, transparent)`,
+                    padding: "3px 8px",
+                  }}
+                >
+                  NO NEXT ACTION SET
+                </span>
+              )}
+            </div>
+            <form action={saveOwnership}>
+              {htid}
+              {hpid}
+              <div
+                className="grid gap-2"
+                style={{
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  marginTop: 12,
+                }}
+              >
+                {(
+                  [
+                    ["account_owner", "Account owner", project.account_owner],
+                    ["delivery_owner", "Delivery owner", project.delivery_owner],
+                    ["technical_owner", "Technical owner", project.technical_owner],
+                    ["finance_owner", "Finance owner", project.finance_owner],
+                  ] as const
+                ).map(([name, label, value]) => (
+                  <label key={name} className="flex flex-col gap-1">
+                    <span
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: 9,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "var(--k-faint)",
+                      }}
+                    >
+                      {label}
+                    </span>
+                    <input
+                      name={name}
+                      defaultValue={value ?? ""}
+                      placeholder="Name"
+                      style={inp}
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-end gap-2 flex-wrap" style={{ marginTop: 10 }}>
+                <label className="flex flex-col gap-1" style={{ flex: "1 1 260px" }}>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 9,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--k-faint)",
+                    }}
+                  >
+                    Next action
+                  </span>
+                  <input
+                    name="next_action"
+                    defaultValue={project.next_action ?? ""}
+                    placeholder="e.g. Send proposal for sign-off"
+                    style={inp}
+                  />
+                </label>
+                <label className="flex flex-col gap-1" style={{ width: 170 }}>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 9,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--k-faint)",
+                    }}
+                  >
+                    Owner
+                  </span>
+                  <input
+                    name="next_action_owner"
+                    defaultValue={project.next_action_owner ?? ""}
+                    placeholder="Who"
+                    style={inp}
+                  />
+                </label>
+                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                  Save
+                </SubmitButton>
+              </div>
+            </form>
+          </section>
+        </Reveal>
+      )}
+
+      {/* Discovery — what the prospect told the funnel + what the agent found */}
+      {hasDiscovery && (
+        <Reveal>
+          <section style={card}>
+            <h2 style={h2}>Discovery</h2>
+            {discoveryFacts.length > 0 && (
+              <div
+                className="grid gap-x-5 gap-y-2"
+                style={{
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  marginTop: 10,
+                }}
+              >
+                {discoveryFacts.map(([label, value]) => (
+                  <div key={label}>
+                    <div
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: 9,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "var(--k-faint)",
+                      }}
+                    >
+                      {label}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.88rem",
+                        color: "var(--k-fg)",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {(enrichSummary || enrichPains.length > 0) && (
+              <div
+                style={{
+                  marginTop: 14,
+                  paddingTop: 12,
+                  borderTop: "1px solid var(--k-border)",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 9,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--k-accent)",
+                  }}
+                >
+                  Agent research — AI draft, verify before relying on it
+                </div>
+                {enrichSummary && (
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.88rem",
+                      color: "var(--k-muted)",
+                      marginTop: 6,
+                    }}
+                  >
+                    {enrichSummary}
+                  </p>
+                )}
+                {enrichPains.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5" style={{ marginTop: 8 }}>
+                    {enrichPains.slice(0, 6).map((p) => (
+                      <span
+                        key={p}
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: 10,
+                          color: "var(--k-muted)",
+                          border: "1px solid var(--k-border)",
+                          padding: "2px 7px",
+                        }}
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {enrichDraftReply && (
+              <details style={{ marginTop: 12 }}>
+                <summary
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 10,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--k-muted)",
+                    cursor: "pointer",
+                  }}
+                >
+                  Drafted first reply (AI — review before sending)
+                </summary>
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.86rem",
+                    color: "var(--k-muted)",
+                    whiteSpace: "pre-wrap",
+                    marginTop: 8,
+                  }}
+                >
+                  {enrichDraftReply}
+                </p>
+              </details>
+            )}
+          </section>
+        </Reveal>
+      )}
 
       {/* Book Call */}
       <Reveal>
@@ -1688,73 +2310,92 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                       >
                         {gbp(Number(it.amount))}
                       </span>
-                      <form action={removeItem}>
-                        {htid}
-                        <input type="hidden" name="id" value={it.id} />
-                        <SubmitButton
-                          style={{
-                            ...btn("transparent", "var(--k-faint)"),
-                            height: 24,
-                            paddingInline: 8,
-                          }}
-                        >
-                          ✕
-                        </SubmitButton>
-                      </form>
+                      {!isAccepted && (
+                        <form action={removeItem}>
+                          {htid}
+                          <input type="hidden" name="id" value={it.id} />
+                          <SubmitButton
+                            style={{
+                              ...btn("transparent", "var(--k-faint)"),
+                              height: 24,
+                              paddingInline: 8,
+                            }}
+                          >
+                            ✕
+                          </SubmitButton>
+                        </form>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
-              <form
-                action={addItem}
-                className="flex items-center gap-2 flex-wrap"
-                style={{ paddingTop: 12, borderTop: "1px solid var(--k-border)" }}
-              >
-                {htid}
-                {hpid}
-                <input
-                  name="name"
-                  placeholder="Module (e.g. Booking system)"
-                  required
-                  style={{ ...inp, width: 220 }}
-                />
-                <input
-                  name="amount"
-                  type="number"
-                  step="1"
-                  placeholder="£"
-                  required
-                  style={{ ...inp, width: 90 }}
-                />
-                <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
-                  + Add
-                </SubmitButton>
-              </form>
-              <div className="flex flex-wrap gap-1.5" style={{ marginTop: 10 }}>
-                {CATALOG.map((m) => (
-                  <form key={m.key} action={addItem}>
+              {isAccepted ? (
+                <p
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: 11,
+                    color: "var(--k-faint)",
+                    paddingTop: 12,
+                    borderTop: "1px solid var(--k-border)",
+                  }}
+                >
+                  SCOPE LOCKED — this is the signed baseline. Additions go through a
+                  change request.
+                </p>
+              ) : (
+                <>
+                  <form
+                    action={addItem}
+                    className="flex items-center gap-2 flex-wrap"
+                    style={{ paddingTop: 12, borderTop: "1px solid var(--k-border)" }}
+                  >
                     {htid}
                     {hpid}
-                    <input type="hidden" name="name" value={m.name} />
-                    <input type="hidden" name="amount" value={m.price} />
-                    <SubmitButton
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: 10,
-                        height: 24,
-                        paddingInline: 8,
-                        background: "transparent",
-                        color: "var(--k-muted)",
-                        border: "1px solid var(--k-border)",
-                        borderRadius: 0,
-                        cursor: "pointer",
-                      }}
-                    >
-                      + {m.name} {gbp(m.price)}
+                    <input
+                      name="name"
+                      placeholder="Module (e.g. Booking system)"
+                      required
+                      style={{ ...inp, width: 220 }}
+                    />
+                    <input
+                      name="amount"
+                      type="number"
+                      step="1"
+                      placeholder="£"
+                      required
+                      style={{ ...inp, width: 90 }}
+                    />
+                    <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                      + Add
                     </SubmitButton>
                   </form>
-                ))}
-              </div>
+                  <div className="flex flex-wrap gap-1.5" style={{ marginTop: 10 }}>
+                    {CATALOG.map((m) => (
+                      <form key={m.key} action={addItem}>
+                        {htid}
+                        {hpid}
+                        <input type="hidden" name="name" value={m.name} />
+                        <input type="hidden" name="amount" value={m.price} />
+                        <SubmitButton
+                          style={{
+                            fontFamily: T.mono,
+                            fontSize: 10,
+                            height: 24,
+                            paddingInline: 8,
+                            background: "transparent",
+                            color: "var(--k-muted)",
+                            border: "1px solid var(--k-border)",
+                            borderRadius: 0,
+                            cursor: "pointer",
+                          }}
+                        >
+                          + {m.name} {gbp(m.price)}
+                        </SubmitButton>
+                      </form>
+                    ))}
+                  </div>
+                </>
+              )}
               {/* Ongoing care plan — part of the proposal the client accepts. */}
               <div
                 className="flex items-center gap-2 flex-wrap"
@@ -1977,13 +2618,70 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 }}
               >
                 {invoicePaid
-                  ? "The client has paid this invoice — it's recorded against their account below."
+                  ? "The client has paid the build invoice — it's recorded against their account below."
                   : invoiceSent
                     ? "Sent to the client — they've been emailed a Stripe payment link. This flips to Paid automatically once the payment goes through."
                     : isAccepted
                       ? "Compiles the build modules above into an itemised Stripe invoice and emails the client a payment link."
-                      : "Available once the client has signed the proposal. An invoice is drafted automatically on signing."}
+                      : "The build invoice is drafted automatically when the client signs in the portal. Agreed offline instead? Raise it below."}
               </p>
+
+              {/* Money already taken on this project that ISN'T the build
+                  invoice — a deposit or an accepted quote. Stated plainly so a
+                  paid deposit is never read as "the build is settled". */}
+              {depositPaid > 0 && !invoicePaid && (
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.8rem",
+                    color: "var(--k-muted)",
+                    margin: "0 0 12px",
+                  }}
+                >
+                  {gbp(depositPaid)} already paid on this project (deposit / quotes).
+                  The build modules above net {gbp(total)}
+                  {total > 0 ? " — that is what the invoice will ask for." : "."}
+                </p>
+              )}
+
+              {/* Agreed outside the portal — the only way to bill a project
+                  that will never get a portal signature. Reason is required
+                  and recorded. */}
+              {!isAccepted && !invoicePaid && !invoiceSent && modulesComplete && (
+                <form
+                  action={generateInvoiceOffline}
+                  className="flex flex-wrap items-center gap-2"
+                  style={{
+                    margin: "0 0 12px",
+                    padding: "12px 14px",
+                    border: "1px dashed var(--k-border)",
+                  }}
+                >
+                  {htid}
+                  {hpid}
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: 10,
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      color: "var(--k-muted)",
+                      width: "100%",
+                    }}
+                  >
+                    Agreed offline — raise the invoice without a portal signature
+                  </span>
+                  <input
+                    name="reason"
+                    required
+                    placeholder="Why (recorded) — e.g. signed by email before the portal existed"
+                    style={{ ...inp, height: 30, flex: "1 1 260px" }}
+                  />
+                  <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
+                    Raise &amp; send invoice
+                  </SubmitButton>
+                </form>
+              )}
               {invoiceList.length > 0 && (
                 <div
                   className="flex items-center justify-between flex-wrap gap-2"
@@ -2714,14 +3412,14 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 {isGoCardlessConfigured() && (
                   <SubmitButton
                     formAction={sendDirectDebitSetup}
-                    disabled={!isAccepted}
+                    disabled={!billingAgreed}
                     style={{
                       ...btn(
-                        isAccepted ? "var(--k-accent)" : "var(--k-surface)",
-                        isAccepted ? "var(--k-on-accent)" : "var(--k-faint)"
+                        billingAgreed ? "var(--k-accent)" : "var(--k-surface)",
+                        billingAgreed ? "var(--k-on-accent)" : "var(--k-faint)"
                       ),
-                      cursor: isAccepted ? "pointer" : "not-allowed",
-                      opacity: isAccepted ? 1 : 0.7,
+                      cursor: billingAgreed ? "pointer" : "not-allowed",
+                      opacity: billingAgreed ? 1 : 0.7,
                     }}
                     title="Email the client a GoCardless Direct Debit authorisation for this plan"
                   >
@@ -2730,22 +3428,22 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                 )}
                 <SubmitButton
                   formAction={sendSubscriptionSignup}
-                  disabled={!isAccepted}
+                  disabled={!billingAgreed}
                   style={{
                     ...btn(
                       isGoCardlessConfigured()
                         ? "var(--k-surface)"
-                        : isAccepted
+                        : billingAgreed
                           ? "var(--k-accent)"
                           : "var(--k-surface)",
                       isGoCardlessConfigured()
                         ? "var(--k-fg)"
-                        : isAccepted
+                        : billingAgreed
                           ? "var(--k-on-accent)"
                           : "var(--k-faint)"
                     ),
-                    cursor: isAccepted ? "pointer" : "not-allowed",
-                    opacity: isAccepted ? 1 : 0.7,
+                    cursor: billingAgreed ? "pointer" : "not-allowed",
+                    opacity: billingAgreed ? 1 : 0.7,
                   }}
                 >
                   {isGoCardlessConfigured()
@@ -2753,7 +3451,7 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     : "Send care-plan sign-up"}
                 </SubmitButton>
               </form>
-              {!isAccepted && (
+              {!billingAgreed && (
                 <p
                   style={{
                     fontFamily: T.sans,
@@ -2762,7 +3460,24 @@ export default async function ClientHub({ params }: { params: Promise<{ id: stri
                     marginTop: 8,
                   }}
                 >
-                  Available once the client has signed the proposal.
+                  Available once the client has signed the proposal, or paid anything
+                  against it.
+                </p>
+              )}
+              {/* GoCardless unconfigured is not the same as "no Direct Debit
+                  offered" — say which, so a missing env var doesn't read as a
+                  product decision. */}
+              {!isGoCardlessConfigured() && (
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.78rem",
+                    color: T.warning,
+                    marginTop: 8,
+                  }}
+                >
+                  Direct Debit is unavailable — GOCARDLESS_ACCESS_TOKEN isn&apos;t set on
+                  this deployment, so only the Stripe card rail can be offered.
                 </p>
               )}
             </div>

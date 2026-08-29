@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
+import { escapeLike } from "@nullshift/db/leads";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
@@ -40,6 +41,15 @@ type Lead = {
     requested_time?: string | null;
   } | null;
   plan: { businessName?: string | null } | null;
+  /** Written by the Agent Consultation (see /api/consult) — internal CRM notes. */
+  agent_enrichment: {
+    summary?: string;
+    painPoints?: string[];
+    estimatedMonthlySpend?: string;
+    suggestedService?: string;
+    urgencySignals?: string[];
+    draftReply?: string;
+  } | null;
 };
 
 /** A client who signed up directly (no funnel lead) — surfaced in the "new" lane. */
@@ -58,7 +68,17 @@ const TIME_SHORT: Record<string, string> = {
   evening: "Eve",
 };
 
+/** Lead lifecycle lanes, named for the client journey:
+ *  Funnel → AI consultation → Human call → (won: proposal & contract, updates &
+ *  change requests, handover — those stages live on the client hub) — or lost. */
 const COLUMNS = ["new", "qualified", "call_booked", "won", "lost"] as const;
+const COLUMN_LABEL: Record<(typeof COLUMNS)[number], string> = {
+  new: "01 · Funnel",
+  qualified: "02 · AI consultation",
+  call_booked: "03 · Call",
+  won: "04 · Won → delivery",
+  lost: "Lost",
+};
 const SPEND_LABEL: Record<string, string> = {
   under50: "<£50/mo",
   "50to150": "£50–150/mo",
@@ -75,11 +95,12 @@ const PAIN_LABEL: Record<string, string> = {
   admin_overload: "admin overload",
   nothing: "exploring",
 };
+const LEAD_STATUSES = ["new", "qualified", "call_booked", "won", "lost"];
 async function setStatus(formData: FormData) {
   "use server";
   const id = String(formData.get("id") || "");
   const status = String(formData.get("status") || "");
-  if (!id || !status) return;
+  if (!id || !LEAD_STATUSES.includes(status)) return;
   const supabase = await createClient();
   await supabase
     .from("leads")
@@ -95,7 +116,11 @@ async function setStatus(formData: FormData) {
 async function deleteLead(formData: FormData) {
   "use server";
   const id = String(formData.get("id") || "");
-  if (!id) return;
+  // Hard delete is unrecoverable (quiz answers, plan, enrichment, and the
+  // prospect's permanent /plan link all die with the row) — require the typed
+  // confirmation from the card before acting.
+  const confirmText = String(formData.get("confirm") || "").trim();
+  if (!id || confirmText !== "DELETE") return;
   const supabase = await createClient();
   await logAudit({ action: "lead.deleted", target: `lead:${id}` });
   await supabase.from("leads").delete().eq("id", id);
@@ -130,7 +155,7 @@ async function openLead(formData: FormData) {
       .from("tenants")
       .select("id")
       .eq("type", "client")
-      .ilike("contact_email", email)
+      .ilike("contact_email", escapeLike(email))
       .limit(1);
     tenantId = existing?.[0]?.id ?? null;
   }
@@ -308,7 +333,51 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
         {spend && <Tag tone="warning">{spend}</Tag>}
         {pain && <Tag>{pain}</Tag>}
       </div>
-      {describe && (
+      {lead.agent_enrichment?.summary && (
+        <div
+          style={{
+            marginTop: 8,
+            borderLeft: "2px solid var(--k-accent)",
+            paddingLeft: 8,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: T.mono,
+              fontSize: "9px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--k-accent)",
+            }}
+          >
+            Agent notes
+          </span>
+          <p
+            title={lead.agent_enrichment.summary}
+            style={{
+              fontFamily: T.sans,
+              fontSize: "11px",
+              lineHeight: 1.45,
+              color: "var(--k-muted)",
+              marginTop: 2,
+            }}
+          >
+            {lead.agent_enrichment.summary}
+          </p>
+          {(lead.agent_enrichment.painPoints?.length ||
+            lead.agent_enrichment.suggestedService) && (
+            <div className="flex flex-wrap gap-1" style={{ marginTop: 6 }}>
+              {lead.agent_enrichment.suggestedService && (
+                <Tag tone="accent">{lead.agent_enrichment.suggestedService}</Tag>
+              )}
+              {(lead.agent_enrichment.painPoints ?? []).slice(0, 3).map((p, i) => (
+                <Tag key={i}>{p}</Tag>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {!lead.agent_enrichment?.summary && describe && (
         <p
           title={describe}
           style={{
@@ -342,20 +411,46 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
           {lead.email ? "Open profile →" : "No email"}
         </span>
         <div className="flex items-center gap-1.5">
-          <form action={deleteLead}>
+          <form action={deleteLead} className="flex items-center gap-1">
             <input type="hidden" name="id" value={lead.id} />
+            <input
+              name="confirm"
+              required
+              placeholder="DELETE"
+              aria-label="Type DELETE to confirm"
+              style={{
+                width: 58,
+                height: 20,
+                padding: "0 4px",
+                fontFamily: T.mono,
+                fontSize: 9,
+                letterSpacing: "0.06em",
+                background: "transparent",
+                border: "1px solid var(--k-border)",
+                color: "var(--k-muted)",
+              }}
+            />
             <button type="submit" style={miniBtn(T.danger)}>
               Delete
             </button>
           </form>
-          {lead.status !== "lost" && (
-            <form action={setStatus}>
-              <input type="hidden" name="id" value={lead.id} />
-              <input type="hidden" name="status" value="lost" />
-              <button type="submit" style={miniBtn("var(--k-muted)")}>
-                Lost
-              </button>
-            </form>
+          {lead.status !== "lost" && lead.status !== "won" && (
+            <>
+              <form action={setStatus}>
+                <input type="hidden" name="id" value={lead.id} />
+                <input type="hidden" name="status" value="won" />
+                <button type="submit" style={miniBtn("var(--k-accent)")}>
+                  Won
+                </button>
+              </form>
+              <form action={setStatus}>
+                <input type="hidden" name="id" value={lead.id} />
+                <input type="hidden" name="status" value="lost" />
+                <button type="submit" style={miniBtn("var(--k-muted)")}>
+                  Lost
+                </button>
+              </form>
+            </>
           )}
         </div>
       </div>
@@ -508,7 +603,9 @@ export default async function PipelinePage() {
   const [{ data }, { data: clientTenants }, { data: dpaRows }] = await Promise.all([
     supabase
       .from("leads")
-      .select("id, name, email, vertical, status, lead_score, quiz_answers, plan")
+      .select(
+        "id, name, email, vertical, status, lead_score, quiz_answers, plan, agent_enrichment"
+      )
       .order("lead_score", { ascending: false, nullsFirst: false }),
     supabase
       .from("tenants")
@@ -571,8 +668,9 @@ export default async function PipelinePage() {
                 {signupClients.length === 1 ? "" : "s"}
               </>
             )}{" "}
-            · click any card to open their client profile (booking, brief, quote &amp;
-            proposal).
+            · Funnel → AI consultation → call → proposal &amp; contract → updates →
+            handover. Click any card to open the client profile, where the post-win stages
+            live.
           </>
         }
         className="mb-8"
@@ -635,7 +733,7 @@ export default async function PipelinePage() {
                         ●
                       </span>
                     )}
-                    {col.replace(/_/g, " ")}
+                    {COLUMN_LABEL[col]}
                   </span>
                   <span
                     style={{

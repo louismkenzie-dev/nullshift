@@ -3,6 +3,7 @@ import { createClient } from "@nullshift/db";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
+import { OPEN_STATUSES, isUnreviewedDraft, type IssueStatus } from "@/lib/ops/issues";
 
 /**
  * Clients — the list of every client, backed by `tenants` (type='client'). One row
@@ -41,7 +42,12 @@ type Tenant = {
 
 const GRID = "1.4fr 1.6fr 110px 90px 90px";
 
-export default async function ClientsPage() {
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview_error?: string }>;
+}) {
+  const { preview_error: previewError } = await searchParams;
   const supabase = await createClient();
   const { data: tenantsRaw } = await supabase
     .from("tenants")
@@ -68,7 +74,13 @@ export default async function ClientsPage() {
           .select("tenant_id")
           .eq("kind", "dpa_signed")
           .in("tenant_id", ids),
-        supabase.from("change_requests").select("tenant_id, status").in("tenant_id", ids),
+        // Open requests = the live intake (issues), not the legacy
+        // change_requests table — which reads 0 for current-portal clients.
+        supabase
+          .from("issues")
+          .select("tenant_id, status, client_visible")
+          .in("status", OPEN_STATUSES)
+          .in("tenant_id", ids),
       ])
     : [{ data: [] }, { data: [] }, { data: [] }, { data: [] }];
 
@@ -76,7 +88,16 @@ export default async function ClientsPage() {
   for (const p of (projects ?? []) as { tenant_id: string; stage: string }[]) {
     // First seen wins is fine; projects aren't ordered, so prefer the "furthest"
     // stage by index for a sensible headline.
-    const order = ["discovery", "build", "review", "live", "care"];
+    const order = [
+      "discovery",
+      "onboarding",
+      "build",
+      "review",
+      "launch_prep",
+      "live",
+      "care",
+      "complete",
+    ];
     const cur = stageByTenant.get(p.tenant_id);
     if (!cur || order.indexOf(p.stage) > order.indexOf(cur))
       stageByTenant.set(p.tenant_id, p.stage);
@@ -86,14 +107,38 @@ export default async function ClientsPage() {
     mrrByTenant.set(s.tenant_id, (mrrByTenant.get(s.tenant_id) ?? 0) + Number(s.mrr));
   const dpaSet = new Set((dpa ?? []).map((d: { tenant_id: string }) => d.tenant_id));
   const openCrByTenant = new Map<string, number>();
-  for (const c of (crs ?? []) as { tenant_id: string; status: string }[]) {
-    if (c.status !== "shipped" && c.status !== "rejected")
+  for (const c of (crs ?? []) as {
+    tenant_id: string;
+    status: string;
+    client_visible: boolean;
+  }[]) {
+    // Unreviewed inbox drafts aren't confirmed work — same rule as mission
+    // control and the batch compiler.
+    if (!isUnreviewedDraft(c as { status: IssueStatus; client_visible: boolean }))
       openCrByTenant.set(c.tenant_id, (openCrByTenant.get(c.tenant_id) ?? 0) + 1);
   }
   const totalMrr = [...mrrByTenant.values()].reduce((a, b) => a + b, 0);
 
   return (
     <div>
+      {/* The one way a "view portal as client" click can legitimately land
+          back here: the tenant no longer exists. Said out loud, because a
+          silent bounce is indistinguishable from a broken button. */}
+      {previewError === "unknown_client" && (
+        <p
+          style={{
+            ...mono,
+            fontSize: 12,
+            color: T.warning,
+            border: `1px solid ${T.warning}55`,
+            padding: "10px 14px",
+            marginBottom: 16,
+          }}
+        >
+          Couldn&apos;t open that portal preview — the client record no longer exists.
+        </p>
+      )}
+
       <PageHeader
         index="01"
         label="Clients"

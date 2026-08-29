@@ -1,14 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const PRIVATE = [
-  "/admin/",
-  "/portal/",
-  "/proposal/",
-  "/onboard",
-  "/client-signup",
-  "/error",
-  "/api/",
-];
+const PRIVATE = ["/admin/", "/portal/", "/client-signup", "/error", "/api/"];
 
 // AI assistant / answer-engine crawlers, explicitly welcomed on the public
 // site (same private-area rules as everyone else). Being crawlable by these

@@ -33,11 +33,33 @@ that share the name.
   flows — built to be owned outright by the client.
 - Agentic AI automation: end-to-end AI workflows that carry out real
   operational tasks, not just chat.
-- Ongoing care plans (monthly, cancel any time):
-  - Hosting Care — £40/month: managed hosting and infrastructure.
-  - Hosting + API Care — £80/month: adds managed API usage (email, AI).
-  - Build 3 — £120/month: includes 3 build items per month.
-  - Build 10 — £180/month: includes 10 build items per month.
+- Ongoing plans (monthly, cancel any time). Prices are "from" figures: the
+  plan sets the service level, and the monthly rate then scales with the
+  platform's usage, complexity, organisation size and commercial importance.
+  - Core — from £40/month: managed hosting, domain, database and SSL,
+    monitoring, backups, platform upkeep and bug fixes to agreed
+    functionality. Response target 2 UK business days. For simple,
+    low-change systems.
+  - Pro — from £80/month: everything in Core, plus managed AI-agent/API
+    capability, transactional email infrastructure, enhanced monitoring of
+    APIs, email delivery and integrations, and configuration support.
+    Response target 1 UK business day. For operational systems.
+  - Max — from £120/month: everything in Pro, plus a named technical owner,
+    quarterly roadmap review, monthly platform health review, free feature
+    discovery and scoping, and priority scheduling. Response target 4 UK
+    business hours. For businesses wanting an ongoing technical partner.
+  - Enterprise — price on application: contracted uptime and response SLAs,
+    security and procurement support, dedicated environments, custom service
+    cadence and optional reserved development capacity.
+- No plan includes feature development. Recurring fees cover the platform,
+  service level and technical partnership; new capabilities are always
+  separately quoted fixed-price projects with a written scope, acceptance
+  criteria and a fixed price agreed before work starts.
+- Support versus development: if a request changes what the product can do,
+  it is development. If it keeps an existing capability working, or
+  configures that capability within its original design, it is support and is
+  included in the plan.
+- The one-off build is quoted to scope, not sold from a price list.
 - Security & compliance: UK/EU hosting, encryption in transit and at
   rest, audit trails, and a signed Data Processing Agreement before any
   system goes live. Nullshift is ICO-registered (ZC214743).
@@ -46,7 +68,8 @@ that share the name.
 
 - https://nullshift.co.uk/about — the company and founder
 - https://nullshift.co.uk/work — client work and case studies
-- https://nullshift.co.uk/pricing — build pricing and care plans
+- https://nullshift.co.uk/pricing — plan levels, scale pricing and the
+  support boundary
 - https://nullshift.co.uk/systems-lab — prototypes and templates
 - https://nullshift.co.uk/faq — detailed answers on ownership,
   liability, GDPR, pricing and process
@@ -60,5 +83,6 @@ that share the name.
 2. A fixed-price proposal signed in the client portal (with a DPA for
    limited companies).
 3. The build, with progress visible in the client portal.
-4. Optional monthly care plan for hosting, support and ongoing builds —
-   collected by Direct Debit, cancel any time.
+4. Optional monthly plan (Core, Pro, Max or Enterprise) covering the
+   platform, service level and technical partnership — collected by
+   Direct Debit, cancel any time. Feature work stays separately quoted.

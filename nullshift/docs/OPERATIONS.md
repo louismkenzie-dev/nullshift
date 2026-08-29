@@ -25,25 +25,61 @@ Everything the client asks for lands in **one place** (the issue bank), gets fix
 **batches** (one compiled prompt, one PR), and flows back out as **client-visible updates**
 and **billing events** automatically.
 
-## Retainer tiers (single source of truth: `apps/web/lib/carePlans.ts`)
+## Recurring plans + scale pricing
 
-| Plan id       | Label         | £/mo | Includes |
-|---------------|---------------|------|----------|
-| `hosting`     | Hosting       | 40   | Hosting, paid Supabase, backups, security patches, bug fixes |
-| `hosting_api` | Hosting + API | 80   | + Resend + OpenAI usage included |
-| `build_3`     | Build 3       | 120  | + 3 build items per month |
-| `build_10`    | Build 10      | 180  | + 10 build items per month |
+Two independent axes. The **plan** answers "what service does this system
+need?"; the **scale band** answers "how much commercial, technical and
+operational load does this client place on Nullshift?".
 
-**Build allowance:** plans with build items get a monthly meter. Consumption is recorded in
-`build_credit_events` (negative delta) automatically when a `build_item` issue ships; top-ups
-are positive deltas granted from `/admin/billing`. Remaining = plan allowance + sum of the
-month's deltas. Clients see their meter in `/portal/plan`.
+Plan catalogue — `apps/web/lib/carePlans.ts` (base "from" price):
 
-**Billing classification of every issue** (AI-suggested at intake, confirmed at triage):
-- `covered` — bug fixes on anything we built, and questions. Always free.
-- `build_item` — new/changed functionality up to ~a day's work. Consumes allowance.
-- `out_of_scope` — bigger than a build item, or not something we built. Needs a quote
-  (`quoted_price` on the issue).
+| Plan id       | Label      | From £/mo | Response target     | Adds                                                                                                 |
+| ------------- | ---------- | --------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `hosting`     | Core       | 40        | 2 UK business days  | Hosting, DB, SSL, backups, monitoring, bug fixes                                                     |
+| `hosting_api` | Pro        | 80        | 1 UK business day   | + managed AI/API + transactional email + enhanced monitoring                                         |
+| `build_3`     | Max        | 120       | 4 UK business hours | + named technical owner, quarterly roadmap, monthly health review, free scoping, priority scheduling |
+| `build_10`    | Enterprise | quoted    | Contracted SLA      | + contracted SLAs, security/procurement, dedicated environments, optional reserved capacity          |
+
+Plan **ids** are DB values (`subscriptions_plan_check`) and keep their original
+names. **No plan includes feature development** — every `buildAllowance` is 0.
+New capabilities are always separately quoted fixed-price projects. Never write
+"unlimited development", "unlimited changes" or "developer on demand".
+
+**Support vs development:** if the request changes what the product can do it is
+development; if it keeps an existing capability working, or configures it within
+its original design, it is support. Bugs in our own signed-off implementation are
+always support.
+
+### What a client actually pays
+
+`final_mrr = ceil_to_5( max( base_plan × scale_multiplier, vendor_cost / 0.25 ) )`
+
+The Nullshift Scale Index (`apps/web/lib/pricing/nsi.ts`, version
+`NSI_v1_2026_08`) scores five dimensions out of 100 — audience 25, commercial
+criticality 25, technical load 20, organisation reach 15, complexity/risk 15 —
+and maps the total to a band: Standard ×1.0 (0–29), Growth ×1.5 (30–44),
+Established ×2.5 (45–59), Scale ×4.0 (60–74), Critical ×5.5 (75–84), Enterprise
+(85+, always a manual quote). The cost floor holds a minimum 75% gross margin on
+attributable vendor spend, so a usage spike can never leave a plan underwater.
+
+Score a client at **/admin/clients/[id]/pricing**. Each save stores the raw
+inputs, component scores, band, multiplier, floor, recommendation and pricing
+version in `scale_assessments` (migration 0028), so any quote can be explained
+months later. Overrides require a reason and record who made them.
+
+`contractedMrr()` (`apps/web/lib/pricing/contracted.ts`) resolves what to charge
+— agreed → override → recommended → base — and **every** billing path goes
+through it: Direct Debit set-up (admin + portal), the GoCardless webhook, Stripe
+checkout and manually recorded plans.
+
+### Review cadence
+
+- Shadow-score monthly; do **not** move the invoice automatically.
+- Formal review every 6 months, or straight after a material change.
+- Increase: two consecutive months in the higher band + 30 days' notice.
+- Decrease: three consecutive months lower, applied at the 6-month review.
+- A client cannot drop below the plan their live dependencies require (managed
+  AI/API or email keeps them on Pro as a minimum).
 
 ## Daily loop
 
@@ -148,18 +184,18 @@ order — the compiler doesn't care about the transport.
 
 ## Environment variables (ops additions)
 
-| Var | Purpose |
-|-----|---------|
-| `ANTHROPIC_API_KEY` | Intake triage classifier + inbox ingest parsing (`claude-opus-5`) |
-| `GITHUB_DISPATCH_TOKEN` | "Dispatch to Claude" GitHub issue creation |
-| `CRON_SECRET` | Protects `/api/cron/*`; Vercel sends it as a Bearer token |
+| Var                     | Purpose                                                           |
+| ----------------------- | ----------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`     | Intake triage classifier + inbox ingest parsing (`claude-opus-5`) |
+| `GITHUB_DISPATCH_TOKEN` | "Dispatch to Claude" GitHub issue creation                        |
+| `CRON_SECRET`           | Protects `/api/cron/*`; Vercel sends it as a Bearer token         |
 
 All are optional — every AI/automation feature degrades to a manual path when unset.
 
 ## Data model quick reference (migration `supabase/migrations/0014_operations_core.sql`)
 
 - `issues` — the bank. Status flow: `new → triaged → queued → batched → in_progress →
-  fixed → shipped` (+ `awaiting_client`, `closed`). Client-visible rows appear in the portal.
+fixed → shipped` (+ `awaiting_client`, `closed`). Client-visible rows appear in the portal.
 - `fix_batches` — compiled work orders: `draft → compiled → dispatched → pr_open → shipped`.
 - `system_profiles` — one per project: the passport.
 - `system_templates` — the template bank.
@@ -177,11 +213,11 @@ Monthly care plans can be collected by Bacs Direct Debit through GoCardless as a
 alternative to the Stripe card checkout. Same graceful degradation as Stripe: with no env
 vars set, every helper no-ops (`@nullshift/billing/gocardless`).
 
-| Var | Purpose |
-|-----|---------|
-| `GOCARDLESS_ACCESS_TOKEN` | API access token (from the GoCardless dashboard → Developers) |
-| `GOCARDLESS_ENVIRONMENT` | `live` or `sandbox` — anything other than `live` uses the sandbox API |
-| `GOCARDLESS_WEBHOOK_SECRET` | Webhook endpoint secret (HMAC-SHA256 signature verification) |
+| Var                         | Purpose                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
+| `GOCARDLESS_ACCESS_TOKEN`   | API access token (from the GoCardless dashboard → Developers)         |
+| `GOCARDLESS_ENVIRONMENT`    | `live` or `sandbox` — anything other than `live` uses the sandbox API |
+| `GOCARDLESS_WEBHOOK_SECRET` | Webhook endpoint secret (HMAC-SHA256 signature verification)          |
 
 **Webhook endpoint:** `https://nullshift.co.uk/api/gocardless/webhook` — add it in the
 GoCardless dashboard (Developers → Webhook endpoints) with the secret above. GoCardless

@@ -5,9 +5,12 @@ import { requireStaff } from "@nullshift/auth/guards";
 import { logAudit } from "@nullshift/db/audit";
 import { getMrrSummary } from "@nullshift/billing/mrr";
 import { getStripe } from "@nullshift/billing/stripe";
+import { cancelGoCardlessSubscription } from "@nullshift/billing/gocardless";
+import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
+import { contractedMrr } from "@/lib/pricing/contracted";
 import {
   CARE_PLANS,
   CARE_PLAN_MRR,
@@ -49,6 +52,7 @@ type Invoice = {
   hosted_invoice_url: string | null;
   paid_at: string | null;
   created_at: string;
+  due_at: string | null;
 };
 type CreditEvent = { tenant_id: string; delta: number };
 
@@ -100,11 +104,11 @@ async function cancelSubscription(formData: FormData) {
   const tenantId = String(formData.get("tenant_id") || "");
   if (!id) return;
   const service = createServiceClient();
-  // Cancel the REAL Stripe subscription first so billing actually stops, then
+  // Cancel the REAL provider subscription first so billing actually stops, then
   // reflect it locally ('canceled' — the enum is American-spelled).
   const { data: sub } = await service
     .from("subscriptions")
-    .select("stripe_subscription_id")
+    .select("stripe_subscription_id, gc_subscription_id")
     .eq("id", id)
     .maybeSingle();
   if (sub?.stripe_subscription_id) {
@@ -117,18 +121,35 @@ async function cancelSubscription(formData: FormData) {
       }
     }
   }
+  if (sub?.gc_subscription_id) {
+    // A Direct Debit keeps charging until GoCardless itself is cancelled — if
+    // that fails, leave the row alone so the UI can't show a client as
+    // cancelled while their bank is still being debited.
+    try {
+      await cancelGoCardlessSubscription(sub.gc_subscription_id);
+    } catch (e) {
+      console.error("gocardless subscription cancel failed:", e);
+      revalidatePath("/admin/billing");
+      return;
+    }
+  }
   const { error } = await service
     .from("subscriptions")
     .update({ status: "canceled" })
     .eq("id", id);
   if (error) console.error("cancelSubscription:", error.message);
-  else await logAudit({ action: "subscription.canceled", target: `subscription:${id}`, tenantId });
+  else
+    await logAudit({
+      action: "subscription.canceled",
+      target: `subscription:${id}`,
+      tenantId,
+    });
   revalidatePath("/admin/billing");
 }
 
 /**
  * Record a retainer without Stripe — for clients who pay by standing order.
- * MRR comes from the plan table so the number can never drift from pricing.
+ * MRR resolves through the pricing engine so the number can never drift.
  */
 async function recordManualSubscription(formData: FormData) {
   "use server";
@@ -137,10 +158,13 @@ async function recordManualSubscription(formData: FormData) {
   const plan = String(formData.get("plan") || "");
   if (!tenantId || !(plan in CARE_PLAN_MRR)) return;
   const supabase = await createClient();
+  // The contracted rate for this tenant (scale multiplier + margin floor),
+  // falling back to the catalogue base when no assessment exists yet.
+  const { mrr } = await contractedMrr(tenantId, plan);
   const { error } = await supabase.from("subscriptions").insert({
     tenant_id: tenantId,
     plan,
-    mrr: CARE_PLAN_MRR[plan],
+    mrr,
     status: "active",
     started_at: new Date().toISOString(),
   });
@@ -149,7 +173,7 @@ async function recordManualSubscription(formData: FormData) {
       action: "subscription.recorded_manually",
       target: `tenant:${tenantId}`,
       tenantId,
-      metadata: { plan, mrr: CARE_PLAN_MRR[plan] },
+      metadata: { plan, mrr },
     });
   revalidatePath("/admin/billing");
 }
@@ -208,14 +232,11 @@ async function markInvoicePaid(formData: FormData) {
   if (!(await requireStaff()).ok) return;
   const id = String(formData.get("id") || "");
   const tenantId = String(formData.get("tenant_id") || "");
-  if (!id) return;
-  const supabase = await createClient();
-  // In production the Stripe webhook does this on invoice.paid.
-  await supabase
-    .from("invoices")
-    .update({ status: "paid", paid_at: new Date().toISOString() })
-    .eq("id", id);
-  await logAudit({ action: "invoice.paid", target: `invoice:${id}`, tenantId });
+  if (!id || !tenantId) return;
+  // Shared implementation — settles the Stripe hosted invoice out-of-band (so
+  // the card link stops collecting), CAS status flip, Xero payment mirror.
+  // This page used to have a weaker copy that skipped all three.
+  await markInvoicePaidOutOfBand({ tenantId, invoiceId: id });
   revalidatePath("/admin/billing");
 }
 
@@ -249,7 +270,9 @@ export default async function BillingPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("invoices")
-      .select("id, tenant_id, type, amount, status, hosted_invoice_url, paid_at, created_at")
+      .select(
+        "id, tenant_id, type, amount, status, hosted_invoice_url, paid_at, created_at, due_at"
+      )
       .order("created_at", { ascending: false }),
     supabase.from("build_credit_events").select("tenant_id, delta").eq("period", period),
     supabase.rpc("tenant_footprint"),
@@ -267,7 +290,10 @@ export default async function BillingPage() {
   // Build-credit deltas folded per tenant for the current period.
   const creditByTenant = new Map<string, number>();
   for (const c of creditList)
-    creditByTenant.set(c.tenant_id, (creditByTenant.get(c.tenant_id) ?? 0) + Number(c.delta));
+    creditByTenant.set(
+      c.tenant_id,
+      (creditByTenant.get(c.tenant_id) ?? 0) + Number(c.delta)
+    );
 
   const activeSubs = subList.filter((s) => s.status === "active");
   const trialingSubs = subList.filter((s) => s.status === "trialing");
@@ -275,6 +301,12 @@ export default async function BillingPage() {
   const openInvoices = invoiceList.filter((i) => i.status === "open");
   const openTotal = openInvoices.reduce((sum, i) => sum + Number(i.amount || 0), 0);
   const recentPaid = invoiceList.filter((i) => i.status === "paid").slice(0, 10);
+  // Overdue = open past its due date. Legacy rows without due_at can't be
+  // overdue (they predate due dates being set at generation).
+  const nowMs = Date.now();
+  const isOverdueInv = (i: Invoice) =>
+    i.status === "open" && !!i.due_at && new Date(i.due_at).getTime() < nowMs;
+  const overdueInvoices = openInvoices.filter(isOverdueInv);
 
   // Per-tenant usage footprint (cost guardrail). A pricing trigger fires when a
   // tenant carries real activity but little/no recurring fee to cover it.
@@ -371,13 +403,22 @@ export default async function BillingPage() {
       {/* ── The four numbers ──────────────────────────────────── */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 mt-7">
         <Reveal delay={0.05}>
-          <StatCard value={gbp(summary.mrr)} label="MRR" sub="Active + trialing retainers" accent />
+          <StatCard
+            value={gbp(summary.mrr)}
+            label="MRR"
+            sub="Active + trialing retainers"
+            accent
+          />
         </Reveal>
         <Reveal delay={0.1}>
           <StatCard
             value={String(activeSubs.length)}
             label="Active retainers"
-            sub={trialingSubs.length ? `+${trialingSubs.length} trialing` : "Recurring plans live now"}
+            sub={
+              trialingSubs.length
+                ? `+${trialingSubs.length} trialing`
+                : "Recurring plans live now"
+            }
           />
         </Reveal>
         <Reveal delay={0.15}>
@@ -391,7 +432,11 @@ export default async function BillingPage() {
           <StatCard
             value={gbp(openTotal)}
             label="Unpaid invoices"
-            sub={`${openInvoices.length} open invoice${openInvoices.length === 1 ? "" : "s"}`}
+            sub={
+              overdueInvoices.length > 0
+                ? `${openInvoices.length} open · ${overdueInvoices.length} OVERDUE`
+                : `${openInvoices.length} open invoice${openInvoices.length === 1 ? "" : "s"}`
+            }
           />
         </Reveal>
       </div>
@@ -449,7 +494,12 @@ export default async function BillingPage() {
 
       {/* ── Retainers: one row per client ─────────────────────── */}
       <Reveal className="block" delay={0.1}>
-        <Panel label="// RETAINERS" title="One row per client" pad={false} className="mt-7">
+        <Panel
+          label="// RETAINERS"
+          title="One row per client"
+          pad={false}
+          className="mt-7"
+        >
           {tenantList.length === 0 ? (
             <p style={emptyStyle}>No client tenants yet — add one in Clients.</p>
           ) : (
@@ -480,7 +530,9 @@ export default async function BillingPage() {
                 const left = remainingAllowance(plan, deltaSum);
                 return (
                   <Reveal key={t.id} className="block" delay={Math.min(i, 8) * 0.04}>
-                    <details style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}>
+                    <details
+                      style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}
+                    >
                       <summary
                         className="k-kard-h max-md:flex max-md:flex-wrap max-md:items-center md:grid"
                         style={{
@@ -554,8 +606,7 @@ export default async function BillingPage() {
                                       100,
                                       Math.round((left / plan.buildAllowance) * 100)
                                     )}%`,
-                                    background:
-                                      left > 0 ? "var(--k-accent)" : T.warning,
+                                    background: left > 0 ? "var(--k-accent)" : T.warning,
                                   }}
                                 />
                               </span>
@@ -601,7 +652,9 @@ export default async function BillingPage() {
                                   </option>
                                 ))}
                               </select>
-                              <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
+                              <SubmitButton
+                                style={btn("var(--k-accent)", "var(--k-on-accent)")}
+                              >
                                 Send signup
                               </SubmitButton>
                             </form>
@@ -626,14 +679,19 @@ export default async function BillingPage() {
                                   </option>
                                 ))}
                               </select>
-                              <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
+                              <SubmitButton
+                                style={btn("var(--k-surface)", "var(--k-fg)", true)}
+                              >
                                 Record
                               </SubmitButton>
                             </form>
                           </ActionGroup>
                         )}
                         <ActionGroup label="Grant top-up (build items)">
-                          <form action={grantTopUp} className="flex flex-wrap items-center gap-2">
+                          <form
+                            action={grantTopUp}
+                            className="flex flex-wrap items-center gap-2"
+                          >
                             <input type="hidden" name="tenant_id" value={t.id} />
                             <input
                               name="delta"
@@ -644,7 +702,9 @@ export default async function BillingPage() {
                               required
                               style={{ ...inp, width: 70, maxWidth: "100%" }}
                             />
-                            <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
+                            <SubmitButton
+                              style={btn("var(--k-surface)", "var(--k-fg)", true)}
+                            >
                               Grant
                             </SubmitButton>
                           </form>
@@ -672,7 +732,12 @@ export default async function BillingPage() {
 
       {/* ── Invoices ──────────────────────────────────────────── */}
       <Reveal className="block" delay={0.1}>
-        <Panel label="// INVOICES" title="Build & one-off invoices" pad={false} className="mt-7">
+        <Panel
+          label="// INVOICES"
+          title="Build & one-off invoices"
+          pad={false}
+          className="mt-7"
+        >
           <form
             action={issueInvoice}
             className="flex items-center gap-2 flex-wrap"
@@ -763,11 +828,21 @@ export default async function BillingPage() {
                     <span style={dimMono}>{inv.type.replace(/_/g, " ")}</span>
                     <span style={dimMono}>{gbp(Number(inv.amount))}</span>
                     <span>
-                      <StatusChip tone={inv.status === "paid" ? "success" : "warning"}>
-                        {inv.status}
+                      <StatusChip
+                        tone={
+                          inv.status === "paid"
+                            ? "success"
+                            : isOverdueInv(inv)
+                              ? "danger"
+                              : "warning"
+                        }
+                      >
+                        {isOverdueInv(inv) ? "overdue" : inv.status}
                       </StatusChip>
                     </span>
-                    <span className={inv.hosted_invoice_url ? undefined : "max-md:hidden"}>
+                    <span
+                      className={inv.hosted_invoice_url ? undefined : "max-md:hidden"}
+                    >
                       {inv.hosted_invoice_url ? (
                         <a
                           href={inv.hosted_invoice_url}
@@ -786,13 +861,17 @@ export default async function BillingPage() {
                         <form action={markInvoicePaid}>
                           <input type="hidden" name="id" value={inv.id} />
                           <input type="hidden" name="tenant_id" value={inv.tenant_id} />
-                          <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")}>
+                          <SubmitButton
+                            style={btn("var(--k-accent)", "var(--k-on-accent)")}
+                          >
                             Mark paid
                           </SubmitButton>
                         </form>
                       ) : (
                         <span style={{ ...dimMono, color: "var(--k-faint)" }}>
-                          {inv.paid_at ? new Date(inv.paid_at).toLocaleDateString("en-GB") : "paid"}
+                          {inv.paid_at
+                            ? new Date(inv.paid_at).toLocaleDateString("en-GB")
+                            : "paid"}
                         </span>
                       )}
                     </span>
@@ -806,7 +885,12 @@ export default async function BillingPage() {
 
       {/* ── Usage footprint / cost guardrail ──────────────────── */}
       <Reveal className="block" delay={0.1}>
-        <Panel label="// COST GUARDRAIL" title="Usage footprint" pad={false} className="mt-7">
+        <Panel
+          label="// COST GUARDRAIL"
+          title="Usage footprint"
+          pad={false}
+          className="mt-7"
+        >
           <p
             style={{
               fontFamily: T.sans,
@@ -854,7 +938,7 @@ export default async function BillingPage() {
                       {f.name}
                     </span>
                     <span>docs {f.documents}</span>
-                    <span>reqs {f.change_requests}</span>
+                    <span>issues {f.change_requests}</span>
                     <span>tasks {f.tasks}</span>
                     <span>audit {f.audit_rows}</span>
                     <span>{gbp(Number(f.mrr))}/mo</span>

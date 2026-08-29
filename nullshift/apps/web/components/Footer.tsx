@@ -1,4 +1,5 @@
 import React from "react";
+import { legalConfig, statutoryDisclosure } from "@nullshift/content/legal/config";
 import Link from "next/link";
 import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
@@ -12,9 +13,9 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     title: "Product",
     links: [
       { label: "What we build", href: "/#capabilities" },
-      { label: "Systems Lab", href: "/systems-lab" },
+      { label: "Agent Consultation", href: "/start" },
+      { label: "Client stories", href: "/client-stories" },
       { label: "Pricing", href: "/pricing" },
-      { label: "Client stories", href: "/work" },
     ],
   },
   {
@@ -29,10 +30,15 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Legal",
     links: [
-      { label: "Privacy", href: "/legal" },
-      { label: "Cookies", href: "/legal" },
-      { label: "Terms", href: "/legal" },
-      { label: "DPA", href: "/legal" },
+      { label: "Legal Centre", href: "/legal" },
+      { label: "Privacy", href: "/legal/privacy" },
+      { label: "Cookies", href: "/legal/cookies" },
+      { label: "Website terms", href: "/legal/website-terms" },
+      { label: "Subprocessors", href: "/legal/subprocessors" },
+      { label: "Data complaint", href: "/legal/data-complaint" },
+      // Persistent withdrawal route (spec §10): consent must be as easy to
+      // take back as it was to give, from every page, without signing in.
+      { label: "Cookie settings", href: legalConfig.routes.cookieSettings },
     ],
   },
 ];
@@ -156,8 +162,25 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
+        {/* Statutory company disclosure — generated from the central legal
+            config so it can never drift from the legal pages. */}
+        <p
+          className="mt-8"
+          style={{
+            fontFamily: T.mono,
+            fontSize: "0.66rem",
+            lineHeight: 1.7,
+            color: "var(--k-faint)",
+            borderTop: "1px solid var(--k-border)",
+            paddingTop: 20,
+            maxWidth: "90ch",
+          }}
+        >
+          {statutoryDisclosure()}
+        </p>
+
         <div
-          className="mt-8 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+          className="mt-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
           style={{ borderTop: "1px solid var(--k-border)", paddingTop: 22 }}
         >
           <span
@@ -172,7 +195,9 @@ export function Footer() {
             © 2026 Nullshift · London, UK
           </span>
           <div className="flex items-center gap-5">
-            <Link href="/portal" className="k-flink" style={monoLink}>
+            {/* Via the login page, not bare /portal: it routes a signed-in
+                staff session to the admin hub and a client to their portal. */}
+            <Link href="/portal/login" className="k-flink" style={monoLink}>
               Client login
             </Link>
             <Link

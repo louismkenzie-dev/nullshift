@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { SmoothScroll } from "@/components/SmoothScroll";
-import { ConsentBanner } from "@/components/ConsentBanner";
+import { ConsentManager } from "@/components/legal/ConsentManager";
 import { IntroSplash } from "@/components/IntroSplash";
 import { PageTransition } from "@/components/PageTransition";
 import { ScrollProgress } from "@/components/ScrollProgress";
 import { LEGAL_ENTITY } from "@nullshift/content/legalEntity";
-import { CARE_PLANS } from "@/lib/carePlans";
+import { PRICING_TIERS } from "@nullshift/content/pricing";
 
 const SITE_URL = "https://nullshift.co.uk";
 const TITLE = "Nullshift — Websites, Systems & Automations";
@@ -13,7 +13,7 @@ const DESCRIPTION =
   "Nullshift designs, builds and runs bespoke websites, custom systems and the automations behind them — owned outright by your business. No per-seat SaaS fees.";
 
 // Marketing-only layout: the public site's SEO metadata, smooth scrolling and
-// privacy consent banner live here, NOT in the root layout, so the internal
+// privacy consent manager live here, NOT in the root layout, so the internal
 // /admin and /portal surfaces are never wrapped by Lenis or the cookie banner.
 export const metadata: Metadata = {
   title: TITLE,
@@ -114,14 +114,23 @@ const jsonLd = {
                 "Custom-built business systems — booking, payments, client portals, automation — owned outright by the client: code, data and accounts.",
             },
           },
-          ...CARE_PLANS.map((p) => ({
+          // The public ladder, "from" prices and all. Enterprise carries no
+          // price node at all — it is quoted per client, and inventing a
+          // figure here would contradict the page.
+          ...PRICING_TIERS.map((t) => ({
             "@type": "Offer",
-            price: String(p.mrr),
-            priceCurrency: "GBP",
+            ...(t.priceFrom !== null && {
+              priceSpecification: {
+                "@type": "UnitPriceSpecification",
+                minPrice: String(t.priceFrom),
+                priceCurrency: "GBP",
+                unitCode: "MON",
+              },
+            }),
             itemOffered: {
               "@type": "Service",
-              name: `${p.label} care plan`,
-              description: p.blurb,
+              name: `${t.name} plan`,
+              description: t.summary,
             },
           })),
         ],
@@ -174,7 +183,7 @@ export default function MarketingLayout({
       <PageTransition />
       <ScrollProgress />
       <SmoothScroll>{children}</SmoothScroll>
-      <ConsentBanner />
+      <ConsentManager />
     </>
   );
 }

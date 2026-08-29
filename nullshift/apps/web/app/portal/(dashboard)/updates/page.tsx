@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
-import { createClient, createServiceClient } from "@nullshift/db";
+import { createServiceClient } from "@nullshift/db";
+import { getPortalClient, isClientPreview } from "@/lib/clientPreview";
 import { logAudit } from "@nullshift/db/audit";
 import { requireTenantMember } from "@nullshift/auth/guards";
 import { T } from "@nullshift/ui/tokens";
@@ -40,6 +41,8 @@ const dateGB = (iso: string) =>
 
 async function decide(formData: FormData) {
   "use server";
+  // Staff view-as-client preview is read-only — never record a decision.
+  if (await isClientPreview()) return;
   const id = String(formData.get("id") || "");
   const tenantId = String(formData.get("tenant_id") || "");
   const optionId = String(formData.get("option_id") || "");
@@ -82,7 +85,7 @@ async function decide(formData: FormData) {
 }
 
 export default async function PortalUpdatesPage() {
-  const supabase = await createClient();
+  const { supabase } = await getPortalClient();
   const { data: updates } = await supabase
     .from("project_updates")
     .select(

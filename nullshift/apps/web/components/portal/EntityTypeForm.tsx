@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useOperationPending } from "@/components/app/operationOverlay";
+import { useOperationPending } from "@/components/app/operationState";
 import { useRouter } from "next/navigation";
 import { T } from "@nullshift/ui/tokens";
 

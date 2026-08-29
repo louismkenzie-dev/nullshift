@@ -241,8 +241,8 @@ export function DpaTemplate({
         (2) {company}, a business registered in the United Kingdom (company number{" "}
         {val(N.companyNumber, "company number — to confirm")}, ICO registration{" "}
         {val(N.ico, "ICO registration — to confirm")}) whose registered office is at{" "}
-        {val(N.registeredOffice, "registered office — to confirm")} (&quot;Nullshift&quot;,
-        the &quot;Processor&quot;).
+        {val(N.registeredOffice, "registered office — to confirm")}{" "}
+        (&quot;Nullshift&quot;, the &quot;Processor&quot;).
       </P>
       <P>each a &quot;party&quot; and together the &quot;parties&quot;.</P>
       <P>Effective date: {effective}</P>

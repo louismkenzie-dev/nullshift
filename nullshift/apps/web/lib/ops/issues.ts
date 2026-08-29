@@ -1,3 +1,5 @@
+import type { WorkClassification } from "@nullshift/content/legal/work";
+
 /**
  * Issue bank — shared constants, labels and tone maps for the ops system.
  * The issues table (migration 0014) is the single intake for every bug,
@@ -46,6 +48,9 @@ export type IssueRow = {
   image_urls: string[];
   client_visible: boolean;
   quoted_price: number | null;
+  quote_note: string | null;
+  quote_accepted_at: string | null;
+  quote_declined_at: string | null;
   build_items: number | null;
   due_at: string | null;
   promised_at: string | null;
@@ -53,6 +58,15 @@ export type IssueRow = {
   ai: Record<string, unknown> | null;
   resolution_note: string | null;
   resolved_at: string | null;
+  /**
+   * Spec §8. `billing` answers who pays; this answers whether the work is a
+   * restoration at all — and it is the one the build gate reads.
+   */
+  classification: WorkClassification | null;
+  classified_by: string | null;
+  classified_at: string | null;
+  classification_note: string | null;
+  change_order_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -70,6 +84,35 @@ export const OPEN_STATUSES: IssueStatus[] = [
 /** Statuses a batch pulls from when compiling. */
 export const QUEUEABLE_STATUSES: IssueStatus[] = ["new", "triaged", "queued"];
 
+/**
+ * An unreviewed inbox draft: AI-parsed, hidden, not yet confirmed by a human.
+ * Drafts must never count as real work (mission control) or enter a batch.
+ */
+export function isUnreviewedDraft(i: {
+  status: IssueStatus;
+  client_visible: boolean;
+}): boolean {
+  return i.status === "new" && !i.client_visible;
+}
+
+/**
+ * Whether an issue may be compiled into a fix batch. Two gates:
+ * 1. not an unreviewed draft (a human must have confirmed it exists), and
+ * 2. the money question is settled — covered/build_item work is included in
+ *    the plan; out_of_scope (billable) work needs the client's recorded
+ *    acceptance of the quote before it can be built, shipped, and announced.
+ */
+export function isBatchable(i: {
+  status: IssueStatus;
+  client_visible: boolean;
+  billing: IssueBilling;
+  quote_accepted_at?: string | null;
+}): boolean {
+  if (isUnreviewedDraft(i)) return false;
+  if (i.billing === "covered" || i.billing === "build_item") return true;
+  return i.billing === "out_of_scope" && !!i.quote_accepted_at;
+}
+
 export const KIND_LABEL: Record<IssueKind, string> = {
   bug: "Bug",
   change: "Change",
@@ -79,14 +122,30 @@ export const KIND_LABEL: Record<IssueKind, string> = {
 
 /** Portal intake picker — phrased for non-technical clients. */
 export const PORTAL_KINDS: { id: IssueKind; label: string; hint: string }[] = [
-  { id: "bug", label: "Something's broken", hint: "An error, a page not working, a payment problem" },
-  { id: "change", label: "Request a change", hint: "Something new, or something done differently" },
-  { id: "question", label: "Ask a question", hint: "How something works, or anything else" },
+  {
+    id: "bug",
+    label: "Something's broken",
+    hint: "An error, a page not working, a payment problem",
+  },
+  {
+    id: "change",
+    label: "Request a change",
+    hint: "Something new, or something done differently",
+  },
+  {
+    id: "question",
+    label: "Ask a question",
+    hint: "How something works, or anything else",
+  },
 ];
 
 export const SEVERITY_META: Record<
   IssueSeverity,
-  { label: string; tone: "accent" | "success" | "warning" | "danger" | "muted"; dueDays: number }
+  {
+    label: string;
+    tone: "accent" | "success" | "warning" | "danger" | "muted";
+    dueDays: number;
+  }
 > = {
   critical: { label: "Critical", tone: "danger", dueDays: 1 },
   high: { label: "High", tone: "warning", dueDays: 3 },

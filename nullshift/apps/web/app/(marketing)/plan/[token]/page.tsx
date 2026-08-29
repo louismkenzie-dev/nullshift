@@ -6,6 +6,7 @@ import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
 import { Footer } from "@/components/Footer";
 import { ScalingPlan } from "@/components/funnel/ScalingPlan";
+import { AgentConsultation } from "@/components/funnel/AgentConsultation";
 import type { ScalingPlan as ScalingPlanData } from "@nullshift/content/scalingPlan";
 
 /**
@@ -117,7 +118,7 @@ export default async function PlanPage({
             marginBottom: 10,
           }}
         >
-          // Your free scaling plan
+          // Agent consultation · your free plan
         </div>
         <h1
           style={{
@@ -150,7 +151,15 @@ export default async function PlanPage({
           you&apos;re ready.
         </p>
 
-        <ScalingPlan plan={plan.scalingPlan} />
+        {/* The Agent Consultation is the plan: researched online, tailored,
+            with a bespoke mockup — generated on first view, cached thereafter.
+            The old template-built ScalingPlan renders only as the fallback
+            when the agent isn't configured. */}
+        {process.env.ANTHROPIC_API_KEY ? (
+          <AgentConsultation token={token} />
+        ) : (
+          <ScalingPlan plan={plan.scalingPlan} />
+        )}
 
         {/* CTA */}
         <div

@@ -1,10 +1,11 @@
-import { createClient } from "@nullshift/db";
+import { getPortalClient } from "@/lib/clientPreview";
 import { T } from "@nullshift/ui/tokens";
-import { clientRef } from "@nullshift/ui/format";
+import { invoiceRef } from "@nullshift/ui/format";
 import { carePlan } from "@/lib/carePlans";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { BankTransferDetails } from "@/components/portal/BankTransferDetails";
 import { Reveal } from "@/components/Reveal";
+import { tenantBalance } from "@/lib/billing/balance";
 
 /**
  * Client portal — payments. The money page: what's outstanding right now, every
@@ -25,11 +26,13 @@ const dateGB = (iso: string) =>
 type Invoice = {
   id: string;
   tenant_id: string;
+  project_id: string | null;
   amount: number;
   status: string;
   hosted_invoice_url: string | null;
   created_at: string;
   paid_at: string | null;
+  due_at: string | null;
   type: string | null;
 };
 type Sub = { plan: string; mrr: number; status: string; provider?: string | null };
@@ -64,27 +67,43 @@ const SUB_LABEL: Record<string, string> = {
 };
 
 export default async function PortalPaymentsPage() {
-  const supabase = await createClient();
-  const [{ data: invoices }, { data: subs }] = await Promise.all([
-    supabase
-      .from("invoices")
-      .select("id, tenant_id, amount, status, hosted_invoice_url, created_at, paid_at, type")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("subscriptions")
-      .select("plan, mrr, status, provider")
-      .order("started_at", { ascending: false }),
-  ]);
+  const { supabase } = await getPortalClient();
+  const [{ data: invoices }, { data: subs }, { data: items }, { data: projects }] =
+    await Promise.all([
+      supabase
+        .from("invoices")
+        .select(
+          "id, tenant_id, project_id, amount, status, hosted_invoice_url, created_at, paid_at, due_at, type"
+        )
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("subscriptions")
+        .select("plan, mrr, status, provider")
+        .order("started_at", { ascending: false }),
+      // The agreed scope, so this page can tell the difference between "you owe
+      // nothing" and "we haven't billed you yet".
+      supabase.from("project_items").select("project_id, amount, status"),
+      supabase.from("projects").select("id, proposal_status"),
+    ]);
 
   // Clients see real bills only — drafts and voided invoices stay internal.
   const invList = ((invoices ?? []) as Invoice[]).filter(
     (i) => i.status !== "draft" && i.status !== "void"
   );
   const open = invList.filter((i) => i.status === "open");
-  const outstanding = open.reduce((s, i) => s + Number(i.amount), 0);
-  const paidTotal = invList
-    .filter((i) => i.status === "paid")
-    .reduce((s, i) => s + Number(i.amount), 0);
+
+  // Outstanding is what they OWE, not what happens to have been invoiced.
+  // Agreed work that nobody has raised an invoice for yet is still owed, and
+  // reporting it as £0 "all settled" would be telling the client something
+  // untrue about their own account.
+  const balance = tenantBalance(
+    (projects ?? []) as { id: string; proposal_status: string | null }[],
+    (items ?? []) as { project_id: string | null; amount: number; status: string | null }[],
+    (invoices ?? []) as Invoice[]
+  );
+  const outstanding = balance.outstandingTotal;
+  const paidTotal = balance.paidTotal;
+  const awaitingInvoice = balance.unbilledTotal;
 
   const subList = (subs ?? []) as Sub[];
   const sub =
@@ -113,13 +132,21 @@ export default async function PortalPaymentsPage() {
                 value={outstanding > 0 ? gbp(outstanding) : "£0"}
                 label="Outstanding"
                 sub={
-                  open.length > 0
-                    ? `${open.length} invoice${open.length === 1 ? "" : "s"} awaiting payment`
-                    : "Nothing owed — all settled"
+                  open.length > 0 && awaitingInvoice > 0
+                    ? `${open.length} invoice${open.length === 1 ? "" : "s"} to pay · ${gbp(awaitingInvoice)} still to be invoiced`
+                    : open.length > 0
+                      ? `${open.length} invoice${open.length === 1 ? "" : "s"} awaiting payment`
+                      : awaitingInvoice > 0
+                        ? "Agreed work not yet invoiced"
+                        : "Nothing owed — all settled"
                 }
                 accent={outstanding > 0}
               />
-              <StatCard value={gbp(paidTotal)} label="Paid to date" sub="Across all invoices" />
+              <StatCard
+                value={gbp(paidTotal)}
+                label="Paid to date"
+                sub="Across all invoices"
+              />
               <StatCard
                 value={plan && sub ? `${gbp(Number(sub.mrr ?? plan.mrr))}/mo` : "—"}
                 label="Care plan"
@@ -177,6 +204,77 @@ export default async function PortalPaymentsPage() {
         </Reveal>
       )}
 
+      {/* Agreed work we haven't billed yet. Shown rather than quietly folded
+          into the headline, so the client knows an invoice is coming and can
+          see the figure before it arrives. */}
+      {awaitingInvoice > 0 && (
+        <Reveal>
+          <Panel label="// TO BE INVOICED" style={{ marginBottom: 20 }}>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <div className="flex flex-col min-w-0" style={{ gap: 4 }}>
+                <span
+                  style={{
+                    fontFamily: T.sans,
+                    fontWeight: 700,
+                    fontSize: "1.1rem",
+                    color: "var(--k-fg)",
+                  }}
+                >
+                  {gbp(awaitingInvoice)} still to be invoiced
+                </span>
+                <span
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.85rem",
+                    lineHeight: 1.6,
+                    color: "var(--k-muted)",
+                    maxWidth: "56ch",
+                  }}
+                >
+                  This is the balance of the work we agreed, after everything
+                  you&apos;ve already paid. We&apos;ll send the invoice for it — you
+                  don&apos;t need to do anything yet, and nothing is overdue.
+                </span>
+              </div>
+              <StatusChip tone="warning">Invoice coming</StatusChip>
+            </div>
+          </Panel>
+        </Reveal>
+      )}
+
+      {/* No monthly plan yet — the one thing they may need to choose. */}
+      {!sub && (
+        <Reveal>
+          <Panel label="// CARE PLAN" style={{ marginBottom: 20 }}>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+              <span
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.9rem",
+                  lineHeight: 1.6,
+                  color: "var(--k-muted)",
+                  maxWidth: "52ch",
+                }}
+              >
+                You don&apos;t have a monthly plan yet. Choosing one sets up hosting,
+                monitoring and support by Direct Debit — or you can tell us you
+                don&apos;t want one.
+              </span>
+              <a
+                href="/portal/plan"
+                className="kb kb-primary kb-sm"
+                style={{ display: "inline-flex", textDecoration: "none" }}
+              >
+                Choose a plan
+                <span className="k-arrow" aria-hidden>
+                  →
+                </span>
+              </a>
+            </div>
+          </Panel>
+        </Reveal>
+      )}
+
       {/* Every invoice, newest first */}
       <Reveal>
         <Panel label="// INVOICES">
@@ -226,7 +324,9 @@ export default async function PortalPaymentsPage() {
                           ·{" "}
                           {inv.status === "paid" && inv.paid_at
                             ? `Paid ${dateGB(inv.paid_at)}`
-                            : `Issued ${dateGB(inv.created_at)}`}
+                            : inv.due_at
+                              ? `Issued ${dateGB(inv.created_at)} · due ${dateGB(inv.due_at)}`
+                              : `Issued ${dateGB(inv.created_at)}`}
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2.5">
@@ -250,7 +350,7 @@ export default async function PortalPaymentsPage() {
                     </div>
                     {inv.status === "open" && (
                       <BankTransferDetails
-                        reference={clientRef(inv.tenant_id)}
+                        reference={invoiceRef(inv.tenant_id, inv.id)}
                         amount={Number(inv.amount)}
                         only={!inv.hosted_invoice_url}
                       />

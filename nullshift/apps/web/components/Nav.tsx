@@ -11,8 +11,8 @@ import { ScrambleHover } from "@/components/anim/ScrambleHover";
 
 const LINKS = [
   { n: "01", label: "What we build", href: "/#capabilities" },
-  { n: "02", label: "Client stories", href: "/work" },
-  { n: "03", label: "Systems Lab", href: "/systems-lab" },
+  { n: "02", label: "Agent Consultation", href: "/start" },
+  { n: "03", label: "Client stories", href: "/client-stories" },
   { n: "04", label: "Pricing", href: "/pricing" },
   { n: "05", label: "About", href: "/about" },
   { n: "06", label: "FAQ", href: "/faq" },
@@ -44,6 +44,9 @@ export function Nav() {
   const [ready, setReady] = useState(false);
   // null = unknown (don't render the chip yet, avoids a flash); true/false once resolved.
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  // Staff are routed to the admin hub, clients to the portal (server enforces
+  // real access either way — this only picks the right front door).
+  const [isStaff, setIsStaff] = useState(false);
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -54,11 +57,24 @@ export function Nav() {
     let unsub: (() => void) | undefined;
     try {
       const supabase = createClient();
+      const checkStaff = (hasSession: boolean) => {
+        if (!hasSession) {
+          if (active) setIsStaff(false);
+          return;
+        }
+        supabase.rpc("is_internal_staff").then(({ data: staff }) => {
+          if (active) setIsStaff(staff === true);
+        });
+      };
       supabase.auth.getSession().then(({ data }) => {
-        if (active) setSignedIn(!!data.session);
+        if (!active) return;
+        setSignedIn(!!data.session);
+        checkStaff(!!data.session);
       });
       const { data } = supabase.auth.onAuthStateChange((_e, session) => {
-        if (active) setSignedIn(!!session);
+        if (!active) return;
+        setSignedIn(!!session);
+        checkStaff(!!session);
       });
       unsub = () => data.subscription.unsubscribe();
     } catch {
@@ -191,7 +207,7 @@ export function Nav() {
             {/* Signed-in / signed-out indicator (links into the client portal) */}
             {signedIn !== null && (
               <Link
-                href={signedIn ? "/portal" : "/portal/login"}
+                href={signedIn ? (isStaff ? "/admin" : "/portal") : "/portal/login"}
                 className="hidden sm:inline-flex items-center gap-2"
                 style={{
                   ...mono,
@@ -199,7 +215,11 @@ export function Nav() {
                   textDecoration: "none",
                 }}
                 aria-label={
-                  signedIn ? "Signed in — open client portal" : "Sign in to client portal"
+                  signedIn
+                    ? isStaff
+                      ? "Signed in — open admin hub"
+                      : "Signed in — open client portal"
+                    : "Sign in to client portal"
                 }
               >
                 <span
@@ -431,7 +451,11 @@ export function Nav() {
             </div>
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <Link
-                href="/portal"
+                // Same routing as the status chip: staff → admin hub, signed-in
+                // clients → portal, everyone else → the login page (which also
+                // knows to send staff to /admin). Never a bare /portal — that
+                // is how an admin ends up inside a client-shaped page.
+                href={signedIn ? (isStaff ? "/admin" : "/portal") : "/portal/login"}
                 onClick={() => setOpen(false)}
                 className="kb kb-outline k-cream"
               >

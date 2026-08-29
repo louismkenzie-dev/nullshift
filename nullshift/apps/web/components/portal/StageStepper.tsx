@@ -2,10 +2,13 @@ import { T } from "@nullshift/ui/tokens";
 
 const STAGES = [
   { key: "discovery", label: "Discovery" },
+  { key: "onboarding", label: "Onboarding" },
   { key: "build", label: "Build" },
   { key: "review", label: "Review" },
+  { key: "launch_prep", label: "Launch prep" },
   { key: "live", label: "Live" },
   { key: "care", label: "Care" },
+  { key: "complete", label: "Complete" },
 ];
 
 /** Compact, wrap-friendly project stage indicator (mobile-safe). */

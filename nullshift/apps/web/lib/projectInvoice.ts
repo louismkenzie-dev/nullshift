@@ -3,7 +3,7 @@ import {
   findOrCreateCustomer,
 } from "@nullshift/billing/stripe";
 import { createServiceClient } from "@nullshift/db";
-import { clientRef } from "@nullshift/ui/format";
+import { invoiceRef } from "@nullshift/ui/format";
 import { sendEmail } from "./sendEmail";
 import { buildInvoiceReadyEmail } from "./clientEmails";
 import { syncInvoiceToXero } from "./xeroSync";
@@ -46,6 +46,10 @@ export async function generateProjectInvoice(
     .maybeSingle();
   if (existing) return { ok: true, invoiceId: existing.id, total };
 
+  // Due in 14 days — matches the Stripe hosted invoice's days_until_due, and
+  // gives the overdue detection on /admin/billing a real date to compare.
+  const dueAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
   const { data: invoice, error } = await service
     .from("invoices")
     .insert({
@@ -54,6 +58,7 @@ export async function generateProjectInvoice(
       type: "build_milestone",
       amount: total,
       status: "draft",
+      due_at: dueAt,
       project_item_count: lines.length,
     })
     .select("id")
@@ -159,9 +164,10 @@ export async function generateProjectInvoice(
         total,
         payUrl,
         items: lines.map((l) => ({ name: l.name, amount: Number(l.amount) })),
-        reference: clientRef(tenantId),
+        reference: invoiceRef(tenantId, invoice.id),
       });
       await sendEmail({
+        purpose: "transactional",
         to: email,
         subject: mail.subject,
         html: mail.html,

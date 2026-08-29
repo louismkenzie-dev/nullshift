@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
+import { requireStaff } from "@nullshift/auth/guards";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
@@ -43,6 +44,7 @@ const NEXT: Record<string, string> = {
 
 async function createTask(formData: FormData) {
   "use server";
+  if (!(await requireStaff()).ok) return;
   const projectId = String(formData.get("project_id") || "");
   const title = String(formData.get("title") || "").trim();
   const estimate = Number(formData.get("estimate_hours") || 0) || null;
@@ -78,6 +80,7 @@ async function createTask(formData: FormData) {
 
 async function advanceTask(formData: FormData) {
   "use server";
+  if (!(await requireStaff()).ok) return;
   const id = String(formData.get("id") || "");
   const tenantId = String(formData.get("tenant_id") || "");
   const from = String(formData.get("from") || "");
