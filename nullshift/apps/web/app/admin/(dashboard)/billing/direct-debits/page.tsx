@@ -110,6 +110,7 @@ export default async function DirectDebitsPage() {
     { data: paidRaw },
     { data: auditRaw },
     users,
+    { data: evidenceRaw },
   ] = await Promise.all([
     service
       .from("tenants")
@@ -146,7 +147,35 @@ export default async function DirectDebitsPage() {
       .order("created_at", { ascending: false })
       .limit(500),
     service.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+    service
+      .from("scale_evidence")
+      .select("tenant_id, provisional_nsi, provisional_band, field_states, collected_at")
+      .order("collected_at", { ascending: false }),
   ]);
+  // The newest auto-score per client — shown where there is no saved
+  // assessment yet, so an unscored row says how close it is to scored.
+  const latestScan = new Map<
+    string,
+    { nsi: number | null; band: string | null; pending: number; at: string }
+  >();
+  for (const e of (evidenceRaw ?? []) as {
+    tenant_id: string;
+    provisional_nsi: number | null;
+    provisional_band: string | null;
+    field_states: Record<string, string> | null;
+    collected_at: string;
+  }[]) {
+    if (latestScan.has(e.tenant_id)) continue;
+    const pending = Object.values(e.field_states ?? {}).filter(
+      (v) => v !== "auto"
+    ).length;
+    latestScan.set(e.tenant_id, {
+      nsi: e.provisional_nsi,
+      band: e.provisional_band,
+      pending,
+      at: e.collected_at,
+    });
+  }
 
   const tenants = (tenantsRaw ?? []) as Tenant[];
   const subs = (subsRaw ?? []) as Sub[];
@@ -390,6 +419,17 @@ export default async function DirectDebitsPage() {
                                 : ""}
                             </StatusChip>
                           )
+                        ) : latestScan.get(t.id) ? (
+                          <StatusChip tone="warning">
+                            Auto NSI {latestScan.get(t.id)!.nsi ?? "—"} ·{" "}
+                            {latestScan.get(t.id)!.band === "enterprise"
+                              ? "Enterprise"
+                              : (SCALE_BAND_LABEL[
+                                  latestScan.get(t.id)!
+                                    .band as keyof typeof SCALE_BAND_LABEL
+                                ] ?? "—")}{" "}
+                            · {latestScan.get(t.id)!.pending} to confirm
+                          </StatusChip>
                         ) : (
                           <StatusChip tone="warning">Not scored</StatusChip>
                         )}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@nullshift/db";
 import { requireStaff } from "@nullshift/auth/guards";
 import { logAudit } from "@nullshift/db/audit";
@@ -23,6 +23,15 @@ import {
   type ScaleInput,
 } from "@/lib/pricing/nsi";
 import { RebandPanel } from "./RebandPanel";
+import { latestEvidence, runAutoScore, type EvidenceRow } from "@/lib/scoring/autoScore";
+import { externalIntegrations, fieldsNeedingAPerson } from "@/lib/scoring/derive";
+import { isSupabaseManagementConfigured } from "@/lib/scoring/collectors/supabase";
+import {
+  FIELD_LABEL,
+  type FieldKey,
+  type FieldState,
+  type FieldStates,
+} from "@/lib/scoring/types";
 
 /**
  * Client scale assessment — the Nullshift Scale Index in one screen.
@@ -81,6 +90,15 @@ async function saveAssessment(formData: FormData) {
 
   const input = readInput(formData);
   const result = calculateScalePricing(input);
+  // The scan this assessment was completed from, and which inputs a machine
+  // filled vs a person — kept so a quote can be traced back to its evidence.
+  const evidenceId = String(formData.get("evidence_id") || "") || null;
+  let fieldStates: FieldStates = {};
+  try {
+    fieldStates = JSON.parse(String(formData.get("field_states") || "{}")) as FieldStates;
+  } catch {
+    fieldStates = {};
+  }
 
   const service = createServiceClient();
   await service.from("scale_assessments").insert({
@@ -104,6 +122,8 @@ async function saveAssessment(formData: FormData) {
     data_quality: result.dataQuality,
     review_flags: result.reviewFlags,
     created_by: staff.userId,
+    evidence_id: evidenceId,
+    field_states: fieldStates,
   });
   await logAudit({
     action: "scale_assessment.saved",
@@ -114,10 +134,39 @@ async function saveAssessment(formData: FormData) {
       band: result.scaleBand,
       recommendedMrr: result.recommendedMrr,
       pricingVersion: result.pricingVersion,
+      evidence: evidenceId,
+      autoFields: (Object.keys(fieldStates) as FieldKey[]).filter(
+        (k) => fieldStates[k] === "auto"
+      ).length,
     },
   });
   revalidatePath(`/admin/clients/${tenantId}/pricing`);
   revalidatePath(`/admin/clients/${tenantId}`);
+  revalidatePath("/admin/billing/direct-debits");
+}
+
+/**
+ * Read the system — repo + production database — and draft the assessment.
+ * Stores a scale_evidence row; the form below is then prefilled from it and
+ * only the fields a machine cannot know are left for the person saving.
+ */
+async function analyseSystem(formData: FormData) {
+  "use server";
+  const staff = await requireStaff();
+  if (!staff.ok) return;
+  const tenantId = String(formData.get("tenant_id") || "");
+  if (!tenantId) return;
+  const outcome = await runAutoScore({
+    tenantId,
+    trigger: "manual",
+    actorId: staff.userId,
+  });
+  revalidatePath(`/admin/clients/${tenantId}/pricing`);
+  revalidatePath("/admin/billing/direct-debits");
+  if (!outcome.ok)
+    redirect(
+      `/admin/clients/${tenantId}/pricing?scan_error=${encodeURIComponent(outcome.error)}`
+    );
 }
 
 /** Override the recommended figure — reason required, owner recorded. */
@@ -203,22 +252,56 @@ const inp: React.CSSProperties = {
   height: 34,
 };
 
+/** How a field got its value: read off the system, proposed, or a person's job. */
+function StateTag({ state }: { state?: FieldState }) {
+  if (!state) return null;
+  const look =
+    state === "auto"
+      ? { text: "auto", color: "var(--k-accent)" }
+      : state === "estimated"
+        ? { text: "estimate — confirm", color: T.warning }
+        : { text: "needs you", color: "var(--k-muted)" };
+  return (
+    <span
+      style={{
+        fontFamily: T.mono,
+        fontSize: "0.56rem",
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        color: look.color,
+        border: `1px solid color-mix(in oklab, ${look.color} 45%, transparent)`,
+        padding: "1px 5px",
+        marginLeft: 6,
+        verticalAlign: "middle",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {look.text}
+    </span>
+  );
+}
+
 function Field({
   name,
   title,
   hint,
   defaultValue,
   placeholder,
+  state,
 }: {
   name: string;
   title: string;
   hint?: string;
   defaultValue?: number | null;
   placeholder?: string;
+  state?: FieldState;
 }) {
   return (
     <label>
-      <span style={label}>{title}</span>
+      <span style={label}>
+        {title}
+        <StateTag state={state} />
+      </span>
       <input
         name={name}
         inputMode="numeric"
@@ -240,6 +323,24 @@ function Field({
         </span>
       )}
     </label>
+  );
+}
+
+function Stat({ title, value }: { title: string; value: string }) {
+  return (
+    <div style={{ padding: "10px 12px", border: "1px solid var(--k-border)" }}>
+      <span style={label}>{title}</span>
+      <span
+        style={{
+          fontFamily: T.sans,
+          fontWeight: 700,
+          fontSize: "1.1rem",
+          color: "var(--k-fg)",
+        }}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 
@@ -310,14 +411,17 @@ type Row = {
 
 export default async function ClientPricingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ scan_error?: string }>;
 }) {
   const { id: tenantId } = await params;
+  const { scan_error: scanError } = await searchParams;
   if (!(await requireStaff()).ok) notFound();
 
   const service = createServiceClient();
-  const [{ data: tenant }, { data: rows }] = await Promise.all([
+  const [{ data: tenant }, { data: rows }, scan, { data: passport }] = await Promise.all([
     service.from("tenants").select("id, name").eq("id", tenantId).maybeSingle(),
     service
       .from("scale_assessments")
@@ -325,12 +429,34 @@ export default async function ClientPricingPage({
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(12),
+    latestEvidence(service, tenantId),
+    service
+      .from("system_profiles")
+      .select("repo_full_name, supabase_ref")
+      .eq("tenant_id", tenantId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
   if (!tenant) notFound();
 
-  const history = (rows ?? []) as Row[];
+  const history = (rows ?? []) as (Row & { field_states?: FieldStates | null })[];
   const latest = history[0];
-  const prev = latest?.inputs;
+  // The form is prefilled from the newest of: the last scan (its derived
+  // inputs already carry the human answers from the assessment before it) or
+  // the last saved assessment. Field tags come from the same source.
+  const scanIsNewer =
+    !!scan && (!latest || new Date(scan.collected_at) > new Date(latest.created_at));
+  const prev: ScaleInput | undefined = scanIsNewer ? scan!.derived : latest?.inputs;
+  const fs: FieldStates = scanIsNewer
+    ? (scan!.field_states ?? {})
+    : (latest?.field_states ?? {});
+  const needsPerson = scan ? fieldsNeedingAPerson(scan.field_states ?? {}) : [];
+  const toConfirm = needsPerson.filter((k) => scan?.field_states?.[k] === "estimated");
+  const toEnter = needsPerson.filter((k) => scan?.field_states?.[k] === "human");
+  const repoEv = scan?.evidence?.repo ?? null;
+  const dbEv = scan?.evidence?.database ?? null;
+  const services = repoEv ? externalIntegrations(repoEv.integrations) : [];
   // scale_assessments.plan is the engine's vocabulary (core/pro/max/enterprise).
   const plan = latest ? carePlanForNsi(latest.plan) : null;
 
@@ -568,10 +694,267 @@ export default async function ClientPricingPage({
         </div>
       )}
 
+      {/* ── Auto-score: read the system ──────────────────────────── */}
+      <div style={{ marginBottom: 20 }}>
+        <Panel label="// AUTO-SCORE" title="Read the system">
+          <form action={analyseSystem} className="flex flex-wrap items-center gap-4">
+            <input type="hidden" name="tenant_id" value={tenantId} />
+            <SubmitButton className="kb kb-outline kb-sm">
+              {scan ? "Re-read the system" : "Analyse the system"}
+            </SubmitButton>
+            <span
+              style={{ fontFamily: T.sans, fontSize: "0.78rem", color: "var(--k-muted)" }}
+            >
+              Reads the repository{" "}
+              {passport?.repo_full_name ? (
+                <strong style={{ color: "var(--k-fg)" }}>
+                  {passport.repo_full_name}
+                </strong>
+              ) : (
+                <span style={{ color: T.warning }}>(none on the passport)</span>
+              )}{" "}
+              and the production database{" "}
+              {passport?.supabase_ref ? (
+                <strong style={{ color: "var(--k-fg)" }}>{passport.supabase_ref}</strong>
+              ) : (
+                <span style={{ color: T.warning }}>
+                  (no Supabase ref on the passport)
+                </span>
+              )}
+              {!isSupabaseManagementConfigured() && (
+                <span style={{ color: T.warning }}> · SUPABASE_ACCESS_TOKEN not set</span>
+              )}
+              . Fills every field it can; the rest are tagged for you below.
+            </span>
+          </form>
+
+          {scanError && (
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.82rem",
+                color: T.warning,
+                marginTop: 12,
+              }}
+            >
+              {scanError}
+            </p>
+          )}
+
+          {scan && (
+            <div style={{ marginTop: 18 }}>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <StatusChip tone={scan.sources?.repo?.ok ? "success" : "warning"}>
+                  {scan.sources?.repo?.ok
+                    ? `Repository read · ${scan.sources.repo.ref}`
+                    : `Repository: ${scan.sources?.repo?.error ?? "not read"}`}
+                </StatusChip>
+                <StatusChip tone={scan.sources?.database?.ok ? "success" : "warning"}>
+                  {scan.sources?.database?.ok
+                    ? `Database read · ${scan.sources.database.ref}`
+                    : `Database: ${scan.sources?.database?.error ?? "not read"}`}
+                </StatusChip>
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "0.64rem",
+                    color: "var(--k-faint)",
+                  }}
+                >
+                  {dateGB(scan.collected_at)} · {scan.trigger}
+                </span>
+              </div>
+
+              <div
+                className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2"
+                style={{ marginTop: 14 }}
+              >
+                <Stat
+                  title="Active users / 30d"
+                  value={dbEv ? dbEv.mau30.toLocaleString("en-GB") : "—"}
+                />
+                <Stat
+                  title="Registered users"
+                  value={dbEv ? dbEv.usersTotal.toLocaleString("en-GB") : "—"}
+                />
+                <Stat
+                  title="Dependencies"
+                  value={repoEv ? String(repoEv.dependencyCount) : "—"}
+                />
+                <Stat
+                  title="External services"
+                  value={repoEv ? String(services.length) : "—"}
+                />
+                <Stat
+                  title="Admin routes"
+                  value={
+                    repoEv ? `${repoEv.adminRouteCount} / ${repoEv.routeCount}` : "—"
+                  }
+                />
+                <Stat
+                  title="Staff users"
+                  value={
+                    dbEv?.roleModel.staffTotal != null
+                      ? String(dbEv.roleModel.staffTotal)
+                      : "—"
+                  }
+                />
+                <Stat
+                  title="Locations"
+                  value={dbEv?.locations ? String(dbEv.locations.count) : "—"}
+                />
+                <Stat title="Tables" value={dbEv ? String(dbEv.publicTables) : "—"} />
+              </div>
+
+              {services.length > 0 && (
+                <div className="flex flex-wrap gap-1.5" style={{ marginTop: 10 }}>
+                  {services.map((h) => (
+                    <span
+                      key={h.key}
+                      title={h.via.join(", ")}
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "0.62rem",
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        color: "var(--k-muted)",
+                        border: "1px solid var(--k-border)",
+                        padding: "2px 7px",
+                      }}
+                    >
+                      {h.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                style={{
+                  marginTop: 16,
+                  paddingTop: 14,
+                  borderTop: "1px solid var(--k-border)",
+                }}
+              >
+                <div>
+                  <span style={label}>Provisional score — before your fields</span>
+                  <div className="flex items-baseline gap-3">
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontWeight: 800,
+                        fontSize: "1.45rem",
+                        color: "var(--k-fg)",
+                      }}
+                    >
+                      NSI {scan.provisional_nsi ?? "—"}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontWeight: 600,
+                        fontSize: "0.95rem",
+                        color: "var(--k-accent)",
+                      }}
+                    >
+                      {scan.provisional_band === "enterprise"
+                        ? "Enterprise review"
+                        : (SCALE_BAND_LABEL[scan.provisional_band as ScaleBand] ?? "—")}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.9rem",
+                        color: "var(--k-muted)",
+                      }}
+                    >
+                      {scan.provisional_mrr != null
+                        ? `≈ ${gbp(Number(scan.provisional_mrr))}/mo on ${carePlanForNsi(scan.derived?.plan)?.label ?? scan.derived?.plan ?? "Core"}`
+                        : "no price until vendor cost is confirmed"}
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.74rem",
+                      color: "var(--k-faint)",
+                      marginTop: 6,
+                    }}
+                  >
+                    Nothing is billed from this. Fill the fields below and save to set the
+                    bracket.
+                  </p>
+                </div>
+                <div>
+                  <span style={label}>Left for you ({needsPerson.length})</span>
+                  {toConfirm.length > 0 && (
+                    <p
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.8rem",
+                        color: T.warning,
+                        margin: "0 0 4px",
+                      }}
+                    >
+                      Confirm: {toConfirm.map((k) => FIELD_LABEL[k]).join(" · ")}
+                    </p>
+                  )}
+                  {toEnter.length > 0 && (
+                    <p
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.8rem",
+                        color: "var(--k-fg)",
+                        margin: 0,
+                      }}
+                    >
+                      Enter: {toEnter.map((k) => FIELD_LABEL[k]).join(" · ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {scan.notes?.length > 0 && (
+                <ul
+                  style={{
+                    listStyle: "none",
+                    margin: "14px 0 0",
+                    padding: "10px 14px",
+                    border: "1px solid var(--k-border)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 5,
+                  }}
+                >
+                  {scan.notes.map((n) => (
+                    <li
+                      key={n}
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.8rem",
+                        color: "var(--k-muted)",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {n}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </Panel>
+      </div>
+
       {/* ── The assessment form ──────────────────────────────────── */}
-      <Panel label="// SCORE THIS CLIENT" title="New assessment">
+      <Panel
+        label="// SCORE THIS CLIENT"
+        title={scanIsNewer ? "Complete the assessment" : "New assessment"}
+      >
         <form action={saveAssessment} className="flex flex-col gap-6">
           <input type="hidden" name="tenant_id" value={tenantId} />
+          <input type="hidden" name="evidence_id" value={scanIsNewer ? scan!.id : ""} />
+          <input type="hidden" name="field_states" value={JSON.stringify(fs)} />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <label>
@@ -590,7 +973,10 @@ export default async function ClientPricingPage({
               </select>
             </label>
             <label className="sm:col-span-2">
-              <span style={label}>Platform role — what the system does for them</span>
+              <span style={label}>
+                Platform role — what the system does for them
+                <StateTag state={fs.platformRole} />
+              </span>
               <select
                 name="platformRole"
                 defaultValue={prev?.platformRole ?? "informational"}
@@ -609,42 +995,49 @@ export default async function ClientPricingPage({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Field
+              state={fs["monthlyActiveUsers"]}
               name="monthlyActiveUsers"
               title="Monthly active users"
               hint="Preferred over sessions"
               defaultValue={prev?.monthlyActiveUsers}
             />
             <Field
+              state={fs["monthlySessions"]}
               name="monthlySessions"
               title="Monthly sessions"
               hint="Fallback when MAU is unavailable"
               defaultValue={prev?.monthlySessions}
             />
             <Field
+              state={fs["annualTurnoverGbp"]}
               name="annualTurnoverGbp"
               title="Annual turnover (£)"
               hint="Never inferred — leave blank if unknown"
               defaultValue={prev?.annualTurnoverGbp}
             />
             <Field
+              state={fs["employeeCount"]}
               name="employeeCount"
               title="Employees"
               hint="Turnover fallback"
               defaultValue={prev?.employeeCount}
             />
             <Field
+              state={fs["directMonthlyVendorCostGbp"]}
               name="directMonthlyVendorCostGbp"
               title="Vendor cost / month (£)"
               hint="Hosting, DB, AI/API, email, monitoring"
               defaultValue={prev?.directMonthlyVendorCostGbp}
             />
             <Field
+              state={fs["internalActiveUsers"]}
               name="internalActiveUsers"
               title="Internal users"
               hint="Staff who depend on it"
               defaultValue={prev?.internalActiveUsers}
             />
             <Field
+              state={fs["locationsOrUnits"]}
               name="locationsOrUnits"
               title="Locations / units"
               hint="Higher of this and internal users counts"
@@ -673,6 +1066,7 @@ export default async function ClientPricingPage({
                       }}
                     >
                       {RISK_FLAG_LABEL[k]}
+                      <StateTag state={fs[`risk.${k}`]} />
                     </span>
                   </label>
                 ))}
@@ -701,6 +1095,7 @@ export default async function ClientPricingPage({
                         }}
                       >
                         {ENTERPRISE_FLAG_LABEL[k]}
+                        <StateTag state={fs[`enterprise.${k}`]} />
                       </span>
                     </label>
                   )

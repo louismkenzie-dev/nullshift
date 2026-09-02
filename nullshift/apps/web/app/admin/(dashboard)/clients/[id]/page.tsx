@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
@@ -28,7 +29,12 @@ import {
   isGoCardlessConfigured,
 } from "@nullshift/billing/gocardless";
 import { isXeroConfigured } from "@nullshift/billing/xero";
-import { syncInvoiceToXero, syncInvoicePaymentToXero } from "@/lib/xeroSync";
+import {
+  reconcileXeroInvoices,
+  syncInvoiceToXero,
+  syncInvoicePaymentToXero,
+} from "@/lib/xeroSync";
+import { runAutoScore } from "@/lib/scoring/autoScore";
 import { sendEmail } from "@/lib/sendEmail";
 import {
   portalInviteEmail,
@@ -558,6 +564,19 @@ async function setStage(formData: FormData) {
     tenantId,
     ...(overrideReason ? { metadata: { override_reason: overrideReason } } : {}),
   });
+  // A built system can score itself: once it is live (or straight into care)
+  // read its repo + database and draft the scale assessment, after the
+  // response so the stage change never waits on GitHub or Supabase.
+  if (stage === "live" || stage === "care") {
+    const actorId = (await supabase.auth.getUser()).data.user?.id ?? null;
+    after(async () => {
+      try {
+        await runAutoScore({ tenantId, projectId, trigger: "stage", actorId });
+      } catch (e) {
+        console.error("auto-score after stage change failed:", e);
+      }
+    });
+  }
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -1337,6 +1356,8 @@ export default async function ClientHub({
     draft_body: draftBody,
   } = await searchParams;
   const supabase = await createClient();
+  // Payments taken in Xero flow back before this client's invoices load.
+  await reconcileXeroInvoices(createServiceClient(), { tenantId, limit: 10 });
 
   // Stage 1 — one batch keyed on the tenant id: the tenant, its projects, and
   // every tenant-scoped section. These only depend on the id, so they run in
