@@ -6,11 +6,12 @@ import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { Reveal } from "@/components/kyma";
-import { CARE_PLANS, SELLABLE_PLANS, carePlan } from "@/lib/carePlans";
+import { carePlan } from "@/lib/carePlans";
 import { pricesFromAssessment } from "@/lib/pricing/contracted";
 import type { AssessmentRow } from "@/lib/pricing/contractedPrice";
 import { SCALE_BAND_LABEL } from "@/lib/pricing/nsi";
 import { sendDirectDebitLink, sendPlanInvite, sendPortalLink } from "./actions";
+import { planChoiceOpen } from "@/lib/planGate";
 
 /**
  * Direct Debits — the board the owner runs recurring billing from.
@@ -33,6 +34,8 @@ type Tenant = {
   name: string;
   contact_name: string | null;
   contact_email: string | null;
+  care_plan_choice: string | null;
+  care_plan_terms_accepted_at: string | null;
 };
 type Sub = {
   id: string;
@@ -114,7 +117,9 @@ export default async function DirectDebitsPage() {
   ] = await Promise.all([
     service
       .from("tenants")
-      .select("id, name, contact_name, contact_email")
+      .select(
+        "id, name, contact_name, contact_email, care_plan_choice, care_plan_terms_accepted_at"
+      )
       .eq("type", "client")
       .neq("status", "prospect")
       .order("name"),
@@ -131,7 +136,7 @@ export default async function DirectDebitsPage() {
       )
       .order("created_at", { ascending: false }),
     service.from("memberships").select("tenant_id, user_id").eq("role", "client_admin"),
-    service.from("projects").select("tenant_id, proposal_status"),
+    service.from("projects").select("tenant_id, proposal_status, stage"),
     service.from("invoices").select("tenant_id, amount").eq("status", "paid"),
     service
       .from("audit_log")
@@ -184,7 +189,13 @@ export default async function DirectDebitsPage() {
   const projects = (projectsRaw ?? []) as {
     tenant_id: string;
     proposal_status: string | null;
+    stage: string | null;
   }[];
+  // The plan is chosen after the build: options and Direct Debit links only
+  // once a project of theirs is live.
+  const builtTenants = new Set(
+    projects.filter((p) => planChoiceOpen(p.stage)).map((p) => p.tenant_id)
+  );
   const paid = (paidRaw ?? []) as { tenant_id: string; amount: number }[];
   const audit = (auditRaw ?? []) as Audit[];
   const userById = new Map(
@@ -227,8 +238,25 @@ export default async function DirectDebitsPage() {
         : "invited";
     const portalEmail = user?.email ?? t.contact_email ?? null;
     const billingAgreed = accepted.has(t.id) || (paidTotal.get(t.id) ?? 0) > 0;
+    const built = builtTenants.has(t.id);
+    const chosen =
+      t.care_plan_choice && t.care_plan_choice !== "none"
+        ? carePlan(t.care_plan_choice)
+        : null;
     const ev = (action: string) => lastEvent.get(`${t.id}:${action}`) ?? null;
-    return { t, pricing, sub, live, pendingDd, portal, portalEmail, billingAgreed, ev };
+    return {
+      t,
+      pricing,
+      sub,
+      live,
+      pendingDd,
+      portal,
+      portalEmail,
+      billingAgreed,
+      built,
+      chosen,
+      ev,
+    };
   });
 
   const awaiting = rows.filter((r) => r.pendingDd).length;
@@ -354,6 +382,8 @@ export default async function DirectDebitsPage() {
                   portal,
                   portalEmail,
                   billingAgreed,
+                  built,
+                  chosen,
                   ev,
                 },
                 i
@@ -362,11 +392,14 @@ export default async function DirectDebitsPage() {
                   ? SCALE_BAND_LABEL[pricing.assessment.scale_band]
                   : null;
                 const plan = sub ? carePlan(sub.plan) : null;
+                // Staff only ever RE-SEND the plan the client chose (and agreed
+                // the terms for) in the portal — never pick one for them.
                 const ddDisabled =
                   rail.tone === "danger" ||
                   !pricing.anyPriced ||
                   !portalEmail ||
                   !billingAgreed ||
+                  !chosen ||
                   live;
                 const sentDd =
                   ev("care_plan.dd_setup_sent") ?? ev("care_plan.dd_started");
@@ -597,14 +630,16 @@ export default async function DirectDebitsPage() {
                               ),
                               cursor: pricing.anyPriced ? "pointer" : "not-allowed",
                             }}
-                            disabled={!pricing.anyPriced || !portalEmail}
+                            disabled={!pricing.anyPriced || !portalEmail || !built}
                             title={
-                              pricing.anyPriced
-                                ? "Email their three priced options with a link into the portal"
-                                : "Score the client first"
+                              !built
+                                ? "The client chooses after the build — opens once a project is live"
+                                : pricing.anyPriced
+                                  ? "Email their three priced options with a link into the portal"
+                                  : "Score the client first"
                             }
                           >
-                            Send plan options
+                            {built ? "Send plan options" : "Options open at go-live"}
                           </SubmitButton>
                         </form>
                         <form
@@ -613,27 +648,19 @@ export default async function DirectDebitsPage() {
                         >
                           <input type="hidden" name="tenant_id" value={t.id} />
                           <input type="hidden" name="email" value={portalEmail ?? ""} />
-                          <select
-                            name="plan"
-                            style={inp}
-                            disabled={ddDisabled}
-                            defaultValue={SELLABLE_PLANS[1]!.id}
+                          <span
+                            style={{
+                              ...cell,
+                              fontSize: "0.78rem",
+                              color: chosen ? "var(--k-fg)" : "var(--k-faint)",
+                            }}
                           >
-                            {[
-                              ...SELLABLE_PLANS,
-                              ...CARE_PLANS.filter((p) => p.quotedOnly),
-                            ]
-                              .map((p) => ({ p, price: pricing.prices[p.id]! }))
-                              .filter(({ p, price }) => !p.quotedOnly || price.priced)
-                              .map(({ p, price }) => (
-                                <option key={p.id} value={p.id} disabled={!price.priced}>
-                                  {p.label}{" "}
-                                  {price.priced
-                                    ? `— ${gbp(price.mrr!)}/mo`
-                                    : "— not priced"}
-                                </option>
-                              ))}
-                          </select>
+                            {chosen
+                              ? `Client chose ${chosen.label}${t.care_plan_terms_accepted_at ? ` · terms agreed ${dateGB(t.care_plan_terms_accepted_at)}` : ""}`
+                              : t.care_plan_choice === "none"
+                                ? "Client chose no plan for now"
+                                : "Client hasn't chosen yet"}
+                          </span>
                           <SubmitButton
                             style={{
                               ...btn(
@@ -650,12 +677,14 @@ export default async function DirectDebitsPage() {
                                   ? "Score the client first"
                                   : !billingAgreed
                                     ? "Available once the client has signed the proposal or paid an invoice"
-                                    : "Email the GoCardless authorisation link for this plan"
+                                    : !chosen
+                                      ? "The client picks their plan and agrees the terms in the portal"
+                                      : "Re-send the GoCardless authorisation link for the plan the client chose"
                             }
                           >
                             {pendingDd
                               ? "Send new Direct Debit link"
-                              : "Send Direct Debit link"}
+                              : "Re-send Direct Debit link"}
                           </SubmitButton>
                         </form>
                       </div>

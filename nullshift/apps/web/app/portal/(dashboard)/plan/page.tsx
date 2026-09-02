@@ -6,6 +6,8 @@ import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit
 import { Reveal } from "@/components/Reveal";
 import { choosePlan } from "./actions";
 import { PendingBeacon } from "@/components/app/PendingBeacon";
+import Link from "next/link";
+import { planChoiceClosedReason, planChoiceOpen } from "@/lib/planGate";
 
 /**
  * Client portal — your plan. What their care plan covers, how many build items
@@ -70,26 +72,39 @@ const INV_TONE: Record<string, Tone> = {
 export default async function PortalPlanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dd?: string; price?: string }>;
+  searchParams: Promise<{ dd?: string; price?: string; gate?: string }>;
 }) {
-  const { dd, price } = await searchParams;
+  const { dd, price, gate } = await searchParams;
   const { supabase } = await getPortalClient();
-  const [{ data: subs }, { data: credits }, { data: invoices }, { data: tenants }] =
-    await Promise.all([
-      supabase
-        .from("subscriptions")
-        .select("id, plan, mrr, status, provider")
-        .order("started_at", { ascending: false }),
-      supabase
-        .from("build_credit_events")
-        .select("delta")
-        .eq("period", currentPeriodStart()),
-      supabase
-        .from("invoices")
-        .select("id, amount, status, hosted_invoice_url, created_at, paid_at")
-        .order("created_at", { ascending: false }),
-      supabase.from("tenants").select("id, care_plan_choice").limit(1),
-    ]);
+  const [
+    { data: subs },
+    { data: credits },
+    { data: invoices },
+    { data: tenants },
+    { data: projects },
+  ] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select("id, plan, mrr, status, provider")
+      .order("started_at", { ascending: false }),
+    supabase
+      .from("build_credit_events")
+      .select("delta")
+      .eq("period", currentPeriodStart()),
+    supabase
+      .from("invoices")
+      .select("id, amount, status, hosted_invoice_url, created_at, paid_at")
+      .order("created_at", { ascending: false }),
+    supabase.from("tenants").select("id, care_plan_choice").limit(1),
+    supabase
+      .from("projects")
+      .select("stage")
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ]);
+  // The plan is chosen after the build — the chooser stays closed until then.
+  const stage = (projects?.[0] as { stage?: string | null } | undefined)?.stage ?? null;
+  const built = planChoiceOpen(stage);
 
   const subList = (subs ?? []) as Sub[];
   const tenantRow = tenants?.[0] as
@@ -258,23 +273,19 @@ export default async function PortalPlanPage({
                     </li>
                   ))}
                 </ul>
-                <form action={choosePlan}>
-                  <PendingBeacon />
-                  <input type="hidden" name="plan" value={p.id} />
-                  {/* The figure shown, echoed back so the server can refuse to
-                      charge anything else. */}
-                  <input
-                    type="hidden"
-                    name="quoted_pence"
-                    value={Math.round(pp.mrr! * 100)}
-                  />
-                  <button type="submit" className="kb kb-primary kb-sm">
-                    Choose {p.label}
-                    <span className="k-arrow" aria-hidden>
-                      →
-                    </span>
-                  </button>
-                </form>
+                {/* The choice is confirmed on the next step, where the client
+                    reads and agrees the care-plan terms before any Direct
+                    Debit is started. */}
+                <Link
+                  href={`/portal/plan/confirm?plan=${encodeURIComponent(p.id)}`}
+                  className="kb kb-primary kb-sm"
+                  style={{ textDecoration: "none" }}
+                >
+                  Choose {p.label}
+                  <span className="k-arrow" aria-hidden>
+                    →
+                  </span>
+                </Link>
               </div>
             );
           })}
@@ -316,6 +327,23 @@ export default async function PortalPlanPage({
         }}
       >
         Paid monthly by Direct Debit — cancel any time
+      </p>
+    </Panel>
+  );
+
+  const notBuiltPanel = (
+    <Panel label="// YOUR PLAN OPTIONS" title="Your care plan comes after the build">
+      <p
+        style={{
+          fontFamily: T.sans,
+          fontSize: "0.9rem",
+          color: "var(--k-muted)",
+          lineHeight: 1.65,
+        }}
+      >
+        {planChoiceClosedReason(stage)} You&apos;ll choose from three options at your own
+        price, agree the terms and set up the Direct Debit — all from here, once
+        there&apos;s a live system to look after.
       </p>
     </Panel>
   );
@@ -421,6 +449,25 @@ export default async function PortalPlanPage({
               </p>
             </div>
           )}
+          {gate === "closed" && (
+            <div
+              style={{
+                padding: "14px 16px",
+                marginBottom: 12,
+                border: "1px solid rgba(245,213,71,0.45)",
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.9rem",
+                  color: "var(--k-muted)",
+                }}
+              >
+                Plan options aren&apos;t open yet — they unlock once your system is live.
+              </p>
+            </div>
+          )}
           {price === "changed" && (
             <div
               style={{
@@ -473,6 +520,8 @@ export default async function PortalPlanPage({
                   </div>
                 </details>
               </Panel>
+            ) : !built ? (
+              notBuiltPanel
             ) : pricing?.anyPriced ? (
               chooserPanel
             ) : (

@@ -35,6 +35,7 @@ import {
   syncInvoicePaymentToXero,
 } from "@/lib/xeroSync";
 import { runAutoScore } from "@/lib/scoring/autoScore";
+import { planChoiceOpen } from "@/lib/planGate";
 import { sendEmail } from "@/lib/sendEmail";
 import {
   portalInviteEmail,
@@ -205,20 +206,6 @@ async function removeItem(formData: FormData) {
     tenantId,
     metadata: { name: item.name, amount: item.amount },
   });
-  revalidatePath(`/admin/clients/${tenantId}`);
-}
-
-async function setProposedPlan(formData: FormData) {
-  "use server";
-  const tenantId = String(formData.get("tenant_id") || "");
-  const projectId = String(formData.get("project_id") || "");
-  const plan = String(formData.get("plan") || "");
-  if (!projectId) return;
-  const supabase = await createClient();
-  await supabase
-    .from("projects")
-    .update({ proposed_plan: plan || null })
-    .eq("id", projectId);
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -950,12 +937,32 @@ async function recordDpa(formData: FormData) {
  * to start the recurring plan). Mirrors the build-invoice send — the webhook
  * flips the local row to active once they complete it.
  */
+/**
+ * Which plan may staff start billing for? The one the client chose in the
+ * portal (terms agreed there). Enterprise — quoted and contracted under its
+ * Order Form — may be passed explicitly. Anything else is refused.
+ */
+async function clientChosenPlan(
+  tenantId: string,
+  requested: string
+): Promise<string | null> {
+  if (carePlan(requested)?.quotedOnly) return requested;
+  const service = createServiceClient();
+  const { data } = await service
+    .from("tenants")
+    .select("care_plan_choice")
+    .eq("id", tenantId)
+    .maybeSingle();
+  const choice = data?.care_plan_choice ?? null;
+  return choice && choice !== "none" && carePlan(choice) ? choice : null;
+}
+
 async function sendSubscriptionSignup(formData: FormData) {
   "use server";
   if (!(await requireStaff()).ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
-  const plan = String(formData.get("plan") || "");
-  if (!tenantId || !(plan in CARE_PLAN_MRR)) return;
+  const plan = await clientChosenPlan(tenantId, String(formData.get("plan") || ""));
+  if (!tenantId || !plan || !(plan in CARE_PLAN_MRR)) return;
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
     /\/$/,
     ""
@@ -985,8 +992,8 @@ async function sendDirectDebitSetup(formData: FormData) {
   "use server";
   if (!(await requireStaff()).ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
-  const plan = String(formData.get("plan") || "");
-  if (!tenantId || !carePlan(plan)) return;
+  const plan = await clientChosenPlan(tenantId, String(formData.get("plan") || ""));
+  if (!tenantId || !plan || !carePlan(plan)) return;
   const service = createServiceClient();
   const { data: tenant } = await service
     .from("tenants")
@@ -1373,7 +1380,7 @@ export default async function ClientHub({
     supabase
       .from("tenants")
       .select(
-        "id, name, type, vertical, status, contact_name, contact_email, contact_phone, notes, care_plan_choice"
+        "id, name, type, vertical, status, contact_name, contact_email, contact_phone, notes, care_plan_choice, care_plan_terms_accepted_at"
       )
       .eq("id", tenantId)
       .maybeSingle(),
@@ -1423,6 +1430,7 @@ export default async function ClientHub({
     contact_phone: string | null;
     notes: string | null;
     care_plan_choice: string | null;
+    care_plan_terms_accepted_at?: string | null;
   };
   // Primary project (most recent). Tenant-scoped sections work without one.
   const project = (projects ?? [])[0] as
@@ -1644,7 +1652,8 @@ export default async function ClientHub({
   // doc + DPA processing details are all present; the invoice can be generated
   // once the client has signed (proposal accepted).
   const modulesComplete = itemList.length > 0;
-  const planSelected = !!project?.proposed_plan;
+  // The care plan is chosen by the client after go-live, never in the proposal.
+  const planSelected = true;
   const isAccepted = project?.proposal_status === "accepted";
   // The active BUILD invoice (ignore voided) + its lifecycle state, so the
   // button/card reads: generate → sent, awaiting payment → paid.
@@ -2547,32 +2556,17 @@ export default async function ClientHub({
                 >
                   Ongoing care plan
                 </span>
-                <form action={setProposedPlan} className="flex items-center gap-2">
-                  {htid}
-                  {hpid}
-                  <select
-                    name="plan"
-                    defaultValue={project.proposed_plan ?? ""}
-                    style={{ ...inp, width: 180 }}
-                  >
-                    <option value="">No care plan</option>
-                    {CARE_PLANS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.label} — £{p.mrr}/mo
-                      </option>
-                    ))}
-                  </select>
-                  <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")}>
-                    Save plan
-                  </SubmitButton>
-                </form>
-                {project.proposed_plan && (
-                  <span
-                    style={{ fontFamily: T.mono, fontSize: 11, color: "var(--k-muted)" }}
-                  >
-                    {carePlan(project.proposed_plan)?.label} · activates on acceptance
-                  </span>
-                )}
+                {/* The client chooses their plan in the portal once the system
+                    is live — staff never pick one on their behalf. The proposal
+                    describes the levels; the choice comes after the build. */}
+                <span
+                  style={{ fontFamily: T.mono, fontSize: 11, color: "var(--k-muted)" }}
+                >
+                  Chosen by the client after go-live
+                  {project.proposed_plan
+                    ? ` · proposal mentions ${carePlan(project.proposed_plan)?.label}`
+                    : ""}
+                </span>
               </div>
               {project.proposal_status === "draft" && (
                 <p
@@ -3540,90 +3534,113 @@ export default async function ClientHub({
                       tenant.care_plan_choice)}
                 </p>
               )}
-              <p
-                style={{
-                  fontFamily: T.sans,
-                  fontSize: "0.82rem",
-                  color: "var(--k-faint)",
-                  marginBottom: 10,
-                }}
-              >
-                {project?.proposed_plan
-                  ? `${carePlan(project.proposed_plan)?.label} · ${gbp(
-                      carePlan(project.proposed_plan)?.mrr ?? 0
-                    )}/mo — not set up yet. Send billing setup to start it.`
-                  : "No care plan yet. Pick one and send the client billing setup to start it."}
-              </p>
-              {/* ONE form, ONE plan select — the buttons pick the rail via
-                  formAction, so the chosen plan always goes with the click. */}
-              <form
-                action={
-                  isGoCardlessConfigured() ? sendDirectDebitSetup : sendSubscriptionSignup
-                }
-                className="flex items-center gap-2 flex-wrap"
-              >
-                {htid}
-                <select
-                  name="plan"
-                  defaultValue={project?.proposed_plan ?? "hosting"}
-                  style={{ ...inp, width: 170 }}
-                >
-                  {[...SELLABLE_PLANS, ...CARE_PLANS.filter((p) => p.quotedOnly)]
-                    .map((p) => ({ p, price: pricing.prices[p.id]! }))
-                    .filter(({ p, price }) => !p.quotedOnly || price.priced)
-                    .map(({ p, price }) => (
-                      <option key={p.id} value={p.id} disabled={!price.priced}>
-                        {p.label} —{" "}
-                        {price.priced
-                          ? `£${price.mrr}/mo`
-                          : pricing.scored
-                            ? "not priced"
-                            : `from £${p.mrr}/mo (score client first)`}
-                      </option>
-                    ))}
-                </select>
-                {isGoCardlessConfigured() && (
-                  <SubmitButton
-                    formAction={sendDirectDebitSetup}
-                    disabled={!billingAgreed || !pricing.anyPriced}
-                    style={{
-                      ...btn(
-                        billingAgreed ? "var(--k-accent)" : "var(--k-surface)",
-                        billingAgreed ? "var(--k-on-accent)" : "var(--k-faint)"
-                      ),
-                      cursor: billingAgreed ? "pointer" : "not-allowed",
-                      opacity: billingAgreed ? 1 : 0.7,
-                    }}
-                    title="Email the client a GoCardless Direct Debit authorisation for this plan"
-                  >
-                    Send Direct Debit setup
-                  </SubmitButton>
-                )}
-                <SubmitButton
-                  formAction={sendSubscriptionSignup}
-                  disabled={!billingAgreed || !pricing.anyPriced}
-                  style={{
-                    ...btn(
-                      isGoCardlessConfigured()
-                        ? "var(--k-surface)"
-                        : billingAgreed
-                          ? "var(--k-accent)"
-                          : "var(--k-surface)",
-                      isGoCardlessConfigured()
-                        ? "var(--k-fg)"
-                        : billingAgreed
-                          ? "var(--k-on-accent)"
-                          : "var(--k-faint)"
-                    ),
-                    cursor: billingAgreed ? "pointer" : "not-allowed",
-                    opacity: billingAgreed ? 1 : 0.7,
-                  }}
-                >
-                  {isGoCardlessConfigured()
-                    ? "Or send card sign-up (Stripe)"
-                    : "Send care-plan sign-up"}
-                </SubmitButton>
-              </form>
+              {(() => {
+                const chosen =
+                  tenant?.care_plan_choice && tenant.care_plan_choice !== "none"
+                    ? carePlan(tenant.care_plan_choice)
+                    : null;
+                const chosenPrice = chosen ? pricing.prices[chosen.id] : null;
+                const enterprise = pricing.prices.build_10;
+                const built = planChoiceOpen(project?.stage);
+                return (
+                  <>
+                    <p
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.82rem",
+                        color: "var(--k-faint)",
+                        marginBottom: 10,
+                      }}
+                    >
+                      {chosen
+                        ? `${chosen.label}${chosenPrice?.priced ? ` · ${gbp(chosenPrice.mrr!)}/mo` : ""} — chosen by the client${
+                            tenant?.care_plan_terms_accepted_at
+                              ? `, terms agreed ${new Date(tenant.care_plan_terms_accepted_at).toLocaleDateString("en-GB")}`
+                              : ""
+                          }. Not set up yet — re-send the Direct Debit link if theirs went astray.`
+                        : built
+                          ? "The client picks their plan and agrees the terms in the portal — send them their options from the Direct Debits board."
+                          : `The client chooses their plan once the system is live (stage: ${project?.stage ?? "—"}). Nothing to send yet.`}
+                    </p>
+                    {/* Only the client's own choice can be (re)started by staff;
+                        Enterprise, agreed under its Order Form, is the exception. */}
+                    <form
+                      action={
+                        isGoCardlessConfigured()
+                          ? sendDirectDebitSetup
+                          : sendSubscriptionSignup
+                      }
+                      className="flex items-center gap-2 flex-wrap"
+                    >
+                      {htid}
+                      <input type="hidden" name="plan" value={chosen?.id ?? ""} />
+                      {isGoCardlessConfigured() && (
+                        <SubmitButton
+                          formAction={sendDirectDebitSetup}
+                          disabled={!billingAgreed || !chosen || !chosenPrice?.priced}
+                          style={{
+                            ...btn(
+                              billingAgreed && chosen
+                                ? "var(--k-accent)"
+                                : "var(--k-surface)",
+                              billingAgreed && chosen
+                                ? "var(--k-on-accent)"
+                                : "var(--k-faint)"
+                            ),
+                            cursor: billingAgreed && chosen ? "pointer" : "not-allowed",
+                            opacity: billingAgreed && chosen ? 1 : 0.7,
+                          }}
+                          title={
+                            chosen
+                              ? "Email the client a fresh GoCardless authorisation link for the plan they chose"
+                              : "The client hasn't chosen a plan yet"
+                          }
+                        >
+                          Re-send Direct Debit link
+                        </SubmitButton>
+                      )}
+                      <SubmitButton
+                        formAction={sendSubscriptionSignup}
+                        disabled={!billingAgreed || !chosen || !chosenPrice?.priced}
+                        style={{
+                          ...btn(
+                            "var(--k-surface)",
+                            chosen ? "var(--k-fg)" : "var(--k-faint)"
+                          ),
+                          cursor: billingAgreed && chosen ? "pointer" : "not-allowed",
+                          opacity: billingAgreed && chosen ? 1 : 0.7,
+                        }}
+                        title={
+                          chosen
+                            ? "Card sign-up (Stripe) for the plan the client chose"
+                            : "The client hasn't chosen a plan yet"
+                        }
+                      >
+                        {isGoCardlessConfigured()
+                          ? "Or send card sign-up (Stripe)"
+                          : "Send care-plan sign-up"}
+                      </SubmitButton>
+                    </form>
+                    {enterprise?.priced && isGoCardlessConfigured() && (
+                      <form
+                        action={sendDirectDebitSetup}
+                        className="flex items-center gap-2 flex-wrap"
+                        style={{ marginTop: 8 }}
+                      >
+                        {htid}
+                        <input type="hidden" name="plan" value="build_10" />
+                        <SubmitButton
+                          disabled={!billingAgreed}
+                          style={btn("var(--k-surface)", "var(--k-fg)")}
+                          title="Enterprise is quoted and contracted by staff under its Order Form"
+                        >
+                          Send Enterprise Direct Debit ({gbp(enterprise.mrr!)}/mo, agreed)
+                        </SubmitButton>
+                      </form>
+                    )}
+                  </>
+                );
+              })()}
               {!billingAgreed && (
                 <p
                   style={{

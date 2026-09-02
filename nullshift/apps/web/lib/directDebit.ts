@@ -40,6 +40,12 @@ export type StartDirectDebitInput = {
   /** Where GoCardless returns the client. Portal default; emailed links go via login. */
   returnPath?: string;
   exitPath?: string;
+  /**
+   * The client's agreement to the care-plan terms, captured on the portal's
+   * confirm step. Admin re-sends pass nothing and the tenant's recorded
+   * acceptance is used; without one, no sellable plan may start.
+   */
+  terms?: { version: string; acceptedAt: string; acceptedBy: string | null };
 };
 
 export type StartDirectDebitResult =
@@ -53,6 +59,8 @@ export type StartDirectDebitResult =
         | "unpriced"
         | "already_live"
         | "no_email"
+        | "client_choice_required"
+        | "terms_required"
         | "gocardless";
       detail?: string;
     };
@@ -74,6 +82,38 @@ export async function startDirectDebitForTenant(
     .in("status", ["active", "trialing", "past_due"])
     .limit(1);
   if (live && live.length > 0) return { ok: false, reason: "already_live" };
+
+  // The plan is the client's choice, made in the portal after go-live, and
+  // they agree the terms there. Staff paths may only re-send the plan the
+  // client chose, carrying the acceptance they already gave. Enterprise is the
+  // exception: quoted and contracted by staff under its Order Form.
+  const { data: tenantRow } = await service
+    .from("tenants")
+    .select(
+      "care_plan_choice, care_plan_terms_version, care_plan_terms_accepted_at, care_plan_terms_accepted_by"
+    )
+    .eq("id", input.tenantId)
+    .maybeSingle();
+  let terms = input.terms ?? null;
+  if (!plan.quotedOnly) {
+    if (input.via !== "portal" && tenantRow?.care_plan_choice !== plan.id)
+      return {
+        ok: false,
+        reason: "client_choice_required",
+        detail: `client chose ${tenantRow?.care_plan_choice ?? "nothing yet"}`,
+      };
+    if (
+      !terms &&
+      tenantRow?.care_plan_terms_accepted_at &&
+      tenantRow.care_plan_terms_version
+    )
+      terms = {
+        version: tenantRow.care_plan_terms_version,
+        acceptedAt: tenantRow.care_plan_terms_accepted_at,
+        acceptedBy: tenantRow.care_plan_terms_accepted_by ?? null,
+      };
+    if (!terms) return { ok: false, reason: "terms_required" };
+  }
 
   const price = await contractedMrr(input.tenantId, plan.id);
   if (plan.quotedOnly && !(price.source === "agreed" || price.source === "override"))
@@ -140,6 +180,9 @@ export async function startDirectDebitForTenant(
     status: "incomplete",
     provider: "gocardless",
     gc_billing_request_id: dd.billingRequestId,
+    terms_version: terms?.version ?? null,
+    terms_accepted_at: terms?.acceptedAt ?? null,
+    terms_accepted_by: terms?.acceptedBy ?? null,
   });
   if (insertErr) return { ok: false, reason: "gocardless", detail: insertErr.message };
 
@@ -181,6 +224,8 @@ export async function startDirectDebitForTenant(
       pricingVersion: price.pricingVersion,
       scaleAssessmentId: price.assessmentId,
       emailed: sent,
+      termsVersion: terms?.version ?? null,
+      termsAcceptedAt: terms?.acceptedAt ?? null,
     },
   });
 

@@ -318,6 +318,9 @@ export type Database = {
       };
       subscriptions: {
         Row: {
+          terms_version: string | null;
+          terms_accepted_at: string | null;
+          terms_accepted_by: string | null;
           created_at: string;
           id: string;
           mrr: number;
@@ -329,6 +332,9 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          terms_version?: string | null;
+          terms_accepted_at?: string | null;
+          terms_accepted_by?: string | null;
           created_at?: string;
           id?: string;
           mrr?: number;
@@ -340,6 +346,9 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          terms_version?: string | null;
+          terms_accepted_at?: string | null;
+          terms_accepted_by?: string | null;
           created_at?: string;
           id?: string;
           mrr?: number;
@@ -396,6 +405,9 @@ export type Database = {
       };
       tenants: {
         Row: {
+          care_plan_terms_version: string | null;
+          care_plan_terms_accepted_at: string | null;
+          care_plan_terms_accepted_by: string | null;
           created_at: string;
           id: string;
           name: string;
@@ -405,6 +417,9 @@ export type Database = {
           vertical: string | null;
         };
         Insert: {
+          care_plan_terms_version?: string | null;
+          care_plan_terms_accepted_at?: string | null;
+          care_plan_terms_accepted_by?: string | null;
           created_at?: string;
           id?: string;
           name: string;
@@ -414,6 +429,9 @@ export type Database = {
           vertical?: string | null;
         };
         Update: {
+          care_plan_terms_version?: string | null;
+          care_plan_terms_accepted_at?: string | null;
+          care_plan_terms_accepted_by?: string | null;
           created_at?: string;
           id?: string;
           name?: string;

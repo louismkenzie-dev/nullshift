@@ -10,6 +10,7 @@ import { ensurePortalAccess, portalReplyTo } from "@/lib/portalAccess";
 import { siteUrl } from "@/lib/portalLinks";
 import { startDirectDebitForTenant } from "@/lib/directDebit";
 import { sendEmail } from "@/lib/sendEmail";
+import { planChoiceOpen } from "@/lib/planGate";
 import {
   planInviteEmail,
   portalAccessEmail,
@@ -34,7 +35,7 @@ async function tenantContact(tenantId: string) {
   const service = createServiceClient();
   const { data } = await service
     .from("tenants")
-    .select("id, name, contact_name, contact_email")
+    .select("id, name, contact_name, contact_email, care_plan_choice")
     .eq("id", tenantId)
     .maybeSingle();
   return {
@@ -44,8 +45,24 @@ async function tenantContact(tenantId: string) {
       name: string;
       contact_name: string | null;
       contact_email: string | null;
+      care_plan_choice: string | null;
     } | null,
   };
+}
+
+/** The plan is chosen after the build — is this client's system live yet? */
+async function systemIsBuilt(
+  service: ReturnType<typeof createServiceClient>,
+  tenantId: string
+) {
+  const { data } = await service
+    .from("projects")
+    .select("stage")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return planChoiceOpen(data?.stage);
 }
 
 /** Invite / fresh link / sign-in pointer, whichever the account state calls for. */
@@ -97,6 +114,10 @@ export async function sendPlanInvite(formData: FormData) {
   const { service, tenant } = await tenantContact(tenantId);
   const email = override || tenant?.contact_email?.toLowerCase() || "";
   if (!tenant || !email) return;
+  if (!(await systemIsBuilt(service, tenantId))) {
+    console.warn("sendPlanInvite: system not live yet for", tenantId);
+    return;
+  }
 
   const pricing = await contractedPrices(tenantId);
   const options = pricing.sellable
@@ -149,18 +170,29 @@ export async function sendPlanInvite(formData: FormData) {
   revalidateAll(tenantId);
 }
 
-/** Email the GoCardless authorisation link for a chosen plan. */
+/**
+ * Re-send the GoCardless authorisation link for the plan THE CLIENT chose in
+ * the portal (their terms acceptance travels with it). Staff never pick the
+ * plan; Enterprise, quoted and contracted separately, may be passed explicitly.
+ */
 export async function sendDirectDebitLink(formData: FormData) {
   if (!(await requireStaff()).ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
-  const planId = String(formData.get("plan") || "");
   const override = String(formData.get("email") || "")
     .trim()
     .toLowerCase();
-  if (!tenantId || !carePlan(planId)) return;
+  if (!tenantId) return;
   const { service, tenant } = await tenantContact(tenantId);
   const email = override || tenant?.contact_email?.toLowerCase() || "";
   if (!tenant || !email) return;
+  const requested = String(formData.get("plan") || "");
+  const planId = carePlan(requested)?.quotedOnly
+    ? requested
+    : (tenant.care_plan_choice ?? "");
+  if (!carePlan(planId)) {
+    console.warn("sendDirectDebitLink: client has not chosen a plan yet", tenantId);
+    return;
+  }
   const res = await startDirectDebitForTenant(service, {
     tenantId,
     planId,

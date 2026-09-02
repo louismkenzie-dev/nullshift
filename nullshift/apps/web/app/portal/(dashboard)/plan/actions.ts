@@ -9,6 +9,8 @@ import { isGoCardlessConfigured } from "@nullshift/billing/gocardless";
 import { CARE_PLANS, carePlan } from "@/lib/carePlans";
 import { contractedMrr } from "@/lib/pricing/contracted";
 import { startDirectDebitForTenant } from "@/lib/directDebit";
+import { planChoiceOpen } from "@/lib/planGate";
+import { CARE_PLAN_TERMS_VERSION, termsAcceptanceValid } from "@/lib/carePlanTerms";
 
 /**
  * Client-side plan choice. "none" records an explicit no-plan decision (the
@@ -50,6 +52,17 @@ export async function choosePlan(formData: FormData): Promise<void> {
   const tenantId = membership?.tenant_id as string | undefined;
   if (!tenantId) return;
 
+  // The plan is chosen AFTER the build: nothing can be picked until the
+  // client's system is live, whatever link brought them here.
+  const { data: proj } = await service
+    .from("projects")
+    .select("stage")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!planChoiceOpen(proj?.stage)) redirect("/portal/plan?gate=closed");
+
   // A live subscription means billing is already set up — nothing to choose.
   const { data: live } = await service
     .from("subscriptions")
@@ -79,7 +92,38 @@ export async function choosePlan(formData: FormData): Promise<void> {
     redirect("/portal/plan?price=changed");
   }
 
-  await service.from("tenants").update({ care_plan_choice: choice }).eq("id", tenantId);
+  // Terms before Direct Debit: the confirm step's agreement, current version
+  // only. Without it nothing is recorded and no mandate is started.
+  if (
+    !termsAcceptanceValid({
+      accepted: formData.get("terms_accepted"),
+      version: formData.get("terms_version"),
+    })
+  ) {
+    redirect(`/portal/plan/confirm?plan=${encodeURIComponent(choice)}&terms=required`);
+  }
+  const acceptedAt = new Date().toISOString();
+  await service
+    .from("tenants")
+    .update({
+      care_plan_choice: choice,
+      care_plan_terms_version: CARE_PLAN_TERMS_VERSION,
+      care_plan_terms_accepted_at: acceptedAt,
+      care_plan_terms_accepted_by: user.id,
+    })
+    .eq("id", tenantId);
+  await logAudit({
+    action: "care_plan.terms_accepted",
+    target: `tenant:${tenantId}`,
+    tenantId,
+    metadata: {
+      version: CARE_PLAN_TERMS_VERSION,
+      plan: choice,
+      amountPence: chargePence,
+      acceptedAt,
+      email: user.email ?? null,
+    },
+  });
   await logAudit({
     action: "care_plan.chosen",
     target: `tenant:${tenantId}`,
@@ -115,6 +159,7 @@ export async function choosePlan(formData: FormData): Promise<void> {
     via: "portal",
     email: user.email ?? "",
     name: tenant?.name ?? tenant?.contact_name ?? null,
+    terms: { version: CARE_PLAN_TERMS_VERSION, acceptedAt, acceptedBy: user.id },
   });
   if (!started.ok) {
     console.error(

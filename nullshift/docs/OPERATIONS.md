@@ -250,6 +250,19 @@ The owner's surface for recurring billing — one row per client:
    gated on: rail configured, client scored, an email on file, and a signed proposal
    or a paid invoice). Both start through `lib/directDebit.ts`, as does the portal.
 
+**Two rules the board enforces.** (1) The plan is chosen by the client, after the
+build: "Send plan options" and the portal chooser stay closed until a project of theirs
+is `live` / `care` / `complete` (`lib/planGate.ts`), and staff never pick a plan on a
+client's behalf — the board's Direct Debit button only re-sends the plan the client
+chose in the portal (`tenants.care_plan_choice`); Enterprise, quoted and contracted
+separately, is the exception. (2) Terms before Direct Debit: choosing a plan lands on
+`/portal/plan/confirm`, where the client reads the care-plan terms
+(`lib/carePlanTerms.ts`, versioned `CARE_TERMS_…`) and ticks agreement; the version,
+time and user are stored on the tenant and on the subscription
+(`terms_version / terms_accepted_at / terms_accepted_by`, migration 0046) and audited as
+`care_plan.terms_accepted`. `startDirectDebitForTenant` refuses a sellable plan without
+the client's choice and acceptance (`client_choice_required` / `terms_required`).
+
 A rail-status panel at the top says Live / Sandbox / Not configured from the
 `GOCARDLESS_*` env; when not configured every Direct Debit button is disabled and the
 missing variables are named. Audit actions: `care_plan.plan_invite_sent`,
