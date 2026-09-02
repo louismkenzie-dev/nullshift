@@ -13,9 +13,11 @@ cloud sessions). Read alongside `docs/OPERATIONS.md` → "Client portal access l
 - **GoCardless:** webhook endpoint created in the GoCardless dashboard;
   `GOCARDLESS_ACCESS_TOKEN` + `GOCARDLESS_WEBHOOK_SECRET` added to Vercel by Louis.
   `GOCARDLESS_ENVIRONMENT` unset → the board shows Sandbox until the live pair goes in.
-- **Still to configure:** `SUPABASE_ACCESS_TOKEN` (auto-scoring reads client databases),
-  `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` (Xero becomes the invoice rail; a payment
-  service connected in Xero gives the online invoice a Pay-now button).
+- **Xero:** custom connection created and `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` /
+  `XERO_PAYMENT_ACCOUNT_CODE` (090, Revolut Business Account) added to Vercel by Louis —
+  Xero is now the invoice rail. Online payments (Stripe/GoCardless in Xero → Pay-now
+  button on the online invoice) is a Xero-side setting still to switch on.
+- **Still to configure:** `SUPABASE_ACCESS_TOKEN` (auto-scoring reads client databases).
 - Supabase Auth URL config fixed by Louis 2026-09-02 (Site URL https, `https://nullshift.co.uk/**`).
 - Amie (The Dance Exclusive): account exists, never signed in, never reset — she was
   emailed a reference password on 19 Aug under the old flow. Fix = score her, then
