@@ -1,4 +1,4 @@
--- 0030: complete the SAR export (audit Phase 4.4). The 0006 version covered
+-- 0042 (was 0030 on the local ops branch): complete the SAR export (audit Phase 4.4). The 0006 version covered
 -- only the ten 0001-era tables — a real subject-access response built from it
 -- would under-disclose. Now covers every live personal-data-bearing table,
 -- including funnel leads matched by the tenant's contact email (name, quiz

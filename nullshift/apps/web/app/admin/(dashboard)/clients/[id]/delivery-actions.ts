@@ -13,7 +13,7 @@ import {
 } from "@/lib/playbooks";
 
 /**
- * Server actions for the delivery layer (migration 0028): milestones, risks,
+ * Server actions for the delivery layer (migration 0040, formerly 0028): milestones, risks,
  * decisions, and playbook checklists. Kept out of the (already huge) client
  * hub page. Every action is staff-guarded and audit-logged; writes go through
  * the caller's RLS-scoped client (staff-all policies are the backstop).

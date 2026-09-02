@@ -1,4 +1,4 @@
--- 0031: close the project-updates bucket hole (audit HIGH-adjacent finding).
+-- 0043 (was 0031 on the local ops branch): close the project-updates bucket hole (audit HIGH-adjacent finding).
 -- Legacy 009 let ANY authenticated user — i.e. any self-signed-up portal
 -- client — upload to and delete from the bucket that hosts progress
 -- screenshots. Writes and deletes are now staff-only. Public READ stays:

@@ -1,7 +1,7 @@
 /**
  * Playbooks — the repeatable operations the brief (§10) asks for, as code-
  * defined checklist templates. A playbook becomes real work when it's
- * instantiated into a `checklists` row (migration 0028) for one project;
+ * instantiated into a `checklists` row (migration 0040, formerly 0028) for one project;
  * items are toggled by NAME, never by index. Templates are deliberately
  * short: only what protects delivery, nothing bureaucratic.
  *

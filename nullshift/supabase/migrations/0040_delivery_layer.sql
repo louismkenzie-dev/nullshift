@@ -1,4 +1,4 @@
--- 0028: the delivery layer the audit found missing (Phase 3) — the entities a
+-- 0040 (was 0028 on the local ops branch): the delivery layer the audit found missing (Phase 3) — the entities a
 -- new employee needs to understand a project without a verbal briefing:
 -- milestones (dates clients can see), a risk register (internal), a decision
 -- log with rationale/approver (internal), and generic checklists that turn

@@ -1,4 +1,4 @@
--- 0029: the compliance-review assistant's record (brief §"UK compliance-review
+-- 0041 (was 0029 on the local ops branch): the compliance-review assistant's record (brief §"UK compliance-review
 -- assistant", audit Phase 4.3). One row per structured review — intake answers,
 -- derived mandatory-escalation flags, the editable evidence-linked pack, and
 -- the Administrator decision that escalated reviews REQUIRE before they can be

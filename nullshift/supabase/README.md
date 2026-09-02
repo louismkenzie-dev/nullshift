@@ -25,12 +25,12 @@ contract for any fresh/staging environment.
    `migrations/0001` (same enum/table names, different shapes) — **skip 006 entirely,
    and skip `007` with it** (007 only ALTERs 006's dead table; on a fresh DB it
    errors with `relation "subscriptions" does not exist`).
-3. **4-digit series, in order: `migrations/0001` → `migrations/0039`.**
+3. **4-digit series, in order: `migrations/0001` → `migrations/0043`.**
 
 **Fresh-replay order, verified end-to-end on Postgres 16 (2026-08-20):**
 `clients` table first (schema.sql's own FK defect) → rest of `schema.sql` →
 legacy `002`–`013` (skip `006`+`007`) → `migrations/0001` → legacy `014`–`020` →
-`migrations/0002` → `0039`. Two more replay hazards found in that run:
+`migrations/0002` → `0043`. Two more replay hazards found in that run:
 legacy `014` fails before `migrations/0001` (`relation "public.tenants" does not
 exist`), and `migrations/0020_ai_workspace_phases2_5.sql`'s routine seeds
 reference agents (`operations-manager`, `finance-assistant`,
@@ -44,6 +44,14 @@ or its `agent_routines` seed fails its FK.
    run yet — apply the legacy series first), `0014` §8 drops `schema.sql`'s
    permissive policies, and `0020` commits two columns that were hand-applied to
    production outside any migration file.
+
+**0040–0043 (renumbered 2026-09-02):** the ops-hub delivery layer, compliance reviews, SAR
+completeness and project-updates bucket hardening were authored on a local branch as
+`0028`–`0031` while `main` gained a different `0028`–`0031` (scale assessments, data
+complaints, order forms, termination). Production already has ALL of them applied — the
+ledger (`supabase_migrations.schema_migrations`) records them by name (`delivery_layer`,
+`compliance_reviews`, `sar_completeness`, `project_updates_bucket_hardening`) — so the
+files were renumbered rather than re-applied. On a fresh DB apply them after `0039`.
 
 Ordering constraints that matter:
 
