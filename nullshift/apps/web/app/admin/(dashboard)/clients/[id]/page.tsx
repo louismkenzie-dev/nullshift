@@ -1763,11 +1763,15 @@ export default async function ClientHub({
           }
           actions={
             <>
-              {/* A plain link, not a form + server action: the button that
-                  did this as a form was reported as unpressable, and a link
-                  cannot silently no-op — it works without hydration and every
-                  refusal in the route redirects somewhere that says why. */}
-              <Link
+              {/* A plain <a>, not <Link>: a client-side navigation into the
+                  preview route followed its redirect as a SOFT navigation and
+                  reused the portal layout from the router cache — so the
+                  banner and header could show the previous client's name
+                  over the newly previewed client's data. A full document
+                  load starts the portal fresh. (And a link, not a form: it
+                  works without hydration and every refusal redirects
+                  somewhere that says why.) */}
+              <a
                 href={`/admin/clients/${tenantId}/preview`}
                 title="Open this client's portal exactly as they see it — read-only"
                 style={{
@@ -1778,7 +1782,7 @@ export default async function ClientHub({
                 }}
               >
                 View portal as client →
-              </Link>
+              </a>
               <Link
                 href={`/admin/clients/${tenantId}/pricing`}
                 title="Score this client's scale band and set their recurring rate"

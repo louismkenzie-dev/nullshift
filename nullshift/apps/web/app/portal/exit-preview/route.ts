@@ -27,7 +27,9 @@ export async function GET(req: Request) {
     maxAge: 0,
   });
 
-  return NextResponse.redirect(
+  const res = NextResponse.redirect(
     new URL(tenantId ? `/admin/clients/${tenantId}` : "/admin/clients", base)
   );
+  res.headers.set("Cache-Control", "no-store");
+  return res;
 }

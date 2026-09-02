@@ -22,10 +22,7 @@ export const dynamic = "force-dynamic";
  * audited, it changes nothing about the client's data, and it expires itself
  * in two hours — a read-only view toggle, not a mutation.
  */
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: tenantId } = await params;
   // Relative to the request, never NEXT_PUBLIC_SITE_URL: on a Vercel preview
   // deployment that env var points at production, and a staff member clicking
@@ -68,5 +65,8 @@ export async function GET(
     metadata: { staff: staff.email, via: "link" },
   });
 
-  return NextResponse.redirect(new URL("/portal", base));
+  // A fresh document every time — never a cached portal frame.
+  const res = NextResponse.redirect(new URL("/portal", base));
+  res.headers.set("Cache-Control", "no-store");
+  return res;
 }
