@@ -229,6 +229,34 @@ single-use and expire after one hour. Supabase Auth → URL Configuration must h
 2026-09-02); without it GoTrue silently redirects to the Site URL. Portal emails set
 `Reply-To` to `ENQUIRY_NOTIFY_EMAIL` so client replies reach a read inbox.
 
+## Direct Debits board (`/admin/billing/direct-debits`)
+
+The owner's surface for recurring billing — one row per client:
+
+1. **Bracket.** The client's scale band from their latest `scale_assessments` row
+   (set on `/admin/clients/[id]/pricing`). Unscored clients show "Not scored" and the
+   portal shows them **no plan options** until you score them — the bracket is set first.
+2. **Their three options.** Core / Pro / Max at the client's contracted price. Enterprise
+   is never offered; it appears only once an enterprise assessment carries an agreed or
+   override figure. Prices come from `apps/web/lib/pricing/contractedPrice.ts`
+   (agreed → override → formula for the scored plan; the band multiplier × base price,
+   floored by vendor cost, for sibling plans). The same function prices the portal
+   chooser and the Direct Debit charge, so the figure shown is the figure collected.
+3. **Portal** — no account / never signed in / signed in, with "Send portal invite",
+   "Send sign-in link" or "Send password reset" (all via `lib/portalAccess.ts`).
+4. **Direct Debit** — not started / awaiting mandate / active / past due, with
+   "Send plan options" (emails the three prices + a link into `/portal/plan`) and
+   "Send Direct Debit link" (emails the GoCardless authorisation for a chosen plan,
+   gated on: rail configured, client scored, an email on file, and a signed proposal
+   or a paid invoice). Both start through `lib/directDebit.ts`, as does the portal.
+
+A rail-status panel at the top says Live / Sandbox / Not configured from the
+`GOCARDLESS_*` env; when not configured every Direct Debit button is disabled and the
+missing variables are named. Audit actions: `care_plan.plan_invite_sent`,
+`care_plan.dd_setup_sent` / `dd_started` (with amount, band, pricing version and
+assessment id), `care_plan.dd_activated`, `care_plan.dd_cancelled`,
+`care_plan.payment_failed` / `payment_recovered`, `gocardless.mandate_orphaned`.
+
 ## GoCardless Direct Debit (care plans)
 
 Monthly care plans can be collected by Bacs Direct Debit through GoCardless as an
@@ -249,7 +277,10 @@ sends all events to the endpoint; the handler acts on these and 200-acks the res
   subscription and activates our `subscriptions` row (`provider='gocardless'`).
 - `mandates` / `cancelled`, `expired`, `failed` — row → `canceled`.
 - `subscriptions` / `cancelled`, `finished` — row → `canceled`.
-- `payments` / `failed` — logged only (surfaces via the Friday pulse), no DB write.
+- `payments` / `failed`, `late_failure_settled`, `charged_back` — the row → `past_due`
+  (the payment is fetched to find its subscription); `confirmed` / `paid_out` → back to
+  `active`. A reused Idempotency-Key returns 409 `idempotent_creation_conflict`, which the
+  client adopts rather than failing (`GoCardlessConflictError`).
 
 **The flow:** client chooses a plan in the portal → `startCareDirectDebit()` creates a
 GoCardless billing request (Bacs mandate, metadata carries tenant + plan) plus a hosted

@@ -5,19 +5,21 @@ import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { isClientPreview } from "@/lib/clientPreview";
 import { logAudit } from "@nullshift/db/audit";
-import {
-  cancelBillingRequest,
-  isGoCardlessConfigured,
-  startCareDirectDebit,
-} from "@nullshift/billing/gocardless";
+import { isGoCardlessConfigured } from "@nullshift/billing/gocardless";
 import { CARE_PLANS, carePlan } from "@/lib/carePlans";
 import { contractedMrr } from "@/lib/pricing/contracted";
+import { startDirectDebitForTenant } from "@/lib/directDebit";
 
 /**
- * Client-side care plan choice. "none" records an explicit no-plan decision
- * (the admin can attach a plan later from the client hub); a paid tier starts
- * the GoCardless Direct Debit authorisation when configured, else records the
- * choice for the admin to complete billing setup.
+ * Client-side plan choice. "none" records an explicit no-plan decision (the
+ * admin can attach a plan later); one of the three sellable levels starts the
+ * GoCardless Direct Debit at the client's CONTRACTED price.
+ *
+ * The price the client saw travels back as `quoted_pence` and is re-derived
+ * here before anything is charged. If the two disagree — the client was
+ * re-scored while the page was open — nothing is recorded and the page
+ * re-renders with the current figures and a note. Enterprise is never
+ * self-serve; it is quoted and started by staff.
  */
 export async function choosePlan(formData: FormData): Promise<void> {
   // Staff view-as-client preview is read-only — never record a choice or
@@ -26,6 +28,8 @@ export async function choosePlan(formData: FormData): Promise<void> {
   const choice = String(formData.get("plan") || "");
   const valid = choice === "none" || CARE_PLANS.some((p) => p.id === choice);
   if (!valid) return;
+  const plan = choice === "none" ? null : carePlan(choice);
+  if (choice !== "none" && (!plan || plan.quotedOnly)) return;
 
   const supabase = await createClient();
   const {
@@ -55,25 +59,45 @@ export async function choosePlan(formData: FormData): Promise<void> {
     .limit(1);
   if (live && live.length > 0) return;
 
+  if (choice === "none" || !plan) {
+    await service.from("tenants").update({ care_plan_choice: "none" }).eq("id", tenantId);
+    await logAudit({
+      action: "care_plan.chosen",
+      target: `tenant:${tenantId}`,
+      tenantId,
+      metadata: { choice: "none", via: "portal" },
+    });
+    revalidatePath("/portal/plan");
+    return;
+  }
+
+  // Price seen must equal price charged.
+  const quoted = Number(formData.get("quoted_pence") || NaN);
+  const price = await contractedMrr(tenantId, plan.id);
+  const chargePence = Math.round(price.mrr * 100);
+  if (!price.priced || !Number.isFinite(quoted) || quoted !== chargePence) {
+    redirect("/portal/plan?price=changed");
+  }
+
   await service.from("tenants").update({ care_plan_choice: choice }).eq("id", tenantId);
   await logAudit({
     action: "care_plan.chosen",
     target: `tenant:${tenantId}`,
     tenantId,
-    metadata: { choice, via: "portal" },
+    metadata: {
+      choice,
+      via: "portal",
+      amountPence: chargePence,
+      priceSource: price.source,
+      band: price.band,
+      pricingVersion: price.pricingVersion,
+      scaleAssessmentId: price.assessmentId,
+    },
   });
 
-  if (choice === "none") {
-    revalidatePath("/portal/plan");
-    return;
-  }
-
-  const plan = carePlan(choice);
-  if (!plan) return;
-
-  // Direct Debit is the billing rail for care plans. When GoCardless isn't
-  // configured yet, the recorded choice is still visible in the client hub and
-  // the admin completes setup from there.
+  // Direct Debit is the billing rail. When GoCardless isn't configured on this
+  // deployment the recorded choice is still visible in the client hub and the
+  // admin completes setup from there.
   if (!isGoCardlessConfigured()) {
     revalidatePath("/portal/plan");
     return;
@@ -85,61 +109,22 @@ export async function choosePlan(formData: FormData): Promise<void> {
     .eq("id", tenantId)
     .maybeSingle();
 
-  const origin = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
-    /\/$/,
-    ""
-  );
-  // The client's contracted rate, not the catalogue base price.
-  const { mrr: chargeMrr } = await contractedMrr(tenantId, plan.id);
-  const dd = await startCareDirectDebit({
+  const started = await startDirectDebitForTenant(service, {
     tenantId,
-    plan: plan.id,
-    amountPence: Math.round(chargeMrr * 100),
-    description: `Nullshift ${plan.label} plan`,
+    planId: plan.id,
+    via: "portal",
     email: user.email ?? "",
     name: tenant?.name ?? tenant?.contact_name ?? null,
-    origin,
   });
-  if (!dd) {
+  if (!started.ok) {
+    console.error(
+      "choosePlan: Direct Debit did not start:",
+      started.reason,
+      started.detail ?? ""
+    );
     revalidatePath("/portal/plan");
     return;
   }
 
-  // Track the pending mandate so the webhook can activate it. Stale pending
-  // GoCardless attempts for this tenant are superseded, not duplicated — and
-  // their billing requests are CANCELLED at GoCardless first, so an old
-  // emailed/open authorisation link can't be completed into a mandate we no
-  // longer track. (Belt-and-braces: the webhook also rescues orphans via the
-  // billing request's metadata.)
-  const { data: stale } = await service
-    .from("subscriptions")
-    .select("gc_billing_request_id")
-    .eq("tenant_id", tenantId)
-    .eq("provider", "gocardless")
-    .eq("status", "incomplete");
-  for (const row of (stale ?? []) as { gc_billing_request_id: string | null }[]) {
-    if (row.gc_billing_request_id) await cancelBillingRequest(row.gc_billing_request_id);
-  }
-  await service
-    .from("subscriptions")
-    .delete()
-    .eq("tenant_id", tenantId)
-    .eq("provider", "gocardless")
-    .eq("status", "incomplete");
-  await service.from("subscriptions").insert({
-    tenant_id: tenantId,
-    plan: plan.id,
-    mrr: chargeMrr,
-    status: "incomplete",
-    provider: "gocardless",
-    gc_billing_request_id: dd.billingRequestId,
-  });
-  await logAudit({
-    action: "care_plan.dd_started",
-    target: `tenant:${tenantId}`,
-    tenantId,
-    metadata: { plan: plan.id, billingRequest: dd.billingRequestId, via: "portal" },
-  });
-
-  redirect(dd.url);
+  redirect(started.url);
 }

@@ -7,7 +7,7 @@ import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { SubmitButton } from "@/components/admin/SubmitButton";
-import { CARE_PLANS, carePlan } from "@/lib/carePlans";
+import { CARE_PLANS, carePlanForNsi } from "@/lib/carePlans";
 import {
   calculateScalePricing,
   ENTERPRISE_FLAG_LABEL,
@@ -331,7 +331,8 @@ export default async function ClientPricingPage({
   const history = (rows ?? []) as Row[];
   const latest = history[0];
   const prev = latest?.inputs;
-  const plan = latest ? carePlan(latest.plan) : null;
+  // scale_assessments.plan is the engine's vocabulary (core/pro/max/enterprise).
+  const plan = latest ? carePlanForNsi(latest.plan) : null;
 
   // The figure billing will actually use, mirroring contractedMrr()'s order.
   const effective =
@@ -581,18 +582,7 @@ export default async function ClientPricingPage({
                 style={{ ...inp, height: 34 }}
               >
                 {CARE_PLANS.map((p) => (
-                  <option
-                    key={p.id}
-                    value={
-                      p.id === "hosting"
-                        ? "core"
-                        : p.id === "hosting_api"
-                          ? "pro"
-                          : p.id === "build_3"
-                            ? "max"
-                            : "enterprise"
-                    }
-                  >
+                  <option key={p.id} value={p.nsiPlan}>
                     {p.label}
                     {p.quotedOnly ? " (quoted)" : ` — from £${p.mrr}`}
                   </option>
@@ -767,8 +757,8 @@ export default async function ClientPricingPage({
                       color: "var(--k-muted)",
                     }}
                   >
-                    {dateGB(h.created_at)} · {carePlan(h.plan)?.label ?? h.plan} · NSI{" "}
-                    {h.nsi} ·{" "}
+                    {dateGB(h.created_at)} · {carePlanForNsi(h.plan)?.label ?? h.plan} ·
+                    NSI {h.nsi} ·{" "}
                     {h.enterprise_review_required
                       ? "Enterprise"
                       : (SCALE_BAND_LABEL[

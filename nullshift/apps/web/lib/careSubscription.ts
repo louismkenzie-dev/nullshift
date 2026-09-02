@@ -41,7 +41,12 @@ export function mapStripeSubStatus(s: string): SubStatus {
 export async function sendCareSubscriptionSignup(
   service: Service,
   opts: { tenantId: string; planId: string; siteUrl: string }
-): Promise<{ ok: boolean; emailed: boolean; alreadyActive?: boolean }> {
+): Promise<{
+  ok: boolean;
+  emailed: boolean;
+  alreadyActive?: boolean;
+  unpriced?: boolean;
+}> {
   const plan = carePlan(opts.planId);
   if (!plan) return { ok: false, emailed: false };
 
@@ -94,7 +99,11 @@ export async function sendCareSubscriptionSignup(
 
   // Charge the client's contracted rate — base price × scale multiplier,
   // floored by margin on vendor cost — never the catalogue "from" price.
-  const { mrr: chargeMrr } = await contractedMrr(opts.tenantId, plan.id);
+  const price = await contractedMrr(opts.tenantId, plan.id);
+  // No chargeable price yet (not scored, or Enterprise without an agreed
+  // figure) — the owner sets the bracket first. Never fall back to the base.
+  if (!price.priced) return { ok: false, emailed: false, unpriced: true };
+  const chargeMrr = price.mrr;
   const checkout = await createSubscriptionCheckoutUrl({
     customerId,
     tenantId: opts.tenantId,
@@ -124,13 +133,13 @@ export async function sendCareSubscriptionSignup(
   if (pending) {
     await service
       .from("subscriptions")
-      .update({ plan: plan.id, mrr: plan.mrr, status: "incomplete" })
+      .update({ plan: plan.id, mrr: chargeMrr, status: "incomplete" })
       .eq("id", pending.id);
   } else {
     await service.from("subscriptions").insert({
       tenant_id: opts.tenantId,
       plan: plan.id,
-      mrr: plan.mrr,
+      mrr: chargeMrr,
       status: "incomplete",
       provider: "stripe",
       stripe_subscription_id: null,
@@ -141,7 +150,7 @@ export async function sendCareSubscriptionSignup(
   const mail = subscriptionSignupEmail({
     name: tenantRow?.contact_name ?? tenantRow?.name ?? "there",
     planLabel: plan.label,
-    mrr: plan.mrr,
+    mrr: chargeMrr,
     url: checkout.url,
   });
   const sent = await sendEmail({

@@ -57,6 +57,8 @@ the ops AI features degrade to manual. Optional: `ANTHROPIC_WORKSPACE_SLUG`
 **GoCardless Direct Debit (care plans):**
 `GOCARDLESS_ACCESS_TOKEN`, `GOCARDLESS_WEBHOOK_SECRET`,
 `GOCARDLESS_ENVIRONMENT` (`live` or unset for sandbox)
+— required for the Direct Debits board under Billing to do anything; without them
+the board shows "Not configured" and every Direct Debit button is disabled.
 
 **Xero mirror sync (invoices):**
 `XERO_CLIENT_ID`, `XERO_CLIENT_SECRET` — optional tuning:

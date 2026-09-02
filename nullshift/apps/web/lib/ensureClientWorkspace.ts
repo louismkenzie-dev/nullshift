@@ -65,6 +65,7 @@ export async function ensureClientWorkspace(opts: {
     }
   }
 
+  let createdHere = false;
   if (!tenantId) {
     const { data: created } = await service
       .from("tenants")
@@ -78,13 +79,40 @@ export async function ensureClientWorkspace(opts: {
       .select("id")
       .single();
     tenantId = created?.id ?? null;
+    createdHere = true;
   }
   if (!tenantId) return;
 
-  await ensureProject(service, tenantId, name);
   await service
     .from("memberships")
     .insert({ tenant_id: tenantId, user_id: userId, role: "client_admin" });
+
+  // A first sign-in fires several portal requests at once (layout + page +
+  // prefetches), and each of them saw "no membership" a moment ago. Without a
+  // lock they would each create a workspace — six "Client" tenants for one
+  // person. Settle it after the fact: the EARLIEST membership wins, and a
+  // tenant this call created that lost the race is removed again (cascade
+  // takes its project and membership with it).
+  const { data: all } = await service
+    .from("memberships")
+    .select("tenant_id, created_at")
+    .eq("user_id", userId)
+    .eq("role", "client_admin")
+    .order("created_at", { ascending: true });
+  const winner = all?.[0]?.tenant_id as string | undefined;
+  if (winner && winner !== tenantId) {
+    if (createdHere) await service.from("tenants").delete().eq("id", tenantId);
+    else
+      await service
+        .from("memberships")
+        .delete()
+        .eq("tenant_id", tenantId)
+        .eq("user_id", userId);
+    await ensureProject(service, winner, name);
+    return;
+  }
+
+  await ensureProject(service, tenantId, name);
 }
 
 async function ensureProject(

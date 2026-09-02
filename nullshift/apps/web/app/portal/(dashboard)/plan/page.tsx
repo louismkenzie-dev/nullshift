@@ -1,6 +1,7 @@
 import { getPortalClient } from "@/lib/clientPreview";
 import { T } from "@nullshift/ui/tokens";
-import { CARE_PLANS, carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
+import { carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
+import { contractedPrices, type ContractedPrices } from "@/lib/pricing/contracted";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/Reveal";
 import { choosePlan } from "./actions";
@@ -69,9 +70,9 @@ const INV_TONE: Record<string, Tone> = {
 export default async function PortalPlanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dd?: string }>;
+  searchParams: Promise<{ dd?: string; price?: string }>;
 }) {
-  const { dd } = await searchParams;
+  const { dd, price } = await searchParams;
   const { supabase } = await getPortalClient();
   const [{ data: subs }, { data: credits }, { data: invoices }, { data: tenants }] =
     await Promise.all([
@@ -91,8 +92,17 @@ export default async function PortalPlanPage({
     ]);
 
   const subList = (subs ?? []) as Sub[];
-  const choice = (tenants?.[0] as { care_plan_choice?: string | null } | undefined)
-    ?.care_plan_choice;
+  const tenantRow = tenants?.[0] as
+    | { id?: string; care_plan_choice?: string | null }
+    | undefined;
+  const choice = tenantRow?.care_plan_choice;
+  // The client's three options at THEIR contracted price (scale band applied).
+  // scale_assessments is staff-only under RLS, so this goes via the service
+  // client — the client only ever sees three figures, never the band or score.
+  const pricing: ContractedPrices | null = tenantRow?.id
+    ? await contractedPrices(tenantRow.id)
+    : null;
+  const enterpriseReview = !!pricing?.assessment?.enterprise_review_required;
   // Prefer a live subscription; fall back to the newest non-cancelled one.
   const sub =
     subList.find((s) => s.status === "active" || s.status === "trialing") ??
@@ -126,65 +136,148 @@ export default async function PortalPlanPage({
       ? carePlan(choice)
       : null;
 
+  const preparingPanel = (
+    <Panel
+      label="// YOUR PLAN OPTIONS"
+      title={
+        enterpriseReview
+          ? "Your plan is priced individually"
+          : "Your plan options are being prepared"
+      }
+    >
+      <p
+        style={{
+          fontFamily: T.sans,
+          fontSize: "0.9rem",
+          color: "var(--k-muted)",
+          lineHeight: 1.65,
+        }}
+      >
+        {enterpriseReview
+          ? "A system at your scale is quoted rather than picked off a list. We'll send your Order Form and Direct Debit link directly — nothing to do here for now."
+          : "We're setting the right level for your system. You'll get an email the moment your three options are ready to choose from — nothing to do here for now."}
+      </p>
+      <div
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+        style={{
+          marginTop: 14,
+          padding: "12px 16px",
+          border: "1px dashed var(--k-border)",
+        }}
+      >
+        <p style={{ fontFamily: T.sans, fontSize: "0.84rem", color: "var(--k-muted)" }}>
+          Not planning a monthly plan at all? Tell us and we&apos;ll leave it there.
+        </p>
+        <form action={choosePlan}>
+          <PendingBeacon />
+          <input type="hidden" name="plan" value="none" />
+          <button type="submit" className="kb kb-sm">
+            Continue without a plan
+          </button>
+        </form>
+      </div>
+    </Panel>
+  );
+
   const chooserPanel = (
     <Panel
       label="// CHOOSE YOUR CARE PLAN"
       title="How would you like your system looked after?"
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {CARE_PLANS.map((p) => (
-          <div
-            key={p.id}
-            className="k-kard k-kard-h flex flex-col gap-2"
-            style={{ background: "var(--k-bg)", padding: "16px 18px" }}
-          >
-            <div className="flex items-baseline justify-between gap-3">
-              <span
-                style={{
-                  fontFamily: T.sans,
-                  fontWeight: 700,
-                  fontSize: "0.98rem",
-                  letterSpacing: "-0.01em",
-                  textTransform: "uppercase",
-                  color: "var(--k-accent)",
-                }}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {(pricing?.sellable ?? [])
+          .filter((pp) => pp.priced && pp.mrr !== null)
+          .map((pp) => {
+            const p = carePlan(pp.planId)!;
+            return (
+              <div
+                key={p.id}
+                className="k-kard k-kard-h flex flex-col gap-2"
+                style={{ background: "var(--k-bg)", padding: "16px 18px" }}
               >
-                {p.label}
-              </span>
-              <span
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: "0.72rem",
-                  letterSpacing: "0.04em",
-                  color: "var(--k-fg)",
-                }}
-              >
-                {gbp(p.mrr)}/mo
-              </span>
-            </div>
-            <p
-              style={{
-                fontFamily: T.sans,
-                fontSize: "0.82rem",
-                color: "var(--k-muted)",
-                lineHeight: 1.55,
-                flex: 1,
-              }}
-            >
-              {p.blurb}
-            </p>
-            <form action={choosePlan}>
-                      <PendingBeacon />
-              <input type="hidden" name="plan" value={p.id} />
-              <button type="submit" className="kb kb-primary kb-sm">
-                Choose {p.label}
-                <span className="k-arrow" aria-hidden>
-                  →
-                </span>
-              </button>
-            </form>
-          </div>
-        ))}
+                <div className="flex items-baseline justify-between gap-3">
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: 700,
+                      fontSize: "0.98rem",
+                      letterSpacing: "-0.01em",
+                      textTransform: "uppercase",
+                      color: "var(--k-accent)",
+                    }}
+                  >
+                    {p.label}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.72rem",
+                      letterSpacing: "0.04em",
+                      color: "var(--k-fg)",
+                    }}
+                  >
+                    {gbp(pp.mrr!)}/mo
+                  </span>
+                </div>
+                <p
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.82rem",
+                    color: "var(--k-muted)",
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {p.blurb}
+                </p>
+                <ul
+                  className="flex flex-col gap-1"
+                  style={{ flex: 1, margin: "4px 0 6px" }}
+                >
+                  {p.features.slice(0, 4).map((f) => (
+                    <li key={f} className="flex items-start gap-2">
+                      <span
+                        aria-hidden
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: "0.7rem",
+                          color: "var(--k-accent)",
+                        }}
+                      >
+                        ✓
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: T.sans,
+                          fontSize: "0.78rem",
+                          color: "var(--k-fg)",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        {f}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <form action={choosePlan}>
+                  <PendingBeacon />
+                  <input type="hidden" name="plan" value={p.id} />
+                  {/* The figure shown, echoed back so the server can refuse to
+                      charge anything else. */}
+                  <input
+                    type="hidden"
+                    name="quoted_pence"
+                    value={Math.round(pp.mrr! * 100)}
+                  />
+                  <button type="submit" className="kb kb-primary kb-sm">
+                    Choose {p.label}
+                    <span className="k-arrow" aria-hidden>
+                      →
+                    </span>
+                  </button>
+                </form>
+              </div>
+            );
+          })}
       </div>
       <div
         className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
@@ -201,11 +294,11 @@ export default async function PortalPlanPage({
             color: "var(--k-muted)",
           }}
         >
-          Not ready for a monthly plan? That&apos;s fine — we&apos;re still here
-          when you need us.
+          Not ready for a monthly plan? That&apos;s fine — we&apos;re still here when you
+          need us.
         </p>
         <form action={choosePlan}>
-                      <PendingBeacon />
+          <PendingBeacon />
           <input type="hidden" name="plan" value="none" />
           <button type="submit" className="kb kb-sm">
             Continue without a plan
@@ -273,7 +366,9 @@ export default async function PortalPlanPage({
               border: "1px solid rgba(245,213,71,0.45)",
             }}
           >
-            <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-muted)" }}>
+            <p
+              style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-muted)" }}
+            >
               Direct Debit setup wasn&apos;t completed — no problem, you can pick a plan
               again below whenever you&apos;re ready.
             </p>
@@ -321,8 +416,28 @@ export default async function PortalPlanPage({
                 ✓
               </span>
               <p style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-fg)" }}>
-                You chose the {chosenPlan.label} plan — that&apos;s recorded.
-                We&apos;ll email you a Direct Debit link to start it.
+                You chose the {chosenPlan.label} plan — that&apos;s recorded. We&apos;ll
+                email you a Direct Debit link to start it.
+              </p>
+            </div>
+          )}
+          {price === "changed" && (
+            <div
+              style={{
+                padding: "14px 16px",
+                marginBottom: 12,
+                border: "1px solid rgba(245,213,71,0.45)",
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.9rem",
+                  color: "var(--k-muted)",
+                }}
+              >
+                Your plan prices were updated while this page was open — please review the
+                figures below and choose again.
               </p>
             </div>
           )}
@@ -337,8 +452,8 @@ export default async function PortalPlanPage({
                     lineHeight: 1.6,
                   }}
                 >
-                  Check your email for the authorisation link — your plan goes live
-                  once the Direct Debit mandate is authorised.
+                  Check your email for the authorisation link — your plan goes live once
+                  the Direct Debit mandate is authorised.
                 </p>
                 <details style={{ marginTop: 14 }}>
                   <summary
@@ -353,11 +468,15 @@ export default async function PortalPlanPage({
                   >
                     Start over / choose a different plan
                   </summary>
-                  <div style={{ marginTop: 14 }}>{chooserPanel}</div>
+                  <div style={{ marginTop: 14 }}>
+                    {pricing?.anyPriced ? chooserPanel : preparingPanel}
+                  </div>
                 </details>
               </Panel>
-            ) : (
+            ) : pricing?.anyPriced ? (
               chooserPanel
+            ) : (
+              preparingPanel
             )}
           </Reveal>
         </div>
@@ -469,7 +588,10 @@ export default async function PortalPlanPage({
                   sub={`of ${plan.buildAllowance} this month — resets on the 1st`}
                   accent={remaining > 0}
                 />
-                <div className="flex flex-col justify-center gap-2 min-w-0" style={{ padding: 18 }}>
+                <div
+                  className="flex flex-col justify-center gap-2 min-w-0"
+                  style={{ padding: 18 }}
+                >
                   <div className="flex flex-wrap items-center gap-1">
                     {Array.from({ length: plan.buildAllowance }).map((_, i) => (
                       <span

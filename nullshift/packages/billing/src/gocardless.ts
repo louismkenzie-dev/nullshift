@@ -25,9 +25,26 @@ export function isGoCardlessConfigured(): boolean {
 }
 
 /**
+ * A reused Idempotency-Key does NOT replay the original response: GoCardless
+ * answers 409 `idempotent_creation_conflict` and points at the resource the
+ * first call created. Callers that create idempotently catch this and adopt
+ * `conflictingResourceId` — otherwise a webhook redelivery after a crash would
+ * 500 forever while the real subscription bills the client.
+ */
+export class GoCardlessConflictError extends Error {
+  constructor(
+    public readonly conflictingResourceId: string,
+    message: string
+  ) {
+    super(message);
+    this.name = "GoCardlessConflictError";
+  }
+}
+
+/**
  * POST to the GoCardless API; throws with the API's error message on failure.
  * Pass an idempotencyKey for any create that must survive retries without
- * duplicating (GoCardless replays the original response for a reused key).
+ * duplicating — see GoCardlessConflictError for what a reused key returns.
  */
 async function gcPost<T>(
   path: string,
@@ -46,11 +63,17 @@ async function gcPost<T>(
   });
   if (!res.ok) {
     let message = `${res.status} ${res.statusText}`;
+    let conflictId: string | null = null;
     try {
       const payload = (await res.json()) as {
         error?: {
           message?: string;
-          errors?: { message?: string; field?: string }[];
+          errors?: {
+            message?: string;
+            field?: string;
+            reason?: string;
+            links?: { conflicting_resource_id?: string };
+          }[];
         };
       };
       const details = payload.error?.errors
@@ -58,8 +81,15 @@ async function gcPost<T>(
         .filter(Boolean)
         .join("; ");
       message = [payload.error?.message, details].filter(Boolean).join(": ") || message;
+      const conflict = payload.error?.errors?.find(
+        (e) => e.reason === "idempotent_creation_conflict"
+      );
+      conflictId = conflict?.links?.conflicting_resource_id ?? null;
     } catch {
       // Non-JSON error body — keep the status line.
+    }
+    if (res.status === 409 && conflictId) {
+      throw new GoCardlessConflictError(conflictId, `GoCardless ${path}: ${message}`);
     }
     throw new Error(`GoCardless ${path} failed: ${message}`);
   }
@@ -83,34 +113,56 @@ export async function startCareDirectDebit(opts: {
   email: string;
   name?: string | null;
   origin: string;
+  /**
+   * Where GoCardless sends the client afterwards. Defaults to the portal plan
+   * page; an emailed link (client may not be signed in) should land on the
+   * login page with a `next` back to the plan page.
+   */
+  redirectPath?: string;
+  exitPath?: string;
+  /** Stable key so a double-submit can't create two billing requests. */
+  idempotencyKey?: string;
 }): Promise<{ url: string; billingRequestId: string } | null> {
   if (!isGoCardlessConfigured()) return null;
 
-  const br = await gcPost<{ billing_requests: { id: string } }>("/billing_requests", {
-    billing_requests: {
-      mandate_request: { scheme: "bacs", currency: "GBP", verify: "recommended" },
-      metadata: { tenant_id: opts.tenantId, plan: opts.plan },
-    },
-  });
-  const billingRequestId = br.billing_requests.id;
-
-  // Prefill what we know so the client only confirms bank details. The stored
-  // name may be a person or a company — offer it as both.
-  const prefilled: Record<string, string> = { email: opts.email };
-  const name = opts.name?.trim();
-  if (name) {
-    const parts = name.split(/\s+/);
-    prefilled.given_name = parts[0]!;
-    if (parts.length > 1) prefilled.family_name = parts.slice(1).join(" ");
-    prefilled.company_name = name;
+  let billingRequestId: string;
+  try {
+    const br = await gcPost<{ billing_requests: { id: string } }>(
+      "/billing_requests",
+      {
+        billing_requests: {
+          mandate_request: { scheme: "bacs", currency: "GBP", verify: "recommended" },
+          metadata: {
+            tenant_id: opts.tenantId,
+            plan: opts.plan,
+            amount_pence: String(Math.round(opts.amountPence)),
+          },
+        },
+      },
+      opts.idempotencyKey
+    );
+    billingRequestId = br.billing_requests.id;
+  } catch (e) {
+    if (e instanceof GoCardlessConflictError) billingRequestId = e.conflictingResourceId;
+    else throw e;
   }
 
+  // Prefill what we know so the client only confirms bank details. GoCardless
+  // wants EITHER a person (given/family) OR a company — never both — so a
+  // business name goes in company_name alone rather than being split into a
+  // first name of "The" and a surname of "Dance Exclusive".
+  const prefilled: Record<string, string> = { email: opts.email };
+  const name = opts.name?.trim();
+  if (name) prefilled.company_name = name;
+
+  const redirectPath = opts.redirectPath ?? "/portal/plan?dd=authorised";
+  const exitPath = opts.exitPath ?? "/portal/plan?dd=exit";
   const flow = await gcPost<{
     billing_request_flows: { authorisation_url: string };
   }>("/billing_request_flows", {
     billing_request_flows: {
-      redirect_uri: `${opts.origin}/portal/plan?dd=authorised`,
-      exit_uri: `${opts.origin}/portal/plan?dd=exit`,
+      redirect_uri: `${opts.origin}${redirectPath}`,
+      exit_uri: `${opts.origin}${exitPath}`,
       prefilled_customer: prefilled,
       lock_currency: true,
       links: { billing_request: billingRequestId },
@@ -138,21 +190,29 @@ export async function createCareSubscription(opts: {
 }): Promise<{ subscriptionId: string } | null> {
   if (!isGoCardlessConfigured()) return null;
 
-  const sub = await gcPost<{ subscriptions: { id: string } }>(
-    "/subscriptions",
-    {
-      subscriptions: {
-        amount: Math.round(opts.amountPence),
-        currency: "GBP",
-        interval_unit: "monthly",
-        name: opts.description,
-        metadata: { plan: opts.plan },
-        links: { mandate: opts.mandateId },
+  try {
+    const sub = await gcPost<{ subscriptions: { id: string } }>(
+      "/subscriptions",
+      {
+        subscriptions: {
+          amount: Math.round(opts.amountPence),
+          currency: "GBP",
+          interval_unit: "monthly",
+          name: opts.description,
+          metadata: { plan: opts.plan },
+          links: { mandate: opts.mandateId },
+        },
       },
-    },
-    opts.idempotencyKey
-  );
-  return { subscriptionId: sub.subscriptions.id };
+      opts.idempotencyKey
+    );
+    return { subscriptionId: sub.subscriptions.id };
+  } catch (e) {
+    // The earlier attempt DID create the subscription (we crashed before
+    // recording it). Adopt it rather than failing every redelivery.
+    if (e instanceof GoCardlessConflictError)
+      return { subscriptionId: e.conflictingResourceId };
+    throw e;
+  }
 }
 
 /**
@@ -191,6 +251,70 @@ export async function cancelGoCardlessSubscription(id: string): Promise<boolean>
     if (/cancel/i.test(message) && /already|status/i.test(message)) return true;
     throw e;
   }
+}
+
+/**
+ * Cancel a mandate we will never charge — e.g. the cross-rail guard found the
+ * client already live on another rail after they authorised this one. Leaving
+ * it active would keep an unused Direct Debit on the client's bank account.
+ */
+export async function cancelMandate(id: string): Promise<boolean> {
+  if (!isGoCardlessConfigured()) return false;
+  try {
+    await gcPost(`/mandates/${id}/actions/cancel`, { data: {} });
+    return true;
+  } catch (e) {
+    const message = (e as Error).message;
+    if (/cancel/i.test(message) && /already|status/i.test(message)) return true;
+    console.warn(`cancelMandate(${id}):`, message);
+    return false;
+  }
+}
+
+async function gcGet<T>(path: string): Promise<T | null> {
+  if (!isGoCardlessConfigured()) return null;
+  const res = await fetch(`${gcBaseUrl()}${path}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.GOCARDLESS_ACCESS_TOKEN}`,
+      "GoCardless-Version": GOCARDLESS_VERSION,
+    },
+  });
+  if (!res.ok) return null;
+  return (await res.json()) as T;
+}
+
+/**
+ * Fetch a payment. Payment events carry only `links.payment`, so the webhook
+ * needs this hop to find the subscription (and mandate) a failed or confirmed
+ * collection belongs to.
+ */
+export async function getPayment(id: string): Promise<{
+  id: string;
+  status: string;
+  amountPence: number;
+  chargeDate: string | null;
+  subscriptionId: string | null;
+  mandateId: string | null;
+} | null> {
+  const data = await gcGet<{
+    payments: {
+      id: string;
+      status: string;
+      amount: number;
+      charge_date?: string;
+      links?: { subscription?: string; mandate?: string };
+    };
+  }>(`/payments/${id}`);
+  if (!data) return null;
+  const p = data.payments;
+  return {
+    id: p.id,
+    status: p.status,
+    amountPence: p.amount,
+    chargeDate: p.charge_date ?? null,
+    subscriptionId: p.links?.subscription ?? null,
+    mandateId: p.links?.mandate ?? null,
+  };
 }
 
 /**

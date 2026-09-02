@@ -21,9 +21,18 @@
  * includes development, which is why every buildAllowance here is 0. Never
  * describe any level as unlimited development or a developer on demand.
  */
+/** The pricing engine's vocabulary (nsi.ts, scale_assessments.plan). */
+export type NsiPlan = "core" | "pro" | "max" | "enterprise";
+
 export type CarePlan = {
   id: string;
   label: string;
+  /**
+   * The same level in the Scale Scoring Formula's vocabulary. subscriptions.plan
+   * and tenants.care_plan_choice store `id`; scale_assessments.plan stores this.
+   * The bridge lives here so no query ever compares the two by accident.
+   */
+  nsiPlan: NsiPlan;
   /** Base "from" price per month, before the client's scale multiplier. */
   mrr: number;
   /** Quoted individually rather than sold at a list price. */
@@ -45,6 +54,7 @@ export type RetainerPlan = CarePlan;
 export const CARE_PLANS: CarePlan[] = [
   {
     id: "hosting",
+    nsiPlan: "core",
     label: "Core",
     mrr: 40,
     buildAllowance: 0,
@@ -60,6 +70,7 @@ export const CARE_PLANS: CarePlan[] = [
   },
   {
     id: "hosting_api",
+    nsiPlan: "pro",
     label: "Pro",
     mrr: 80,
     buildAllowance: 0,
@@ -75,6 +86,7 @@ export const CARE_PLANS: CarePlan[] = [
   },
   {
     id: "build_3",
+    nsiPlan: "max",
     label: "Max",
     mrr: 120,
     buildAllowance: 0,
@@ -91,6 +103,7 @@ export const CARE_PLANS: CarePlan[] = [
   },
   {
     id: "build_10",
+    nsiPlan: "enterprise",
     label: "Enterprise",
     mrr: 120,
     quotedOnly: true,
@@ -109,6 +122,18 @@ export const CARE_PLANS: CarePlan[] = [
 ];
 
 export const RETAINER_PLANS = CARE_PLANS;
+
+/** The three levels a client may choose for themselves. Enterprise is quoted. */
+export const SELLABLE_PLANS: CarePlan[] = CARE_PLANS.filter((p) => !p.quotedOnly);
+
+/** Reverse lookup from the pricing engine's vocabulary. */
+export function carePlanForNsi(nsi: string | null | undefined): CarePlan | null {
+  return CARE_PLANS.find((p) => p.nsiPlan === nsi) ?? null;
+}
+
+export function nsiPlanOf(planId: string | null | undefined): NsiPlan | null {
+  return CARE_PLANS.find((p) => p.id === planId)?.nsiPlan ?? null;
+}
 
 export const CARE_PLAN_MRR: Record<string, number> = Object.fromEntries(
   CARE_PLANS.map((p) => [p.id, p.mrr])

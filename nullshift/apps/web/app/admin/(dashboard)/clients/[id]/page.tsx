@@ -17,16 +17,15 @@ import { uploadDeliverable } from "@nullshift/db/documents";
 import { CATALOG } from "@nullshift/content/catalog";
 import { T } from "@nullshift/ui/tokens";
 import { clientRef } from "@nullshift/ui/format";
-import { CARE_PLANS, CARE_PLAN_MRR, carePlan } from "@/lib/carePlans";
+import { CARE_PLANS, CARE_PLAN_MRR, SELLABLE_PLANS, carePlan } from "@/lib/carePlans";
+import { startDirectDebitForTenant } from "@/lib/directDebit";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { sendCareSubscriptionSignup } from "@/lib/careSubscription";
 import { ensurePortalAccess, issuePortalLink, portalReplyTo } from "@/lib/portalAccess";
 import { getStripe, voidStripeInvoice } from "@nullshift/billing/stripe";
 import {
-  cancelBillingRequest,
   cancelGoCardlessSubscription,
   isGoCardlessConfigured,
-  startCareDirectDebit,
 } from "@nullshift/billing/gocardless";
 import { isXeroConfigured } from "@nullshift/billing/xero";
 import { syncInvoiceToXero, syncInvoicePaymentToXero } from "@/lib/xeroSync";
@@ -36,12 +35,12 @@ import {
   documentsReadyEmail,
   portalAccessEmail,
   passwordResetEmail,
-  buildDirectDebitEmail,
 } from "@/lib/clientEmails";
 import { ProposalDocsForm } from "@/components/admin/ProposalDocsForm";
 import { dpaReadyToSend } from "@/lib/dpa";
 import { PageHeader } from "@/components/app/AppKit";
-import { contractedMrr } from "@/lib/pricing/contracted";
+import { contractedPrices } from "@/lib/pricing/contracted";
+import { SCALE_BAND_LABEL } from "@/lib/pricing/nsi";
 import { tenantBalance } from "@/lib/billing/balance";
 import { Reveal } from "@/components/kyma";
 
@@ -968,87 +967,26 @@ async function sendDirectDebitSetup(formData: FormData) {
   if (!(await requireStaff()).ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
   const plan = String(formData.get("plan") || "");
-  if (!tenantId || !(plan in CARE_PLAN_MRR)) return;
-  if (!isGoCardlessConfigured()) return;
-  const meta = carePlan(plan);
-  if (!meta) return;
+  if (!tenantId || !carePlan(plan)) return;
   const service = createServiceClient();
-  // Never double-bill: bail if billing is already live.
-  const { data: live } = await service
-    .from("subscriptions")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1);
-  if (live && live.length > 0) return;
   const { data: tenant } = await service
     .from("tenants")
     .select("name, contact_name, contact_email")
     .eq("id", tenantId)
     .maybeSingle();
   if (!tenant?.contact_email) return;
-  const origin = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
-    /\/$/,
-    ""
-  );
-  // Bill the client's contracted rate (scale multiplier + margin floor), not
-  // the catalogue's base "from" price.
-  const { mrr: chargeMrr } = await contractedMrr(tenantId, meta.id);
-  const dd = await startCareDirectDebit({
+  // One implementation for every rail entry point (lib/directDebit.ts): the
+  // contracted price, the never-double-bill guard, superseding stale links,
+  // the pending row and the audit trail all live there.
+  const res = await startDirectDebitForTenant(service, {
     tenantId,
-    plan: meta.id,
-    amountPence: Math.round(chargeMrr * 100),
-    description: `Nullshift ${meta.label} plan`,
+    planId: plan,
+    via: "admin",
     email: tenant.contact_email,
     name: tenant.name ?? tenant.contact_name ?? null,
-    origin,
+    emailLink: true,
   });
-  if (!dd) return;
-  // Supersede any earlier attempt: cancel its billing request at GoCardless
-  // (so the old emailed link dies) before replacing the tracking row.
-  const { data: stale } = await service
-    .from("subscriptions")
-    .select("gc_billing_request_id")
-    .eq("tenant_id", tenantId)
-    .eq("provider", "gocardless")
-    .eq("status", "incomplete");
-  for (const row of (stale ?? []) as { gc_billing_request_id: string | null }[]) {
-    if (row.gc_billing_request_id && row.gc_billing_request_id !== dd.billingRequestId)
-      await cancelBillingRequest(row.gc_billing_request_id);
-  }
-  await service
-    .from("subscriptions")
-    .delete()
-    .eq("tenant_id", tenantId)
-    .eq("provider", "gocardless")
-    .eq("status", "incomplete");
-  await service.from("subscriptions").insert({
-    tenant_id: tenantId,
-    plan: meta.id,
-    mrr: chargeMrr,
-    status: "incomplete",
-    provider: "gocardless",
-    gc_billing_request_id: dd.billingRequestId,
-  });
-  const mail = buildDirectDebitEmail({
-    name: tenant.contact_name ?? tenant.name ?? "",
-    planLabel: meta.label,
-    mrr: chargeMrr,
-    url: dd.url,
-  });
-  await sendEmail({
-    purpose: "transactional",
-    to: tenant.contact_email,
-    subject: mail.subject,
-    html: mail.html,
-    text: mail.text,
-  });
-  await logAudit({
-    action: "care_plan.dd_setup_sent",
-    target: `tenant:${tenantId}`,
-    tenantId,
-    metadata: { plan: meta.id, billingRequest: dd.billingRequestId, via: "admin" },
-  });
+  if (!res.ok) console.error("sendDirectDebitSetup:", res.reason, res.detail ?? "");
   revalidatePath(`/admin/clients/${tenantId}`);
 }
 
@@ -1729,6 +1667,12 @@ export default async function ClientHub({
     .reduce((sum, i) => sum + Number(i.amount), 0);
 
   const billingAgreed = isAccepted || balance.paidTotal > 0;
+  // The client's contracted prices (scale band applied). Nothing can be sent
+  // until the client is scored — that is the owner's "set the bracket first".
+  const pricing = await contractedPrices(tenantId);
+  const bandLabel = pricing.assessment?.scale_band
+    ? SCALE_BAND_LABEL[pricing.assessment.scale_band]
+    : null;
   // The client provides their DPA details in the portal; the docs can't be sent
   // until they have (drives the form gate + a header badge).
   const clientDpaReady = !!project && dpaReadyToSend(project);
@@ -3603,16 +3547,24 @@ export default async function ClientHub({
                   defaultValue={project?.proposed_plan ?? "hosting"}
                   style={{ ...inp, width: 170 }}
                 >
-                  {CARE_PLANS.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.label} — £{p.mrr}/mo
-                    </option>
-                  ))}
+                  {[...SELLABLE_PLANS, ...CARE_PLANS.filter((p) => p.quotedOnly)]
+                    .map((p) => ({ p, price: pricing.prices[p.id]! }))
+                    .filter(({ p, price }) => !p.quotedOnly || price.priced)
+                    .map(({ p, price }) => (
+                      <option key={p.id} value={p.id} disabled={!price.priced}>
+                        {p.label} —{" "}
+                        {price.priced
+                          ? `£${price.mrr}/mo`
+                          : pricing.scored
+                            ? "not priced"
+                            : `from £${p.mrr}/mo (score client first)`}
+                      </option>
+                    ))}
                 </select>
                 {isGoCardlessConfigured() && (
                   <SubmitButton
                     formAction={sendDirectDebitSetup}
-                    disabled={!billingAgreed}
+                    disabled={!billingAgreed || !pricing.anyPriced}
                     style={{
                       ...btn(
                         billingAgreed ? "var(--k-accent)" : "var(--k-surface)",
@@ -3628,7 +3580,7 @@ export default async function ClientHub({
                 )}
                 <SubmitButton
                   formAction={sendSubscriptionSignup}
-                  disabled={!billingAgreed}
+                  disabled={!billingAgreed || !pricing.anyPriced}
                   style={{
                     ...btn(
                       isGoCardlessConfigured()
@@ -3680,6 +3632,36 @@ export default async function ClientHub({
                   this deployment, so only the Stripe card rail can be offered.
                 </p>
               )}
+              <p
+                style={{
+                  fontFamily: T.mono,
+                  fontSize: 11,
+                  letterSpacing: "0.04em",
+                  color: pricing.scored ? "var(--k-muted)" : T.warning,
+                  marginTop: 10,
+                }}
+              >
+                {pricing.scored
+                  ? `Band: ${bandLabel ?? "Enterprise review"}${
+                      pricing.assessment?.multiplier
+                        ? ` ×${Number(pricing.assessment.multiplier)}`
+                        : ""
+                    } · prices above are what the client sees and is charged.`
+                  : "Not scored yet — the client sees no plan options until you set their band."}{" "}
+                <Link
+                  href={`/admin/clients/${tenantId}/pricing`}
+                  style={{ color: "var(--k-accent)", textDecoration: "underline" }}
+                >
+                  {pricing.scored ? "Re-score" : "Score client"}
+                </Link>
+                {" · "}
+                <Link
+                  href="/admin/billing/direct-debits"
+                  style={{ color: "var(--k-accent)", textDecoration: "underline" }}
+                >
+                  Direct Debits board
+                </Link>
+              </p>
             </div>
           )}
         </section>

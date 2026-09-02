@@ -1,9 +1,12 @@
 import {
+  cancelMandate,
   createCareSubscription,
   getBillingRequest,
+  getPayment,
   verifyGoCardlessWebhook,
 } from "@nullshift/billing/gocardless";
 import { createServiceClient } from "@nullshift/db";
+import { logAuditAsService } from "@nullshift/db/audit";
 import { carePlan } from "@/lib/carePlans";
 import { contractedMrr } from "@/lib/pricing/contracted";
 
@@ -82,12 +85,18 @@ export async function POST(req: Request) {
               );
               break;
             }
+            // The amount the client was shown travels in the billing request's
+            // metadata; recompute only for links minted before that existed.
+            const stamped = Number(br?.metadata?.amount_pence ?? NaN);
+            const rescuedMrr = Number.isFinite(stamped)
+              ? stamped / 100
+              : (await contractedMrr(tenantId, planId)).mrr;
             const { data: recreated, error: recreateErr } = await supabase
               .from("subscriptions")
               .insert({
                 tenant_id: tenantId,
                 plan: planId,
-                mrr: (await contractedMrr(tenantId, planId)).mrr,
+                mrr: rescuedMrr,
                 status: "incomplete",
                 provider: "gocardless",
                 gc_billing_request_id: billingRequestId,
@@ -124,14 +133,23 @@ export async function POST(req: Request) {
             return new Response("db error", { status: 500 });
           }
           if (live && live.length > 0) {
+            // Don't leave an authorised-but-unused Direct Debit on the client's
+            // bank account, and don't rely on a console line nobody reads.
+            const mandateCancelled = await cancelMandate(mandateId);
             console.error(
-              `gocardless billing_requests.fulfilled: tenant ${pending.tenant_id} already has a live subscription — NOT creating a second one. Mandate ${mandateId} is authorised but unused; cancel it in the GoCardless dashboard.`
+              `gocardless billing_requests.fulfilled: tenant ${pending.tenant_id} already has a live subscription — NOT creating a second one. Mandate ${mandateId} ${mandateCancelled ? "cancelled" : "could NOT be cancelled — cancel it in the GoCardless dashboard"}.`
             );
             const { error } = await supabase
               .from("subscriptions")
               .update({ status: "canceled", gc_mandate_id: mandateId })
               .eq("id", pending.id);
             if (error) return new Response("db error", { status: 500 });
+            await logAuditAsService({
+              action: "gocardless.mandate_orphaned",
+              target: `tenant:${pending.tenant_id}`,
+              tenantId: pending.tenant_id,
+              metadata: { mandateId, billingRequestId, mandateCancelled },
+            });
             break;
           }
           // Record the mandate BEFORE creating the GC subscription, so a
@@ -177,17 +195,39 @@ export async function POST(req: Request) {
             console.error("gocardless activation update failed:", activateErr);
             return new Response("db error", { status: 500 });
           }
+          await logAuditAsService({
+            action: "care_plan.dd_activated",
+            target: `tenant:${pending.tenant_id}`,
+            tenantId: pending.tenant_id,
+            metadata: {
+              plan: plan.id,
+              billingRequestId,
+              mandateId,
+              gcSubscriptionId: created.subscriptionId,
+              amountPence: Math.round(Number(pending.mrr) * 100),
+            },
+          });
           break;
         }
         case "mandates": {
-          if (!["cancelled", "expired", "failed"].includes(event.action)) break;
           const mandateId = event.links?.mandate;
           if (!mandateId) break;
+          // A bank switch replaces the mandate id; follow it or a later
+          // cancellation of the new mandate would match nothing.
+          if (event.action === "replaced" && event.links?.new_mandate) {
+            const { error } = await supabase
+              .from("subscriptions")
+              .update({ gc_mandate_id: event.links.new_mandate })
+              .eq("gc_mandate_id", mandateId);
+            if (error) return new Response("db error", { status: 500 });
+            break;
+          }
+          if (!["cancelled", "expired", "failed"].includes(event.action)) break;
           const { data: updated, error } = await supabase
             .from("subscriptions")
             .update({ status: "canceled" })
             .eq("gc_mandate_id", mandateId)
-            .select("id");
+            .select("id, tenant_id");
           // A DB failure must NOT ack — 500 so GoCardless redelivers (the
           // cancel update is idempotent). "No row" is a real ack-able outcome.
           if (error) {
@@ -199,6 +239,13 @@ export async function POST(req: Request) {
               `gocardless mandates.${event.action}: no subscription row for mandate`,
               mandateId
             );
+          for (const row of updated ?? [])
+            await logAuditAsService({
+              action: "care_plan.dd_cancelled",
+              target: `tenant:${row.tenant_id}`,
+              tenantId: row.tenant_id,
+              metadata: { mandateId, cause: `mandates.${event.action}` },
+            });
           break;
         }
         case "subscriptions": {
@@ -209,7 +256,7 @@ export async function POST(req: Request) {
             .from("subscriptions")
             .update({ status: "canceled" })
             .eq("gc_subscription_id", subscriptionId)
-            .select("id");
+            .select("id, tenant_id");
           if (error) {
             console.error(
               `gocardless subscriptions.${event.action} update failed:`,
@@ -222,31 +269,59 @@ export async function POST(req: Request) {
               `gocardless subscriptions.${event.action}: no subscription row for`,
               subscriptionId
             );
+          for (const row of updated ?? [])
+            await logAuditAsService({
+              action: "care_plan.dd_cancelled",
+              target: `tenant:${row.tenant_id}`,
+              tenantId: row.tenant_id,
+              metadata: {
+                gcSubscriptionId: subscriptionId,
+                cause: `subscriptions.${event.action}`,
+              },
+            });
           break;
         }
         case "payments": {
           // A failed collection flips the row to past_due so it surfaces on
-          // the billing page's past-due rail and the dashboard Money panel —
-          // console.error alone reached no human. GoCardless retries per its
-          // own schedule; a later successful payment re-activates below.
-          const gcSubId = event.links?.subscription ?? null;
-          if (!gcSubId) break;
-          if (event.action === "failed") {
-            const { error } = await supabase
-              .from("subscriptions")
-              .update({ status: "past_due" })
-              .eq("gc_subscription_id", gcSubId)
-              .eq("status", "active");
-            if (error) console.error("gocardless payments.failed update failed:", error);
-          } else if (event.action === "confirmed" || event.action === "paid_out") {
-            const { error } = await supabase
-              .from("subscriptions")
-              .update({ status: "active" })
-              .eq("gc_subscription_id", gcSubId)
-              .eq("status", "past_due");
-            if (error)
-              console.error("gocardless payments recovery update failed:", error);
+          // the billing page's past-due rail and the dashboard Money panel.
+          // Payment events carry only `links.payment` — the subscription (and
+          // mandate) come from the payment itself.
+          const FAILS = ["failed", "late_failure_settled", "charged_back"];
+          const RECOVERS = ["confirmed", "paid_out"];
+          if (!FAILS.includes(event.action) && !RECOVERS.includes(event.action)) break;
+          const paymentId = event.links?.payment;
+          if (!paymentId) break;
+          const payment = await getPayment(paymentId);
+          const gcSubId = payment?.subscriptionId ?? event.links?.subscription ?? null;
+          const mandateId = payment?.mandateId ?? null;
+          if (!gcSubId && !mandateId) break;
+          const target = supabase.from("subscriptions").update({
+            status: FAILS.includes(event.action) ? "past_due" : "active",
+          });
+          const scoped = gcSubId
+            ? target.eq("gc_subscription_id", gcSubId)
+            : target.eq("gc_mandate_id", mandateId!);
+          const { data: updated, error } = await scoped
+            .eq("status", FAILS.includes(event.action) ? "active" : "past_due")
+            .select("id, tenant_id");
+          if (error) {
+            console.error(`gocardless payments.${event.action} update failed:`, error);
+            return new Response("db error", { status: 500 });
           }
+          for (const row of updated ?? [])
+            await logAuditAsService({
+              action: FAILS.includes(event.action)
+                ? "care_plan.payment_failed"
+                : "care_plan.payment_recovered",
+              target: `tenant:${row.tenant_id}`,
+              tenantId: row.tenant_id,
+              metadata: {
+                paymentId,
+                action: event.action,
+                amountPence: payment?.amountPence ?? null,
+                chargeDate: payment?.chargeDate ?? null,
+              },
+            });
           break;
         }
         default:

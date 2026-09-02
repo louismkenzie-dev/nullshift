@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import Link from "next/link";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { requireStaff } from "@nullshift/auth/guards";
@@ -40,6 +41,7 @@ type Sub = {
   plan: string | null;
   mrr: number;
   status: string;
+  provider: string | null;
   stripe_subscription_id: string | null;
   created_at: string;
 };
@@ -266,7 +268,9 @@ export default async function BillingPage() {
       .order("name"),
     supabase
       .from("subscriptions")
-      .select("id, tenant_id, plan, mrr, status, stripe_subscription_id, created_at")
+      .select(
+        "id, tenant_id, plan, mrr, status, provider, stripe_subscription_id, created_at"
+      )
       .order("created_at", { ascending: false }),
     supabase
       .from("invoices")
@@ -295,6 +299,9 @@ export default async function BillingPage() {
       (creditByTenant.get(c.tenant_id) ?? 0) + Number(c.delta)
     );
 
+  const awaitingDd = subList.filter(
+    (s) => s.provider === "gocardless" && s.status === "incomplete"
+  ).length;
   const activeSubs = subList.filter((s) => s.status === "active");
   const trialingSubs = subList.filter((s) => s.status === "trialing");
   const pastDueSubs = subList.filter((s) => s.status === "past_due");
@@ -338,6 +345,34 @@ export default async function BillingPage() {
         title="Money cockpit"
         lead="Retainers, build invoices and the cost guardrail — the numbers the business steers by."
       />
+
+      {/* Tab strip — the Direct Debits board lives alongside the cockpit */}
+      <div
+        className="flex items-center gap-4 mt-6"
+        style={{ borderBottom: "1px solid var(--k-border)" }}
+      >
+        <span
+          style={{
+            ...headLabel,
+            padding: "8px 0",
+            color: "var(--k-accent)",
+            borderBottom: "2px solid var(--k-accent)",
+            marginBottom: -1,
+          }}
+        >
+          Money cockpit
+        </span>
+        <Link
+          href="/admin/billing/direct-debits"
+          className="inline-flex items-center gap-2"
+          style={{ ...headLabel, padding: "8px 0", textDecoration: "none" }}
+        >
+          Direct Debits
+          {awaitingDd > 0 && (
+            <StatusChip tone="warning">{awaitingDd} awaiting</StatusChip>
+          )}
+        </Link>
+      </div>
 
       {/* ── Past-due rail: the first thing to look at ─────────── */}
       {pastDueSubs.length > 0 && (

@@ -20,10 +20,11 @@ import { BANK_DETAILS } from "@nullshift/content/legalEntity";
  * leaked. This sends a single-use link instead: the client sets their own
  * password, we never know it, and the link expires.
  */
-export function portalInviteEmail(opts: {
-  name: string;
-  inviteUrl: string;
-}): { subject: string; html: string; text: string } {
+export function portalInviteEmail(opts: { name: string; inviteUrl: string }): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   const { name, inviteUrl } = opts;
   const first = name.split(" ")[0] || name || "there";
   const subject = "Set up your Nullshift client portal";
@@ -388,6 +389,71 @@ ${url}
 
 Your plan activates automatically once the mandate is confirmed. You can
 cancel any time. If you weren't expecting this, just reply and tell us.
+
+— Nullshift`;
+  return { subject, html, text };
+}
+
+/**
+ * Plan invite — sent from the Direct Debits board once the client has been
+ * scored: their three monthly options at THEIR price, and one link into the
+ * portal (a set-your-password link for a client who has never signed in, the
+ * sign-in page otherwise) landing on the plan page.
+ */
+export function planInviteEmail(opts: {
+  name: string;
+  options: { label: string; mrr: number; blurb: string }[];
+  url: string;
+  /** True when the link sets their password (first sign-in). */
+  firstSignIn: boolean;
+}): { subject: string; html: string; text: string } {
+  const { name, options, url, firstSignIn } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
+  const subject = "Your Nullshift plan options are ready";
+
+  const rows = options
+    .map(
+      (o, i) => `<tr>
+        <td style="padding:12px 16px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:14px;font-weight:700;color:${C.fg};vertical-align:top;white-space:nowrap">${esc(o.label)}</td>
+        <td style="padding:12px 16px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:13px;line-height:1.55;color:${C.muted};vertical-align:top">${esc(o.blurb)}</td>
+        <td style="padding:12px 16px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:14px;color:${C.fg};text-align:right;white-space:nowrap;vertical-align:top">${gbp(o.mrr)}<span style="color:${C.faint};font-size:12px">/month</span></td>
+      </tr>`
+    )
+    .join("");
+
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Your monthly plan</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Three ways we can look after your system</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, your plan options are ready. These are priced for your system — pick whichever suits, and it's collected monthly by Direct Debit. Cancel any time.</p>
+    </td></tr>
+    <tr><td style="padding:18px 32px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:0">${rows}</table>
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(url, firstSignIn ? "Choose your password &amp; pick a plan →" : "Sign in &amp; pick a plan →")}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">${
+        firstSignIn
+          ? "This is your Nullshift client portal — a separate login from any system we built for you, even if it uses the same email. The link is single-use and expires after an hour; if it has run out, use &ldquo;Forgot your password?&rdquo; on the sign-in page."
+          : "This is your Nullshift client portal — a separate login from any system we built for you, even if it uses the same email."
+      } Protected by the Direct Debit Guarantee.</p>
+    </td></tr>`;
+
+  const html = wrap(
+    inner,
+    "Your Nullshift plan options are ready — three levels, priced for you."
+  );
+  const text = `Hi ${first},
+
+Your plan options are ready — priced for your system, collected monthly by Direct Debit, cancel any time:
+
+${options.map((o) => `- ${o.label}: ${gbp(o.mrr)}/month — ${o.blurb}`).join("\n")}
+
+${firstSignIn ? "Choose your password and pick a plan here (single-use link, valid for one hour):" : "Sign in and pick a plan here:"}
+${url}
+
+This is your Nullshift client portal — a separate login from any system we built for you, even if it uses the same email.
 
 — Nullshift`;
   return { subject, html, text };
