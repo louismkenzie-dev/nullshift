@@ -6,6 +6,7 @@ import { createServiceClient } from "@nullshift/db";
 import { invoiceRef } from "@nullshift/ui/format";
 import { sendEmail } from "./sendEmail";
 import { buildInvoiceReadyEmail } from "./clientEmails";
+import { isXeroPrimary } from "@nullshift/billing/xero";
 import { syncInvoiceToXero } from "./xeroSync";
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -98,43 +99,60 @@ export async function generateQuoteInvoice(
   email = email ?? tenantRow?.contact_email ?? null;
 
   let payUrl: string | null = null;
+  let payVia: "xero" | "stripe" | null = null;
   if (email) {
-    try {
-      const customerId = await findOrCreateCustomer({
-        email,
-        name: tenantRow?.name ?? undefined,
-        existingCustomerId: tenantRow?.stripe_customer_id ?? null,
-        idempotencyKey: `customer:${tenantId}`,
-      });
-      const stripeInv = customerId
-        ? await createItemisedStripeInvoice({
-            customerId,
-            items: [{ name: title, amountPence: Math.round(amount * 100) }],
-          })
-        : null;
-      if (stripeInv) {
-        payUrl = stripeInv.url ?? null;
-        await service
-          .from("invoices")
-          .update({
-            status: "open",
-            stripe_invoice_id: stripeInv.id,
-            hosted_invoice_url: stripeInv.url,
-          })
-          .eq("id", invoice.id);
-      } else {
+    // Xero is the invoice rail when configured: raise it there first and send
+    // the client Xero's online invoice (with its Pay-now button once a payment
+    // service is connected in Xero). Stripe stays the fallback.
+    if (isXeroPrimary()) {
+      await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
+      const xero = await syncInvoiceToXero(service, invoice.id);
+      if (xero.ok && xero.onlineUrl) {
+        payUrl = xero.onlineUrl;
+        payVia = "xero";
+      }
+    }
+    if (payVia) {
+      /* invoiced through Xero — no Stripe invoice */
+    } else
+      try {
+        const customerId = await findOrCreateCustomer({
+          email,
+          name: tenantRow?.name ?? undefined,
+          existingCustomerId: tenantRow?.stripe_customer_id ?? null,
+          idempotencyKey: `customer:${tenantId}`,
+        });
+        const stripeInv = customerId
+          ? await createItemisedStripeInvoice({
+              customerId,
+              items: [{ name: title, amountPence: Math.round(amount * 100) }],
+            })
+          : null;
+        if (stripeInv) {
+          payUrl = stripeInv.url ?? null;
+          payVia = payUrl ? "stripe" : null;
+          await service
+            .from("invoices")
+            .update({
+              status: "open",
+              stripe_invoice_id: stripeInv.id,
+              hosted_invoice_url: stripeInv.url,
+            })
+            .eq("id", invoice.id);
+        } else {
+          await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
+        }
+      } catch (e) {
+        console.error("Stripe quote-invoice send failed:", e);
         await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
       }
-    } catch (e) {
-      console.error("Stripe quote-invoice send failed:", e);
-      await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-    }
 
     try {
       const mail = buildInvoiceReadyEmail({
         name: tenantRow?.contact_name ?? tenantRow?.name ?? "",
         total: amount,
         payUrl,
+        payVia,
         items: [{ name: title, amount }],
         reference: invoiceRef(tenantId, invoice.id),
       });

@@ -254,11 +254,14 @@ export function buildInvoiceReadyEmail(opts: {
   name: string;
   total: number;
   payUrl: string | null;
+  /** Which rail the link points at — changes the wording, not the flow. */
+  payVia?: "xero" | "stripe" | null;
   items: { name: string; amount: number; quantity?: number }[];
   /** Payment reference for bank transfers (e.g. NS-2E458EB1). */
   reference: string;
 }): { subject: string; html: string; text: string } {
   const { name, total, payUrl, items, reference } = opts;
+  const viaXero = opts.payVia === "xero";
   const first = name.split(" ")[0] || name || "there";
   const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
   const subject = `Your Nullshift invoice — ${gbp(total)}`;
@@ -276,7 +279,7 @@ export function buildInvoiceReadyEmail(opts: {
     <tr><td style="padding:22px 32px 0">
       <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Invoice ready</p>
       <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Your invoice is ready to pay</h1>
-      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, here's your itemised invoice for the build. ${payUrl ? "Pay securely below — your card is handled by Stripe and you'll get a receipt automatically." : "Pay by bank transfer using the details below — we'll confirm as soon as it arrives."}</p>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, here's your itemised invoice for the build. ${payUrl ? (viaXero ? "View the invoice below — you can pay online from it, or by bank transfer, and you'll get a receipt automatically." : "Pay securely below — your card is handled by Stripe and you'll get a receipt automatically.") : "Pay by bank transfer using the details below — we'll confirm as soon as it arrives."}</p>
     </td></tr>
     <tr><td style="padding:18px 32px 0">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -287,7 +290,7 @@ export function buildInvoiceReadyEmail(opts: {
         </tr>
       </table>
     </td></tr>
-    ${payUrl ? `<tr><td style="padding:22px 32px 6px">${button(payUrl, "Pay by card →")}</td></tr>` : ""}
+    ${payUrl ? `<tr><td style="padding:22px 32px 6px">${button(payUrl, viaXero ? "View & pay invoice →" : "Pay by card →")}</td></tr>` : ""}
     <tr><td style="padding:${payUrl ? "10px" : "22px"} 32px 8px">
       <p style="margin:0 0 8px;font-family:${FONT};font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:${C.faint}">${payUrl ? "Or pay" : "Pay"} by bank transfer</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${C.border}">
@@ -327,7 +330,7 @@ Total due: ${gbp(total)}
 ${
   payUrl
     ? `
-Pay by card here:
+${viaXero ? "View and pay your invoice here:" : "Pay by card here:"}
 ${payUrl}
 `
     : ""

@@ -295,14 +295,53 @@ authorisation flow use GoCardless's test bank details (sort code `20-00-00`, acc
 `55779911`); mandates activate within minutes and webhooks fire for the full lifecycle,
 so the whole choose → authorise → activate loop is testable without moving money.
 
-## Xero invoice sync
+## Auto-scoring (`scale_evidence`)
 
-Every invoice the system creates is mirrored into Xero as an authorised ACCREC
-sales invoice against the client's Xero contact (found or created by email/name
-on first sync, cached on the tenant). Payments are recorded in Xero when the
-invoice is paid — by card (Stripe webhook) or by bank transfer ("Mark paid —
-transfer" in the client hub). Older invoices can be pushed on demand with the
-"→ Xero" button on the client hub's invoice rows.
+Once a system is built it can score itself. **Analyse the system** on
+`/admin/clients/[id]/pricing` (and, automatically, when a project's stage is set to
+`live` or `care`) reads two things named on the system passport:
+
+- **The repository** (GitHub API; `GITHUB_DISPATCH_TOKEN` for private repos) —
+  runtime dependency count, the external services it talks to (Stripe, Resend,
+  OpenAI, Mapbox…), whether there is an admin area and a role model, edge
+  functions, migrations, scheduled jobs, tests, CI.
+- **The production database** (Supabase Management API; `SUPABASE_ACCESS_TOKEN`) —
+  registered users, **monthly active users** (signed in within 30 days), staff-role
+  users, locations/venues, tables holding payments, bookings, enquiries, PII and
+  special-category columns.
+
+`lib/scoring/derive.ts` turns that into Scale Index inputs and tags every field:
+
+| Tag         | Meaning                                                        | Fields                                                                                               |
+| ----------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `auto`      | Read off the system; evidence always wins                      | MAU, internal users, locations, payments, auth+PII, 3+ integrations, complex admin, 100k+ MAU        |
+| `estimated` | Proposed; a person confirms (a previously typed value is kept) | platform role, vendor cost, operational AI, £500+ vendor cost                                        |
+| `human`     | Nothing in code or data can tell us                            | turnover, employees, sessions, SLA, regulated, multi-entity, reserved capacity, exceptional exposure |
+
+The scan is stored on `scale_evidence` with a **provisional NSI / band / price** —
+never billed from. The pricing form is prefilled from it with the tags shown; saving
+writes a normal `scale_assessments` row linked by `evidence_id` (with `field_states`),
+which is what `contractedMrr()` and the Direct Debits board read. The board shows
+"Auto NSI n · band · k to confirm" for clients with a scan but no saved assessment.
+
+Audit: `scale_evidence.collected` (trigger, sources read, nsi, band, mau, dependencies).
+
+## Xero invoicing
+
+**Xero is the invoice rail when configured.** Build and quote invoices are raised in
+Xero first (authorised ACCREC sales invoice against the client's Xero contact, found
+or created by email/name and cached on the tenant) and the client's email carries
+Xero's **online invoice** link — `hosted_invoice_url` on our row. Connect a payment
+service to the Xero organisation (Settings → Payment services: Stripe or GoCardless)
+and that page shows a **Pay now** button; bank-transfer details are in our email
+regardless. Stripe hosted invoices remain the fallback when Xero is unconfigured or
+the Xero call fails, or always with `INVOICE_RAIL=stripe`.
+
+Payments taken in Xero flow back: the billing cockpit and the client hub check open
+invoices that have a Xero id on load and flip them to paid when Xero says PAID
+(`invoice.paid_via_xero` audit row). Payments taken here — Stripe webhook, "Mark paid —
+transfer" — are recorded in Xero as before. Older invoices can be pushed on demand
+with the "→ Xero" button on the client hub's invoice rows.
 
 **Setup (Xero custom connection — machine-to-machine, one organisation):**
 

@@ -69,7 +69,9 @@ async function xeroFetch<T>(
   });
   const text = await res.text();
   if (!res.ok) {
-    throw new Error(`Xero ${init?.method ?? "GET"} ${path} → ${res.status}: ${text.slice(0, 500)}`);
+    throw new Error(
+      `Xero ${init?.method ?? "GET"} ${path} → ${res.status}: ${text.slice(0, 500)}`
+    );
   }
   return text ? (JSON.parse(text) as T) : null;
 }
@@ -198,4 +200,74 @@ export async function recordXeroPayment(opts: {
     },
   });
   return { ok: true };
+}
+
+/**
+ * Xero as the invoice rail (not just the mirror). When configured, invoices
+ * are raised in Xero first and the client gets Xero's online invoice link —
+ * which carries a "Pay now" button once a payment service (Stripe, GoCardless)
+ * is connected to the organisation in Xero. Set INVOICE_RAIL=stripe to keep
+ * Stripe hosted invoices as the client-facing document while still mirroring.
+ */
+export function isXeroPrimary(): boolean {
+  return isXeroConfigured() && (process.env.INVOICE_RAIL || "xero") !== "stripe";
+}
+
+type OnlineInvoiceResponse = { OnlineInvoices?: { OnlineInvoiceUrl?: string }[] };
+
+/** The shareable online-invoice URL for an AUTHORISED sales invoice. */
+export async function getXeroOnlineInvoiceUrl(
+  xeroInvoiceId: string
+): Promise<string | null> {
+  if (!isXeroConfigured()) return null;
+  const res = await xeroFetch<OnlineInvoiceResponse>(
+    `/Invoices/${encodeURIComponent(xeroInvoiceId)}/OnlineInvoice`
+  );
+  return res?.OnlineInvoices?.[0]?.OnlineInvoiceUrl ?? null;
+}
+
+export type XeroInvoiceStatus = {
+  status: string;
+  invoiceNumber: string | null;
+  amountDue: number;
+  amountPaid: number;
+  fullyPaidOnDate: string | null;
+};
+
+type InvoiceDetailResponse = {
+  Invoices?: {
+    Status?: string;
+    InvoiceNumber?: string;
+    AmountDue?: number;
+    AmountPaid?: number;
+    FullyPaidOnDate?: string;
+  }[];
+};
+
+/** Xero /Date(1693526400000+0000)/ → ISO; ISO passes through. */
+function xeroDate(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const m = raw.match(/\/Date\((-?\d+)/);
+  if (m) return new Date(Number(m[1])).toISOString();
+  const d = new Date(raw);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+/** Current status of a Xero invoice — used to notice payments taken in Xero. */
+export async function getXeroInvoiceStatus(
+  xeroInvoiceId: string
+): Promise<XeroInvoiceStatus | null> {
+  if (!isXeroConfigured()) return null;
+  const res = await xeroFetch<InvoiceDetailResponse>(
+    `/Invoices/${encodeURIComponent(xeroInvoiceId)}`
+  );
+  const inv = res?.Invoices?.[0];
+  if (!inv?.Status) return null;
+  return {
+    status: inv.Status,
+    invoiceNumber: inv.InvoiceNumber ?? null,
+    amountDue: Number(inv.AmountDue ?? 0),
+    amountPaid: Number(inv.AmountPaid ?? 0),
+    fullyPaidOnDate: xeroDate(inv.FullyPaidOnDate),
+  };
 }

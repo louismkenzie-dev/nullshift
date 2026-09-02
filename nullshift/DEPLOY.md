@@ -60,9 +60,15 @@ the ops AI features degrade to manual. Optional: `ANTHROPIC_WORKSPACE_SLUG`
 — required for the Direct Debits board under Billing to do anything; without them
 the board shows "Not configured" and every Direct Debit button is disabled.
 
-**Xero mirror sync (invoices):**
+**Xero invoicing (the invoice rail when set; Stripe is the fallback):**
 `XERO_CLIENT_ID`, `XERO_CLIENT_SECRET` — optional tuning:
-`XERO_SALES_ACCOUNT_CODE`, `XERO_PAYMENT_ACCOUNT_CODE`, `XERO_TAX_TYPE`
+`XERO_SALES_ACCOUNT_CODE`, `XERO_PAYMENT_ACCOUNT_CODE`, `XERO_TAX_TYPE`,
+`INVOICE_RAIL=stripe` to keep Stripe hosted invoices client-facing.
+
+**Auto-scoring (reads a client's repo + database to draft the scale assessment):**
+`SUPABASE_ACCESS_TOKEN` — a personal access token (supabase.com/dashboard/account/tokens)
+whose owner is in the client projects' organisation; `GITHUB_DISPATCH_TOKEN` also
+needs `contents:read` on client repos (public repos need no token).
 
 **Cron:**
 `CRON_SECRET` — gates `/api/cron/weekly-pulse` (the Friday client-pulse digest).

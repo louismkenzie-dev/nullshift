@@ -6,6 +6,7 @@ import { createServiceClient } from "@nullshift/db";
 import { invoiceRef } from "@nullshift/ui/format";
 import { sendEmail } from "./sendEmail";
 import { buildInvoiceReadyEmail } from "./clientEmails";
+import { isXeroPrimary } from "@nullshift/billing/xero";
 import { syncInvoiceToXero } from "./xeroSync";
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -114,47 +115,63 @@ export async function generateProjectInvoice(
   // failure (or Stripe simply unconfigured) still leaves the invoice open and
   // payable by bank transfer — the email below always carries those details.
   let payUrl: string | null = null;
+  let payVia: "xero" | "stripe" | null = null;
   if (email) {
-    try {
-      const customerId = await findOrCreateCustomer({
-        email,
-        name: tenantRow?.name ?? undefined,
-        existingCustomerId: tenantRow?.stripe_customer_id ?? null,
-        idempotencyKey: `customer:${tenantId}`,
-      });
-      if (customerId && customerId !== tenantRow?.stripe_customer_id) {
-        await service
-          .from("tenants")
-          .update({ stripe_customer_id: customerId })
-          .eq("id", tenantId)
-          .is("stripe_customer_id", null);
+    // Xero is the invoice rail when configured: raise it there first and send
+    // the client Xero's online invoice (with its Pay-now button once a payment
+    // service is connected in Xero). Stripe stays the fallback.
+    if (isXeroPrimary()) {
+      await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
+      const xero = await syncInvoiceToXero(service, invoice.id);
+      if (xero.ok && xero.onlineUrl) {
+        payUrl = xero.onlineUrl;
+        payVia = "xero";
       }
-      const stripeInv = customerId
-        ? await createItemisedStripeInvoice({
-            customerId,
-            items: lines.map((l) => ({
-              name: l.name,
-              amountPence: Math.round(Number(l.amount) * 100),
-            })),
-          })
-        : null;
-      if (stripeInv) {
-        payUrl = stripeInv.url ?? null;
-        await service
-          .from("invoices")
-          .update({
-            status: "open",
-            stripe_invoice_id: stripeInv.id,
-            hosted_invoice_url: stripeInv.url,
-          })
-          .eq("id", invoice.id);
-      } else {
+    }
+    if (payVia) {
+      /* invoiced through Xero — no Stripe invoice */
+    } else
+      try {
+        const customerId = await findOrCreateCustomer({
+          email,
+          name: tenantRow?.name ?? undefined,
+          existingCustomerId: tenantRow?.stripe_customer_id ?? null,
+          idempotencyKey: `customer:${tenantId}`,
+        });
+        if (customerId && customerId !== tenantRow?.stripe_customer_id) {
+          await service
+            .from("tenants")
+            .update({ stripe_customer_id: customerId })
+            .eq("id", tenantId)
+            .is("stripe_customer_id", null);
+        }
+        const stripeInv = customerId
+          ? await createItemisedStripeInvoice({
+              customerId,
+              items: lines.map((l) => ({
+                name: l.name,
+                amountPence: Math.round(Number(l.amount) * 100),
+              })),
+            })
+          : null;
+        if (stripeInv) {
+          payUrl = stripeInv.url ?? null;
+          payVia = payUrl ? "stripe" : null;
+          await service
+            .from("invoices")
+            .update({
+              status: "open",
+              stripe_invoice_id: stripeInv.id,
+              hosted_invoice_url: stripeInv.url,
+            })
+            .eq("id", invoice.id);
+        } else {
+          await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
+        }
+      } catch (e) {
+        console.error("Stripe invoice send failed:", e);
         await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
       }
-    } catch (e) {
-      console.error("Stripe invoice send failed:", e);
-      await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-    }
 
     // Branded invoice email — card link (when Stripe produced one) + bank
     // transfer details in all cases. Best-effort; complements Stripe's own email.
@@ -163,6 +180,7 @@ export async function generateProjectInvoice(
         name: tenantRow?.contact_name ?? tenantRow?.name ?? "",
         total,
         payUrl,
+        payVia,
         items: lines.map((l) => ({ name: l.name, amount: Number(l.amount) })),
         reference: invoiceRef(tenantId, invoice.id),
       });

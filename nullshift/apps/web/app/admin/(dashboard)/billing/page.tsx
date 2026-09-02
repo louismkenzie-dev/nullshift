@@ -12,6 +12,7 @@ import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { contractedMrr } from "@/lib/pricing/contracted";
+import { reconcileXeroInvoices } from "@/lib/xeroSync";
 import {
   CARE_PLANS,
   CARE_PLAN_MRR,
@@ -249,6 +250,9 @@ const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 export default async function BillingPage() {
   const supabase = await createClient();
   const period = currentPeriodStart();
+  // Payments taken in Xero (online invoice / bookkeeper) flow back here
+  // before the lists load — bounded, best-effort.
+  await reconcileXeroInvoices(createServiceClient(), { limit: 10 });
   const [
     summary,
     { data: tenants },
