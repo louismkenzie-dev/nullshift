@@ -462,7 +462,7 @@ export default async function ClientPricingPage({
     latestEvidence(service, tenantId),
     service
       .from("system_profiles")
-      .select("repo_full_name, supabase_ref")
+      .select("project_id, repo_full_name, supabase_ref")
       .eq("tenant_id", tenantId)
       .order("updated_at", { ascending: false })
       .limit(1)
@@ -870,6 +870,19 @@ export default async function ClientPricingPage({
               )}
               . Fills every field it can; the rest are tagged for you below.
             </span>
+            {/* The passport is where the repo and database refs live — one
+                click away, so a missing ref never means hunting for it. */}
+            <Link
+              href={
+                passport?.project_id
+                  ? `/admin/systems/${passport.project_id}`
+                  : "/admin/systems"
+              }
+              className="kb kb-outline kb-sm"
+              style={{ textDecoration: "none" }}
+            >
+              {passport ? "Edit passport →" : "Create passport →"}
+            </Link>
           </form>
 
           {scanError && (
