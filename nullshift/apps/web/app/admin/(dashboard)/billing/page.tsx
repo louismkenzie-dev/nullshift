@@ -279,6 +279,22 @@ function XeroStatus({ status }: { status: XeroSetupStatus | null }) {
     );
   const acct = status.paymentAccount;
   const payOk = !!acct && acct.status === "ACTIVE" && acct.type === "BANK";
+  // No token, no organisation: the account checks never ran, so don't blame
+  // the account codes for a credentials problem.
+  if (!status.organisation && !status.needsSettingsScope)
+    return (
+      <div className="flex flex-wrap items-center gap-3 mt-5" style={line}>
+        <StatusChip tone="danger">Xero: {status.error ?? "token failed"}</StatusChip>
+        <StatusChip tone={status.primary ? "accent" : "muted"}>
+          {status.primary ? "Invoice rail: Xero" : "Invoice rail: Stripe (Xero mirrors)"}
+        </StatusChip>
+        <span>
+          Xero rejected the client id / secret. Regenerate the secret on the custom
+          connection at developer.xero.com, paste both values into Vercel with no
+          whitespace, and redeploy. Invoices fall back to Stripe until this is fixed.
+        </span>
+      </div>
+    );
   return (
     <div className="flex flex-wrap items-center gap-3 mt-5" style={line}>
       {status.organisation ? (
