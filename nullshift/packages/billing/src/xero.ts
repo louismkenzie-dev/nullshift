@@ -344,22 +344,46 @@ export async function getXeroSetupStatus(): Promise<XeroSetupStatus> {
     error: null,
   };
   if (!base.configured) return base;
+  // The token exchange is the credentials test. Past it, a 401 or 403 on a
+  // resource means the token lacks a scope (Xero answers 401
+  // "AuthorizationUnsuccessful" for a missing scope, not 403).
   try {
-    // Proves the client id/secret and the org binding.
+    await getToken();
+  } catch (e) {
+    return { ...base, error: (e instanceof Error ? e.message : String(e)).slice(0, 300) };
+  }
+  const scopeProblem = (msg: string) => /→ 40[13]\b/.test(msg);
+  try {
+    // Organisation needs accounting.settings(.read).
     const org = await xeroFetch<OrganisationResponse>("/Organisation");
     const o = org?.Organisations?.[0];
     if (o?.Name) base.organisation = { name: o.Name, shortCode: o.ShortCode ?? null };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (/→ 403/.test(msg)) base.needsSettingsScope = true;
-    else return { ...base, error: msg.slice(0, 300) };
+    if (!scopeProblem(msg)) return { ...base, error: msg.slice(0, 300) };
+    base.needsSettingsScope = true;
+    // Prove the connection with a scope we do have (accounting.transactions).
+    // If that fails too, the app is not authorised for the organisation.
+    try {
+      await xeroFetch("/Invoices?page=1&pageSize=1");
+    } catch (e2) {
+      const msg2 = e2 instanceof Error ? e2.message : String(e2);
+      return {
+        ...base,
+        needsSettingsScope: false,
+        error: scopeProblem(msg2)
+          ? "the custom connection is not authorised for the organisation — open it at developer.xero.com and Connect"
+          : msg2.slice(0, 300),
+      };
+    }
+    return base;
   }
   try {
     base.salesAccount = await accountByCode(salesAccountCode);
     if (paymentAccountCode) base.paymentAccount = await accountByCode(paymentAccountCode);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (/→ 403/.test(msg)) base.needsSettingsScope = true;
+    if (scopeProblem(msg)) base.needsSettingsScope = true;
     else base.error = msg.slice(0, 300);
   }
   return base;

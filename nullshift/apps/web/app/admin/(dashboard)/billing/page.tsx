@@ -289,9 +289,9 @@ function XeroStatus({ status }: { status: XeroSetupStatus | null }) {
           {status.primary ? "Invoice rail: Xero" : "Invoice rail: Stripe (Xero mirrors)"}
         </StatusChip>
         <span>
-          Xero rejected the client id / secret. Regenerate the secret on the custom
-          connection at developer.xero.com, paste both values into Vercel with no
-          whitespace, and redeploy. Invoices fall back to Stripe until this is fixed.
+          {/token request failed/i.test(status.error ?? "")
+            ? "Xero rejected the client id / secret. Regenerate the secret on the custom connection at developer.xero.com, paste both values into Vercel with no whitespace, and redeploy."
+            : "The credentials work but Xero refused the request — see the message. Invoices fall back to Stripe until this is fixed."}
         </span>
       </div>
     );
