@@ -17,6 +17,12 @@ cloud sessions). Read alongside `docs/OPERATIONS.md` → "Client portal access l
   `XERO_PAYMENT_ACCOUNT_CODE` (090, Revolut Business Account) added to Vercel by Louis —
   Xero is now the invoice rail. Online payments (Stripe/GoCardless in Xero → Pay-now
   button on the online invoice) is a Xero-side setting still to switch on.
+- **Checking Xero:** the money cockpit (`/admin/billing`) has a live status strip — org the
+  custom connection is bound to, invoice rail, whether `XERO_PAYMENT_ACCOUNT_CODE` (now 091,
+  Revolut GBP Main — the account with the Revolut feed; 090 was a manual duplicate) and
+  the sales code resolve. Reading accounts needs the `accounting.settings.read` scope on
+  the custom connection. Client secret was regenerated 2026-09-02 15:37; rotate again at
+  leisure (it appeared in a screenshot) and delete the unused secret 1.
 - **Still to configure:** `SUPABASE_ACCESS_TOKEN` (auto-scoring reads client databases).
 - Supabase Auth URL config fixed by Louis 2026-09-02 (Site URL https, `https://nullshift.co.uk/**`).
 - Amie (The Dance Exclusive): account exists, never signed in, never reset — she was
