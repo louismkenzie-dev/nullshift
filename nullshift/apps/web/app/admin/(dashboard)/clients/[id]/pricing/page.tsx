@@ -7,7 +7,9 @@ import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { SubmitButton } from "@/components/admin/SubmitButton";
-import { CARE_PLANS, carePlanForNsi } from "@/lib/carePlans";
+import { carePlanForNsi } from "@/lib/carePlans";
+import { pricesFromAssessment } from "@/lib/pricing/contracted";
+import type { AssessmentRow } from "@/lib/pricing/contractedPrice";
 import {
   calculateScalePricing,
   ENTERPRISE_FLAG_LABEL,
@@ -15,6 +17,9 @@ import {
   PRICING_VERSION,
   RISK_FLAG_LABEL,
   SCALE_BAND_LABEL,
+  scaleBandFor,
+  ceilToFive,
+  BASE_PLAN_PRICE,
   type EnterpriseFlags,
   type PlanId,
   type PlatformRole,
@@ -64,7 +69,10 @@ function readInput(fd: FormData): ScaleInput {
   const riskKeys = Object.keys(RISK_FLAG_LABEL) as (keyof RiskFlags)[];
   const entKeys = Object.keys(ENTERPRISE_FLAG_LABEL) as (keyof EnterpriseFlags)[];
   return {
-    plan: (String(fd.get("plan") || "core") as PlanId) ?? "core",
+    // The score sets the BRACKET. The plan level is the client's choice, made
+    // in the portal after go-live — every assessment is anchored on Core and
+    // the three prices follow from the band (lib/pricing/contractedPrice.ts).
+    plan: "core" as PlanId,
     monthlyActiveUsers: num(fd.get("monthlyActiveUsers")),
     monthlySessions: num(fd.get("monthlySessions")),
     platformRole: String(fd.get("platformRole") || "informational") as PlatformRole,
@@ -169,26 +177,49 @@ async function analyseSystem(formData: FormData) {
     );
 }
 
-/** Override the recommended figure — reason required, owner recorded. */
-async function overrideMrr(formData: FormData) {
+/**
+ * Override the bracket — a deliberate commercial call, reason required, owner
+ * recorded. Moves the assessment to the chosen band's multiplier and re-prices
+ * the Core anchor (Pro and Max follow from the band); the formula's original
+ * band stays in the audit trail.
+ */
+async function overrideBracket(formData: FormData) {
   "use server";
   const staff = await requireStaff();
   if (!staff.ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
   const id = String(formData.get("assessment_id") || "");
-  const amount = num(formData.get("override_mrr"));
+  const band = String(formData.get("band") || "") as ScaleBand;
   const reason = String(formData.get("override_reason") || "").trim();
-  // The DB constraint enforces this too — bail early so a blank reason never
-  // surfaces as a failed insert.
-  if (!tenantId || !id || amount === null || amount < 0 || !reason) return;
+  if (!tenantId || !id || !(band in SCALE_BAND_LABEL) || !reason) return;
+  const multiplier = {
+    standard: 1.0,
+    growth: 1.5,
+    established: 2.5,
+    scale: 4.0,
+    critical: 5.5,
+  }[band];
 
   const service = createServiceClient();
+  const { data: row } = await service
+    .from("scale_assessments")
+    .select("scale_band, multiplier, direct_cost_floor")
+    .eq("id", id)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (!row) return;
+  const floor = row.direct_cost_floor === null ? 0 : Number(row.direct_cost_floor);
+  const coreMrr = ceilToFive(Math.max(BASE_PLAN_PRICE.core * multiplier, floor));
   await service
     .from("scale_assessments")
     .update({
-      override_mrr: amount,
+      scale_band: band,
+      multiplier,
+      scaled_plan_price: BASE_PLAN_PRICE.core * multiplier,
+      override_mrr: coreMrr,
       override_reason: reason,
       overridden_by: staff.userId,
+      enterprise_review_required: false,
     })
     .eq("id", id)
     .eq("tenant_id", tenantId);
@@ -196,10 +227,19 @@ async function overrideMrr(formData: FormData) {
     action: "scale_assessment.overridden",
     target: `tenant:${tenantId}`,
     tenantId,
-    metadata: { assessment: id, overrideMrr: amount, reason },
+    metadata: {
+      assessment: id,
+      fromBand: row.scale_band,
+      fromMultiplier: row.multiplier,
+      toBand: band,
+      toMultiplier: multiplier,
+      coreMrr,
+      reason,
+    },
   });
   revalidatePath(`/admin/clients/${tenantId}/pricing`);
   revalidatePath(`/admin/clients/${tenantId}`);
+  revalidatePath("/admin/billing/direct-debits");
 }
 
 /** Adopt a figure as the agreed contracted rate — what billing then charges. */
@@ -457,12 +497,15 @@ export default async function ClientPricingPage({
   const repoEv = scan?.evidence?.repo ?? null;
   const dbEv = scan?.evidence?.database ?? null;
   const services = repoEv ? externalIntegrations(repoEv.integrations) : [];
-  // scale_assessments.plan is the engine's vocabulary (core/pro/max/enterprise).
-  const plan = latest ? carePlanForNsi(latest.plan) : null;
 
-  // The figure billing will actually use, mirroring contractedMrr()'s order.
+  // The figure billing will actually use for the Core anchor, mirroring
+  // contractedMrr()'s order; the three client-facing prices come from the
+  // same rule the portal and the Direct Debit starter use.
   const effective =
     latest?.agreed_mrr ?? latest?.override_mrr ?? latest?.recommended_mrr ?? null;
+  const threePrices = latest
+    ? pricesFromAssessment(latest as unknown as AssessmentRow)
+    : null;
 
   return (
     <div
@@ -473,7 +516,7 @@ export default async function ClientPricingPage({
         index="02"
         label="Scale assessment"
         title={`Recurring price — ${tenant.name}`}
-        lead="Score the client on the five Nullshift Scale Index dimensions. The plan sets the service level; the band sets what they pay for it."
+        lead="Score the client on the five Nullshift Scale Index dimensions. The score sets their bracket; the client picks Core, Pro or Max at the bracket's prices once their system is live."
         actions={
           <Link
             href={`/admin/clients/${tenantId}`}
@@ -490,20 +533,6 @@ export default async function ClientPricingPage({
         <div style={{ margin: "22px 0 20px" }}>
           <Panel label="// CURRENT ASSESSMENT">
             <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-              <div className="flex flex-col" style={{ gap: 3 }}>
-                <span style={label}>Plan level</span>
-                <span
-                  style={{
-                    fontFamily: T.sans,
-                    fontWeight: 700,
-                    fontSize: "1.1rem",
-                    color: "var(--k-accent)",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {plan?.label ?? latest.plan}
-                </span>
-              </div>
               <div className="flex flex-col" style={{ gap: 3 }}>
                 <span style={label}>NSI</span>
                 <span
@@ -548,18 +577,49 @@ export default async function ClientPricingPage({
                 </span>
               </div>
               <div className="flex flex-col" style={{ gap: 3 }}>
-                <span style={label}>Billing will charge</span>
-                <span
-                  style={{
-                    fontFamily: T.sans,
-                    fontWeight: 800,
-                    fontSize: "1.45rem",
-                    letterSpacing: "-0.02em",
-                    color: effective === null ? T.warning : "var(--k-accent)",
-                  }}
-                >
-                  {effective === null ? "Quote manually" : `${gbp(effective)}/mo`}
-                </span>
+                <span style={label}>Their three options — the client picks one</span>
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                  {threePrices?.sellable.map((pp) => (
+                    <span
+                      key={pp.planId}
+                      style={{ fontFamily: T.sans, color: "var(--k-fg)" }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: "0.68rem",
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          color: "var(--k-muted)",
+                        }}
+                      >
+                        {pp.label}{" "}
+                      </span>
+                      <span
+                        style={{
+                          fontWeight: 800,
+                          fontSize: "1.25rem",
+                          letterSpacing: "-0.02em",
+                          color: pp.priced ? "var(--k-accent)" : T.warning,
+                        }}
+                      >
+                        {pp.priced && pp.mrr !== null ? gbp(pp.mrr) : "—"}
+                      </span>
+                    </span>
+                  ))}
+                  {latest.enterprise_review_required && (
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.82rem",
+                        color: T.warning,
+                      }}
+                    >
+                      Enterprise review — no self-serve price until a figure is agreed
+                      below
+                    </span>
+                  )}
+                </div>
               </div>
               {latest.enterprise_review_required && (
                 <StatusChip tone="warning">Enterprise review required</StatusChip>
@@ -629,7 +689,7 @@ export default async function ClientPricingPage({
               </p>
             )}
 
-            {/* Override + agree, side by side */}
+            {/* Override the bracket; Enterprise gets its agreed figure here */}
             <div
               className="grid grid-cols-1 md:grid-cols-2 gap-4"
               style={{
@@ -638,41 +698,55 @@ export default async function ClientPricingPage({
                 borderTop: "1px solid var(--k-border)",
               }}
             >
-              <form action={overrideMrr} className="flex flex-col gap-2">
+              <form action={overrideBracket} className="flex flex-col gap-2">
                 <input type="hidden" name="tenant_id" value={tenantId} />
                 <input type="hidden" name="assessment_id" value={latest.id} />
-                <span style={label}>Override the recommendation</span>
-                <input
-                  name="override_mrr"
-                  inputMode="numeric"
-                  placeholder="£ / month"
-                  defaultValue={latest.override_mrr ?? ""}
-                  style={inp}
-                />
+                <span style={label}>Override the bracket</span>
+                <select
+                  name="band"
+                  defaultValue={latest.scale_band ?? "standard"}
+                  style={{ ...inp, height: 34 }}
+                >
+                  {(Object.keys(SCALE_BAND_LABEL) as ScaleBand[]).map((b) => (
+                    <option key={b} value={b}>
+                      {SCALE_BAND_LABEL[b]} ×
+                      {
+                        scaleBandFor(
+                          {
+                            standard: 0,
+                            growth: 30,
+                            established: 45,
+                            scale: 60,
+                            critical: 75,
+                          }[b]
+                        )?.multiplier
+                      }
+                      {" · "}Core{" "}
+                      {gbp(
+                        ceilToFive(
+                          Math.max(
+                            BASE_PLAN_PRICE.core *
+                              (scaleBandFor(
+                                {
+                                  standard: 0,
+                                  growth: 30,
+                                  established: 45,
+                                  scale: 60,
+                                  critical: 75,
+                                }[b]
+                              )?.multiplier ?? 1),
+                            Number(latest.direct_cost_floor ?? 0)
+                          )
+                        )
+                      )}
+                    </option>
+                  ))}
+                </select>
                 <input
                   name="override_reason"
                   required
                   placeholder="Reason (required, stored with your name)"
                   defaultValue={latest.override_reason ?? ""}
-                  style={inp}
-                />
-                <SubmitButton className="kb kb-outline kb-sm">Save override</SubmitButton>
-              </form>
-
-              <form action={agreeMrr} className="flex flex-col gap-2">
-                <input type="hidden" name="tenant_id" value={tenantId} />
-                <input type="hidden" name="assessment_id" value={latest.id} />
-                <span style={label}>Agree the contracted rate</span>
-                <input
-                  name="agreed_mrr"
-                  inputMode="numeric"
-                  placeholder="£ / month"
-                  defaultValue={
-                    latest.agreed_mrr ??
-                    latest.override_mrr ??
-                    latest.recommended_mrr ??
-                    ""
-                  }
                   style={inp}
                 />
                 <span
@@ -682,13 +756,70 @@ export default async function ClientPricingPage({
                     color: "var(--k-faint)",
                   }}
                 >
-                  This is the figure every billing flow charges — Direct Debit, Stripe and
-                  manually recorded plans.
+                  Moves all three prices with the band. The formula&apos;s own band stays
+                  in the audit trail.
                 </span>
-                <SubmitButton className="kb kb-primary kb-sm">
-                  Set contracted rate
+                <SubmitButton className="kb kb-outline kb-sm">
+                  Override bracket
                 </SubmitButton>
               </form>
+
+              {latest.enterprise_review_required ? (
+                <form action={agreeMrr} className="flex flex-col gap-2">
+                  <input type="hidden" name="tenant_id" value={tenantId} />
+                  <input type="hidden" name="assessment_id" value={latest.id} />
+                  <span style={label}>Enterprise — agree the monthly figure</span>
+                  <input
+                    name="agreed_mrr"
+                    inputMode="numeric"
+                    placeholder="£ / month"
+                    defaultValue={latest.agreed_mrr ?? latest.override_mrr ?? ""}
+                    style={inp}
+                  />
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.74rem",
+                      color: "var(--k-faint)",
+                    }}
+                  >
+                    Enterprise is never self-serve: this is the figure the Order Form
+                    carries and the Direct Debit collects.
+                  </span>
+                  <SubmitButton className="kb kb-primary kb-sm">
+                    Set agreed figure
+                  </SubmitButton>
+                </form>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <span style={label}>What happens next</span>
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.82rem",
+                      color: "var(--k-muted)",
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    The bracket is set. Once the system is live, send the client their
+                    options from the Direct Debits board — they choose Core, Pro or Max at
+                    these prices, agree the terms and set up the Direct Debit themselves.
+                  </p>
+                  {effective !== null && (
+                    <span
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "0.64rem",
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        color: "var(--k-faint)",
+                      }}
+                    >
+                      Core anchor {gbp(effective)}/mo · formula {latest.pricing_version}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </Panel>
         </div>
@@ -956,23 +1087,8 @@ export default async function ClientPricingPage({
           <input type="hidden" name="evidence_id" value={scanIsNewer ? scan!.id : ""} />
           <input type="hidden" name="field_states" value={JSON.stringify(fs)} />
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <label>
-              <span style={label}>Plan level</span>
-              <select
-                name="plan"
-                defaultValue={prev?.plan ?? "core"}
-                style={{ ...inp, height: 34 }}
-              >
-                {CARE_PLANS.map((p) => (
-                  <option key={p.id} value={p.nsiPlan}>
-                    {p.label}
-                    {p.quotedOnly ? " (quoted)" : ` — from £${p.mrr}`}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="sm:col-span-2">
               <span style={label}>
                 Platform role — what the system does for them
                 <StateTag state={fs.platformRole} />
@@ -1152,8 +1268,7 @@ export default async function ClientPricingPage({
                       color: "var(--k-muted)",
                     }}
                   >
-                    {dateGB(h.created_at)} · {carePlanForNsi(h.plan)?.label ?? h.plan} ·
-                    NSI {h.nsi} ·{" "}
+                    {dateGB(h.created_at)} · NSI {h.nsi} ·{" "}
                     {h.enterprise_review_required
                       ? "Enterprise"
                       : (SCALE_BAND_LABEL[
