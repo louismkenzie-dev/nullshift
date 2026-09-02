@@ -9,6 +9,7 @@ import { createServiceClient } from "@nullshift/db";
 import { logAuditAsService } from "@nullshift/db/audit";
 import { carePlan } from "@/lib/carePlans";
 import { contractedMrr } from "@/lib/pricing/contracted";
+import { recordCarePlanPayment } from "@/lib/carePlanInvoice";
 
 /**
  * GoCardless webhook (point the dashboard endpoint at /api/gocardless/webhook).
@@ -307,6 +308,34 @@ export async function POST(req: Request) {
           if (error) {
             console.error(`gocardless payments.${event.action} update failed:`, error);
             return new Response("db error", { status: 500 });
+          }
+          // A confirmed collection is revenue: raise the paid care-plan invoice
+          // here and in Xero (idempotent on the payment id, so the later
+          // paid_out event and any retry are no-ops).
+          if (RECOVERS.includes(event.action) && payment && payment.amountPence > 0) {
+            const subQuery = supabase
+              .from("subscriptions")
+              .select("id, tenant_id, plan")
+              .limit(1);
+            const { data: sub } = await (
+              gcSubId
+                ? subQuery.eq("gc_subscription_id", gcSubId)
+                : subQuery.eq("gc_mandate_id", mandateId!)
+            ).maybeSingle();
+            if (sub) {
+              try {
+                await recordCarePlanPayment(supabase, {
+                  tenantId: sub.tenant_id,
+                  subscriptionId: sub.id,
+                  plan: sub.plan,
+                  paymentId,
+                  amountPence: payment.amountPence,
+                  chargeDate: payment.chargeDate,
+                });
+              } catch (e) {
+                console.error("care plan invoice failed:", e);
+              }
+            }
           }
           for (const row of updated ?? [])
             await logAuditAsService({

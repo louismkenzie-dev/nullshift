@@ -184,9 +184,11 @@ export async function recordXeroPayment(opts: {
   xeroInvoiceId: string;
   amount: number;
   dateISO?: string;
+  /** Override the account (e.g. the GoCardless clearing account). */
+  accountCode?: string;
 }): Promise<{ ok: boolean } | null> {
   if (!isXeroConfigured()) return null;
-  const account = process.env.XERO_PAYMENT_ACCOUNT_CODE;
+  const account = opts.accountCode || process.env.XERO_PAYMENT_ACCOUNT_CODE;
   if (!account) return null;
   await xeroFetch("/Payments", {
     method: "PUT",

@@ -63,6 +63,8 @@ the board shows "Not configured" and every Direct Debit button is disabled.
 **Xero invoicing (the invoice rail when set; Stripe is the fallback):**
 `XERO_CLIENT_ID`, `XERO_CLIENT_SECRET` — optional tuning:
 `XERO_SALES_ACCOUNT_CODE`, `XERO_PAYMENT_ACCOUNT_CODE`, `XERO_TAX_TYPE`,
+`XERO_GOCARDLESS_ACCOUNT_CODE` (the GoCardless clearing bank account in Xero —
+care-plan collections are recorded against it; falls back to the payment account),
 `INVOICE_RAIL=stripe` to keep Stripe hosted invoices client-facing.
 
 **Auto-scoring (reads a client's repo + database to draft the scale assessment):**

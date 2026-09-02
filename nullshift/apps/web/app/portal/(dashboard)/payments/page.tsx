@@ -98,7 +98,11 @@ export default async function PortalPaymentsPage() {
   // untrue about their own account.
   const balance = tenantBalance(
     (projects ?? []) as { id: string; proposal_status: string | null }[],
-    (items ?? []) as { project_id: string | null; amount: number; status: string | null }[],
+    (items ?? []) as {
+      project_id: string | null;
+      amount: number;
+      status: string | null;
+    }[],
     (invoices ?? []) as Invoice[]
   );
   const outstanding = balance.outstandingTotal;
@@ -231,9 +235,9 @@ export default async function PortalPaymentsPage() {
                     maxWidth: "56ch",
                   }}
                 >
-                  This is the balance of the work we agreed, after everything
-                  you&apos;ve already paid. We&apos;ll send the invoice for it — you
-                  don&apos;t need to do anything yet, and nothing is overdue.
+                  This is the balance of the work we agreed, after everything you&apos;ve
+                  already paid. We&apos;ll send the invoice for it — you don&apos;t need
+                  to do anything yet, and nothing is overdue.
                 </span>
               </div>
               <StatusChip tone="warning">Invoice coming</StatusChip>
@@ -257,8 +261,8 @@ export default async function PortalPaymentsPage() {
                 }}
               >
                 You don&apos;t have a monthly plan yet. Choosing one sets up hosting,
-                monitoring and support by Direct Debit — or you can tell us you
-                don&apos;t want one.
+                monitoring and support by Direct Debit — or you can tell us you don&apos;t
+                want one.
               </span>
               <a
                 href="/portal/plan"
@@ -320,7 +324,9 @@ export default async function PortalPaymentsPage() {
                             ? "Deposit / one-off"
                             : inv.type === "build_milestone"
                               ? "Build invoice"
-                              : "Invoice"}{" "}
+                              : inv.type === "care_plan"
+                                ? "Care plan"
+                                : "Invoice"}{" "}
                           ·{" "}
                           {inv.status === "paid" && inv.paid_at
                             ? `Paid ${dateGB(inv.paid_at)}`

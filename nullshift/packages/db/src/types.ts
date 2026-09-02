@@ -155,6 +155,7 @@ export type Database = {
           project_id: string | null;
           status: Database["public"]["Enums"]["invoice_status"];
           stripe_invoice_id: string | null;
+          gc_payment_id: string | null;
           tenant_id: string;
           type: Database["public"]["Enums"]["invoice_type"];
           updated_at: string;
@@ -168,6 +169,7 @@ export type Database = {
           project_id?: string | null;
           status?: Database["public"]["Enums"]["invoice_status"];
           stripe_invoice_id?: string | null;
+          gc_payment_id?: string | null;
           tenant_id: string;
           type: Database["public"]["Enums"]["invoice_type"];
           updated_at?: string;
@@ -181,6 +183,7 @@ export type Database = {
           project_id?: string | null;
           status?: Database["public"]["Enums"]["invoice_status"];
           stripe_invoice_id?: string | null;
+          gc_payment_id?: string | null;
           tenant_id?: string;
           type?: Database["public"]["Enums"]["invoice_type"];
           updated_at?: string;
@@ -442,7 +445,7 @@ export type Database = {
       compliance_kind: "dpa_signed" | "data_register" | "breach" | "sar" | "backup_check";
       document_kind: "asset" | "contract" | "dpa" | "consent" | "brief";
       invoice_status: "draft" | "open" | "paid" | "void" | "uncollectible";
-      invoice_type: "build_milestone" | "one_off";
+      invoice_type: "build_milestone" | "one_off" | "care_plan";
       lead_status: "new" | "qualified" | "call_booked" | "won" | "lost";
       membership_role: "owner" | "staff" | "client_admin" | "client_member";
       project_stage: "discovery" | "build" | "review" | "live" | "care";

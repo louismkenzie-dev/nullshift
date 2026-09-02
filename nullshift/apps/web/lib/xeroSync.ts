@@ -22,7 +22,11 @@ type Service = ReturnType<typeof createServiceClient>;
  */
 export async function syncInvoiceToXero(
   service: Service,
-  invoiceId: string
+  invoiceId: string,
+  opts: {
+    /** Where a payment is recorded — defaults to XERO_PAYMENT_ACCOUNT_CODE. */
+    paymentAccountCode?: string;
+  } = {}
 ): Promise<{ ok: boolean; xeroInvoiceId?: string; onlineUrl?: string | null }> {
   if (!isXeroConfigured()) return { ok: false };
   try {
@@ -83,7 +87,9 @@ export async function syncInvoiceToXero(
                   ? "Deposit / one-off payment"
                   : inv.type === "build_milestone"
                     ? "System build"
-                    : "Nullshift invoice",
+                    : inv.type === "care_plan"
+                      ? "Care plan"
+                      : "Nullshift invoice",
               amount: Number(inv.amount),
             },
           ];
@@ -102,10 +108,15 @@ export async function syncInvoiceToXero(
     // Xero's online invoice — the client-facing document when Xero is the
     // rail. Only fills hosted_invoice_url when nothing (a Stripe link) is
     // there already.
-    const onlineUrl = await getXeroOnlineInvoiceUrl(created.invoiceId).catch((e) => {
-      console.warn("Xero online invoice URL unavailable:", e);
-      return null;
-    });
+    // An already-paid invoice (a care-plan collection) has nothing to pay
+    // online — skip the extra round-trip.
+    const onlineUrl =
+      inv.status === "paid"
+        ? null
+        : await getXeroOnlineInvoiceUrl(created.invoiceId).catch((e) => {
+            console.warn("Xero online invoice URL unavailable:", e);
+            return null;
+          });
     await service
       .from("invoices")
       .update({ xero_invoice_id: created.invoiceId })
@@ -124,6 +135,7 @@ export async function syncInvoiceToXero(
         xeroInvoiceId: created.invoiceId,
         amount: Number(inv.amount),
         dateISO: inv.paid_at ?? undefined,
+        accountCode: opts.paymentAccountCode,
       });
     }
     return { ok: true, xeroInvoiceId: created.invoiceId, onlineUrl };

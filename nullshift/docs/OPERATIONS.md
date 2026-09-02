@@ -279,7 +279,12 @@ sends all events to the endpoint; the handler acts on these and 200-acks the res
 - `subscriptions` / `cancelled`, `finished` — row → `canceled`.
 - `payments` / `failed`, `late_failure_settled`, `charged_back` — the row → `past_due`
   (the payment is fetched to find its subscription); `confirmed` / `paid_out` → back to
-  `active`. A reused Idempotency-Key returns 409 `idempotent_creation_conflict`, which the
+  `active`. A `confirmed` collection also raises a **paid care-plan invoice** (type
+  `care_plan`, one per GoCardless payment id) and mirrors it into Xero with the payment
+  recorded against `XERO_GOCARDLESS_ACCOUNT_CODE` — the GoCardless clearing bank account
+  in Xero (give the "GoCardless-GBP" account a code). GoCardless payouts then reconcile
+  in the Revolut feed as transfers from that clearing account, not as unexplained income.
+  Audit: `care_plan.payment_invoiced`. A reused Idempotency-Key returns 409 `idempotent_creation_conflict`, which the
   client adopts rather than failing (`GoCardlessConflictError`).
 
 **The flow:** client chooses a plan in the portal → `startCareDirectDebit()` creates a
