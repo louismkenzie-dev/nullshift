@@ -4,18 +4,23 @@ Written for the session that continues this work (local memory does not travel t
 cloud sessions). Read alongside `docs/OPERATIONS.md` → "Client portal access links",
 "Direct Debits board", "GoCardless Direct Debit".
 
-## State
+## State (updated 2026-09-02, afternoon)
 
-- **main (production, 02409ba):** the reconciled tree — old GitHub main + the local ops
-  Phases 2–4 (migrations renumbered 0040–0043) + the portal reset-link rework
-  (`lib/portalLinks.ts`, `lib/portalAccess.ts`, `portal/reset/*`). Verified end to end
-  locally with a throwaway user (invite + recovery links); the throwaway was deleted.
-- **feat/direct-debits (2aa9b50, one commit ahead of main):** Phase 1 of the Direct Debits
-  feature. tsc clean, 235 vitest tests green, `next build` succeeds. NOT yet deployed —
-  Louis has to say "push". No migration in this phase.
+- **main (production):** Phase 1 of Direct Debits is deployed (2aa9b50), plus
+  auto-scoring (337f630 — `scale_evidence`, migration 0044 applied to Nullshift Ops)
+  and Xero as the invoice rail (074a412). Every push to main deploys; the owner works
+  on one branch and gives prompts — no fast-forward step any more.
+- **GoCardless:** webhook endpoint created in the GoCardless dashboard;
+  `GOCARDLESS_ACCESS_TOKEN` + `GOCARDLESS_WEBHOOK_SECRET` added to Vercel by Louis.
+  `GOCARDLESS_ENVIRONMENT` unset → the board shows Sandbox until the live pair goes in.
+- **Still to configure:** `SUPABASE_ACCESS_TOKEN` (auto-scoring reads client databases),
+  `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` (Xero becomes the invoice rail; a payment
+  service connected in Xero gives the online invoice a Pay-now button).
 - Supabase Auth URL config fixed by Louis 2026-09-02 (Site URL https, `https://nullshift.co.uk/**`).
-- Vercel production still has **no GOCARDLESS\_\* env vars**. A GoCardless merchant account
-  exists (louis@nullshift.co.uk, verified Jul 2026). Sandbox rehearsal, then live.
+- Amie (The Dance Exclusive): account exists, never signed in, never reset — she was
+  emailed a reference password on 19 Aug under the old flow. Fix = score her, then
+  "Send sign-in link" from the board. The unscored state is now one click away:
+  "Analyse the system" on her pricing page drafts the assessment from her repo + DB.
 
 ## What Phase 1 does (see commit 2aa9b50 message for detail)
 
@@ -39,8 +44,7 @@ to `tenants.contact_email` with an override field on the board.
 
 ## Remaining steps
 
-1. Louis: "push" → fast-forward main to `feat/direct-debits`, Vercel deploys. Confirm the board
-   renders (needs an admin login) and `/portal/plan` for a scored client.
+1. ~~Louis: "push" → fast-forward main~~ Done; deployed and verified live.
 2. Louis: score The Dance Exclusive (`/admin/clients/2e458eb1-2217-40d2-a52e-9bdfc32c797e/pricing`,
    enter £0 vendor cost if none, Save, "Set contracted rate"), then from the board "Send sign-in
    link" (she has never signed in; her account is hello@thedanceexclusive.co.uk — confirm she
