@@ -38,7 +38,7 @@ export type ContractedPrices = {
 };
 
 const ASSESSMENT_COLUMNS =
-  "id, plan, scale_band, multiplier, direct_cost_floor, recommended_mrr, override_mrr, agreed_mrr, enterprise_review_required, pricing_version, created_at";
+  "id, plan, scale_band, multiplier, direct_cost_floor, recommended_mrr, override_mrr, agreed_mrr, enterprise_review_required, pricing_version, plan_prices, created_at";
 
 export async function latestAssessment(tenantId: string): Promise<AssessmentRow | null> {
   if (!tenantId) return null;
@@ -89,6 +89,7 @@ export async function contractedMrr(
     multiplier: null,
     pricingVersion: null,
     assessmentId: null,
+    note: null,
   };
   if (!plan) return fallback;
   const price = priceFromAssessment(await latestAssessment(tenantId), plan);

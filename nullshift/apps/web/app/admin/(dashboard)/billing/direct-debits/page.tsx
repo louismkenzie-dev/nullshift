@@ -132,7 +132,7 @@ export default async function DirectDebitsPage() {
     service
       .from("scale_assessments")
       .select(
-        "id, tenant_id, plan, scale_band, multiplier, direct_cost_floor, recommended_mrr, override_mrr, agreed_mrr, enterprise_review_required, pricing_version, created_at"
+        "id, tenant_id, plan, scale_band, multiplier, direct_cost_floor, recommended_mrr, override_mrr, agreed_mrr, enterprise_review_required, pricing_version, plan_prices, created_at"
       )
       .order("created_at", { ascending: false }),
     service.from("memberships").select("tenant_id, user_id").eq("role", "client_admin"),

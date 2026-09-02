@@ -146,3 +146,50 @@ describe("priceFromAssessment", () => {
     expect(priceFromAssessment(r, carePlan("hosting")!).mrr).toBe(60);
   });
 });
+
+describe("hand-set plan prices", () => {
+  const row: AssessmentRow = {
+    id: "a1",
+    plan: "core",
+    scale_band: "growth",
+    multiplier: 1.5,
+    direct_cost_floor: 80,
+    recommended_mrr: 80,
+    override_mrr: null,
+    agreed_mrr: null,
+    enterprise_review_required: false,
+    pricing_version: "NSI_v1_2026_08",
+    plan_prices: { pro: { mrr: 95, reason: "Includes the weekly export you asked for" } },
+  };
+  it("wins for the plan it names and carries the client-facing reason", () => {
+    expect(priceFromAssessment(row, carePlan("hosting_api")!)).toMatchObject({
+      mrr: 95,
+      source: "override",
+      priced: true,
+      note: "Includes the weekly export you asked for",
+    });
+  });
+  it("leaves the other plans on the formula", () => {
+    expect(priceFromAssessment(row, carePlan("hosting")!)).toMatchObject({
+      mrr: 80,
+      source: "formula",
+      note: null,
+    });
+    expect(priceFromAssessment(row, carePlan("build_3")!)).toMatchObject({
+      mrr: 180,
+      source: "derived",
+      note: null,
+    });
+  });
+  it("an agreed figure for the exact plan still beats a hand-set one", () => {
+    const agreed: AssessmentRow = {
+      ...row,
+      agreed_mrr: 70,
+      plan_prices: { core: { mrr: 60, reason: "x" } },
+    };
+    expect(priceFromAssessment(agreed, carePlan("hosting")!)).toMatchObject({
+      mrr: 70,
+      source: "agreed",
+    });
+  });
+});

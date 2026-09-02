@@ -250,6 +250,12 @@ The owner's surface for recurring billing — one row per client:
    gated on: rail configured, client scored, an email on file, and a signed proposal
    or a paid invoice). Both start through `lib/directDebit.ts`, as does the portal.
 
+**Prices.** The score sets the bracket; Core / Pro / Max follow from the band. On the
+pricing page the owner can set any plan's price by hand (`scale_assessments.plan_prices`,
+migration 0047) with a reason the client sees on their chooser, on the confirm step and in
+the plan-options email; a blank price returns that plan to the formula. Audit:
+`scale_assessment.plan_prices_set` (before/after).
+
 **Two rules the board enforces.** (1) The plan is chosen by the client, after the
 build: "Send plan options" and the portal chooser stay closed until a project of theirs
 is `live` / `care` / `complete` (`lib/planGate.ts`), and staff never pick a plan on a

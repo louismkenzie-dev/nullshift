@@ -23,6 +23,15 @@ export type AssessmentRow = {
   enterprise_review_required: boolean;
   pricing_version: string;
   created_at?: string;
+  /**
+   * Hand-set prices per plan (keyed by nsi plan id: core / pro / max), each
+   * with the reason the client is shown. Wins over everything but an agreed
+   * figure for the exact plan.
+   */
+  plan_prices?: Record<
+    string,
+    { mrr: number | string | null; reason?: string | null }
+  > | null;
 };
 
 export type PriceSource =
@@ -44,6 +53,8 @@ export type PlanPrice = {
   multiplier: number | null;
   pricingVersion: string | null;
   assessmentId: string | null;
+  /** Client-facing reason for a hand-set price; null when the formula priced it. */
+  note: string | null;
 };
 
 const num = (v: number | string | null | undefined): number | null =>
@@ -60,6 +71,7 @@ export function priceFromAssessment(
     multiplier: num(row?.multiplier),
     pricingVersion: row?.pricing_version ?? null,
     assessmentId: row?.id ?? null,
+    note: null as string | null,
   };
 
   // Not scored yet: the catalogue figure is informational only. Nothing may be
@@ -74,6 +86,19 @@ export function priceFromAssessment(
   // Enterprise, which is the only way an Enterprise plan ever gets a price.
   if (exact && agreed !== null)
     return { ...base, mrr: agreed, source: "agreed", priced: true };
+
+  // A price set by hand for this plan, with the reason the client sees.
+  const handSet = row.plan_prices?.[plan.nsiPlan];
+  const handMrr = num(handSet?.mrr ?? null);
+  if (handMrr !== null && handMrr >= 0)
+    return {
+      ...base,
+      mrr: handMrr,
+      source: "override",
+      priced: true,
+      note: handSet?.reason?.trim() || null,
+    };
+
   if (exact && override !== null)
     return { ...base, mrr: override, source: "override", priced: true };
 

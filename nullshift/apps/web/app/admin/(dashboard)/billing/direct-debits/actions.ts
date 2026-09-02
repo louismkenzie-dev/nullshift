@@ -124,7 +124,7 @@ export async function sendPlanInvite(formData: FormData) {
     .filter((s) => s.priced && s.mrr !== null)
     .map((s) => {
       const p = carePlan(s.planId)!;
-      return { label: p.label, mrr: s.mrr!, blurb: p.blurb };
+      return { label: p.label, mrr: s.mrr!, blurb: p.blurb, note: s.note };
     });
   if (options.length === 0) return; // not scored / Enterprise — nothing to offer yet
 

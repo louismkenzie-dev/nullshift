@@ -17,9 +17,6 @@ import {
   PRICING_VERSION,
   RISK_FLAG_LABEL,
   SCALE_BAND_LABEL,
-  scaleBandFor,
-  ceilToFive,
-  BASE_PLAN_PRICE,
   type EnterpriseFlags,
   type PlanId,
   type PlatformRole,
@@ -178,64 +175,53 @@ async function analyseSystem(formData: FormData) {
 }
 
 /**
- * Override the bracket — a deliberate commercial call, reason required, owner
- * recorded. Moves the assessment to the chosen band's multiplier and re-prices
- * the Core anchor (Pro and Max follow from the band); the formula's original
- * band stays in the audit trail.
+ * Set any of the three plan prices by hand. The score sets the bracket and the
+ * three prices follow from it; this lets the owner adjust one, two or all
+ * three, each with a reason the CLIENT sees next to the price on their
+ * chooser and in the plan-options email. Blank price = back to the formula.
  */
-async function overrideBracket(formData: FormData) {
+async function setPlanPrices(formData: FormData) {
   "use server";
   const staff = await requireStaff();
   if (!staff.ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
   const id = String(formData.get("assessment_id") || "");
-  const band = String(formData.get("band") || "") as ScaleBand;
-  const reason = String(formData.get("override_reason") || "").trim();
-  if (!tenantId || !id || !(band in SCALE_BAND_LABEL) || !reason) return;
-  const multiplier = {
-    standard: 1.0,
-    growth: 1.5,
-    established: 2.5,
-    scale: 4.0,
-    critical: 5.5,
-  }[band];
+  if (!tenantId || !id) return;
+
+  const next: Record<
+    string,
+    { mrr: number; reason: string; setBy: string; setAt: string }
+  > = {};
+  for (const key of ["core", "pro", "max"] as const) {
+    const mrr = num(formData.get(`price_${key}`));
+    const reason = String(formData.get(`reason_${key}`) || "").trim();
+    if (mrr === null) continue;
+    // A hand-set price without a reason would show the client a figure with
+    // no explanation — refuse the whole save so nothing half-applies.
+    if (mrr < 0 || !reason) {
+      redirect(`/admin/clients/${tenantId}/pricing?prices_error=${key}`);
+    }
+    next[key] = { mrr, reason, setBy: staff.userId, setAt: new Date().toISOString() };
+  }
 
   const service = createServiceClient();
   const { data: row } = await service
     .from("scale_assessments")
-    .select("scale_band, multiplier, direct_cost_floor")
+    .select("plan_prices")
     .eq("id", id)
     .eq("tenant_id", tenantId)
     .maybeSingle();
   if (!row) return;
-  const floor = row.direct_cost_floor === null ? 0 : Number(row.direct_cost_floor);
-  const coreMrr = ceilToFive(Math.max(BASE_PLAN_PRICE.core * multiplier, floor));
   await service
     .from("scale_assessments")
-    .update({
-      scale_band: band,
-      multiplier,
-      scaled_plan_price: BASE_PLAN_PRICE.core * multiplier,
-      override_mrr: coreMrr,
-      override_reason: reason,
-      overridden_by: staff.userId,
-      enterprise_review_required: false,
-    })
+    .update({ plan_prices: next })
     .eq("id", id)
     .eq("tenant_id", tenantId);
   await logAudit({
-    action: "scale_assessment.overridden",
+    action: "scale_assessment.plan_prices_set",
     target: `tenant:${tenantId}`,
     tenantId,
-    metadata: {
-      assessment: id,
-      fromBand: row.scale_band,
-      fromMultiplier: row.multiplier,
-      toBand: band,
-      toMultiplier: multiplier,
-      coreMrr,
-      reason,
-    },
+    metadata: { assessment: id, before: row.plan_prices ?? {}, after: next },
   });
   revalidatePath(`/admin/clients/${tenantId}/pricing`);
   revalidatePath(`/admin/clients/${tenantId}`);
@@ -447,6 +433,10 @@ type Row = {
   override_reason: string | null;
   agreed_mrr: number | null;
   agreed_at: string | null;
+  plan_prices?: Record<
+    string,
+    { mrr: number | string | null; reason?: string | null }
+  > | null;
 };
 
 export default async function ClientPricingPage({
@@ -454,10 +444,10 @@ export default async function ClientPricingPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ scan_error?: string }>;
+  searchParams: Promise<{ scan_error?: string; prices_error?: string }>;
 }) {
   const { id: tenantId } = await params;
-  const { scan_error: scanError } = await searchParams;
+  const { scan_error: scanError, prices_error: pricesError } = await searchParams;
   if (!(await requireStaff()).ok) notFound();
 
   const service = createServiceClient();
@@ -605,6 +595,21 @@ export default async function ClientPricingPage({
                       >
                         {pp.priced && pp.mrr !== null ? gbp(pp.mrr) : "—"}
                       </span>
+                      {pp.note && (
+                        <span
+                          title={pp.note}
+                          style={{
+                            fontFamily: T.mono,
+                            fontSize: "0.58rem",
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                            color: T.warning,
+                            marginLeft: 6,
+                          }}
+                        >
+                          set by hand
+                        </span>
+                      )}
                     </span>
                   ))}
                   {latest.enterprise_review_required && (
@@ -698,57 +703,65 @@ export default async function ClientPricingPage({
                 borderTop: "1px solid var(--k-border)",
               }}
             >
-              <form action={overrideBracket} className="flex flex-col gap-2">
+              <form action={setPlanPrices} className="flex flex-col gap-3">
                 <input type="hidden" name="tenant_id" value={tenantId} />
                 <input type="hidden" name="assessment_id" value={latest.id} />
-                <span style={label}>Override the bracket</span>
-                <select
-                  name="band"
-                  defaultValue={latest.scale_band ?? "standard"}
-                  style={{ ...inp, height: 34 }}
-                >
-                  {(Object.keys(SCALE_BAND_LABEL) as ScaleBand[]).map((b) => (
-                    <option key={b} value={b}>
-                      {SCALE_BAND_LABEL[b]} ×
-                      {
-                        scaleBandFor(
-                          {
-                            standard: 0,
-                            growth: 30,
-                            established: 45,
-                            scale: 60,
-                            critical: 75,
-                          }[b]
-                        )?.multiplier
-                      }
-                      {" · "}Core{" "}
-                      {gbp(
-                        ceilToFive(
-                          Math.max(
-                            BASE_PLAN_PRICE.core *
-                              (scaleBandFor(
-                                {
-                                  standard: 0,
-                                  growth: 30,
-                                  established: 45,
-                                  scale: 60,
-                                  critical: 75,
-                                }[b]
-                              )?.multiplier ?? 1),
-                            Number(latest.direct_cost_floor ?? 0)
-                          )
-                        )
-                      )}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  name="override_reason"
-                  required
-                  placeholder="Reason (required, stored with your name)"
-                  defaultValue={latest.override_reason ?? ""}
-                  style={inp}
-                />
+                <span style={label}>
+                  Set plan prices by hand — the client sees the reason
+                </span>
+                {pricesError && (
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.8rem",
+                      color: T.warning,
+                      margin: 0,
+                    }}
+                  >
+                    A hand-set price needs a reason ({pricesError}). Nothing was saved.
+                  </p>
+                )}
+                {threePrices?.sellable.map((pp) => {
+                  const key =
+                    carePlanForNsi(latest.plan) && pp.planId
+                      ? ["hosting", "hosting_api", "build_3"].indexOf(pp.planId) >= 0
+                        ? (["core", "pro", "max"][
+                            ["hosting", "hosting_api", "build_3"].indexOf(pp.planId)
+                          ] as string)
+                        : pp.planId
+                      : pp.planId;
+                  const current = latest.plan_prices?.[key];
+                  return (
+                    <div
+                      key={pp.planId}
+                      className="grid grid-cols-1 sm:grid-cols-[110px_1fr] gap-2 items-start"
+                    >
+                      <label>
+                        <span style={label}>{pp.label}</span>
+                        <input
+                          name={`price_${key}`}
+                          inputMode="numeric"
+                          placeholder={
+                            pp.priced && pp.mrr !== null && !pp.note
+                              ? `${gbp(pp.mrr)} formula`
+                              : "£ / month"
+                          }
+                          defaultValue={current?.mrr ?? ""}
+                          style={inp}
+                        />
+                      </label>
+                      <label>
+                        <span style={label}>Why — shown to the client</span>
+                        <input
+                          name={`reason_${key}`}
+                          placeholder="e.g. Includes the extra weekly backup you asked for"
+                          defaultValue={current?.reason ?? ""}
+                          style={inp}
+                        />
+                      </label>
+                    </div>
+                  );
+                })}
                 <span
                   style={{
                     fontFamily: T.sans,
@@ -756,11 +769,11 @@ export default async function ClientPricingPage({
                     color: "var(--k-faint)",
                   }}
                 >
-                  Moves all three prices with the band. The formula&apos;s own band stays
-                  in the audit trail.
+                  Leave a price blank to go back to the formula for that plan. Saved with
+                  your name; every change is audited.
                 </span>
                 <SubmitButton className="kb kb-outline kb-sm">
-                  Override bracket
+                  Save plan prices
                 </SubmitButton>
               </form>
 

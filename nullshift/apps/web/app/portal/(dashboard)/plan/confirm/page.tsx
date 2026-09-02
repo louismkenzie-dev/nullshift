@@ -121,6 +121,32 @@ export default async function ConfirmPlanPage({
             >
               {plan.blurb}
             </p>
+            {price.note && (
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.82rem",
+                  color: "var(--k-fg)",
+                  marginTop: 10,
+                  padding: "8px 10px",
+                  border: "1px dashed var(--k-border)",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "0.6rem",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--k-muted)",
+                  }}
+                >
+                  Why this price
+                </span>
+                <br />
+                {price.note}
+              </p>
+            )}
             <ul className="flex flex-col gap-1" style={{ marginTop: 12 }}>
               {plan.features.map((f) => (
                 <li key={f} className="flex items-start gap-2">

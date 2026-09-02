@@ -244,6 +244,32 @@ export default async function PortalPlanPage({
                 >
                   {p.blurb}
                 </p>
+                {pp.note && (
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.78rem",
+                      color: "var(--k-fg)",
+                      lineHeight: 1.5,
+                      padding: "8px 10px",
+                      border: "1px dashed var(--k-border)",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: "0.6rem",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "var(--k-muted)",
+                      }}
+                    >
+                      Why this price
+                    </span>
+                    <br />
+                    {pp.note}
+                  </p>
+                )}
                 <ul
                   className="flex flex-col gap-1"
                   style={{ flex: 1, margin: "4px 0 6px" }}

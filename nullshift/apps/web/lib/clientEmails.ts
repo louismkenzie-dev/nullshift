@@ -405,7 +405,7 @@ cancel any time. If you weren't expecting this, just reply and tell us.
  */
 export function planInviteEmail(opts: {
   name: string;
-  options: { label: string; mrr: number; blurb: string }[];
+  options: { label: string; mrr: number; blurb: string; note?: string | null }[];
   url: string;
   /** True when the link sets their password (first sign-in). */
   firstSignIn: boolean;
@@ -419,7 +419,7 @@ export function planInviteEmail(opts: {
     .map(
       (o, i) => `<tr>
         <td style="padding:12px 16px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:14px;font-weight:700;color:${C.fg};vertical-align:top;white-space:nowrap">${esc(o.label)}</td>
-        <td style="padding:12px 16px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:13px;line-height:1.55;color:${C.muted};vertical-align:top">${esc(o.blurb)}</td>
+        <td style="padding:12px 16px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:13px;line-height:1.55;color:${C.muted};vertical-align:top">${esc(o.blurb)}${o.note ? `<br/><span style="color:${C.fg}">Why this price: ${esc(o.note)}</span>` : ""}</td>
         <td style="padding:12px 16px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:14px;color:${C.fg};text-align:right;white-space:nowrap;vertical-align:top">${gbp(o.mrr)}<span style="color:${C.faint};font-size:12px">/month</span></td>
       </tr>`
     )
@@ -451,7 +451,7 @@ export function planInviteEmail(opts: {
 
 Your plan options are ready — priced for your system, collected monthly by Direct Debit, cancel any time:
 
-${options.map((o) => `- ${o.label}: ${gbp(o.mrr)}/month — ${o.blurb}`).join("\n")}
+${options.map((o) => `- ${o.label}: ${gbp(o.mrr)}/month — ${o.blurb}${o.note ? ` (Why this price: ${o.note})` : ""}`).join("\n")}
 
 ${firstSignIn ? "Choose your password and pick a plan here (single-use link, valid for one hour):" : "Sign in and pick a plan here:"}
 ${url}
