@@ -7,6 +7,7 @@ import { logAudit } from "@nullshift/db/audit";
 import { getMrrSummary } from "@nullshift/billing/mrr";
 import { getStripe } from "@nullshift/billing/stripe";
 import { cancelGoCardlessSubscription } from "@nullshift/billing/gocardless";
+import { getXeroSetupStatus, type XeroSetupStatus } from "@nullshift/billing/xero";
 import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
@@ -247,12 +248,103 @@ const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
 
 /* ── Page ───────────────────────────────────────────────────────── */
 
+/**
+ * Xero status strip. Answers, on the page itself, whether the custom
+ * connection works, which organisation it is bound to and whether the payment
+ * and sales account codes point at real accounts — so a wrong env var shows
+ * up here rather than as a failed payment record later.
+ */
+function XeroStatus({ status }: { status: XeroSetupStatus | null }) {
+  const line: React.CSSProperties = {
+    fontFamily: T.sans,
+    fontSize: "0.8rem",
+    color: "var(--k-muted)",
+  };
+  if (!status)
+    return (
+      <div className="flex flex-wrap items-center gap-3 mt-5" style={line}>
+        <StatusChip tone="warning">Xero: no answer within 6s</StatusChip>
+        <span>Connection status unknown this load — refresh to retry.</span>
+      </div>
+    );
+  if (!status.configured)
+    return (
+      <div className="flex flex-wrap items-center gap-3 mt-5" style={line}>
+        <StatusChip tone="muted">Xero not configured</StatusChip>
+        <span>
+          Set XERO_CLIENT_ID and XERO_CLIENT_SECRET to raise invoices in Xero; Stripe
+          hosted invoices are used until then.
+        </span>
+      </div>
+    );
+  const acct = status.paymentAccount;
+  const payOk = !!acct && acct.status === "ACTIVE" && acct.type === "BANK";
+  return (
+    <div className="flex flex-wrap items-center gap-3 mt-5" style={line}>
+      {status.organisation ? (
+        <StatusChip tone="success">Xero · {status.organisation.name}</StatusChip>
+      ) : status.needsSettingsScope ? (
+        <StatusChip tone="success">Xero connected</StatusChip>
+      ) : (
+        <StatusChip tone="danger">Xero: {status.error ?? "token failed"}</StatusChip>
+      )}
+      <StatusChip tone={status.primary ? "accent" : "muted"}>
+        {status.primary ? "Invoice rail: Xero" : "Invoice rail: Stripe (Xero mirrors)"}
+      </StatusChip>
+      {status.needsSettingsScope ? (
+        <span>
+          Account codes can't be checked — add the{" "}
+          <strong>accounting.settings.read</strong> scope to the custom connection
+          (developer.xero.com → your app → scopes, then reconnect).
+        </span>
+      ) : status.paymentAccountCode ? (
+        payOk ? (
+          <StatusChip tone="success">
+            Payments → {acct!.code} {acct!.name}
+            {acct!.bankAccountNumber ? ` · ${acct!.bankAccountNumber}` : ""}
+          </StatusChip>
+        ) : (
+          <StatusChip tone="danger">
+            {acct
+              ? `Payment account ${acct.code} is ${acct.type.toLowerCase()} / ${acct.status.toLowerCase()} — must be an active bank account`
+              : `No Xero account has code ${status.paymentAccountCode} — set it on the bank account in the chart of accounts`}
+          </StatusChip>
+        )
+      ) : (
+        <StatusChip tone="warning">
+          XERO_PAYMENT_ACCOUNT_CODE unset — invoices sync, payments stay manual in Xero
+        </StatusChip>
+      )}
+      {!status.needsSettingsScope &&
+        (status.salesAccount ? (
+          <span>
+            Sales → {status.salesAccount.code} {status.salesAccount.name}
+          </span>
+        ) : (
+          <StatusChip tone="danger">
+            No account with sales code {status.salesAccountCode}
+          </StatusChip>
+        ))}
+      {status.error && !status.needsSettingsScope && (
+        <span style={{ color: T.warning }}>{status.error}</span>
+      )}
+    </div>
+  );
+}
+
 export default async function BillingPage() {
   const supabase = await createClient();
   const period = currentPeriodStart();
   // Payments taken in Xero (online invoice / bookkeeper) flow back here
   // before the lists load — bounded, best-effort.
-  await reconcileXeroInvoices(createServiceClient(), { limit: 10 });
+  const [, xero] = await Promise.all([
+    reconcileXeroInvoices(createServiceClient(), { limit: 10 }),
+    // Bounded: a slow Xero must not hold the cockpit.
+    Promise.race<XeroSetupStatus | null>([
+      getXeroSetupStatus(),
+      new Promise<null>((r) => setTimeout(() => r(null), 6000)),
+    ]).catch(() => null),
+  ]);
   const [
     summary,
     { data: tenants },
@@ -349,6 +441,9 @@ export default async function BillingPage() {
         title="Money cockpit"
         lead="Retainers, build invoices and the cost guardrail — the numbers the business steers by."
       />
+
+      {/* Xero wiring — is the connection live and do the account codes resolve? */}
+      <XeroStatus status={xero} />
 
       {/* Tab strip — the Direct Debits board lives alongside the cockpit */}
       <div

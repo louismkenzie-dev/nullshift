@@ -271,3 +271,96 @@ export async function getXeroInvoiceStatus(
     fullyPaidOnDate: xeroDate(inv.FullyPaidOnDate),
   };
 }
+
+/* ── Setup status — answers "have I wired Xero up right?" in-product ── */
+
+export type XeroAccountInfo = {
+  code: string;
+  name: string;
+  type: string;
+  status: string;
+  /** Bank accounts only: sort code + account number as Xero holds them. */
+  bankAccountNumber: string | null;
+};
+
+export type XeroSetupStatus = {
+  configured: boolean;
+  /** Xero raises the invoices clients receive (vs. Stripe with Xero as mirror). */
+  primary: boolean;
+  organisation: { name: string; shortCode: string | null } | null;
+  paymentAccountCode: string | null;
+  paymentAccount: XeroAccountInfo | null;
+  salesAccountCode: string;
+  salesAccount: XeroAccountInfo | null;
+  /** The custom connection lacks accounting.settings.read — accounts can't be checked. */
+  needsSettingsScope: boolean;
+  error: string | null;
+};
+
+type OrganisationResponse = { Organisations?: { Name?: string; ShortCode?: string }[] };
+type AccountsResponse = {
+  Accounts?: {
+    Code?: string;
+    Name?: string;
+    Type?: string;
+    Status?: string;
+    BankAccountNumber?: string;
+  }[];
+};
+
+async function accountByCode(code: string): Promise<XeroAccountInfo | null> {
+  const res = await xeroFetch<AccountsResponse>(
+    `/Accounts?where=${encodeURIComponent(`Code=="${code.replace(/"/g, "")}"`)}`
+  );
+  const a = res?.Accounts?.[0];
+  if (!a?.Code) return null;
+  return {
+    code: a.Code,
+    name: a.Name ?? "",
+    type: a.Type ?? "",
+    status: a.Status ?? "",
+    bankAccountNumber: a.BankAccountNumber ?? null,
+  };
+}
+
+/**
+ * Live check of the Xero wiring: token exchange, which organisation the
+ * custom connection is bound to, and whether the configured payment and
+ * sales account codes resolve to real, active accounts. Never throws — the
+ * billing page renders whatever could be established plus the error.
+ */
+export async function getXeroSetupStatus(): Promise<XeroSetupStatus> {
+  const paymentAccountCode = process.env.XERO_PAYMENT_ACCOUNT_CODE || null;
+  const salesAccountCode = process.env.XERO_SALES_ACCOUNT_CODE || "200";
+  const base: XeroSetupStatus = {
+    configured: isXeroConfigured(),
+    primary: isXeroPrimary(),
+    organisation: null,
+    paymentAccountCode,
+    paymentAccount: null,
+    salesAccountCode,
+    salesAccount: null,
+    needsSettingsScope: false,
+    error: null,
+  };
+  if (!base.configured) return base;
+  try {
+    // Proves the client id/secret and the org binding.
+    const org = await xeroFetch<OrganisationResponse>("/Organisation");
+    const o = org?.Organisations?.[0];
+    if (o?.Name) base.organisation = { name: o.Name, shortCode: o.ShortCode ?? null };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/→ 403/.test(msg)) base.needsSettingsScope = true;
+    else return { ...base, error: msg.slice(0, 300) };
+  }
+  try {
+    base.salesAccount = await accountByCode(salesAccountCode);
+    if (paymentAccountCode) base.paymentAccount = await accountByCode(paymentAccountCode);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/→ 403/.test(msg)) base.needsSettingsScope = true;
+    else base.error = msg.slice(0, 300);
+  }
+  return base;
+}
