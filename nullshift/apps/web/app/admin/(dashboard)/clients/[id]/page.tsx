@@ -360,6 +360,7 @@ async function postUpdate(formData: FormData) {
     if (email) {
       const portalUrl = `${SITE_URL}/portal/updates`;
       await sendEmail({
+        purpose: "service_relationship",
         to: email,
         subject: `Project update: ${title}`,
         html: wrap(

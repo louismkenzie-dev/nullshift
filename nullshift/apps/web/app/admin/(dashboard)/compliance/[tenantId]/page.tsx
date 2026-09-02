@@ -121,6 +121,7 @@ async function saveIntake(formData: FormData) {
   if (flags.length > 0 && !hadFlags) {
     try {
       await sendEmail({
+        purpose: "transactional",
         to: process.env.ENQUIRY_NOTIFY_EMAIL || "louis@nullshift.co.uk",
         subject: `⚑ Compliance escalation — ${tenant?.name ?? "client"} (${TRIGGER_LABEL[review.trigger as ComplianceTrigger]})`,
         html: wrap(
