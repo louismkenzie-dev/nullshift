@@ -346,9 +346,10 @@ with the "→ Xero" button on the client hub's invoice rows.
 **Setup (Xero custom connection — machine-to-machine, one organisation):**
 
 1. developer.xero.com → New app → **Custom connection**.
-2. Scopes: `accounting.transactions` + `accounting.contacts`. Authorise it
-   against the Nullshift organisation (Xero bills custom connections as a
-   small monthly add-on in the UK).
+2. Scopes (Xero's granular list): `accounting.invoices`, `accounting.payments`,
+   `accounting.contacts`, `accounting.settings.read`. Authorise it against the
+   Nullshift organisation (Xero bills custom connections as a small monthly
+   add-on in the UK).
 3. Vercel env vars:
    - `XERO_CLIENT_ID` / `XERO_CLIENT_SECRET` — from the custom connection.
    - `XERO_SALES_ACCOUNT_CODE` — revenue account for invoice lines

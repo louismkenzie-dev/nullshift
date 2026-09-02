@@ -7,8 +7,10 @@
  *
  * Env:
  *   XERO_CLIENT_ID / XERO_CLIENT_SECRET — from developer.xero.com → New app →
- *     Custom connection, scopes accounting.transactions + accounting.contacts,
- *     authorised against the Nullshift organisation.
+ *     Custom connection, scopes accounting.invoices, accounting.payments,
+ *     accounting.contacts, accounting.settings.read (Xero's granular scopes;
+ *     the old accounting.transactions is no longer offered), authorised
+ *     against the Nullshift organisation.
  *   XERO_SALES_ACCOUNT_CODE   — revenue account for invoice lines (default 200).
  *   XERO_PAYMENT_ACCOUNT_CODE — bank account (with "enable payments") used when
  *     recording payments. Optional: unset = invoices sync but payments don't.
@@ -362,7 +364,7 @@ export async function getXeroSetupStatus(): Promise<XeroSetupStatus> {
     const msg = e instanceof Error ? e.message : String(e);
     if (!scopeProblem(msg)) return { ...base, error: msg.slice(0, 300) };
     base.needsSettingsScope = true;
-    // Prove the connection with a scope we do have (accounting.transactions).
+    // Prove the connection with a scope we do have (accounting.invoices).
     // If that fails too, the app is not authorised for the organisation.
     try {
       await xeroFetch("/Invoices?page=1&pageSize=1");
