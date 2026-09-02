@@ -20,6 +20,7 @@ import { clientRef } from "@nullshift/ui/format";
 import { CARE_PLANS, CARE_PLAN_MRR, carePlan } from "@/lib/carePlans";
 import { generateProjectInvoice } from "@/lib/projectInvoice";
 import { sendCareSubscriptionSignup } from "@/lib/careSubscription";
+import { ensurePortalAccess, issuePortalLink, portalReplyTo } from "@/lib/portalAccess";
 import { getStripe, voidStripeInvoice } from "@nullshift/billing/stripe";
 import {
   cancelBillingRequest,
@@ -1099,13 +1100,11 @@ async function cancelSubscription(formData: FormData) {
 /**
  * Give the client portal access: an auth user + a client_admin membership.
  * Credential handling depends on the account's state, so we never clobber a
- * password the client chose themselves:
- *   • no account yet → create it with the reference password + email it.
- *   • account exists but never signed in (admin-issued, unused) → (re)set the
- *     reference password + email it.
- *   • account exists AND the client has already signed in → they have their own
- *     password; we only link membership and email a "sign in with your existing
- *     password" note — we NEVER reset it or expose a reference.
+ * password the client chose themselves (rule lives in lib/portalAccess.ts):
+ *   • no account yet → invite link; they choose their own password.
+ *   • account exists but never signed in → a fresh single-use link.
+ *   • account exists AND the client has already signed in → membership only
+ *     and a "sign in with your existing password" note — we NEVER reset it.
  */
 async function createPortalAccount(formData: FormData) {
   "use server";
@@ -1119,87 +1118,37 @@ async function createPortalAccount(formData: FormData) {
   const service = createServiceClient();
   const loginUrl = `${SITE_URL}/portal/login`;
 
-  // Resolve any existing auth user with this email + whether they've signed in.
-  // (Paginating lookup — a bare listUsers() only returns the first 50 users.)
-  const existing = await findUserByEmail(service, email);
-  const hasLoggedIn = !!existing?.last_sign_in_at;
-
-  let userId: string | null = existing?.id ?? null;
-  // The single-use link the client uses to choose their own password. Null
-  // once they already have one — we never reset a working password.
-  let inviteUrl: string | null = null;
-
-  // We no longer generate a password and email it. A password in an inbox is a
-  // password in an inbox forever: one spam filter from being lost, one
-  // forwarded thread from being leaked. `generateLink` returns the link
-  // WITHOUT sending Supabase's own email, so the client gets our branded one
-  // and we never learn what they choose.
-  if (!existing) {
-    // `invite` creates the user and returns the link in one call.
-    const { data: invited, error: inviteErr } = await service.auth.admin.generateLink({
-      type: "invite",
-      email,
-      options: { redirectTo: `${SITE_URL}/portal/reset` },
-    });
-    if (inviteErr || !invited?.properties?.action_link) {
-      console.error("createPortalAccount: invite link failed:", inviteErr?.message);
-      return;
-    }
-    userId = invited.user?.id ?? null;
-    inviteUrl = invited.properties.action_link;
-  } else if (!hasLoggedIn) {
-    // The account exists but has never been used — almost always an invite
-    // that went astray. Issue a fresh link rather than a second account.
-    const { data: recovered, error: recErr } = await service.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: { redirectTo: `${SITE_URL}/portal/reset` },
-    });
-    if (recErr || !recovered?.properties?.action_link) {
-      console.error("createPortalAccount: recovery link failed:", recErr?.message);
-      return;
-    }
-    inviteUrl = recovered.properties.action_link;
-  }
-  // else: the client has their own working password — link the membership and
-  // point them at the portal. Never reset a password that works.
-
-  if (!userId) {
-    console.error("createPortalAccount: could not resolve user for", email);
+  // One rule, one place: lib/portalAccess.ts decides whether this is a brand-new
+  // invite, a fresh link for an account that was never used, or membership only
+  // for a client who already has a working password. The link carries the
+  // hashed token to /portal/reset, where it is verified server-side.
+  const access = await ensurePortalAccess(service, { tenantId, email });
+  if (!access.ok) {
+    console.error("createPortalAccount:", access.error);
     return;
   }
-
-  // Link as a client_admin member of this tenant (idempotent).
-  const { data: member } = await service
-    .from("memberships")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("user_id", userId)
-    .limit(1);
-  if (!member?.length) {
-    await service
-      .from("memberships")
-      .insert({ tenant_id: tenantId, user_id: userId, role: "client_admin" });
-  }
+  const inviteUrl = access.link;
   await logAudit({
     action: "portal.account_created",
     target: `tenant:${tenantId}`,
     tenantId,
     // `invited` replaces the old `credentials` flag. No password is ever
     // generated, emailed, or recorded here.
-    metadata: { email, invited: !!inviteUrl },
+    metadata: { email, invited: !!inviteUrl, kind: access.kind },
   });
 
   const mail = inviteUrl
     ? portalInviteEmail({ name, inviteUrl })
     : portalAccessEmail({ name, loginUrl });
-  await sendEmail({
+  const sent = await sendEmail({
     purpose: "transactional",
     to: email,
     subject: mail.subject,
     html: mail.html,
     text: mail.text,
+    replyTo: portalReplyTo(),
   });
+  if (!sent) console.error("createPortalAccount: portal email did not send for", email);
 
   revalidatePath(`/admin/clients/${tenantId}`);
 }
@@ -1221,24 +1170,21 @@ async function sendPasswordReset(formData: FormData) {
   if (!tenantId || !email) return;
   const service = createServiceClient();
 
-  const { data, error } = await service.auth.admin.generateLink({
-    type: "recovery",
-    email,
-    options: { redirectTo: `${SITE_URL}/portal/reset` },
-  });
-  const link = data?.properties?.action_link;
-  if (error || !link) {
-    console.error("sendPasswordReset: generateLink failed:", error?.message);
+  const issued = await issuePortalLink(service, { email, type: "recovery" });
+  if (!issued.url) {
+    console.error("sendPasswordReset: link failed:", issued.error);
     return;
   }
-  const mail = passwordResetEmail({ name, resetUrl: link });
-  await sendEmail({
+  const mail = passwordResetEmail({ name, resetUrl: issued.url });
+  const sent = await sendEmail({
     purpose: "transactional",
     to: email,
     subject: mail.subject,
     html: mail.html,
     text: mail.text,
+    replyTo: portalReplyTo(),
   });
+  if (!sent) console.error("sendPasswordReset: reset email did not send for", email);
   await logAudit({
     action: "portal.password_reset_sent",
     target: `tenant:${tenantId}`,
@@ -1862,14 +1808,20 @@ export default async function ClientHub({
               <Link
                 href={`/admin/clients/${tenantId}/pricing`}
                 title="Score this client's scale band and set their recurring rate"
-                style={{ ...btn("var(--k-surface)", "var(--k-fg)"), textDecoration: "none" }}
+                style={{
+                  ...btn("var(--k-surface)", "var(--k-fg)"),
+                  textDecoration: "none",
+                }}
               >
                 Scale &amp; pricing →
               </Link>
               <Link
                 href={`/admin/clients/${tenantId}/agreement`}
                 title="Order Form, acceptance evidence and Change Orders"
-                style={{ ...btn("var(--k-surface)", "var(--k-fg)"), textDecoration: "none" }}
+                style={{
+                  ...btn("var(--k-surface)", "var(--k-fg)"),
+                  textDecoration: "none",
+                }}
               >
                 Agreement →
               </Link>
@@ -2007,10 +1959,10 @@ export default async function ClientHub({
                 maxWidth: "70ch",
               }}
             >
-              The portal shows this as outstanding, but there is no invoice behind it —
-              so there is no card link and no due date. Raising it creates the Stripe
-              hosted invoice, emails {t.contact_name ?? "the client"} a payment link and
-              bank details, and mirrors it to Xero.
+              The portal shows this as outstanding, but there is no invoice behind it — so
+              there is no card link and no due date. Raising it creates the Stripe hosted
+              invoice, emails {t.contact_name ?? "the client"} a payment link and bank
+              details, and mirrors it to Xero.
               {!isAccepted &&
                 " This project has no portal signature, so a reason is recorded against the override."}
             </p>
@@ -2854,8 +2806,8 @@ export default async function ClientHub({
                     margin: "0 0 12px",
                   }}
                 >
-                  {gbp(depositPaid)} already paid on this project (deposit / quotes).
-                  The build modules above net {gbp(total)}
+                  {gbp(depositPaid)} already paid on this project (deposit / quotes). The
+                  build modules above net {gbp(total)}
                   {total > 0 ? " — that is what the invoice will ask for." : "."}
                 </p>
               )}
@@ -3837,8 +3789,8 @@ export default async function ClientHub({
                 }}
               >
                 We email a single-use link and they choose their own password — no
-                password is ever generated, sent or stored. If the link expires, they
-                can use &ldquo;Forgot your password?&rdquo; on the sign-in page without
+                password is ever generated, sent or stored. If the link expires, they can
+                use &ldquo;Forgot your password?&rdquo; on the sign-in page without
                 needing us.
               </p>
             </>

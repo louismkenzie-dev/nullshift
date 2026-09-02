@@ -1,4 +1,4 @@
-import { createClient } from "./server";
+import { createClient, createServiceClient } from "./server";
 
 /**
  * Append an entry to the append-only `audit_log` (brief §3/§9). Uses the caller's
@@ -25,5 +25,28 @@ export async function logAudit(input: AuditInput): Promise<void> {
     if (error) console.error("audit_log insert failed:", error.message);
   } catch (e) {
     console.error("audit_log insert threw:", e);
+  }
+}
+
+/**
+ * Same append, via the service-role client. For the few places where the
+ * caller has no usable cookie session at write time — a webhook, or a server
+ * action that has JUST created the session (the fresh cookies are not visible
+ * to a new cookie client inside the same request, so the RLS insert policy
+ * `to authenticated` refuses it). The stamp trigger tolerates a null actor;
+ * pass the acting user in `metadata` so the row still says who.
+ */
+export async function logAuditAsService(input: AuditInput): Promise<void> {
+  try {
+    const service = createServiceClient();
+    const { error } = await service.from("audit_log").insert({
+      tenant_id: input.tenantId ?? null,
+      action: input.action,
+      target: input.target ?? null,
+      metadata: (input.metadata ?? null) as never,
+    });
+    if (error) console.error("audit_log (service) insert failed:", error.message);
+  } catch (e) {
+    console.error("audit_log (service) insert threw:", e);
   }
 }

@@ -207,6 +207,28 @@ fixed → shipped` (+ `awaiting_client`, `closed`). Client-visible rows appear i
 Admin access = a `staff` membership on the internal tenant (preferred) **or** an entry in
 `ADMIN_EMAILS` (transitional). Every admin mutation is audit-logged (`audit_log`).
 
+## Client portal access links (invite / reset)
+
+Every "choose your password" link we email — the invite from the client hub, the
+self-serve `/portal/forgot` reset, the admin "Send password reset link" — is built by
+`apps/web/lib/portalAccess.ts` and lands on **`/portal/reset?token_hash=…&type=invite|recovery`**.
+The page renders the form immediately; on submit `portal/reset/actions.ts` verifies the
+hashed token **server-side** (`auth.verifyOtp`) with the cookie-writing Supabase client,
+sets the password, audits `portal.password_set_via_link`, and redirects to `next`
+(portal-internal paths only — see `lib/portalLinks.ts`).
+
+Why not Supabase's `action_link`: the browser client is PKCE-only (`@supabase/ssr`) and
+rejects the implicit `#access_token=` fragment those links redirect with, so the old page
+waited forever. `/portal/reset` keeps a client-side fallback that adopts a legacy fragment
+session or explains an expired link and offers a new one.
+
+Three-branch rule (`ensurePortalAccess`): no account → invite link; account never signed
+in → fresh recovery link; account in use → membership only, never a reset. Links are
+single-use and expire after one hour. Supabase Auth → URL Configuration must have Site URL
+`https://nullshift.co.uk` and `https://nullshift.co.uk/**` in Redirect URLs (fixed
+2026-09-02); without it GoTrue silently redirects to the Site URL. Portal emails set
+`Reply-To` to `ENQUIRY_NOTIFY_EMAIL` so client replies reach a read inbox.
+
 ## GoCardless Direct Debit (care plans)
 
 Monthly care plans can be collected by Bacs Direct Debit through GoCardless as an

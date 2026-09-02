@@ -1,10 +1,12 @@
 "use server";
 
 import { createServiceClient } from "@nullshift/db";
+import { escapeLike } from "@nullshift/db/leads";
 import { rateLimitAllow } from "@nullshift/db/rateLimit";
 import { logAudit } from "@nullshift/db/audit";
 import { sendEmail } from "@/lib/sendEmail";
 import { passwordResetEmail } from "@/lib/clientEmails";
+import { issuePortalLink, portalReplyTo } from "@/lib/portalAccess";
 
 /**
  * Self-serve password reset for portal clients.
@@ -54,40 +56,42 @@ export async function requestPasswordReset(
     };
 
   const service = createServiceClient();
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk"
-  ).replace(/\/$/, "");
 
-  // generateLink fails for an address with no account. That is not an error
-  // the caller may see — it is exactly the fact we are hiding.
-  const { data, error } = await service.auth.admin.generateLink({
-    type: "recovery",
-    email,
-    options: { redirectTo: `${siteUrl}/portal/reset` },
-  });
-  const link = data?.properties?.action_link;
-
-  if (error || !link) {
+  // The link carries the hashed token to OUR reset page, where it is verified
+  // server-side (see portal/reset/actions.ts). generateLink fails for an
+  // address with no account — that is not an error the caller may see; it is
+  // exactly the fact we are hiding.
+  const issued = await issuePortalLink(service, { email, type: "recovery" });
+  if (!issued.url) {
     console.warn("requestPasswordReset: no link for address (reported neutrally)");
     return { ok: true };
   }
 
-  const mail = passwordResetEmail({
-    name: data.user?.user_metadata?.full_name ?? "there",
-    resetUrl: link,
-  });
-  await sendEmail({
+  // Greet them by the name we actually hold — the tenant contact — rather than
+  // auth metadata, which admin-created accounts never carry.
+  const { data: tenant } = await service
+    .from("tenants")
+    .select("contact_name")
+    .ilike("contact_email", escapeLike(email))
+    .limit(1)
+    .maybeSingle();
+  const name = (tenant?.contact_name as string | null) ?? "there";
+
+  const mail = passwordResetEmail({ name, resetUrl: issued.url });
+  const sent = await sendEmail({
     purpose: "transactional",
     to: email,
     subject: mail.subject,
     html: mail.html,
     text: mail.text,
+    replyTo: portalReplyTo(),
   });
+  if (!sent) console.error("requestPasswordReset: reset email did not send for", email);
 
   await logAudit({
     action: "portal.password_reset_self_serve",
     target: `email:${email}`,
-    metadata: { email },
+    metadata: { email, sent },
   });
 
   return { ok: true };

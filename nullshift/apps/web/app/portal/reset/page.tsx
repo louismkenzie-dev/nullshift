@@ -1,107 +1,39 @@
-"use client";
-
-import { Suspense, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@nullshift/db/client";
 import { T } from "@nullshift/ui/tokens";
 import { LogoMark } from "@nullshift/ui/components/Logo";
-import { hasSupabaseBrowserConfig } from "@nullshift/db/env";
 import { Eyebrow, Display } from "@/components/kyma";
 import { Reveal } from "@/components/Reveal";
+import { safePortalNext } from "@/lib/portalLinks";
+import { ResetForm } from "./ResetForm";
+import { ResetFallback } from "./ResetFallback";
 
 /**
- * Choose-your-password page. Two links land here and both work the same way:
- * the INVITE a new client gets (they have never had a password) and the
- * RECOVERY link from "Forgot your password?" or the admin hub. Either drops a
- * session in the URL, the Supabase browser client picks it up automatically
- * (detectSessionInUrl), and the client sets their password via updateUser.
+ * Choose-your-password page. Every set-your-password link we email lands here:
+ * the INVITE a new client gets, the RECOVERY link from "Forgot your password?"
+ * or the client hub, and the plan invite from the Direct Debits board.
+ *
+ * The link carries `token_hash` + `type`; the form renders straight away and the
+ * token is verified SERVER-SIDE when they submit (see actions.ts). Nothing here
+ * waits on the browser to pick a session out of the URL — that is the wait that
+ * never ended under the old flow.
  *
  * The copy deliberately says "choose", not "reset" — for an invited client
- * there is no old password to reset, and telling them there is would be
- * confusing at the exact moment they are trying to get in for the first time.
+ * there is no old password to reset.
  */
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  height: 44,
-  background: "var(--k-surface)",
-  border: "1px solid var(--k-border)",
-  borderRadius: 0,
-  padding: "0 14px",
-  color: "var(--k-fg)",
-  fontFamily: T.sans,
-  fontSize: "0.9375rem",
-  outline: "none",
-  transition: `border-color ${T.duration.base} ${T.ease}, box-shadow ${T.duration.base} ${T.ease}`,
-};
-const labelStyle: React.CSSProperties = {
-  fontFamily: T.mono,
-  fontSize: "0.66rem",
-  fontWeight: 500,
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  color: "var(--k-muted)",
-};
-function onFocus(e: React.FocusEvent<HTMLInputElement>) {
-  e.currentTarget.style.borderColor = T.primary;
-  e.currentTarget.style.boxShadow = T.shadow.focus;
-}
-function onBlur(e: React.FocusEvent<HTMLInputElement>) {
-  e.currentTarget.style.borderColor = "var(--k-border)";
-  e.currentTarget.style.boxShadow = "none";
-}
+export const dynamic = "force-dynamic";
 
-function ResetForm() {
-  const router = useRouter();
-  const [ready, setReady] = useState(false);
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+const LINK_TYPES = new Set(["invite", "recovery", "magiclink", "email"]);
 
-  // Wait for the recovery session the link drops in the URL to be picked up.
-  useEffect(() => {
-    if (!hasSupabaseBrowserConfig()) return;
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setReady(true);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) setReady(true);
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-    if (password !== confirm) {
-      setError("Passwords don't match.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const supabase = createClient();
-      const { error: updErr } = await supabase.auth.updateUser({ password });
-      if (updErr) throw updErr;
-      setDone(true);
-      setTimeout(() => router.replace("/portal"), 1200);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not reset your password.");
-      setBusy(false);
-    }
-  }
-
-  if (!hasSupabaseBrowserConfig()) {
-    return (
-      <p style={{ fontFamily: T.sans, color: "var(--k-muted)" }}>Auth not configured.</p>
-    );
-  }
+export default async function PortalResetPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token_hash?: string; type?: string; next?: string }>;
+}) {
+  const sp = await searchParams;
+  const tokenHash = (sp.token_hash ?? "").trim();
+  const type = (sp.type ?? "").trim();
+  const next = safePortalNext(sp.next);
+  const hasToken = tokenHash.length > 0 && LINK_TYPES.has(type);
 
   return (
     <main
@@ -126,99 +58,28 @@ function ResetForm() {
         </div>
 
         <div className="mb-7 flex flex-col items-center gap-3 text-center">
-          <Eyebrow index="01" label="Portal Access" align="center" />
+          <Eyebrow index="01" label="Client Portal" align="center" />
           <Display as="h1" size="md">
             Choose your password
           </Display>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.86rem",
+              lineHeight: 1.6,
+              color: "var(--k-muted)",
+              maxWidth: 340,
+            }}
+          >
+            This is your Nullshift client portal — a separate login from any system we
+            built for you, even if it uses the same email address.
+          </p>
         </div>
 
-        {done ? (
-          <p
-            className="k-kard text-center p-8"
-            style={{
-              background: "var(--k-surface)",
-              fontFamily: T.sans,
-              fontSize: "0.9rem",
-              color: "var(--k-accent)",
-            }}
-          >
-            Password updated — taking you to your portal…
-          </p>
-        ) : !ready ? (
-          <p
-            className="k-kard text-center p-8"
-            style={{
-              background: "var(--k-surface)",
-              fontFamily: T.sans,
-              fontSize: "0.875rem",
-              color: "var(--k-muted)",
-            }}
-          >
-            Opening your secure reset link… If nothing happens, the link may have expired
-            — ask us to send a new one.
-          </p>
+        {hasToken ? (
+          <ResetForm tokenHash={tokenHash} type={type} next={next} />
         ) : (
-          <form
-            onSubmit={onSubmit}
-            className="k-kard flex flex-col gap-4 p-8"
-            style={{ background: "var(--k-surface)" }}
-          >
-            <div className="flex flex-col gap-1.5">
-              <label style={labelStyle}>New password</label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={inputStyle}
-                autoComplete="new-password"
-                placeholder="Min. 8 characters"
-                onFocus={onFocus}
-                onBlur={onBlur}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label style={labelStyle}>Confirm password</label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                style={inputStyle}
-                autoComplete="new-password"
-                placeholder="Re-enter password"
-                onFocus={onFocus}
-                onBlur={onBlur}
-              />
-            </div>
-
-            {error && (
-              <p
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: "0.7rem",
-                  letterSpacing: "0.04em",
-                  color: T.danger,
-                }}
-              >
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={busy}
-              className="kb kb-primary mt-2"
-              style={{ width: "100%", opacity: busy ? 0.6 : 1 }}
-            >
-              {busy ? "Saving…" : "Update password"}
-              <span className="k-arrow" aria-hidden>
-                →
-              </span>
-            </button>
-          </form>
+          <ResetFallback next={next} />
         )}
 
         <div className="mt-6 text-center">
@@ -238,15 +99,5 @@ function ResetForm() {
         </div>
       </Reveal>
     </main>
-  );
-}
-
-export default function PortalResetPage() {
-  return (
-    <Suspense
-      fallback={<div style={{ minHeight: "100vh", background: "var(--k-bg)" }} />}
-    >
-      <ResetForm />
-    </Suspense>
   );
 }
