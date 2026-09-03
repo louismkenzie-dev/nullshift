@@ -6,10 +6,17 @@ import { getPortalClient, isClientPreview } from "@/lib/clientPreview";
 import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
-import { legalConfig, effectiveDateLabel, bindingAcceptanceEnabled } from "@nullshift/content/legal/config";
+import {
+  legalConfig,
+  effectiveDateLabel,
+  bindingAcceptanceEnabled,
+} from "@nullshift/content/legal/config";
 import { activeSubprocessors } from "@nullshift/content/legal/subprocessors";
 import { SUPPORT_BOUNDARY } from "@nullshift/content/pricing";
-import { CHANGE_ORDER_LABEL, type ChangeOrderStatus } from "@nullshift/content/legal/work";
+import {
+  CHANGE_ORDER_LABEL,
+  type ChangeOrderStatus,
+} from "@nullshift/content/legal/work";
 import { SCALE_BAND_LABEL } from "@/lib/pricing/nsi";
 import {
   PAYMENT_ARCHITECTURE_LABEL,
@@ -17,6 +24,7 @@ import {
   type OrderFormRow,
 } from "@/lib/legal/agreement";
 import { AcceptOrderForm } from "@/components/portal/AcceptOrderForm";
+import { recordClientViews, recordDocumentEvent } from "@/lib/documentEvents";
 
 /**
  * The client's legal centre (spec §17), and the place they actually accept
@@ -142,6 +150,16 @@ async function acceptOrder(
     .update({ status: "accepted", accepted_at: new Date().toISOString() })
     .eq("id", order.id);
 
+  await recordDocumentEvent(db, {
+    tenantId: order.tenant_id,
+    documentType: "order_form",
+    documentId: order.id,
+    event: "signed",
+    actor: user.id,
+    actorKind: "client",
+    meta: { by: email, versions: docs.versions },
+  });
+
   await logAudit({
     action: "order_form.accepted",
     target: `order_form:${order.id}`,
@@ -194,6 +212,17 @@ async function decideChangeOrder(formData: FormData) {
     )
     .eq("id", id);
 
+  if (decision === "accepted")
+    await recordDocumentEvent(db, {
+      tenantId: co.tenant_id,
+      documentType: "change_order",
+      documentId: id,
+      event: "signed",
+      actor: user.id,
+      actorKind: "client",
+      meta: { by: user.email ?? null, name },
+    });
+
   await logAudit({
     action: `change_order.${decision}`,
     target: `change_order:${id}`,
@@ -206,14 +235,11 @@ async function decideChangeOrder(formData: FormData) {
 /* ── page ──────────────────────────────────────────────────────── */
 
 export default async function PortalLegalPage() {
-  const { supabase, preview } = await getPortalClient();
+  const { supabase, user, preview } = await getPortalClient();
 
   const [{ data: orders }, { data: changeOrders }, { data: subs }, { data: projects }] =
     await Promise.all([
-      supabase
-        .from("order_forms")
-        .select("*")
-        .order("created_at", { ascending: false }),
+      supabase.from("order_forms").select("*").order("created_at", { ascending: false }),
       supabase
         .from("change_orders")
         .select("*")
@@ -249,9 +275,30 @@ export default async function PortalLegalPage() {
   const sub = subs?.[0];
   const project = projects?.[0];
   const docs = incorporatedDocuments();
-  const pendingChanges = (changeOrders ?? []).filter(
-    (c) => c.status === "client_review"
-  );
+  const pendingChanges = (changeOrders ?? []).filter((c) => c.status === "client_review");
+
+  // Read receipts: the real client (never a staff preview) has now opened
+  // every Order Form and Change Order that has been sent to them.
+  if (user && !preview) {
+    const sentOrders = list.filter((o) => o.status !== "draft");
+    const sentChanges = (changeOrders ?? []).filter((c) => c.status !== "draft");
+    const tenantId = sentOrders[0]?.tenant_id ?? sentChanges[0]?.tenant_id;
+    if (tenantId)
+      await recordClientViews(createServiceClient(), {
+        tenantId,
+        userId: user.id,
+        documents: [
+          ...sentOrders.map((o) => ({
+            documentType: "order_form" as const,
+            documentId: o.id,
+          })),
+          ...sentChanges.map((c) => ({
+            documentType: "change_order" as const,
+            documentId: c.id as string,
+          })),
+        ],
+      });
+  }
 
   return (
     <div className="flex flex-col gap-7">
@@ -280,13 +327,17 @@ export default async function PortalLegalPage() {
 
       {/* ── the live agreement (§17) ───────────────────────── */}
       {active && active.status === "accepted" && (
-        <Panel label={active.reference} title="Order Form" actions={<StatusChip tone="success">Accepted</StatusChip>}>
+        <Panel
+          label={active.reference}
+          title="Order Form"
+          actions={<StatusChip tone="success">Accepted</StatusChip>}
+        >
           <OrderSummary row={active} />
           {acceptance && (
             <p style={{ ...body, marginTop: 16 }}>
-              Accepted by {acceptance.accepted_by_name} ({acceptance.accepted_by_title}) on{" "}
-              {dateGB(acceptance.accepted_at)}, against {acceptance.msa_version} and pricing
-              version {acceptance.pricing_version}.
+              Accepted by {acceptance.accepted_by_name} ({acceptance.accepted_by_title})
+              on {dateGB(acceptance.accepted_at)}, against {acceptance.msa_version} and
+              pricing version {acceptance.pricing_version}.
             </p>
           )}
         </Panel>
@@ -341,7 +392,10 @@ export default async function PortalLegalPage() {
       {active?.payment_architecture && (
         <Panel label="§14 Payments" title="Who holds your customers' money">
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-            <Row k="Architecture" v={PAYMENT_ARCHITECTURE_LABEL[active.payment_architecture]} />
+            <Row
+              k="Architecture"
+              v={PAYMENT_ARCHITECTURE_LABEL[active.payment_architecture]}
+            />
             <Row k="Merchant of record" v={active.client_legal_name} />
             <Row k="Payout destination" v={`${active.client_legal_name}'s own account`} />
             <Row k="Refunds and chargebacks" v={active.client_legal_name} />
@@ -359,14 +413,23 @@ export default async function PortalLegalPage() {
       {(changeOrders ?? []).length > 0 && (
         <Panel
           label="§9 Changes"
-          title={pendingChanges.length ? `${pendingChanges.length} waiting for you` : "Change Orders"}
+          title={
+            pendingChanges.length
+              ? `${pendingChanges.length} waiting for you`
+              : "Change Orders"
+          }
         >
           <div className="flex flex-col gap-4">
             {(changeOrders ?? []).map((co) => (
-              <div key={co.id} style={{ border: "1px solid var(--k-border)", padding: "16px 18px" }}>
+              <div
+                key={co.id}
+                style={{ border: "1px solid var(--k-border)", padding: "16px 18px" }}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <span style={{ ...mono, color: "var(--k-accent)" }}>{co.reference}</span>
+                    <span style={{ ...mono, color: "var(--k-accent)" }}>
+                      {co.reference}
+                    </span>
                     <p
                       style={{
                         fontFamily: T.sans,
@@ -416,7 +479,10 @@ export default async function PortalLegalPage() {
                 {(co.acceptance_criteria ?? []).length > 0 && (
                   <>
                     <p style={{ ...mono, marginTop: 14 }}>Done means</p>
-                    <ul className="mt-2 flex flex-col gap-1" style={{ margin: 0, paddingLeft: 18 }}>
+                    <ul
+                      className="mt-2 flex flex-col gap-1"
+                      style={{ margin: 0, paddingLeft: 18 }}
+                    >
                       {(co.acceptance_criteria as string[]).map((a) => (
                         <li key={a} style={{ ...body, fontSize: "0.88rem" }}>
                           {a}
@@ -428,7 +494,10 @@ export default async function PortalLegalPage() {
 
                 {co.status === "client_review" && (
                   <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end">
-                    <form action={decideChangeOrder} className="flex flex-wrap items-end gap-3">
+                    <form
+                      action={decideChangeOrder}
+                      className="flex flex-wrap items-end gap-3"
+                    >
                       <input type="hidden" name="id" value={co.id} />
                       <input type="hidden" name="decision" value="accepted" />
                       <label style={{ minWidth: 220 }}>
@@ -450,14 +519,22 @@ export default async function PortalLegalPage() {
                           }}
                         />
                       </label>
-                      <button type="submit" className="kb kb-primary kb-sm" disabled={!!preview}>
+                      <button
+                        type="submit"
+                        className="kb kb-primary kb-sm"
+                        disabled={!!preview}
+                      >
                         Approve this change
                       </button>
                     </form>
                     <form action={decideChangeOrder}>
                       <input type="hidden" name="id" value={co.id} />
                       <input type="hidden" name="decision" value="rejected" />
-                      <button type="submit" className="kb kb-outline kb-sm" disabled={!!preview}>
+                      <button
+                        type="submit"
+                        className="kb kb-outline kb-sm"
+                        disabled={!!preview}
+                      >
                         Decline
                       </button>
                     </form>
@@ -487,7 +564,10 @@ export default async function PortalLegalPage() {
           {[SUPPORT_BOUNDARY.included, SUPPORT_BOUNDARY.quoted].map((col) => (
             <div key={col.title}>
               <span style={{ ...mono, color: "var(--k-fg)" }}>{col.title}</span>
-              <ul className="mt-3 flex flex-col gap-2" style={{ margin: 0, paddingLeft: 18 }}>
+              <ul
+                className="mt-3 flex flex-col gap-2"
+                style={{ margin: 0, paddingLeft: 18 }}
+              >
                 {col.items.map((i) => (
                   <li key={i} style={{ ...body, fontSize: "0.88rem" }}>
                     {i}
@@ -505,7 +585,10 @@ export default async function PortalLegalPage() {
           In force since {effectiveDateLabel()}. These are the controlling documents —
           anything summarised elsewhere is a summary, and these win.
         </p>
-        <ul className="mt-4 flex flex-col gap-2" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        <ul
+          className="mt-4 flex flex-col gap-2"
+          style={{ listStyle: "none", margin: 0, padding: 0 }}
+        >
           {docs.links.map((d) => (
             <li key={d.href}>
               <Link href={d.href} style={{ ...body, color: "var(--k-accent)" }}>
@@ -538,10 +621,15 @@ export default async function PortalLegalPage() {
 
       {/* ── subprocessors (§12, §17) ───────────────────────── */}
       <Panel label="§12 Subprocessors" title="Who else touches your data">
-        <ul className="flex flex-col gap-3" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        <ul
+          className="flex flex-col gap-3"
+          style={{ listStyle: "none", margin: 0, padding: 0 }}
+        >
           {activeSubprocessors().map((s) => (
             <li key={s.id}>
-              <span style={{ fontFamily: T.sans, fontSize: "0.95rem", color: "var(--k-fg)" }}>
+              <span
+                style={{ fontFamily: T.sans, fontSize: "0.95rem", color: "var(--k-fg)" }}
+              >
                 {s.tradingName ?? s.legalName}
               </span>
               <p style={{ ...body, fontSize: "0.86rem" }}>{s.purpose}</p>
@@ -551,7 +639,10 @@ export default async function PortalLegalPage() {
         <p style={{ ...body, marginTop: 14 }}>
           We give you at least 14 days&apos; direct notice before adding a new
           subprocessor that touches your data, and you can object.{" "}
-          <Link href={legalConfig.routes.subprocessors} style={{ color: "var(--k-accent)" }}>
+          <Link
+            href={legalConfig.routes.subprocessors}
+            style={{ color: "var(--k-accent)" }}
+          >
             Full register →
           </Link>
         </p>
@@ -563,7 +654,11 @@ export default async function PortalLegalPage() {
           Your data is yours. You can request a standard export at any time, and you can
           start the process of ending the agreement without emailing anyone.
         </p>
-        <Link href="/portal/legal/close" className="kb kb-outline kb-sm" style={{ display: "inline-flex", marginTop: 14 }}>
+        <Link
+          href="/portal/legal/close"
+          className="kb kb-outline kb-sm"
+          style={{ display: "inline-flex", marginTop: 14 }}
+        >
           Data export &amp; termination
           <span className="k-arrow" aria-hidden>
             →
@@ -576,12 +671,21 @@ export default async function PortalLegalPage() {
         <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
           <Row k="Legal" v={legalConfig.contact.legal} />
           <Row k="Privacy" v={legalConfig.contact.privacy} />
-          <Row k="Billing" v={legalConfig.contact.billing ?? legalConfig.contact.general} />
-          <Row k="Support" v={legalConfig.contact.support ?? legalConfig.contact.general} />
+          <Row
+            k="Billing"
+            v={legalConfig.contact.billing ?? legalConfig.contact.general}
+          />
+          <Row
+            k="Support"
+            v={legalConfig.contact.support ?? legalConfig.contact.general}
+          />
         </dl>
         <p style={{ ...body, marginTop: 14 }}>
           To complain about how we&apos;ve handled personal information, use the{" "}
-          <Link href={legalConfig.routes.dataComplaint} style={{ color: "var(--k-accent)" }}>
+          <Link
+            href={legalConfig.routes.dataComplaint}
+            style={{ color: "var(--k-accent)" }}
+          >
             complaint form
           </Link>
           . You can also go straight to the ICO.
@@ -595,7 +699,14 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div>
       <dt style={mono}>{k}</dt>
-      <dd style={{ fontFamily: T.sans, fontSize: "0.92rem", color: "var(--k-fg)", marginTop: 3 }}>
+      <dd
+        style={{
+          fontFamily: T.sans,
+          fontSize: "0.92rem",
+          color: "var(--k-fg)",
+          marginTop: 3,
+        }}
+      >
         {v}
       </dd>
     </div>
@@ -631,7 +742,10 @@ function OrderSummary({ row }: { row: OrderFormRow }) {
         <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
             <span style={{ ...mono, color: "var(--k-fg)" }}>Included</span>
-            <ul className="mt-3 flex flex-col gap-2" style={{ margin: 0, paddingLeft: 18 }}>
+            <ul
+              className="mt-3 flex flex-col gap-2"
+              style={{ margin: 0, paddingLeft: 18 }}
+            >
               {(scope.included ?? []).map((i) => (
                 <li key={i} style={{ ...body, fontSize: "0.88rem" }}>
                   {i}
@@ -641,7 +755,10 @@ function OrderSummary({ row }: { row: OrderFormRow }) {
           </div>
           <div>
             <span style={{ ...mono, color: "var(--k-fg)" }}>Not included</span>
-            <ul className="mt-3 flex flex-col gap-2" style={{ margin: 0, paddingLeft: 18 }}>
+            <ul
+              className="mt-3 flex flex-col gap-2"
+              style={{ margin: 0, paddingLeft: 18 }}
+            >
               {(scope.excluded ?? []).map((i) => (
                 <li key={i} style={{ ...body, fontSize: "0.88rem" }}>
                   {i}

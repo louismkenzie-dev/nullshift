@@ -71,6 +71,10 @@ export type OrderFormRow = {
   superseded_by: string | null;
   sent_at: string | null;
   accepted_at: string | null;
+  /** Author for the second-person review gate (migration 0030 / 0049). */
+  created_by?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
   created_at: string;
 };
 

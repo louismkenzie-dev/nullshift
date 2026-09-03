@@ -11,11 +11,7 @@ import { siteUrl } from "@/lib/portalLinks";
 import { startDirectDebitForTenant } from "@/lib/directDebit";
 import { sendEmail } from "@/lib/sendEmail";
 import { planChoiceOpen } from "@/lib/planGate";
-import {
-  planInviteEmail,
-  portalAccessEmail,
-  portalInviteEmail,
-} from "@/lib/clientEmails";
+import { planInviteEmail } from "@/lib/clientEmails";
 
 /**
  * Direct Debits board actions. Each is one click for the owner and one email
@@ -29,6 +25,7 @@ function revalidateAll(tenantId: string) {
   revalidatePath("/admin/billing/direct-debits");
   revalidatePath("/admin/billing");
   revalidatePath(`/admin/clients/${tenantId}`);
+  revalidatePath("/admin/clients/[id]", "layout");
 }
 
 async function tenantContact(tenantId: string) {
@@ -63,44 +60,6 @@ async function systemIsBuilt(
     .limit(1)
     .maybeSingle();
   return planChoiceOpen(data?.stage);
-}
-
-/** Invite / fresh link / sign-in pointer, whichever the account state calls for. */
-export async function sendPortalLink(formData: FormData) {
-  if (!(await requireStaff()).ok) return;
-  const tenantId = String(formData.get("tenant_id") || "");
-  const override = String(formData.get("email") || "")
-    .trim()
-    .toLowerCase();
-  if (!tenantId) return;
-  const { service, tenant } = await tenantContact(tenantId);
-  const email = override || tenant?.contact_email?.toLowerCase() || "";
-  if (!tenant || !email) return;
-  const name = tenant.contact_name ?? tenant.name ?? "there";
-
-  const access = await ensurePortalAccess(service, { tenantId, email });
-  if (!access.ok) {
-    console.error("sendPortalLink:", access.error);
-    return;
-  }
-  const mail = access.link
-    ? portalInviteEmail({ name, inviteUrl: access.link })
-    : portalAccessEmail({ name, loginUrl: `${siteUrl()}/portal/login` });
-  const sent = await sendEmail({
-    purpose: "transactional",
-    to: email,
-    subject: mail.subject,
-    html: mail.html,
-    text: mail.text,
-    replyTo: portalReplyTo(),
-  });
-  await logAudit({
-    action: "portal.account_created",
-    target: `tenant:${tenantId}`,
-    tenantId,
-    metadata: { email, invited: !!access.link, kind: access.kind, sent, via: "board" },
-  });
-  revalidateAll(tenantId);
 }
 
 /** The three priced options by email, with one link into the plan page. */

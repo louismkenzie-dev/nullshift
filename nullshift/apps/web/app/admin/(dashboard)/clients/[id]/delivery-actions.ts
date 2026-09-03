@@ -20,6 +20,11 @@ import {
  */
 
 const hub = (tenantId: string) => `/admin/clients/${tenantId}`;
+/** Refresh the block page and every tile page beneath it. */
+function revalidateClient(tenantId: string) {
+  revalidatePath(hub(tenantId));
+  revalidatePath("/admin/clients/[id]", "layout");
+}
 
 function fields(formData: FormData, names: string[]): Record<string, string> {
   const out: Record<string, string> = {};
@@ -60,7 +65,7 @@ export async function addMilestone(formData: FormData) {
       tenantId: f.tenant_id,
       metadata: { title: f.title, target_date: f.target_date || null },
     });
-  revalidatePath(hub(f.tenant_id));
+  revalidateClient(f.tenant_id);
 }
 
 export async function setMilestoneHealth(formData: FormData) {
@@ -80,7 +85,7 @@ export async function setMilestoneHealth(formData: FormData) {
     target: `milestone:${f.id}`,
     tenantId: f.tenant_id,
   });
-  revalidatePath(hub(f.tenant_id));
+  revalidateClient(f.tenant_id);
 }
 
 // ── Risks ──────────────────────────────────────────────────────
@@ -118,7 +123,7 @@ export async function addRisk(formData: FormData) {
       tenantId: f.tenant_id,
       metadata: { title: f.title },
     });
-  revalidatePath(hub(f.tenant_id));
+  revalidateClient(f.tenant_id);
 }
 
 export async function resolveRisk(formData: FormData) {
@@ -140,7 +145,7 @@ export async function resolveRisk(formData: FormData) {
     tenantId: f.tenant_id,
     metadata: f.resolution ? { resolution: f.resolution } : undefined,
   });
-  revalidatePath(hub(f.tenant_id));
+  revalidateClient(f.tenant_id);
 }
 
 // ── Decisions ──────────────────────────────────────────────────
@@ -178,7 +183,7 @@ export async function addDecision(formData: FormData) {
       tenantId: f.tenant_id,
       metadata: { decision: f.decision.slice(0, 200) },
     });
-  revalidatePath(hub(f.tenant_id));
+  revalidateClient(f.tenant_id);
 }
 
 // ── Playbook checklists ────────────────────────────────────────
@@ -205,7 +210,7 @@ export async function seedChecklist(formData: FormData) {
       tenantId: f.tenant_id,
       metadata: { kind },
     });
-  revalidatePath(hub(f.tenant_id));
+  revalidateClient(f.tenant_id);
 }
 
 export async function toggleChecklistItem(formData: FormData) {
@@ -223,5 +228,5 @@ export async function toggleChecklistItem(formData: FormData) {
     .from("checklists")
     .update({ items: toggleItem((row.items ?? []) as ChecklistItem[], f.name) })
     .eq("id", f.id);
-  revalidatePath(hub(f.tenant_id));
+  revalidateClient(f.tenant_id);
 }

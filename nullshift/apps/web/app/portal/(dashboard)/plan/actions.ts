@@ -11,6 +11,7 @@ import { contractedMrr } from "@/lib/pricing/contracted";
 import { startDirectDebitForTenant } from "@/lib/directDebit";
 import { planChoiceOpen } from "@/lib/planGate";
 import { CARE_PLAN_TERMS_VERSION, termsAcceptanceValid } from "@/lib/carePlanTerms";
+import { recordDocumentEvent } from "@/lib/documentEvents";
 
 /**
  * Client-side plan choice. "none" records an explicit no-plan decision (the
@@ -112,6 +113,15 @@ export async function choosePlan(formData: FormData): Promise<void> {
       care_plan_terms_accepted_by: user.id,
     })
     .eq("id", tenantId);
+  await recordDocumentEvent(service, {
+    tenantId,
+    documentType: "care_plan_terms",
+    documentId: CARE_PLAN_TERMS_VERSION,
+    event: "signed",
+    actor: user.id,
+    actorKind: "client",
+    meta: { plan: choice, amountPence: chargePence, email: user.email ?? null },
+  });
   await logAudit({
     action: "care_plan.terms_accepted",
     target: `tenant:${tenantId}`,

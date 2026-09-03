@@ -1,19 +1,19 @@
-import { revalidatePath } from "next/cache";
-import { SubmitButton } from "@/components/admin/SubmitButton";
 import Link from "next/link";
 import { createClient } from "@nullshift/db";
-import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { SubprocessorNotices } from "./SubprocessorNotices";
 import { Reveal } from "@/components/kyma";
+import { GDPR_CONTROLS } from "@/lib/compliance/controls";
 
 /**
- * Compliance centre — a per-client-tenant checklist + log (brief §5/§9). Tracks
- * the GDPR controls that gate go-live: DPA signed, data-processing register
- * entry, last backup verified, and any breach / SAR. Pulls from
- * compliance_records. A project can't go live until its DPA is logged (Phase 5
- * enforces the block; this surfaces the state).
+ * Compliance centre — the global §12 subprocessor notices plus a compact
+ * per-client scan of the UK GDPR controls that gate go-live (compliance_records:
+ * DPA signed, data-processing register entry, last backup verified). Read-only
+ * per client: the DPA is recorded on the Docs and Legal tile, the two
+ * operational controls on Scale and Risk, and erasure lives in the Account
+ * management danger zone (email-confirmed deleteClient) — one write path each,
+ * no weaker duplicates here. Each row just links to where the work happens.
  */
 
 export const dynamic = "force-dynamic";
@@ -21,56 +21,29 @@ export const dynamic = "force-dynamic";
 type Tenant = { id: string; name: string };
 type Record_ = { id: string; tenant_id: string; kind: string; recorded_at: string };
 
-const CHECKS: { kind: string; label: string }[] = [
-  { kind: "dpa_signed", label: "DPA signed" },
-  { kind: "data_register", label: "Data-processing register entry" },
-  { kind: "backup_check", label: "Last backup verified" },
-];
+const DPA_KIND = "dpa_signed";
+/** All three go-live controls: the DPA plus the two operational ones. */
+const CONTROL_KINDS = [DPA_KIND, ...GDPR_CONTROLS.map((c) => c.kind)];
 
-async function recordCompliance(formData: FormData) {
-  "use server";
-  const tenantId = String(formData.get("tenant_id") || "");
-  const kind = String(formData.get("kind") || "");
-  if (!tenantId || !kind) return;
-  const supabase = await createClient();
-  await supabase
-    .from("compliance_records")
-    .insert({ tenant_id: tenantId, kind: kind as never });
-  await logAudit({
-    action: `compliance.${kind}`,
-    target: `tenant:${tenantId}`,
-    tenantId,
-  });
-  revalidatePath("/admin/compliance");
-}
-
-// Retention + right-to-erasure: hard-delete a tenant (cascades to all its data).
-async function deleteTenant(formData: FormData) {
-  "use server";
-  const tenantId = String(formData.get("tenant_id") || "");
-  const confirm = String(formData.get("confirm") || "");
-  if (!tenantId || confirm !== "DELETE") return;
-  const supabase = await createClient();
-  // Audit BEFORE the row (and its audit rows) cascade away.
-  await logAudit({ action: "tenant.erased", target: `tenant:${tenantId}`, tenantId });
-  await supabase.from("tenants").delete().eq("id", tenantId);
-  revalidatePath("/admin/compliance");
-}
-
-// Square mono action button used inside the per-tenant forms.
-const actionBtn = {
+// Square mono action link used on the per-tenant rows.
+const actionLink: React.CSSProperties = {
   fontFamily: T.mono,
   fontSize: "10px",
   letterSpacing: "0.08em",
-  textTransform: "uppercase" as const,
-  height: 28,
-  paddingInline: 11,
+  textTransform: "uppercase",
+  height: 26,
+  paddingInline: 9,
   background: "var(--k-surface)",
-  color: "var(--k-fg)",
+  color: "var(--k-accent)",
   border: "1px solid var(--k-border)",
   borderRadius: 0,
-  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  textDecoration: "none",
+  whiteSpace: "nowrap",
 };
+
+const dateGB = (iso: string) => new Date(iso).toLocaleDateString("en-GB");
 
 export default async function CompliancePage() {
   const supabase = await createClient();
@@ -80,6 +53,14 @@ export default async function CompliancePage() {
   ]);
   const tenantList = (tenants ?? []) as Tenant[];
   const recordList = (records ?? []) as Record_[];
+
+  const rows = tenantList.map((tenant) => {
+    const recs = recordList.filter((r) => r.tenant_id === tenant.id);
+    const doneCount = CONTROL_KINDS.filter((k) => recs.some((r) => r.kind === k)).length;
+    const dpa = recs.find((r) => r.kind === DPA_KIND);
+    return { tenant, doneCount, dpa };
+  });
+  const readyCount = rows.filter((r) => r.doneCount === CONTROL_KINDS.length).length;
 
   return (
     <div>
@@ -94,146 +75,106 @@ export default async function CompliancePage() {
         <SubprocessorNotices />
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 28 }}>
-        {tenantList.map((tenant, ti) => {
-          const recs = recordList.filter((r) => r.tenant_id === tenant.id);
-          const doneCount = CHECKS.filter((c) =>
-            recs.some((r) => r.kind === c.kind)
-          ).length;
-          const allDone = doneCount === CHECKS.length;
-          return (
-            <Reveal key={tenant.id} delay={ti * 0.05}>
-              <Panel
-                title={tenant.name}
-                actions={
-                  <StatusChip tone={allDone ? "success" : "warning"}>
-                    {doneCount}/{CHECKS.length} controls
-                  </StatusChip>
-                }
+      <div style={{ marginTop: 28 }}>
+        <Reveal delay={0.05}>
+          <Panel
+            label="Per client"
+            title="Go-live controls"
+            pad={false}
+            actions={
+              tenantList.length > 0 ? (
+                <StatusChip tone={readyCount === tenantList.length ? "success" : "muted"}>
+                  {readyCount}/{tenantList.length} ready
+                </StatusChip>
+              ) : undefined
+            }
+          >
+            {rows.length === 0 && (
+              <p
+                style={{
+                  fontFamily: T.sans,
+                  color: "var(--k-muted)",
+                  padding: "14px 18px",
+                  margin: 0,
+                }}
               >
-                <div className="flex flex-col">
-                  {CHECKS.map((check, ci) => {
-                    const done = recs.find((r) => r.kind === check.kind);
-                    return (
-                      <div
-                        key={check.kind}
-                        className="flex items-center justify-between"
-                        style={{
-                          padding: "10px 0",
-                          borderTop: ci ? "1px solid var(--k-border)" : "none",
-                        }}
-                      >
-                        <span
-                          className="flex items-center gap-2"
-                          style={{
-                            fontFamily: T.sans,
-                            fontSize: "0.88rem",
-                            color: done ? "var(--k-fg)" : "var(--k-muted)",
-                          }}
-                        >
-                          <span style={{ color: done ? T.success : "var(--k-faint)" }}>
-                            {done ? "✓" : "○"}
-                          </span>
-                          {check.label}
-                          {done && (
-                            <span
-                              style={{
-                                fontFamily: T.mono,
-                                fontSize: "10px",
-                                letterSpacing: "0.06em",
-                                color: "var(--k-faint)",
-                                marginLeft: 6,
-                              }}
-                            >
-                              {new Date(done.recorded_at).toLocaleDateString("en-GB")}
-                            </span>
-                          )}
-                        </span>
-                        {!done && (
-                          <form action={recordCompliance}>
-                            <input type="hidden" name="tenant_id" value={tenant.id} />
-                            <input type="hidden" name="kind" value={check.kind} />
-                            <SubmitButton style={actionBtn}>Mark done</SubmitButton>
-                          </form>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Data subject rights — SAR export + right to erasure */}
+                No client tenants yet.
+              </p>
+            )}
+            {rows.map(({ tenant, doneCount, dpa }, i) => {
+              const allDone = doneCount === CONTROL_KINDS.length;
+              return (
                 <div
-                  className="flex items-center gap-3 flex-wrap"
+                  key={tenant.id}
+                  className="flex items-center justify-between gap-4 flex-wrap"
                   style={{
-                    marginTop: 14,
-                    paddingTop: 12,
-                    borderTop: "1px solid var(--k-border)",
+                    padding: "12px 18px",
+                    borderTop: i ? "1px solid var(--k-border)" : "none",
                   }}
                 >
+                  {/* Tenant name → the client block */}
                   <Link
-                    href={`/admin/compliance/${tenant.id}`}
+                    href={`/admin/clients/${tenant.id}`}
+                    className="truncate"
                     style={{
-                      ...actionBtn,
-                      display: "inline-flex",
-                      alignItems: "center",
+                      fontFamily: T.sans,
+                      fontWeight: 700,
+                      fontSize: "0.95rem",
+                      letterSpacing: "-0.01em",
+                      textTransform: "uppercase",
+                      color: "var(--k-fg)",
                       textDecoration: "none",
-                      color: "var(--k-accent)",
+                      minWidth: 0,
+                      flex: "1 1 180px",
                     }}
+                    title={`Open ${tenant.name}`}
                   >
-                    Compliance reviews →
+                    {tenant.name}
                   </Link>
-                  <Link
-                    href={`/api/sar/${tenant.id}`}
-                    prefetch={false}
-                    style={{
-                      ...actionBtn,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      textDecoration: "none",
-                    }}
-                  >
-                    ↓ Export data (SAR)
-                  </Link>
-                  <form action={deleteTenant} className="flex items-center gap-2">
-                    <input type="hidden" name="tenant_id" value={tenant.id} />
-                    <input
-                      name="confirm"
-                      placeholder="type DELETE"
-                      autoComplete="off"
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "10px",
-                        letterSpacing: "0.06em",
-                        height: 28,
-                        padding: "0 9px",
-                        width: 104,
-                        background: "var(--k-surface)",
-                        color: "var(--k-fg)",
-                        border: `1px solid ${T.danger}55`,
-                        borderRadius: 0,
-                      }}
-                    />
-                    <SubmitButton
-                      style={{
-                        ...actionBtn,
-                        background: "transparent",
-                        color: T.danger,
-                        border: `1px solid ${T.danger}55`,
-                      }}
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Controls chip → Scale and Risk (where the operational controls are recorded) */}
+                    <Link
+                      href={`/admin/clients/${tenant.id}/pricing`}
+                      style={{ textDecoration: "none" }}
+                      title="Data-processing register + backup check — recorded on Scale and Risk"
                     >
-                      Erase tenant
-                    </SubmitButton>
-                  </form>
+                      <StatusChip tone={allDone ? "success" : "warning"}>
+                        {doneCount}/{CONTROL_KINDS.length} controls
+                      </StatusChip>
+                    </Link>
+                    {/* DPA chip → Docs and Legal (where the DPA is recorded) */}
+                    <Link
+                      href={`/admin/clients/${tenant.id}/docs`}
+                      style={{ textDecoration: "none" }}
+                      title={
+                        dpa
+                          ? `DPA signed ${dateGB(dpa.recorded_at)} — Docs and Legal`
+                          : "DPA not yet signed — recorded on Docs and Legal"
+                      }
+                    >
+                      <StatusChip tone={dpa ? "success" : "danger"}>
+                        {dpa ? `DPA signed ${dateGB(dpa.recorded_at)}` : "DPA unsigned"}
+                      </StatusChip>
+                    </Link>
+
+                    <Link href={`/admin/compliance/${tenant.id}`} style={actionLink}>
+                      Reviews →
+                    </Link>
+                    <Link
+                      href={`/api/sar/${tenant.id}`}
+                      prefetch={false}
+                      style={{ ...actionLink, color: "var(--k-fg)" }}
+                      title="Subject access request — export this client's data"
+                    >
+                      ↓ SAR
+                    </Link>
+                  </div>
                 </div>
-              </Panel>
-            </Reveal>
-          );
-        })}
-        {tenantList.length === 0 && (
-          <p style={{ fontFamily: T.sans, color: "var(--k-muted)" }}>
-            No client tenants yet.
-          </p>
-        )}
+              );
+            })}
+          </Panel>
+        </Reveal>
       </div>
     </div>
   );

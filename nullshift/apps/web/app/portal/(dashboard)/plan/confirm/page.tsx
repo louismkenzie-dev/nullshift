@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { createServiceClient } from "@nullshift/db";
 import { getPortalClient } from "@/lib/clientPreview";
+import { recordClientViews } from "@/lib/documentEvents";
 import { T } from "@nullshift/ui/tokens";
 import { carePlan } from "@/lib/carePlans";
 import { contractedPrices } from "@/lib/pricing/contracted";
@@ -35,7 +37,7 @@ export default async function ConfirmPlanPage({
   const plan = carePlan(planId);
   if (!plan || plan.quotedOnly) redirect("/portal/plan");
 
-  const { supabase } = await getPortalClient();
+  const { supabase, user, preview } = await getPortalClient();
   const [{ data: tenants }, { data: projects }] = await Promise.all([
     supabase.from("tenants").select("id, name").limit(1),
     supabase
@@ -52,6 +54,17 @@ export default async function ConfirmPlanPage({
   const pricing = await contractedPrices(tenant.id);
   const price = pricing.prices[plan.id];
   if (!price?.priced || price.mrr === null) redirect("/portal/plan");
+
+  // Read receipt: the real client (never a staff preview) has now read the
+  // care-plan terms at this version.
+  if (user && !preview)
+    await recordClientViews(createServiceClient(), {
+      tenantId: tenant.id,
+      userId: user.id,
+      documents: [
+        { documentType: "care_plan_terms", documentId: CARE_PLAN_TERMS_VERSION },
+      ],
+    });
 
   return (
     <div

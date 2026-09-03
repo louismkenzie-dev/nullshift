@@ -7,6 +7,9 @@ import { logAudit } from "@nullshift/db/audit";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { SubmitButton } from "@/components/admin/SubmitButton";
+import { ReviewBlockedNotice, ReviewGate } from "@/components/admin/ReviewGate";
+import { assertSendable, reviewState } from "@/lib/legalReview";
+import { createChangeOrder } from "../actions";
 import { legalConfig } from "@nullshift/content/legal/config";
 import {
   CHANGE_ORDER_LABEL,
@@ -16,6 +19,7 @@ import {
   type ChangeOrderStatus,
 } from "@nullshift/content/legal/work";
 import { PRICING_VERSION, SCALE_BAND_LABEL } from "@/lib/pricing/nsi";
+import { recordDocumentEvent } from "@/lib/documentEvents";
 import {
   PAYMENT_ARCHITECTURE_LABEL,
   releaseState,
@@ -116,7 +120,10 @@ async function createOrderForm(formData: FormData) {
   const { data: ref } = await db.rpc("next_order_form_ref");
 
   const fee =
-    assessment?.agreed_mrr ?? assessment?.override_mrr ?? assessment?.recommended_mrr ?? 0;
+    assessment?.agreed_mrr ??
+    assessment?.override_mrr ??
+    assessment?.recommended_mrr ??
+    0;
 
   const { data: created, error } = await db
     .from("order_forms")
@@ -192,11 +199,14 @@ async function saveOrderForm(formData: FormData) {
         targetWindow: String(formData.get("target_window") || "").trim() || undefined,
       },
       technical: {
-        hostingProvider: String(formData.get("hosting_provider") || "").trim() || undefined,
+        hostingProvider:
+          String(formData.get("hosting_provider") || "").trim() || undefined,
         databaseProvider:
           String(formData.get("database_provider") || "").trim() || undefined,
-        paymentProvider: String(formData.get("payment_provider") || "").trim() || undefined,
-        backupPolicyId: String(formData.get("backup_policy_id") || "").trim() || undefined,
+        paymentProvider:
+          String(formData.get("payment_provider") || "").trim() || undefined,
+        backupPolicyId:
+          String(formData.get("backup_policy_id") || "").trim() || undefined,
       },
       payment_architecture: architecture || null,
       compliance: {
@@ -209,6 +219,9 @@ async function saveOrderForm(formData: FormData) {
         paymentIntegration: formData.get("payment_integration") === "on",
       },
       portfolio_use: formData.get("portfolio_use") === "on",
+      // Review gate: an edited draft is re-approved before it can be sent.
+      reviewed_by: null,
+      reviewed_at: null,
     })
     .eq("id", id)
     .eq("status", "draft");
@@ -249,11 +262,35 @@ async function sendOrderForm(formData: FormData) {
     return;
   }
 
+  // Second-person review: refuses (and redirects back with ?blocked=review)
+  // unless a staff member other than the author approved this draft.
+  const form = row as OrderFormRow;
+  await assertSendable({
+    kind: "order_form",
+    id,
+    tenantId,
+    reference: form.reference,
+    review: {
+      author: form.created_by,
+      reviewedBy: form.reviewed_by,
+      reviewedAt: form.reviewed_at,
+    },
+  });
+
   await db
     .from("order_forms")
     .update({ status: "client_review", sent_at: new Date().toISOString() })
     .eq("id", id)
     .eq("status", "draft");
+  await recordDocumentEvent(db, {
+    tenantId,
+    documentType: "order_form",
+    documentId: id,
+    event: "sent",
+    actor: staff.userId,
+    actorKind: "staff",
+    meta: { reference: (row as OrderFormRow).reference },
+  });
   await logAudit({
     action: "order_form.sent_for_acceptance",
     target: `order_form:${id}`,
@@ -293,41 +330,6 @@ async function attachPaymentReview(formData: FormData) {
   revalidatePath(`/admin/clients/${tenantId}/agreement`);
 }
 
-async function createChangeOrder(formData: FormData) {
-  "use server";
-  const staff = await requireStaff();
-  if (!staff.ok) return;
-  const tenantId = String(formData.get("tenant_id") || "");
-  const orderFormId = String(formData.get("order_form_id") || "");
-  const description = String(formData.get("description") || "").trim();
-  if (!tenantId || !orderFormId || !description) return;
-
-  const db = createServiceClient();
-  const { data: ref } = await db.rpc("next_change_order_ref");
-  const { data: created } = await db
-    .from("change_orders")
-    .insert({
-      tenant_id: tenantId,
-      order_form_id: orderFormId,
-      issue_id: String(formData.get("issue_id") || "") || null,
-      reference: ref ?? `CO-${Date.now()}`,
-      description,
-      business_outcome: String(formData.get("business_outcome") || "").trim(),
-      created_by: staff.userId,
-    })
-    .select("id, reference")
-    .single();
-
-  if (created)
-    await logAudit({
-      action: "change_order.drafted",
-      target: `change_order:${created.id}`,
-      tenantId,
-      metadata: { reference: created.reference },
-    });
-  revalidatePath(`/admin/clients/${tenantId}/agreement`);
-}
-
 async function saveChangeOrder(formData: FormData) {
   "use server";
   const staff = await requireStaff();
@@ -359,6 +361,13 @@ async function saveChangeOrder(formData: FormData) {
     })
     .eq("id", id)
     .in("status", ["draft", "client_review"]);
+  // Review gate: an edited DRAFT is re-approved before it can go out. An edit
+  // while in client review keeps the approval record of what was sent.
+  await db
+    .from("change_orders")
+    .update({ reviewed_by: null, reviewed_at: null })
+    .eq("id", id)
+    .eq("status", "draft");
 
   await logAudit({
     action: "change_order.updated",
@@ -396,6 +405,19 @@ async function advanceChangeOrder(formData: FormData) {
       recurringFeeDelta: co.recurring_fee_delta,
     });
     if (missing.length) return;
+    // Second-person review: refuses (and redirects back with ?blocked=review)
+    // unless a staff member other than the author approved this draft.
+    await assertSendable({
+      kind: "change_order",
+      id,
+      tenantId,
+      reference: co.reference as string,
+      review: {
+        author: co.created_by as string | null,
+        reviewedBy: co.reviewed_by as string | null,
+        reviewedAt: co.reviewed_at as string | null,
+      },
+    });
   }
 
   const patch: Record<string, unknown> = { status: to };
@@ -403,6 +425,16 @@ async function advanceChangeOrder(formData: FormData) {
   if (to === "accepted_complete") patch.completed_at = new Date().toISOString();
 
   await db.from("change_orders").update(patch).eq("id", id);
+  if (to === "client_review")
+    await recordDocumentEvent(db, {
+      tenantId,
+      documentType: "change_order",
+      documentId: id,
+      event: "sent",
+      actor: staff.userId,
+      actorKind: "staff",
+      meta: { reference: co.reference as string },
+    });
   await logAudit({
     action: `change_order.${to}`,
     target: `change_order:${id}`,
@@ -416,34 +448,42 @@ async function advanceChangeOrder(formData: FormData) {
 
 export default async function AgreementPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  /** Review gate bounce: ?blocked=review | self_approval | not_draft. */
+  searchParams: Promise<{ blocked?: string }>;
 }) {
   const staff = await requireStaff();
   if (!staff.ok) notFound();
   const { id: tenantId } = await params;
+  const { blocked } = await searchParams;
 
   const db = createServiceClient();
-  const [{ data: tenant }, { data: orderRows }, { data: changeOrders }, { data: unlinked }] =
-    await Promise.all([
-      db.from("tenants").select("id, name").eq("id", tenantId).maybeSingle(),
-      db
-        .from("order_forms")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false }),
-      db
-        .from("change_orders")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false }),
-      db
-        .from("issues")
-        .select("id, title, classification, change_order_id, status")
-        .eq("tenant_id", tenantId)
-        .in("classification", ["additional_development", "mixed"])
-        .is("change_order_id", null),
-    ]);
+  const [
+    { data: tenant },
+    { data: orderRows },
+    { data: changeOrders },
+    { data: unlinked },
+  ] = await Promise.all([
+    db.from("tenants").select("id, name").eq("id", tenantId).maybeSingle(),
+    db
+      .from("order_forms")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false }),
+    db
+      .from("change_orders")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false }),
+    db
+      .from("issues")
+      .select("id, title, classification, change_order_id, status")
+      .eq("tenant_id", tenantId)
+      .in("classification", ["additional_development", "mixed"])
+      .is("change_order_id", null),
+  ]);
 
   if (!tenant) notFound();
 
@@ -465,9 +505,17 @@ export default async function AgreementPage({
     : null;
 
   const state = live ? releaseState(live) : null;
+  const liveReview = live
+    ? reviewState({
+        author: live.created_by,
+        reviewedBy: live.reviewed_by,
+        reviewedAt: live.reviewed_at,
+      })
+    : null;
 
   return (
     <div className="flex flex-col gap-7">
+      <ReviewBlockedNotice blocked={blocked} />
       <PageHeader
         index="/06"
         label="Agreement"
@@ -530,7 +578,10 @@ export default async function AgreementPage({
                   : undefined,
               }}
             >
-              <ul className="flex flex-col gap-3" style={{ margin: 0, padding: 0, listStyle: "none" }}>
+              <ul
+                className="flex flex-col gap-3"
+                style={{ margin: 0, padding: 0, listStyle: "none" }}
+              >
                 {state.blockers.map((b) => (
                   <li key={b.code + b.detail} className="flex items-start gap-3">
                     <StatusChip tone={b.blocksSelfServe ? "danger" : "warning"}>
@@ -570,7 +621,10 @@ export default async function AgreementPage({
               >
                 {state.productionBlockReason}
               </p>
-              <form action={attachPaymentReview} className="mt-4 flex flex-wrap items-end gap-3">
+              <form
+                action={attachPaymentReview}
+                className="mt-4 flex flex-wrap items-end gap-3"
+              >
                 <input type="hidden" name="tenant_id" value={tenantId} />
                 <input type="hidden" name="id" value={live.id} />
                 <label style={{ minWidth: 300 }}>
@@ -614,7 +668,10 @@ export default async function AgreementPage({
                     <input type="hidden" name="id" value={live.id} />
                     <SubmitButton
                       className="kb kb-primary kb-sm"
-                      disabled={!state.selfServe}
+                      disabled={!state.selfServe || !liveReview?.canSend}
+                      title={
+                        liveReview && !liveReview.canSend ? liveReview.reason : undefined
+                      }
                       pendingLabel="Sending…"
                     >
                       Send for acceptance
@@ -624,11 +681,40 @@ export default async function AgreementPage({
               </>
             }
           >
+            <div style={{ marginBottom: 16 }}>
+              <ReviewGate
+                kind="order_form"
+                id={live.id}
+                tenantId={tenantId}
+                author={live.created_by}
+                reviewedBy={live.reviewed_by}
+                reviewedAt={live.reviewed_at}
+                viewerId={staff.userId}
+                sendable={live.status === "draft"}
+              />
+            </div>
             {live.status === "draft" ? (
               <OrderFormEditor row={live} tenantId={tenantId} />
             ) : (
               <OrderFormSummary row={live} />
             )}
+            {live.status === "draft" &&
+              state.selfServe &&
+              liveReview &&
+              !liveReview.canSend && (
+                <p
+                  style={{
+                    ...mono,
+                    color: "var(--k-faint)",
+                    marginTop: 14,
+                    textTransform: "none",
+                    letterSpacing: "0.02em",
+                    fontSize: "0.72rem",
+                  }}
+                >
+                  Send is disabled: {liveReview.reason}
+                </p>
+              )}
             {live.status === "draft" && !state.selfServe && (
               <p
                 style={{
@@ -651,9 +737,15 @@ export default async function AgreementPage({
           {acceptance && (
             <Panel label="§5 Evidence" title="Acceptance record">
               <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
-                <Row k="Accepted by" v={`${acceptance.accepted_by_name} — ${acceptance.accepted_by_title}`} />
+                <Row
+                  k="Accepted by"
+                  v={`${acceptance.accepted_by_name} — ${acceptance.accepted_by_title}`}
+                />
                 <Row k="Email" v={acceptance.accepted_by_email} />
-                <Row k="When" v={new Date(acceptance.accepted_at).toLocaleString("en-GB")} />
+                <Row
+                  k="When"
+                  v={new Date(acceptance.accepted_at).toLocaleString("en-GB")}
+                />
                 <Row k="Method" v={acceptance.acceptance_method} />
                 <Row k="Agreement version" v={acceptance.msa_version} />
                 <Row k="Pricing version" v={acceptance.pricing_version} />
@@ -685,10 +777,7 @@ export default async function AgreementPage({
           )}
 
           {/* ── change orders ────────────────────────────────── */}
-          <Panel
-            label="§9 Change Orders"
-            title={`${(changeOrders ?? []).length} raised`}
-          >
+          <Panel label="§9 Change Orders" title={`${(changeOrders ?? []).length} raised`}>
             {(unlinked ?? []).length > 0 && (
               <div
                 style={{
@@ -709,13 +798,19 @@ export default async function AgreementPage({
                     marginTop: 6,
                   }}
                 >
-                  These are classified as additional development. They cannot be
-                  scheduled until a Change Order is raised and the client accepts it.
+                  These are classified as additional development. They cannot be scheduled
+                  until a Change Order is raised and the client accepts it.
                 </p>
-                <ul className="mt-3 flex flex-col gap-2" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                <ul
+                  className="mt-3 flex flex-col gap-2"
+                  style={{ listStyle: "none", margin: 0, padding: 0 }}
+                >
                   {(unlinked ?? []).map((i) => (
                     <li key={i.id}>
-                      <form action={createChangeOrder} className="flex flex-wrap items-center gap-2">
+                      <form
+                        action={createChangeOrder}
+                        className="flex flex-wrap items-center gap-2"
+                      >
                         <input type="hidden" name="tenant_id" value={tenantId} />
                         <input type="hidden" name="order_form_id" value={live.id} />
                         <input type="hidden" name="issue_id" value={i.id} />
@@ -763,6 +858,11 @@ export default async function AgreementPage({
                   recurringFeeDelta: co.recurring_fee_delta,
                 });
                 const next = staffTransitions(co.status as ChangeOrderStatus);
+                const coReview = reviewState({
+                  author: co.created_by as string | null,
+                  reviewedBy: co.reviewed_by as string | null,
+                  reviewedAt: co.reviewed_at as string | null,
+                });
                 return (
                   <div
                     key={co.id}
@@ -838,8 +938,23 @@ export default async function AgreementPage({
                       </ul>
                     )}
 
+                    {!["withdrawn", "superseded", "rejected"].includes(co.status) && (
+                      <div className="mt-4">
+                        <ReviewGate
+                          kind="change_order"
+                          id={co.id}
+                          tenantId={tenantId}
+                          author={co.created_by as string | null}
+                          reviewedBy={co.reviewed_by as string | null}
+                          reviewedAt={co.reviewed_at as string | null}
+                          viewerId={staff.userId}
+                          sendable={co.status === "draft"}
+                        />
+                      </div>
+                    )}
+
                     {next.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-2">
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
                         {next.map((to) => (
                           <form key={to} action={advanceChangeOrder}>
                             <input type="hidden" name="tenant_id" value={tenantId} />
@@ -847,13 +962,34 @@ export default async function AgreementPage({
                             <input type="hidden" name="to" value={to} />
                             <SubmitButton
                               className="kb kb-outline kb-sm"
-                              disabled={to === "client_review" && missing.length > 0}
+                              disabled={
+                                to === "client_review" &&
+                                (missing.length > 0 || !coReview.canSend)
+                              }
+                              title={
+                                to === "client_review" && !coReview.canSend
+                                  ? coReview.reason
+                                  : undefined
+                              }
                               pendingLabel="…"
                             >
                               {CHANGE_ORDER_LABEL[to]}
                             </SubmitButton>
                           </form>
                         ))}
+                        {next.includes("client_review") &&
+                          missing.length === 0 &&
+                          !coReview.canSend && (
+                            <span
+                              style={{
+                                fontFamily: T.sans,
+                                fontSize: "0.78rem",
+                                color: "var(--k-faint)",
+                              }}
+                            >
+                              Send is disabled: {coReview.reason}
+                            </span>
+                          )}
                       </div>
                     )}
                   </div>
@@ -1025,7 +1161,9 @@ function OrderFormEditor({ row, tenantId }: { row: OrderFormRow; tenantId: strin
           />
         </label>
         <label>
-          <span style={{ ...mono, display: "block", marginBottom: 6 }}>Billing email</span>
+          <span style={{ ...mono, display: "block", marginBottom: 6 }}>
+            Billing email
+          </span>
           <input
             name="client_billing_email"
             type="email"
@@ -1128,40 +1266,82 @@ function OrderFormEditor({ row, tenantId }: { row: OrderFormRow; tenantId: strin
         hint="What the client actually gets out of this, in their language."
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Text name="deliverables" label="Deliverables (one per line)" defaultValue={list(scope.deliverables)} />
-        <Text name="acceptance_criteria" label="Acceptance criteria (one per line)" defaultValue={list(scope.acceptanceCriteria)} />
-        <Text name="included" label="Included (one per line)" defaultValue={list(scope.included)} />
+        <Text
+          name="deliverables"
+          label="Deliverables (one per line)"
+          defaultValue={list(scope.deliverables)}
+        />
+        <Text
+          name="acceptance_criteria"
+          label="Acceptance criteria (one per line)"
+          defaultValue={list(scope.acceptanceCriteria)}
+        />
+        <Text
+          name="included"
+          label="Included (one per line)"
+          defaultValue={list(scope.included)}
+        />
         <Text
           name="excluded"
           label="Excluded (one per line)"
           defaultValue={list(scope.excluded)}
           hint="The list that prevents an argument later. Be specific."
         />
-        <Text name="client_dependencies" label="Client dependencies (one per line)" defaultValue={list(scope.clientDependencies)} />
-        <Text name="invoice_schedule" label="Invoice schedule (one per line)" defaultValue={list(row.invoice_schedule ?? [])} />
+        <Text
+          name="client_dependencies"
+          label="Client dependencies (one per line)"
+          defaultValue={list(scope.clientDependencies)}
+        />
+        <Text
+          name="invoice_schedule"
+          label="Invoice schedule (one per line)"
+          defaultValue={list(row.invoice_schedule ?? [])}
+        />
       </div>
 
       <label>
         <span style={{ ...mono, display: "block", marginBottom: 6 }}>Target window</span>
-        <input name="target_window" defaultValue={scope.targetWindow ?? ""} style={field} />
+        <input
+          name="target_window"
+          defaultValue={scope.targetWindow ?? ""}
+          style={field}
+        />
       </label>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <label>
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>Hosting</span>
-          <input name="hosting_provider" defaultValue={tech.hostingProvider ?? ""} style={field} />
+          <input
+            name="hosting_provider"
+            defaultValue={tech.hostingProvider ?? ""}
+            style={field}
+          />
         </label>
         <label>
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>Database</span>
-          <input name="database_provider" defaultValue={tech.databaseProvider ?? ""} style={field} />
+          <input
+            name="database_provider"
+            defaultValue={tech.databaseProvider ?? ""}
+            style={field}
+          />
         </label>
         <label>
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>Payments</span>
-          <input name="payment_provider" defaultValue={tech.paymentProvider ?? ""} style={field} />
+          <input
+            name="payment_provider"
+            defaultValue={tech.paymentProvider ?? ""}
+            style={field}
+          />
         </label>
         <label>
-          <span style={{ ...mono, display: "block", marginBottom: 6 }}>Backup policy</span>
-          <input name="backup_policy_id" defaultValue={tech.backupPolicyId ?? ""} style={field} />
+          <span style={{ ...mono, display: "block", marginBottom: 6 }}>
+            Backup policy
+          </span>
+          <input
+            name="backup_policy_id"
+            defaultValue={tech.backupPolicyId ?? ""}
+            style={field}
+          />
         </label>
       </div>
 
@@ -1176,7 +1356,9 @@ function OrderFormEditor({ row, tenantId }: { row: OrderFormRow; tenantId: strin
         >
           <option value="">Not classified</option>
           {(
-            Object.keys(PAYMENT_ARCHITECTURE_LABEL) as (keyof typeof PAYMENT_ARCHITECTURE_LABEL)[]
+            Object.keys(
+              PAYMENT_ARCHITECTURE_LABEL
+            ) as (keyof typeof PAYMENT_ARCHITECTURE_LABEL)[]
           ).map((k) => (
             <option key={k} value={k}>
               {PAYMENT_ARCHITECTURE_LABEL[k]}
@@ -1195,16 +1377,32 @@ function OrderFormEditor({ row, tenantId }: { row: OrderFormRow; tenantId: strin
 
       <div className="flex flex-wrap gap-x-6 gap-y-3">
         <Check name="personal_data" label="Stores personal data" on={comp.personalData} />
-        <Check name="special_category" label="Special-category data" on={comp.specialCategoryData} />
-        <Check name="children_likely" label="Children likely to use it" on={comp.childrenLikely} />
+        <Check
+          name="special_category"
+          label="Special-category data"
+          on={comp.specialCategoryData}
+        />
+        <Check
+          name="children_likely"
+          label="Children likely to use it"
+          on={comp.childrenLikely}
+        />
         <Check name="ai_feature" label="AI feature" on={comp.aiFeature} />
         <Check
           name="significant_decision"
           label="Significant automated decisions"
           on={comp.significantAutomatedDecision}
         />
-        <Check name="payment_integration" label="Payment integration" on={comp.paymentIntegration} />
-        <Check name="portfolio_use" label="Portfolio use permitted" on={row.portfolio_use} />
+        <Check
+          name="payment_integration"
+          label="Payment integration"
+          on={comp.paymentIntegration}
+        />
+        <Check
+          name="portfolio_use"
+          label="Portfolio use permitted"
+          on={row.portfolio_use}
+        />
       </div>
 
       <div>
@@ -1220,7 +1418,10 @@ function OrderFormEditor({ row, tenantId }: { row: OrderFormRow; tenantId: strin
           }}
         >
           Incorporated terms:{" "}
-          <Link href={legalConfig.routes.clientServices} style={{ color: "var(--k-accent)" }}>
+          <Link
+            href={legalConfig.routes.clientServices}
+            style={{ color: "var(--k-accent)" }}
+          >
             {legalConfig.legal.clientAgreementVersion}
           </Link>
         </span>
@@ -1245,7 +1446,11 @@ function ChangeOrderEditor({
 
       <label>
         <span style={{ ...mono, display: "block", marginBottom: 6 }}>Change</span>
-        <input name="description" defaultValue={String(co.description ?? "")} style={field} />
+        <input
+          name="description"
+          defaultValue={String(co.description ?? "")}
+          style={field}
+        />
       </label>
       <label>
         <span style={{ ...mono, display: "block", marginBottom: 6 }}>
@@ -1264,13 +1469,23 @@ function ChangeOrderEditor({
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>
             Included (one per line)
           </span>
-          <textarea name="included" rows={3} defaultValue={arr(co.included)} style={{ ...field, resize: "vertical" }} />
+          <textarea
+            name="included"
+            rows={3}
+            defaultValue={arr(co.included)}
+            style={{ ...field, resize: "vertical" }}
+          />
         </label>
         <label>
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>
             Excluded (one per line)
           </span>
-          <textarea name="excluded" rows={3} defaultValue={arr(co.excluded)} style={{ ...field, resize: "vertical" }} />
+          <textarea
+            name="excluded"
+            rows={3}
+            defaultValue={arr(co.excluded)}
+            style={{ ...field, resize: "vertical" }}
+          />
         </label>
         <label>
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>
@@ -1287,14 +1502,23 @@ function ChangeOrderEditor({
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>
             Dependencies (one per line)
           </span>
-          <textarea name="dependencies" rows={3} defaultValue={arr(co.dependencies)} style={{ ...field, resize: "vertical" }} />
+          <textarea
+            name="dependencies"
+            rows={3}
+            defaultValue={arr(co.dependencies)}
+            style={{ ...field, resize: "vertical" }}
+          />
         </label>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <label>
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>Fixed fee £</span>
-          <input name="project_fee" defaultValue={String(co.project_fee ?? "0")} style={field} />
+          <input
+            name="project_fee"
+            defaultValue={String(co.project_fee ?? "0")}
+            style={field}
+          />
         </label>
         <label>
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>
@@ -1302,7 +1526,9 @@ function ChangeOrderEditor({
           </span>
           <input
             name="recurring_fee_delta"
-            defaultValue={co.recurring_fee_delta === null ? "" : String(co.recurring_fee_delta)}
+            defaultValue={
+              co.recurring_fee_delta === null ? "" : String(co.recurring_fee_delta)
+            }
             placeholder="0"
             style={field}
           />
@@ -1315,18 +1541,24 @@ function ChangeOrderEditor({
             style={{ ...field, height: 40 }}
           >
             <option value="">unchanged</option>
-            {["standard", "growth", "established", "scale", "critical", "enterprise"].map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
+            {["standard", "growth", "established", "scale", "critical", "enterprise"].map(
+              (b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              )
+            )}
           </select>
         </label>
         <label>
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>
             Delivery impact
           </span>
-          <input name="delivery_impact" defaultValue={String(co.delivery_impact ?? "")} style={field} />
+          <input
+            name="delivery_impact"
+            defaultValue={String(co.delivery_impact ?? "")}
+            style={field}
+          />
         </label>
       </div>
 
@@ -1339,9 +1571,15 @@ function ChangeOrderEditor({
             ["flag_payments", "Payments", flags.payments],
           ] as const
         ).map(([name, label, on]) => (
-          <label key={name} className="flex items-center gap-2" style={{ cursor: "pointer" }}>
+          <label
+            key={name}
+            className="flex items-center gap-2"
+            style={{ cursor: "pointer" }}
+          >
             <input type="checkbox" name={name} defaultChecked={!!on} />
-            <span style={{ fontFamily: T.sans, fontSize: "0.86rem", color: "var(--k-fg)" }}>
+            <span
+              style={{ fontFamily: T.sans, fontSize: "0.86rem", color: "var(--k-fg)" }}
+            >
               {label}
             </span>
           </label>

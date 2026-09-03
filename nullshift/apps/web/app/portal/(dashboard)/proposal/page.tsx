@@ -19,6 +19,7 @@ import { SignProposal } from "@/components/portal/SignProposal";
 import { EntityTypeForm } from "@/components/portal/EntityTypeForm";
 import { setEntityType } from "../dpa-actions";
 import { dpaReadyToSend } from "@/lib/dpa";
+import { recordClientViews, recordDocumentEvent } from "@/lib/documentEvents";
 import { advanceOnly } from "@/lib/projectStage";
 import { sendEmail } from "@/lib/sendEmail";
 import { proposalSignedEmail } from "@/lib/clientEmails";
@@ -129,6 +130,17 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
   // Everything past here is best-effort — the proposal IS accepted, so a hiccup
   // in a downstream step must never turn the client's success into an error.
   try {
+    // Read receipts: one signature signs both the proposal and the DPA.
+    for (const documentType of ["proposal", "dpa"] as const)
+      await recordDocumentEvent(service, {
+        tenantId: project.tenant_id,
+        documentType,
+        documentId: projectId,
+        event: "signed",
+        actor: user.id,
+        actorKind: "client",
+        meta: { signed_name: signature },
+      });
     // Freeze the accepted agreement (migration 0025): the exact modules,
     // overview, payment terms and care plan at the moment of signature. The
     // signed PDF renders from THIS — scope edits after acceptance can never
@@ -252,7 +264,7 @@ async function acceptProposal(formData: FormData): Promise<{ ok: boolean }> {
       reference: clientRef(project.tenant_id),
       total: buildTotal,
       planLabel: carePlan(project.proposed_plan)?.label ?? null,
-      adminUrl: `${siteUrl}/admin/clients/${project.tenant_id}`,
+      adminUrl: `${siteUrl}/admin/clients/${project.tenant_id}/docs`,
     });
     await sendEmail({
       purpose: "transactional",
@@ -316,7 +328,7 @@ function Badge({ s }: { s: string }) {
 }
 
 export default async function PortalProposal() {
-  const { supabase } = await getPortalClient();
+  const { supabase, user, preview } = await getPortalClient();
   const [{ data: projects }, { data: items }, { data: invoices }, { data: invItems }] =
     await Promise.all([
       supabase
@@ -340,6 +352,22 @@ export default async function PortalProposal() {
   const itemList = (items ?? []) as Item[];
   const invoiceList = (invoices ?? []) as Invoice[];
   const invItemList = (invItems ?? []) as InvItem[];
+
+  // Read receipt: the real client (never a staff preview) has now opened the
+  // proposal and the DPA that travels with it. First view only is kept.
+  if (user && !preview) {
+    const sent = projectList.filter((p) => p.proposal_status !== "draft");
+    const tenantId = sent[0]?.tenant_id;
+    if (tenantId)
+      await recordClientViews(createServiceClient(), {
+        tenantId,
+        userId: user.id,
+        documents: sent.flatMap((p) => [
+          { documentType: "proposal" as const, documentId: p.id },
+          { documentType: "dpa" as const, documentId: p.id },
+        ]),
+      });
+  }
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "40px 24px" }}>

@@ -10,7 +10,7 @@ import { carePlan } from "@/lib/carePlans";
 import { pricesFromAssessment } from "@/lib/pricing/contracted";
 import type { AssessmentRow } from "@/lib/pricing/contractedPrice";
 import { SCALE_BAND_LABEL } from "@/lib/pricing/nsi";
-import { sendDirectDebitLink, sendPlanInvite, sendPortalLink } from "./actions";
+import { sendDirectDebitLink, sendPlanInvite } from "./actions";
 import { planChoiceOpen } from "@/lib/planGate";
 
 /**
@@ -18,8 +18,9 @@ import { planChoiceOpen } from "@/lib/planGate";
  *
  * One row per client: the bracket (scale band) you set, the three prices that
  * bracket produces, whether the client can get into the portal, and where
- * their Direct Debit is. Three buttons cover the whole journey: get them in,
- * send them their options, or send the GoCardless link for a plan directly.
+ * their Direct Debit is. Two buttons cover the money side — send them their
+ * options, or send the GoCardless link for a plan directly — and portal access
+ * (invite / sign-in link / reset) links through to the client's Account tile.
  * Everything routes through the same helpers as the client hub and the portal,
  * so the price on this screen is the price the client sees and is charged.
  */
@@ -62,16 +63,6 @@ const cell: React.CSSProperties = {
   fontFamily: T.sans,
   fontSize: "0.84rem",
   color: "var(--k-fg)",
-};
-const inp: React.CSSProperties = {
-  height: 30,
-  background: "var(--k-bg)",
-  border: "1px solid var(--k-border)",
-  borderRadius: 0,
-  padding: "0 8px",
-  color: "var(--k-fg)",
-  fontFamily: T.sans,
-  fontSize: "0.8rem",
 };
 const btn = (bg: string, fg: string): React.CSSProperties => ({
   height: 30,
@@ -418,7 +409,7 @@ export default async function DirectDebitsPage() {
                       {/* Client */}
                       <div>
                         <Link
-                          href={`/admin/clients/${t.id}`}
+                          href={`/admin/clients/${t.id}/care-plan`}
                           style={{ ...cell, fontWeight: 600, textDecoration: "none" }}
                         >
                           {t.name}
@@ -594,27 +585,21 @@ export default async function DirectDebitsPage() {
                     {/* Actions */}
                     {!live && (
                       <div className="flex flex-wrap items-end gap-2 mt-3">
-                        <form action={sendPortalLink} className="flex items-center gap-2">
-                          <input type="hidden" name="tenant_id" value={t.id} />
-                          <input
-                            name="email"
-                            type="email"
-                            defaultValue={portalEmail ?? ""}
-                            placeholder="client@email.com"
-                            style={{ ...inp, width: 220 }}
-                            title="Recipient — change it if the client reads a different inbox"
-                          />
-                          <SubmitButton
-                            style={btn("var(--k-surface)", "var(--k-fg)")}
-                            disabled={!portalEmail && false}
-                          >
-                            {portal === "none"
-                              ? "Send portal invite"
-                              : portal === "invited"
-                                ? "Send sign-in link"
-                                : "Send password reset"}
-                          </SubmitButton>
-                        </form>
+                        {/* Portal access (invite / sign-in link / reset) is
+                            managed on the client's Account management tile —
+                            one write path, not a second one on the board. */}
+                        <Link
+                          href={`/admin/clients/${t.id}/account`}
+                          style={{
+                            ...btn("var(--k-surface)", "var(--k-fg)"),
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }}
+                          title="Send the portal invite, sign-in link or password reset from Account management"
+                        >
+                          Portal access →
+                        </Link>
                         <form action={sendPlanInvite} className="flex items-center gap-2">
                           <input type="hidden" name="tenant_id" value={t.id} />
                           <input type="hidden" name="email" value={portalEmail ?? ""} />

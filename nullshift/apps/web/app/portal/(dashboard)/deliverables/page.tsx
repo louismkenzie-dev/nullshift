@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { createServiceClient } from "@nullshift/db";
 import { getPortalClient } from "@/lib/clientPreview";
 import { signDeliverableUrl } from "@nullshift/db/documents";
+import { recordClientViews } from "@/lib/documentEvents";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader } from "@/components/app/AppKit";
 import { Reveal } from "@/components/Reveal";
@@ -15,6 +17,7 @@ export const dynamic = "force-dynamic";
 
 type Doc = {
   id: string;
+  tenant_id: string;
   project_id: string;
   kind: string;
   storage_path: string;
@@ -23,11 +26,11 @@ type Doc = {
 type Project = { id: string; name: string };
 
 export default async function DeliverablesPage() {
-  const { supabase } = await getPortalClient();
+  const { supabase, user, preview } = await getPortalClient();
   const [{ data: docs }, { data: projects }] = await Promise.all([
     supabase
       .from("documents")
-      .select("id, project_id, kind, storage_path, version")
+      .select("id, tenant_id, project_id, kind, storage_path, version")
       .order("created_at", { ascending: false }),
     supabase.from("projects").select("id, name, proposal_status, accepted_at"),
   ]);
@@ -41,6 +44,23 @@ export default async function DeliverablesPage() {
   const signed = projectList.find((p) => p.proposal_status === "accepted");
   const awaiting = projectList.find((p) => p.proposal_status === "sent");
   const nameOf = (id: string) => projectList.find((p) => p.id === id)?.name ?? "Project";
+
+  // Read receipt: the real client (never a staff preview) has now seen the
+  // uploaded legal artefacts — contracts and consent forms — listed here.
+  // First view only; asset / brief uploads are delivery files, not receipts.
+  if (user && !preview) {
+    const legal = docList.filter((d) => d.kind === "contract" || d.kind === "consent");
+    const tenantId = legal[0]?.tenant_id;
+    if (tenantId)
+      await recordClientViews(createServiceClient(), {
+        tenantId,
+        userId: user.id,
+        documents: legal.map((d) => ({
+          documentType: "deliverable" as const,
+          documentId: d.id,
+        })),
+      });
+  }
 
   // Mint a signed URL per document (RLS lets the client read only their tenant's).
   const withUrls = await Promise.all(
@@ -95,18 +115,13 @@ export default async function DeliverablesPage() {
                 {signed
                   ? `Proposal & agreement — signed${
                       signed.accepted_at
-                        ? " " +
-                          new Date(signed.accepted_at).toLocaleDateString("en-GB")
+                        ? " " + new Date(signed.accepted_at).toLocaleDateString("en-GB")
                         : ""
                     }`
                   : "Proposal & agreement — awaiting your signature"}
               </span>
             </div>
-            <Link
-              href="/portal/proposal"
-              className="kb kb-sm"
-              style={{ flexShrink: 0 }}
-            >
+            <Link href="/portal/proposal" className="kb kb-sm" style={{ flexShrink: 0 }}>
               {signed ? "View & download PDF" : "Review & sign"}
               <span className="k-arrow" aria-hidden>
                 →
@@ -230,8 +245,8 @@ export default async function DeliverablesPage() {
               padding: 18,
             }}
           >
-            No files yet — designs, exports and handover packs appear here as we
-            ship them. Your proposal and signed agreement live under Agreement.
+            No files yet — designs, exports and handover packs appear here as we ship
+            them. Your proposal and signed agreement live under Agreement.
           </p>
         )}
       </div>

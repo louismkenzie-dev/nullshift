@@ -149,9 +149,11 @@ async function triageIssue(formData: FormData) {
   // materially change one = additional development, and that must not be built
   // off a support entitlement.
   const classRaw = String(formData.get("classification") || "");
-  const classification = ((CLASSIFICATIONS as string[]).includes(classRaw)
-    ? classRaw
-    : (cur.classification ?? null)) as WorkClassification | null;
+  const classification = (
+    (CLASSIFICATIONS as string[]).includes(classRaw)
+      ? classRaw
+      : (cur.classification ?? null)
+  ) as WorkClassification | null;
 
   let buildBlocked = false;
   if (requiresChangeOrder(classification) && BUILD_STATUSES.includes(status)) {
@@ -192,8 +194,7 @@ async function triageIssue(formData: FormData) {
     billing,
     status,
     classification,
-    classification_note:
-      String(formData.get("classification_note") || "").trim() || null,
+    classification_note: String(formData.get("classification_note") || "").trim() || null,
     build_items: buildItems,
     quoted_price: quotedRaw ? Number(quotedRaw) : null,
     due_at: dueAt,
@@ -409,7 +410,12 @@ async function closeIssue(formData: FormData) {
 export default async function IssuesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; tenant?: string; project?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    tenant?: string;
+    project?: string;
+    issue?: string;
+  }>;
 }) {
   const params = await searchParams;
   const statusFilter = (ALL_STATUSES as string[]).includes(params.status ?? "")
@@ -706,7 +712,11 @@ export default async function IssuesPage({
           } | null;
           return (
             <Reveal key={issue.id} delay={Math.min(i, 8) * 0.04}>
-              <details style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}>
+              <details
+                id={`issue-${issue.id}`}
+                open={params.issue === issue.id}
+                style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}
+              >
                 <summary
                   className="max-md:flex max-md:flex-wrap max-md:items-center max-md:gap-x-2 max-md:gap-y-1.5 md:grid md:gap-3 items-center px-4 py-3 list-none hover:bg-[var(--k-surface)] transition-colors"
                   style={{ gridTemplateColumns: GRID, cursor: "pointer" }}
@@ -774,11 +784,12 @@ export default async function IssuesPage({
                   </span>
                   {/* §8: the ticket that cannot be scheduled yet, said out
                       loud on the row rather than discovered on save. */}
-                  {requiresChangeOrder(issue.classification) && !issue.change_order_id && (
-                    <span>
-                      <StatusChip tone="warning">Needs Change Order</StatusChip>
-                    </span>
-                  )}
+                  {requiresChangeOrder(issue.classification) &&
+                    !issue.change_order_id && (
+                      <span>
+                        <StatusChip tone="warning">Needs Change Order</StatusChip>
+                      </span>
+                    )}
                   <span>
                     <StatusChip tone={STATUS_TONE[issue.status]}>
                       {issue.status.replace(/_/g, " ")}

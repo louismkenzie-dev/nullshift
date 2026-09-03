@@ -1,8 +1,9 @@
 import { createElement } from "react";
 import type { DocumentProps } from "@react-pdf/renderer";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { createClient } from "@nullshift/db";
+import { createClient, createServiceClient } from "@nullshift/db";
 import { clientRef } from "@nullshift/ui/format";
+import { recordClientViews } from "@/lib/documentEvents";
 import { carePlan } from "@/lib/carePlans";
 import { ProposalPdf } from "@/lib/pdf/ProposalPdf";
 import { DpaPdf } from "@/lib/pdf/DpaPdf";
@@ -85,6 +86,26 @@ export async function GET(
   // the portal UI shows.
   if (project.proposal_status !== "sent" && project.proposal_status !== "accepted")
     return new Response("Not found", { status: 404 });
+
+  // Read receipt: downloading the PDF is opening the document. The helper
+  // drops staff previews (ns_client_preview) and non-members, so a staff
+  // download from the admin Documents page never ticks the client's receipt.
+  // The terms PDF is the sole trader's "service terms & data processing"
+  // document — the same receipt row the DPA fills for a limited company.
+  const receiptType =
+    kind === "proposal"
+      ? "proposal"
+      : kind === "dpa"
+        ? "dpa"
+        : project.client_entity_type === "sole_trader"
+          ? "dpa"
+          : null;
+  if (receiptType)
+    await recordClientViews(createServiceClient(), {
+      tenantId: project.tenant_id,
+      userId: user.id,
+      documents: [{ documentType: receiptType, documentId: project.id }],
+    });
 
   const ref = clientRef(project.tenant_id);
   const accepted = project.accepted_at

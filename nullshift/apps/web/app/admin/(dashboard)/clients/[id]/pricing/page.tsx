@@ -25,7 +25,10 @@ import {
   type ScaleInput,
 } from "@/lib/pricing/nsi";
 import { RebandPanel } from "./RebandPanel";
-import { latestEvidence, runAutoScore, type EvidenceRow } from "@/lib/scoring/autoScore";
+import { DeliverySections } from "../DeliverySections";
+import { recordCompliance } from "../../../compliance/actions";
+import { GDPR_CONTROLS } from "@/lib/compliance/controls";
+import { latestEvidence, runAutoScore } from "@/lib/scoring/autoScore";
 import { externalIntegrations, fieldsNeedingAPerson } from "@/lib/scoring/derive";
 import { isSupabaseManagementConfigured } from "@/lib/scoring/collectors/supabase";
 import {
@@ -266,6 +269,16 @@ const label: React.CSSProperties = {
   display: "block",
   marginBottom: 5,
 };
+// Sub-heading inside the Risk panel (cost guardrail / GDPR controls).
+const sectionLabel: React.CSSProperties = {
+  fontFamily: T.mono,
+  fontSize: "10px",
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  color: "var(--k-faint)",
+};
+
 const inp: React.CSSProperties = {
   fontFamily: T.sans,
   fontSize: "0.88rem",
@@ -451,7 +464,15 @@ export default async function ClientPricingPage({
   if (!(await requireStaff()).ok) notFound();
 
   const service = createServiceClient();
-  const [{ data: tenant }, { data: rows }, scan, { data: passport }] = await Promise.all([
+  const [
+    { data: tenant },
+    { data: rows },
+    scan,
+    { data: passport },
+    { data: riskProject },
+    { data: footprintRows },
+    { data: complianceRows },
+  ] = await Promise.all([
     service.from("tenants").select("id, name").eq("id", tenantId).maybeSingle(),
     service
       .from("scale_assessments")
@@ -467,8 +488,66 @@ export default async function ClientPricingPage({
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // The risk register hangs off the newest project (Scale and Risk tile).
+    service
+      .from("projects")
+      .select("id, stage")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    // Usage footprint (cost guardrail) — the rpc returns every tenant; this
+    // page keeps only this client's row.
+    service.rpc("tenant_footprint"),
+    service
+      .from("compliance_records")
+      .select("kind, recorded_at")
+      .eq("tenant_id", tenantId)
+      .order("recorded_at", { ascending: true }),
   ]);
   if (!tenant) notFound();
+
+  // Cost guardrail: the same rule as the money cockpit — a real footprint on
+  // a fee below the cheapest plan is a pricing trigger, never absorbed cost.
+  type Footprint = {
+    tenant_id: string;
+    name: string;
+    documents: number;
+    change_requests: number;
+    tasks: number;
+    invoices: number;
+    audit_rows: number;
+    mrr: number;
+  };
+  const footprintRow =
+    ((footprintRows ?? []) as Footprint[]).find((f) => f.tenant_id === tenantId) ?? null;
+  const footprint = footprintRow
+    ? (() => {
+        const score =
+          Number(footprintRow.documents) +
+          Number(footprintRow.change_requests) +
+          Number(footprintRow.tasks) +
+          Number(footprintRow.audit_rows) / 10;
+        return {
+          ...footprintRow,
+          score,
+          flag: score >= 15 && Number(footprintRow.mrr) < 40,
+        };
+      })()
+    : null;
+
+  // Per-tenant GDPR controls. The DPA row is read-only here (recorded on the
+  // Docs and Legal tile); the two operational controls are marked from here.
+  const complianceList = (complianceRows ?? []) as {
+    kind: string;
+    recorded_at: string;
+  }[];
+  const controlDone = (kind: string) =>
+    complianceList.find((r) => r.kind === kind)?.recorded_at ?? null;
+  const controlsDone =
+    (controlDone("dpa_signed") ? 1 : 0) +
+    GDPR_CONTROLS.filter((c) => controlDone(c.kind)).length;
+  const controlsTotal = GDPR_CONTROLS.length + 1;
 
   const history = (rows ?? []) as (Row & { field_states?: FieldStates | null })[];
   const latest = history[0];
@@ -513,7 +592,7 @@ export default async function ClientPricingPage({
             className="kb kb-outline kb-sm"
             style={{ textDecoration: "none" }}
           >
-            ← Client hub
+            ← {tenant.name}
           </Link>
         }
       />
@@ -1264,6 +1343,187 @@ export default async function ClientPricingPage({
           </div>
         </form>
       </Panel>
+
+      {/* ── Risks & blockers — the delivery risk register (Scale and Risk tile) ── */}
+      {riskProject && (
+        <div style={{ marginTop: 20 }}>
+          <DeliverySections
+            tenantId={tenantId}
+            projectId={(riskProject as { id: string }).id}
+            stage={(riskProject as { stage: string }).stage}
+            sections={["risks"]}
+          />
+        </div>
+      )}
+
+      {/* ── Risk — cost guardrail + per-tenant GDPR controls ─────────────── */}
+      {/* The Scale and Risk tile's second half: the same usage-footprint
+          guardrail the money cockpit runs, filtered to this client, and the
+          compliance_records checklist from the compliance centre. */}
+      <div style={{ marginTop: 20 }}>
+        <Panel
+          label="// RISK"
+          title="Cost guardrail and GDPR controls"
+          actions={
+            <>
+              <StatusChip tone={controlsDone === controlsTotal ? "success" : "warning"}>
+                {controlsDone}/{controlsTotal} controls
+              </StatusChip>
+              <Link
+                href={`/api/sar/${tenantId}`}
+                prefetch={false}
+                className="kb kb-outline kb-sm"
+                style={{ textDecoration: "none" }}
+                title="Subject access request — export everything held on this client"
+              >
+                ↓ Export data (SAR)
+              </Link>
+            </>
+          }
+        >
+          {/* Cost guardrail row — this client's usage footprint vs their fee */}
+          <div
+            className="flex flex-col gap-2"
+            style={{ paddingBottom: 14, borderBottom: "1px solid var(--k-border)" }}
+          >
+            <span style={sectionLabel}>Cost guardrail</span>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontSize: "0.84rem",
+                lineHeight: 1.5,
+                color: "var(--k-muted)",
+                maxWidth: "64ch",
+                margin: 0,
+              }}
+            >
+              A proxy for this client&apos;s resource footprint vs its recurring fee. A
+              flag is a pricing trigger — raise the plan, never absorb the cost.
+            </p>
+            {footprint ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div
+                  className="flex items-center gap-4 flex-wrap"
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "0.72rem",
+                    letterSpacing: "0.04em",
+                    color: "var(--k-muted)",
+                  }}
+                >
+                  <span>docs {footprint.documents}</span>
+                  <span>issues {footprint.change_requests}</span>
+                  <span>tasks {footprint.tasks}</span>
+                  <span>audit {footprint.audit_rows}</span>
+                  <span style={{ color: "var(--k-fg)" }}>
+                    {gbp(Number(footprint.mrr))}/mo
+                  </span>
+                  <span style={{ color: "var(--k-faint)" }}>
+                    score {Math.round(footprint.score)} · flags at 15+ under £40/mo
+                  </span>
+                </div>
+                {footprint.flag ? (
+                  <StatusChip tone="warning">⚠ review pricing</StatusChip>
+                ) : (
+                  <StatusChip tone="success">✓ healthy</StatusChip>
+                )}
+              </div>
+            ) : (
+              <span
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.85rem",
+                  color: "var(--k-muted)",
+                }}
+              >
+                No footprint yet — nothing recorded against this tenant.
+              </span>
+            )}
+          </div>
+
+          {/* GDPR controls — the per-tenant compliance_records checklist */}
+          <div className="flex flex-col" style={{ paddingTop: 14 }}>
+            <span style={sectionLabel}>GDPR controls</span>
+            {[
+              {
+                kind: "dpa_signed",
+                label: "DPA signed",
+                hint: "Recorded on the Docs and Legal tile (portal acceptance or an offline signature).",
+                recordable: false,
+              },
+              ...GDPR_CONTROLS.map((c) => ({ ...c, recordable: true })),
+            ].map((check, ci) => {
+              const done = controlDone(check.kind);
+              return (
+                <div
+                  key={check.kind}
+                  className="flex items-center justify-between gap-3 flex-wrap"
+                  style={{
+                    padding: "10px 0",
+                    borderTop: ci ? "1px solid var(--k-border)" : "none",
+                  }}
+                >
+                  <span className="flex flex-col gap-0.5 min-w-0">
+                    <span
+                      className="flex items-center gap-2"
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.88rem",
+                        color: done ? "var(--k-fg)" : "var(--k-muted)",
+                      }}
+                    >
+                      <span style={{ color: done ? T.success : "var(--k-faint)" }}>
+                        {done ? "✓" : "○"}
+                      </span>
+                      {check.label}
+                      {done && (
+                        <span
+                          style={{
+                            fontFamily: T.mono,
+                            fontSize: "10px",
+                            letterSpacing: "0.06em",
+                            color: "var(--k-faint)",
+                          }}
+                        >
+                          {dateGB(done)}
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.78rem",
+                        color: "var(--k-faint)",
+                        paddingLeft: 20,
+                      }}
+                    >
+                      {check.hint}
+                    </span>
+                  </span>
+                  {!done &&
+                    (check.recordable ? (
+                      <form action={recordCompliance}>
+                        <input type="hidden" name="tenant_id" value={tenantId} />
+                        <input type="hidden" name="kind" value={check.kind} />
+                        <SubmitButton className="kb kb-outline kb-sm" pendingLabel="…">
+                          Mark done
+                        </SubmitButton>
+                      </form>
+                    ) : (
+                      <Link
+                        href={`/admin/clients/${tenantId}/docs`}
+                        className="kb kb-outline kb-sm"
+                        style={{ textDecoration: "none" }}
+                      >
+                        Docs and Legal →
+                      </Link>
+                    ))}
+                </div>
+              );
+            })}
+          </div>
+        </Panel>
+      </div>
 
       {/* ── History ──────────────────────────────────────────────── */}
       {/* §7: the monthly shadow score and the notice workflow that stands

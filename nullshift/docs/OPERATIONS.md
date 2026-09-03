@@ -81,6 +81,42 @@ checkout and manually recorded plans.
 - A client cannot drop below the plan their live dependencies require (managed
   AI/API or email keeps them on Pro as a minimum).
 
+## Ops hub layout (2026-09)
+
+`/admin` is a grid of **client blocks**, one per client, coloured by contract state:
+green = signed proposal or signed Order Form; orange = proposal / Order Form sent and
+awaiting signature; red = enquiry, prospect, nothing sent, or declined. Enquiries (leads
+with no client record yet) sit in their own red row above the grid; the internal
+Nullshift tenant sits in a "Platform" row with no colour. Seven small dots on each block
+mirror the tile states. The old Mission Control is `/admin/overview`.
+
+Inside a block (`/admin/clients/[id]`) the client's world is seven portal-style tiles,
+each with a traffic-light chip (plus grey for "not started"):
+
+| Tile                | Route                                       | Holds                                                                                                                            |
+| ------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Passport            | `…/passport` → `/admin/systems/[projectId]` | the system passport (repo, Supabase ref, stack, routine, build cockpit, handover)                                                |
+| Billing and Payment | `…/billing`                                 | invoices (issue / send / mark paid / Xero), build modules, balance, contracted schedule, subscription rows (read-only)           |
+| Issues and Bugs     | `…/issues`                                  | issue bank for this client with quick-add, triage, quotes, change requests, fix batches, delivery tasks, ingest drafts, promises |
+| Care Plan           | `…/care-plan`                               | client's choice + terms, three contracted prices, send options / re-send DD link, subscription state, history                    |
+| Scale and Risk      | `…/pricing`                                 | scale assessment + auto-score, per-plan prices, re-band notices, cost guardrail, GDPR controls, SAR export                       |
+| Account management  | `…/account`                                 | owners, next action, stage control, milestones, updates, portal access, view-as-client, compliance review, activity              |
+| Docs and Legal      | `…/docs`                                    | proposal drafter, Order Form & Change Orders, DPA, care-plan terms, deliverables, **read receipts**, notices                     |
+
+**Care Plan chip:** red = not scored / no price (and past due); amber = options sent or
+mandate awaiting; green = subscribed; grey = client chose none, or chooser closed before go-live.
+
+**Read receipts** (`document_events`, migration 0048): one ledger row per (document, event)
+— sent / viewed / signed / approved. `viewed` is recorded when the CLIENT first opens the
+document in the portal (staff "view as client" previews are excluded); `signed` from the
+acceptance actions; `sent` from the staff send actions. The Docs tile shows Sent · Viewed ·
+Signed per document like message ticks.
+
+**Review gate** (migration 0049): a proposal, Order Form or Change Order can only be sent
+once a DIFFERENT staff member than its author has approved it (`reviewed_by` ≠ author;
+`lib/legal/review.ts`, `components/admin/ReviewGate.tsx`). Every draft save clears the
+approval. Audit: `legal.approved`, plus an `approved` document event.
+
 ## Daily loop
 
 1. **`/admin`** (Mission Control) — the one screen: critical/overdue issues, batches in

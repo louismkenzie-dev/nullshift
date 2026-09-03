@@ -119,6 +119,22 @@ export default async function TasksPage() {
         lead="The internal delivery engine — every client project tracked across the lifecycle."
       />
 
+      <p
+        style={{
+          fontFamily: T.mono,
+          fontSize: 11,
+          letterSpacing: "0.04em",
+          color: "var(--k-muted)",
+          marginTop: 12,
+          border: "1px solid var(--k-border)",
+          padding: "8px 12px",
+        }}
+      >
+        SUPERSEDED — each client&apos;s tasks now live on their Issues and Bugs tile
+        (/admin/clients/[id]/issues), next to their issues, change requests and fix
+        batches. This board stays as the cross-client view.
+      </p>
+
       <Reveal className="block" delay={0.05}>
         <Panel label="New task" className="mt-7">
           <form action={createTask} className="flex items-center gap-2 flex-wrap">

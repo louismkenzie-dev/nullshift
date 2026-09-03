@@ -302,7 +302,7 @@ export default function CalendarPage() {
                       {dayCalls.map((call) => (
                         <Link
                           key={call.id}
-                          href={`/admin/clients/${call.tenant_id}`}
+                          href={`/admin/clients/${call.tenant_id}/account`}
                           className="block transition-opacity hover:opacity-80 px-1.5 py-1"
                           style={{
                             background: "var(--k-accent-soft, rgba(16,185,129,0.14))",
@@ -380,7 +380,7 @@ export default function CalendarPage() {
                 {upcoming.map((c, i) => (
                   <Link
                     key={c.id}
-                    href={`/admin/clients/${c.tenant_id}`}
+                    href={`/admin/clients/${c.tenant_id}/account`}
                     className="block transition-opacity hover:opacity-80 py-3"
                     style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}
                   >

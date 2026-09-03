@@ -5,13 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
+  LayoutGrid,
   Boxes,
   Bug,
   Zap,
+  ClipboardList,
   Inbox,
   Puzzle,
   Funnel,
-  Building2,
   Receipt,
   Copy,
   ShieldCheck,
@@ -35,19 +36,26 @@ import { ScrambleHover } from "@/components/anim/ScrambleHover";
 type NavItem = { label: string; href: string; Icon: LucideIcon };
 type NavGroup = { section: string; items: NavItem[] };
 
-// Ordered by how the agency runs: Operate (the daily cockpit — mission control,
-// the fleet, the issue bank, fix batches, raw intake) → Commercial (winning and
+// Ordered by how the agency runs: Operate (the daily cockpit — the Dashboard
+// grid, Overview, the fleet, the issue bank, fix batches, the cross-client
+// delivery board, modules, raw intake) → AI Office → Commercial (winning and
 // billing clients) → Admin (the paperwork that keeps it all legal and safe).
+// Per-client pages (hub, tiles, passport, agreement, pricing) are reached
+// through the Dashboard grid blocks rather than the drawer.
 const groups: NavGroup[] = [
   {
     section: "Operate",
     items: [
-      { label: "Dashboard", href: "/admin", Icon: LayoutDashboard },
+      { label: "Dashboard", href: "/admin", Icon: LayoutGrid },
+      { label: "Overview", href: "/admin/overview", Icon: LayoutDashboard },
       { label: "Systems", href: "/admin/systems", Icon: Boxes },
       { label: "Issues", href: "/admin/issues", Icon: Bug },
       { label: "Batches", href: "/admin/batches", Icon: Zap },
-      { label: "Modules", href: "/admin/modules", Icon: Puzzle },
+      { label: "Delivery tasks", href: "/admin/tasks", Icon: ClipboardList },
       { label: "Inbox", href: "/admin/inbox", Icon: Inbox },
+      { label: "Calendar", href: "/admin/calendar", Icon: Calendar },
+      { label: "Templates", href: "/admin/templates", Icon: Copy },
+      { label: "Modules", href: "/admin/modules", Icon: Puzzle },
     ],
   },
   {
@@ -66,9 +74,7 @@ const groups: NavGroup[] = [
     section: "Commercial",
     items: [
       { label: "Pipeline", href: "/admin/pipeline", Icon: Funnel },
-      { label: "Clients", href: "/admin/clients", Icon: Building2 },
       { label: "Billing", href: "/admin/billing", Icon: Receipt },
-      { label: "Templates", href: "/admin/templates", Icon: Copy },
     ],
   },
   {
@@ -76,7 +82,6 @@ const groups: NavGroup[] = [
     items: [
       { label: "Compliance", href: "/admin/compliance", Icon: ShieldCheck },
       { label: "SOC 2 Readiness", href: "/admin/soc2", Icon: FileCheck },
-      { label: "Calendar", href: "/admin/calendar", Icon: Calendar },
       { label: "Security", href: "/admin/security", Icon: KeyRound },
     ],
   },

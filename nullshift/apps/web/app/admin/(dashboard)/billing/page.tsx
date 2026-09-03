@@ -12,16 +12,8 @@ import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
-import { contractedMrr } from "@/lib/pricing/contracted";
 import { reconcileXeroInvoices } from "@/lib/xeroSync";
-import {
-  CARE_PLANS,
-  CARE_PLAN_MRR,
-  carePlan,
-  currentPeriodStart,
-  remainingAllowance,
-} from "@/lib/carePlans";
-import { sendCareSubscriptionSignup } from "@/lib/careSubscription";
+import { carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
 
 /**
  * Billing — the money cockpit. MRR on the new four-tier retainer model
@@ -29,9 +21,11 @@ import { sendCareSubscriptionSignup } from "@/lib/careSubscription";
  * @/lib/carePlans, the single source of truth), one row per client with their
  * latest retainer + build-item allowance meter, past-due triage at the top,
  * build invoices, and the usage-footprint cost guardrail. The Stripe webhook
- * flips invoices to paid and upserts subscriptions in production; the actions
- * here let staff send sign-ups, record standing-order retainers, and grant
- * build-credit top-ups.
+ * flips invoices to paid and upserts subscriptions in production. The plan is
+ * the CLIENT's choice (portal chooser + terms): staff never pick one here —
+ * starting, re-sending or cancelling a plan lives on the client's Care Plan
+ * tile, which enforces tenants.care_plan_choice. This page keeps top-ups and
+ * cancellation only.
  */
 
 export const dynamic = "force-dynamic";
@@ -60,11 +54,6 @@ type Invoice = {
 };
 type CreditEvent = { tenant_id: string; delta: number };
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk").replace(
-  /\/$/,
-  ""
-);
-
 const SUB_TONE: Record<string, "accent" | "success" | "warning" | "danger" | "muted"> = {
   active: "success",
   trialing: "accent",
@@ -76,31 +65,10 @@ const SUB_TONE: Record<string, "accent" | "success" | "warning" | "danger" | "mu
 /* ── Server actions ─────────────────────────────────────────────── */
 
 /**
- * Email the client a Stripe Checkout sign-up for a retainer plan (they add a
- * card to start the recurring plan). The webhook flips the local row to active
- * once they complete it. Idempotent — a no-op if already actively subscribed.
+ * Cancel a live retainer at the provider (Stripe or GoCardless) and mark the
+ * local row canceled. Starting or re-sending a plan is not done here — the
+ * client chooses their plan in the portal, from their Care Plan tile.
  */
-async function sendSubscriptionSignup(formData: FormData) {
-  "use server";
-  if (!(await requireStaff()).ok) return;
-  const tenantId = String(formData.get("tenant_id") || "");
-  const plan = String(formData.get("plan") || "");
-  if (!tenantId || !(plan in CARE_PLAN_MRR)) return;
-  const res = await sendCareSubscriptionSignup(createServiceClient(), {
-    tenantId,
-    planId: plan,
-    siteUrl: SITE_URL,
-  });
-  if (res.ok)
-    await logAudit({
-      action: "subscription.signup_sent",
-      target: `tenant:${tenantId}`,
-      tenantId,
-      metadata: { plan, emailed: res.emailed, alreadyActive: res.alreadyActive ?? false },
-    });
-  revalidatePath("/admin/billing");
-}
-
 async function cancelSubscription(formData: FormData) {
   "use server";
   if (!(await requireStaff()).ok) return;
@@ -147,37 +115,6 @@ async function cancelSubscription(formData: FormData) {
       action: "subscription.canceled",
       target: `subscription:${id}`,
       tenantId,
-    });
-  revalidatePath("/admin/billing");
-}
-
-/**
- * Record a retainer without Stripe — for clients who pay by standing order.
- * MRR resolves through the pricing engine so the number can never drift.
- */
-async function recordManualSubscription(formData: FormData) {
-  "use server";
-  if (!(await requireStaff()).ok) return;
-  const tenantId = String(formData.get("tenant_id") || "");
-  const plan = String(formData.get("plan") || "");
-  if (!tenantId || !(plan in CARE_PLAN_MRR)) return;
-  const supabase = await createClient();
-  // The contracted rate for this tenant (scale multiplier + margin floor),
-  // falling back to the catalogue base when no assessment exists yet.
-  const { mrr } = await contractedMrr(tenantId, plan);
-  const { error } = await supabase.from("subscriptions").insert({
-    tenant_id: tenantId,
-    plan,
-    mrr,
-    status: "active",
-    started_at: new Date().toISOString(),
-  });
-  if (!error)
-    await logAudit({
-      action: "subscription.recorded_manually",
-      target: `tenant:${tenantId}`,
-      tenantId,
-      metadata: { plan, mrr },
     });
   revalidatePath("/admin/billing");
 }
@@ -784,57 +721,18 @@ export default async function BillingPage() {
                         }}
                       >
                         {!live && (
-                          <ActionGroup label="Send signup">
-                            <form
-                              action={sendSubscriptionSignup}
-                              className="flex flex-wrap items-center gap-2"
+                          <ActionGroup label="Care plan">
+                            <Link
+                              href={`/admin/clients/${t.id}/care-plan`}
+                              className="kb kb-outline kb-sm"
+                              style={{ textDecoration: "none", width: "fit-content" }}
+                              title="Send options or the Direct Debit link from their Care Plan tile"
                             >
-                              <input type="hidden" name="tenant_id" value={t.id} />
-                              <select
-                                name="plan"
-                                className="max-md:w-full"
-                                style={{ ...inp, maxWidth: "100%" }}
-                                defaultValue={plan?.id ?? "hosting"}
-                              >
-                                {CARE_PLANS.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    {p.label} · £{p.mrr}/mo
-                                  </option>
-                                ))}
-                              </select>
-                              <SubmitButton
-                                style={btn("var(--k-accent)", "var(--k-on-accent)")}
-                              >
-                                Send signup
-                              </SubmitButton>
-                            </form>
-                          </ActionGroup>
-                        )}
-                        {!live && (
-                          <ActionGroup label="Record manually (standing order)">
-                            <form
-                              action={recordManualSubscription}
-                              className="flex flex-wrap items-center gap-2"
-                            >
-                              <input type="hidden" name="tenant_id" value={t.id} />
-                              <select
-                                name="plan"
-                                className="max-md:w-full"
-                                style={{ ...inp, maxWidth: "100%" }}
-                                defaultValue="hosting"
-                              >
-                                {CARE_PLANS.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    {p.label} · £{p.mrr}/mo
-                                  </option>
-                                ))}
-                              </select>
-                              <SubmitButton
-                                style={btn("var(--k-surface)", "var(--k-fg)", true)}
-                              >
-                                Record
-                              </SubmitButton>
-                            </form>
+                              Care Plan tile →
+                            </Link>
+                            <span style={dimMono}>
+                              The client chooses their plan in the portal
+                            </span>
                           </ActionGroup>
                         )}
                         <ActionGroup label="Grant top-up (build items)">

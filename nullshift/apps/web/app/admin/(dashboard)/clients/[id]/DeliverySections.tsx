@@ -118,15 +118,21 @@ type Decision = {
 };
 type Checklist = { id: string; kind: string; title: string; items: ChecklistItem[] };
 
+export type DeliverySection = "milestones" | "risks" | "decisions" | "playbooks";
+
 export async function DeliverySections({
   tenantId,
   projectId,
   stage,
+  sections = ["milestones", "risks", "decisions", "playbooks"],
 }: {
   tenantId: string;
   projectId: string;
   stage: string;
+  /** Which panels to render — the tile pages each take their own subset. */
+  sections?: DeliverySection[];
 }) {
+  const show = (s: DeliverySection) => sections.includes(s);
   const supabase = await createClient();
   const [{ data: msRaw }, { data: riskRaw }, { data: decRaw }, { data: clRaw }] =
     await Promise.all([
@@ -169,251 +175,259 @@ export async function DeliverySections({
   return (
     <>
       {/* ── Milestones ── */}
-      <Reveal>
-        <section style={card}>
-          <h2 style={h2}>Milestones</h2>
-          {milestones.length === 0 ? (
-            <p style={dimNote}>No milestones yet — give the work target dates.</p>
-          ) : (
-            <div className="flex flex-col" style={{ marginTop: 8 }}>
-              {milestones.map((m, i) => (
-                <div
-                  key={m.id}
-                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5"
-                  style={{
-                    padding: "8px 0",
-                    borderTop: i ? "1px solid var(--k-border)" : "none",
-                    opacity: m.health === "done" ? 0.55 : 1,
-                  }}
-                >
-                  <div className="min-w-0">
-                    <span style={rowText}>{m.title}</span>
-                    <div style={{ ...mono, marginTop: 2 }}>
-                      {m.target_date && <>due {dateGB(m.target_date)} · </>}
-                      {m.owner && <>{m.owner} · </>}
-                      {m.acceptance_criteria ?? ""}
+      {show("milestones") && (
+        <Reveal>
+          <section style={card}>
+            <h2 style={h2}>Milestones</h2>
+            {milestones.length === 0 ? (
+              <p style={dimNote}>No milestones yet — give the work target dates.</p>
+            ) : (
+              <div className="flex flex-col" style={{ marginTop: 8 }}>
+                {milestones.map((m, i) => (
+                  <div
+                    key={m.id}
+                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5"
+                    style={{
+                      padding: "8px 0",
+                      borderTop: i ? "1px solid var(--k-border)" : "none",
+                      opacity: m.health === "done" ? 0.55 : 1,
+                    }}
+                  >
+                    <div className="min-w-0">
+                      <span style={rowText}>{m.title}</span>
+                      <div style={{ ...mono, marginTop: 2 }}>
+                        {m.target_date && <>due {dateGB(m.target_date)} · </>}
+                        {m.owner && <>{m.owner} · </>}
+                        {m.acceptance_criteria ?? ""}
+                      </div>
                     </div>
+                    <form action={setMilestoneHealth} className="flex items-center gap-1">
+                      <input type="hidden" name="tenant_id" value={tenantId} />
+                      <input type="hidden" name="id" value={m.id} />
+                      <select
+                        name="health"
+                        defaultValue={m.health}
+                        style={{
+                          ...inp,
+                          height: 26,
+                          fontFamily: T.mono,
+                          fontSize: 10,
+                          color: MILESTONE_TONE[m.health] ?? "var(--k-muted)",
+                        }}
+                      >
+                        {["on_track", "watch", "at_risk", "done"].map((h) => (
+                          <option key={h} value={h}>
+                            {h.replace(/_/g, " ")}
+                          </option>
+                        ))}
+                      </select>
+                      <SubmitButton style={btn("transparent", "var(--k-muted)")}>
+                        Set
+                      </SubmitButton>
+                    </form>
                   </div>
-                  <form action={setMilestoneHealth} className="flex items-center gap-1">
-                    <input type="hidden" name="tenant_id" value={tenantId} />
-                    <input type="hidden" name="id" value={m.id} />
-                    <select
-                      name="health"
-                      defaultValue={m.health}
-                      style={{
-                        ...inp,
-                        height: 26,
-                        fontFamily: T.mono,
-                        fontSize: 10,
-                        color: MILESTONE_TONE[m.health] ?? "var(--k-muted)",
-                      }}
-                    >
-                      {["on_track", "watch", "at_risk", "done"].map((h) => (
-                        <option key={h} value={h}>
-                          {h.replace(/_/g, " ")}
-                        </option>
-                      ))}
-                    </select>
-                    <SubmitButton style={btn("transparent", "var(--k-muted)")}>
-                      Set
-                    </SubmitButton>
-                  </form>
-                </div>
-              ))}
-            </div>
-          )}
-          <form
-            action={addMilestone}
-            className="flex items-center gap-2 flex-wrap"
-            style={{
-              marginTop: 10,
-              paddingTop: 10,
-              borderTop: "1px solid var(--k-border)",
-            }}
-          >
-            {hidden}
-            <input
-              name="title"
-              required
-              placeholder="Milestone"
-              style={{ ...inp, width: 200 }}
-            />
-            <input name="target_date" type="date" style={inp} />
-            <input name="owner" placeholder="Owner" style={{ ...inp, width: 110 }} />
-            <input
-              name="acceptance_criteria"
-              placeholder="Done when…"
-              style={{ ...inp, width: 200 }}
-            />
-            <SubmitButton style={btn("var(--k-bg)", "var(--k-fg)")}>+ Add</SubmitButton>
-          </form>
-        </section>
-      </Reveal>
+                ))}
+              </div>
+            )}
+            <form
+              action={addMilestone}
+              className="flex items-center gap-2 flex-wrap"
+              style={{
+                marginTop: 10,
+                paddingTop: 10,
+                borderTop: "1px solid var(--k-border)",
+              }}
+            >
+              {hidden}
+              <input
+                name="title"
+                required
+                placeholder="Milestone"
+                style={{ ...inp, width: 200 }}
+              />
+              <input name="target_date" type="date" style={inp} />
+              <input name="owner" placeholder="Owner" style={{ ...inp, width: 110 }} />
+              <input
+                name="acceptance_criteria"
+                placeholder="Done when…"
+                style={{ ...inp, width: 200 }}
+              />
+              <SubmitButton style={btn("var(--k-bg)", "var(--k-fg)")}>+ Add</SubmitButton>
+            </form>
+          </section>
+        </Reveal>
+      )}
 
       {/* ── Risks & blockers (internal) ── */}
-      <Reveal>
-        <section style={card}>
-          <div className="flex items-center justify-between">
-            <h2 style={h2}>Risks &amp; blockers</h2>
-            <span style={mono}>internal only — never shown to the client</span>
-          </div>
-          {openRisks.length === 0 ? (
-            <p style={dimNote}>No open risks on the register.</p>
-          ) : (
-            <div className="flex flex-col" style={{ marginTop: 8 }}>
-              {openRisks.map((r, i) => (
-                <div
-                  key={r.id}
-                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5"
-                  style={{
-                    padding: "8px 0",
-                    borderTop: i ? "1px solid var(--k-border)" : "none",
-                  }}
-                >
-                  <div className="min-w-0">
-                    <span style={rowText}>{r.title}</span>
-                    <div style={{ ...mono, marginTop: 2 }}>
-                      {r.impact && <>impact: {r.impact} · </>}
-                      {r.owner && <>{r.owner} · </>}
-                      {r.mitigation && <>mitigation: {r.mitigation} · </>}
-                      {r.review_date && <>review {dateGB(r.review_date)}</>}
-                    </div>
-                  </div>
-                  <form action={resolveRisk} className="flex items-center gap-1">
-                    <input type="hidden" name="tenant_id" value={tenantId} />
-                    <input type="hidden" name="id" value={r.id} />
-                    <input
-                      name="resolution"
-                      placeholder="How it resolved"
-                      style={{ ...inp, height: 26, width: 150 }}
-                    />
-                    <SubmitButton
-                      name="status"
-                      value="mitigated"
-                      style={btn("transparent", T.success)}
-                    >
-                      Mitigated
-                    </SubmitButton>
-                    <SubmitButton
-                      name="status"
-                      value="closed"
-                      style={btn("transparent", "var(--k-muted)")}
-                    >
-                      Close
-                    </SubmitButton>
-                  </form>
-                </div>
-              ))}
+      {show("risks") && (
+        <Reveal>
+          <section style={card}>
+            <div className="flex items-center justify-between">
+              <h2 style={h2}>Risks &amp; blockers</h2>
+              <span style={mono}>internal only — never shown to the client</span>
             </div>
-          )}
-          <form
-            action={addRisk}
-            className="flex items-center gap-2 flex-wrap"
-            style={{
-              marginTop: 10,
-              paddingTop: 10,
-              borderTop: "1px solid var(--k-border)",
-            }}
-          >
-            {hidden}
-            <input
-              name="title"
-              required
-              placeholder="Risk / blocker"
-              style={{ ...inp, width: 190 }}
-            />
-            <input name="impact" placeholder="Impact" style={{ ...inp, width: 130 }} />
-            <input name="owner" placeholder="Owner" style={{ ...inp, width: 100 }} />
-            <input
-              name="mitigation"
-              placeholder="Mitigation"
-              style={{ ...inp, width: 170 }}
-            />
-            <input name="review_date" type="date" style={inp} />
-            <SubmitButton style={btn("var(--k-bg)", "var(--k-fg)")}>+ Raise</SubmitButton>
-          </form>
-        </section>
-      </Reveal>
+            {openRisks.length === 0 ? (
+              <p style={dimNote}>No open risks on the register.</p>
+            ) : (
+              <div className="flex flex-col" style={{ marginTop: 8 }}>
+                {openRisks.map((r, i) => (
+                  <div
+                    key={r.id}
+                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5"
+                    style={{
+                      padding: "8px 0",
+                      borderTop: i ? "1px solid var(--k-border)" : "none",
+                    }}
+                  >
+                    <div className="min-w-0">
+                      <span style={rowText}>{r.title}</span>
+                      <div style={{ ...mono, marginTop: 2 }}>
+                        {r.impact && <>impact: {r.impact} · </>}
+                        {r.owner && <>{r.owner} · </>}
+                        {r.mitigation && <>mitigation: {r.mitigation} · </>}
+                        {r.review_date && <>review {dateGB(r.review_date)}</>}
+                      </div>
+                    </div>
+                    <form action={resolveRisk} className="flex items-center gap-1">
+                      <input type="hidden" name="tenant_id" value={tenantId} />
+                      <input type="hidden" name="id" value={r.id} />
+                      <input
+                        name="resolution"
+                        placeholder="How it resolved"
+                        style={{ ...inp, height: 26, width: 150 }}
+                      />
+                      <SubmitButton
+                        name="status"
+                        value="mitigated"
+                        style={btn("transparent", T.success)}
+                      >
+                        Mitigated
+                      </SubmitButton>
+                      <SubmitButton
+                        name="status"
+                        value="closed"
+                        style={btn("transparent", "var(--k-muted)")}
+                      >
+                        Close
+                      </SubmitButton>
+                    </form>
+                  </div>
+                ))}
+              </div>
+            )}
+            <form
+              action={addRisk}
+              className="flex items-center gap-2 flex-wrap"
+              style={{
+                marginTop: 10,
+                paddingTop: 10,
+                borderTop: "1px solid var(--k-border)",
+              }}
+            >
+              {hidden}
+              <input
+                name="title"
+                required
+                placeholder="Risk / blocker"
+                style={{ ...inp, width: 190 }}
+              />
+              <input name="impact" placeholder="Impact" style={{ ...inp, width: 130 }} />
+              <input name="owner" placeholder="Owner" style={{ ...inp, width: 100 }} />
+              <input
+                name="mitigation"
+                placeholder="Mitigation"
+                style={{ ...inp, width: 170 }}
+              />
+              <input name="review_date" type="date" style={inp} />
+              <SubmitButton style={btn("var(--k-bg)", "var(--k-fg)")}>
+                + Raise
+              </SubmitButton>
+            </form>
+          </section>
+        </Reveal>
+      )}
 
       {/* ── Decision log (internal) ── */}
-      <Reveal>
-        <section style={card}>
-          <div className="flex items-center justify-between">
-            <h2 style={h2}>Decision log</h2>
-            <span style={mono}>what was decided, why, by whom</span>
-          </div>
-          {decisions.length === 0 ? (
-            <p style={dimNote}>
-              No decisions recorded — big calls made on calls or WhatsApp belong here.
-            </p>
-          ) : (
-            <div className="flex flex-col" style={{ marginTop: 8 }}>
-              {decisions.slice(0, 8).map((d, i) => (
-                <div
-                  key={d.id}
-                  style={{
-                    padding: "8px 0",
-                    borderTop: i ? "1px solid var(--k-border)" : "none",
-                  }}
-                >
-                  <span style={rowText}>{d.decision}</span>
-                  <div style={{ ...mono, marginTop: 2 }}>
-                    {dateGB(d.decided_at)}
-                    {d.approver && <> · approved by {d.approver}</>}
-                    {d.source && <> · via {d.source}</>}
-                    {d.impact && <> · impact: {d.impact}</>}
-                  </div>
-                  {d.rationale && (
-                    <div style={{ ...dimNote, marginTop: 2 }}>{d.rationale}</div>
-                  )}
-                </div>
-              ))}
+      {show("decisions") && (
+        <Reveal>
+          <section style={card}>
+            <div className="flex items-center justify-between">
+              <h2 style={h2}>Decision log</h2>
+              <span style={mono}>what was decided, why, by whom</span>
             </div>
-          )}
-          <form
-            action={addDecision}
-            className="flex items-center gap-2 flex-wrap"
-            style={{
-              marginTop: 10,
-              paddingTop: 10,
-              borderTop: "1px solid var(--k-border)",
-            }}
-          >
-            {hidden}
-            <input
-              name="decision"
-              required
-              placeholder="Decision"
-              style={{ ...inp, width: 220 }}
-            />
-            <input name="rationale" placeholder="Why" style={{ ...inp, width: 180 }} />
-            <input
-              name="approver"
-              placeholder="Approved by"
-              style={{ ...inp, width: 110 }}
-            />
-            <select name="source" defaultValue="" style={{ ...inp, width: 110 }}>
-              <option value="">source…</option>
-              {["call", "whatsapp", "email", "portal", "internal"].map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <input
-              name="impact"
-              placeholder="Cost / timeline / scope impact"
-              style={{ ...inp, width: 200 }}
-            />
-            <SubmitButton style={btn("var(--k-bg)", "var(--k-fg)")}>
-              + Record
-            </SubmitButton>
-          </form>
-        </section>
-      </Reveal>
+            {decisions.length === 0 ? (
+              <p style={dimNote}>
+                No decisions recorded — big calls made on calls or WhatsApp belong here.
+              </p>
+            ) : (
+              <div className="flex flex-col" style={{ marginTop: 8 }}>
+                {decisions.slice(0, 8).map((d, i) => (
+                  <div
+                    key={d.id}
+                    style={{
+                      padding: "8px 0",
+                      borderTop: i ? "1px solid var(--k-border)" : "none",
+                    }}
+                  >
+                    <span style={rowText}>{d.decision}</span>
+                    <div style={{ ...mono, marginTop: 2 }}>
+                      {dateGB(d.decided_at)}
+                      {d.approver && <> · approved by {d.approver}</>}
+                      {d.source && <> · via {d.source}</>}
+                      {d.impact && <> · impact: {d.impact}</>}
+                    </div>
+                    {d.rationale && (
+                      <div style={{ ...dimNote, marginTop: 2 }}>{d.rationale}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <form
+              action={addDecision}
+              className="flex items-center gap-2 flex-wrap"
+              style={{
+                marginTop: 10,
+                paddingTop: 10,
+                borderTop: "1px solid var(--k-border)",
+              }}
+            >
+              {hidden}
+              <input
+                name="decision"
+                required
+                placeholder="Decision"
+                style={{ ...inp, width: 220 }}
+              />
+              <input name="rationale" placeholder="Why" style={{ ...inp, width: 180 }} />
+              <input
+                name="approver"
+                placeholder="Approved by"
+                style={{ ...inp, width: 110 }}
+              />
+              <select name="source" defaultValue="" style={{ ...inp, width: 110 }}>
+                <option value="">source…</option>
+                {["call", "whatsapp", "email", "portal", "internal"].map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <input
+                name="impact"
+                placeholder="Cost / timeline / scope impact"
+                style={{ ...inp, width: 200 }}
+              />
+              <SubmitButton style={btn("var(--k-bg)", "var(--k-fg)")}>
+                + Record
+              </SubmitButton>
+            </form>
+          </section>
+        </Reveal>
+      )}
 
       {/* ── Playbook checklists ── */}
-      {(checklists.length > 0 || offerable.length > 0) && (
+      {show("playbooks") && (checklists.length > 0 || offerable.length > 0) && (
         <Reveal>
           <section style={card}>
             <div className="flex items-center justify-between flex-wrap gap-2">

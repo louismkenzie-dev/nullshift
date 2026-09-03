@@ -408,10 +408,20 @@ export default async function SystemPassportPage({
               Handover →
             </Link>
             <Link
+              href={
+                project.tenant_id
+                  ? `/admin/clients/${project.tenant_id}`
+                  : "/admin/systems"
+              }
+              style={{ ...mono, fontSize: 11, color: "var(--k-muted)" }}
+            >
+              ← {tenant?.name ?? "Client"}
+            </Link>
+            <Link
               href="/admin/systems"
               style={{ ...mono, fontSize: 11, color: "var(--k-muted)" }}
             >
-              ← All systems
+              All systems
             </Link>
           </div>
         }
@@ -980,7 +990,7 @@ export default async function SystemPassportPage({
                 issues.map((iss, i) => (
                   <Reveal key={iss.id} delay={Math.min(i, 8) * 0.04}>
                     <Link
-                      href="/admin/issues"
+                      href={`/admin/clients/${project.tenant_id}/issues?project=${project.id}`}
                       className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 px-4 hover:bg-[var(--k-bg)]"
                       style={{
                         borderTop: i ? "1px solid var(--k-border)" : "none",

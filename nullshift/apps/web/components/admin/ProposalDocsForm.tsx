@@ -54,8 +54,14 @@ export function ProposalDocsForm({
   specialCategory,
   specialCategoryDetail,
   defaults,
+  reviewApproved = true,
+  reviewReason = "",
 }: {
   action: (formData: FormData) => void | Promise<void>;
+  /** Second-person review gate: false until a staff member other than the author approved the draft. */
+  reviewApproved?: boolean;
+  /** Why the send is blocked, shown under the disabled Send button. */
+  reviewReason?: string;
   tenantId: string;
   projectId: string;
   proposalStatus: string;
@@ -86,7 +92,10 @@ export function ProposalDocsForm({
   if (!paymentTerms.trim()) missing.push("payment terms");
   if (!clientDpaReady) missing.push("the client's DPA details (they fill these in)");
   const complete = missing.length === 0;
-  const canSubmit = draft ? complete : true;
+  // In draft there are two buttons: "Save draft" (always) and "Save & send"
+  // (complete AND approved by a second staff member). After sending there is
+  // only "Save changes".
+  const canSend = draft ? complete && reviewApproved : true;
 
   const ta = (rows: number) =>
     ({
@@ -236,27 +245,66 @@ export function ProposalDocsForm({
         </p>
       )}
 
-      <SubmitButton
-        disabled={!canSubmit}
-        pendingLabel={draft ? "Sending…" : "Saving…"}
-        style={{
-          fontFamily: T.mono,
-          fontSize: "11px",
-          letterSpacing: "0.05em",
-          textTransform: "uppercase",
-          height: 36,
-          paddingInline: 16,
-          alignSelf: "flex-start",
-          background: canSubmit ? T.primary : T.surface2,
-          color: canSubmit ? T.primaryFg : T.faint,
-          border: canSubmit ? "none" : `1px solid ${T.border}`,
-          borderRadius: 0,
-          cursor: canSubmit ? "pointer" : "not-allowed",
-          opacity: canSubmit ? 1 : 0.7,
-        }}
-      >
-        {draft ? "Save documents & DPA details and send →" : "Save changes"}
-      </SubmitButton>
+      {draft && complete && !reviewApproved && (
+        <p
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.8rem",
+            color: T.warning,
+            lineHeight: 1.5,
+          }}
+        >
+          To send:{" "}
+          {reviewReason || "a staff member other than the author must approve it."}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        {draft && (
+          <SubmitButton
+            name="intent"
+            value="save"
+            pendingLabel="Saving…"
+            style={{
+              fontFamily: T.mono,
+              fontSize: "11px",
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              height: 36,
+              paddingInline: 16,
+              background: "transparent",
+              color: T.fg,
+              border: `1px solid ${T.border}`,
+              borderRadius: 0,
+              cursor: "pointer",
+            }}
+          >
+            Save draft
+          </SubmitButton>
+        )}
+        <SubmitButton
+          name="intent"
+          value={draft ? "send" : "save"}
+          disabled={!canSend}
+          pendingLabel={draft ? "Sending…" : "Saving…"}
+          style={{
+            fontFamily: T.mono,
+            fontSize: "11px",
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
+            height: 36,
+            paddingInline: 16,
+            background: canSend ? T.primary : T.surface2,
+            color: canSend ? T.primaryFg : T.faint,
+            border: canSend ? "none" : `1px solid ${T.border}`,
+            borderRadius: 0,
+            cursor: canSend ? "pointer" : "not-allowed",
+            opacity: canSend ? 1 : 0.7,
+          }}
+        >
+          {draft ? "Save & send to client →" : "Save changes"}
+        </SubmitButton>
+      </div>
     </form>
   );
 }
