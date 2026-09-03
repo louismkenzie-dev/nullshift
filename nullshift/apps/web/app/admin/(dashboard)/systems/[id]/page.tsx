@@ -7,6 +7,7 @@ import { requireStaff } from "@nullshift/auth/guards";
 import { T } from "@nullshift/ui/tokens";
 import { money } from "@nullshift/ui/format";
 import { SubmitButton } from "@/components/admin/SubmitButton";
+import { CopyButton } from "@/components/app/CopyButton";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
@@ -27,6 +28,10 @@ import {
  */
 
 export const dynamic = "force-dynamic";
+
+/** The saved prompt every fix-batch routine needs — it is what authorises acting on the fire payload. */
+const ROUTINE_PROMPT =
+  "You are NullShift's fix-batch runner for this repository. Work through the fix batch described in the routine-fire-payload block: fix every issue with minimal production-quality changes, run the project's typecheck/build, push a branch and open a pull request whose description lists each issue with a one-line plain-English summary. If an issue can't be fixed, say so under a \"Not fixed\" heading.";
 
 type ProjectRow = {
   id: string;
@@ -61,7 +66,14 @@ type ProfileRow = {
 };
 type PassportIssue = Pick<
   IssueRow,
-  "id" | "title" | "severity" | "status" | "created_at" | "billing" | "client_visible" | "quote_accepted_at"
+  | "id"
+  | "title"
+  | "severity"
+  | "status"
+  | "created_at"
+  | "billing"
+  | "client_visible"
+  | "quote_accepted_at"
 >;
 type BatchRow = { id: string; title: string; status: string; created_at: string };
 type UpdateRow = { id: string; title: string; type: string; created_at: string };
@@ -260,7 +272,9 @@ export default async function SystemPassportPage({
       .maybeSingle(),
     supabase
       .from("issues")
-      .select("id, title, severity, status, created_at, billing, client_visible, quote_accepted_at")
+      .select(
+        "id, title, severity, status, created_at, billing, client_visible, quote_accepted_at"
+      )
       .eq("project_id", id)
       .in("status", OPEN_STATUSES)
       .order("created_at", { ascending: false }),
@@ -322,17 +336,45 @@ export default async function SystemPassportPage({
   ).length;
   const nextUp: { text: string; href: string; cta: string } = activeBatch
     ? activeBatch.status === "pr_open"
-      ? { text: `A PR is open for "${activeBatch.title}" — review and merge it.`, href: `/admin/batches/${activeBatch.id}`, cta: "Open batch →" }
+      ? {
+          text: `A PR is open for "${activeBatch.title}" — review and merge it.`,
+          href: `/admin/batches/${activeBatch.id}`,
+          cta: "Open batch →",
+        }
       : activeBatch.status === "dispatched"
-        ? { text: `Claude is working "${activeBatch.title}" — check the session.`, href: `/admin/batches/${activeBatch.id}`, cta: "Open batch →" }
-        : { text: `"${activeBatch.title}" is compiled and waiting — dispatch it to Claude.`, href: `/admin/batches/${activeBatch.id}`, cta: "Dispatch →" }
+        ? {
+            text: `Claude is working "${activeBatch.title}" — check the session.`,
+            href: `/admin/batches/${activeBatch.id}`,
+            cta: "Open batch →",
+          }
+        : {
+            text: `"${activeBatch.title}" is compiled and waiting — dispatch it to Claude.`,
+            href: `/admin/batches/${activeBatch.id}`,
+            cta: "Dispatch →",
+          }
     : draftPlan
-      ? { text: "A draft build plan is waiting for your review — hand it off when it reads right.", href: `/admin/systems/${project.id}/plan`, cta: "Review plan →" }
+      ? {
+          text: "A draft build plan is waiting for your review — hand it off when it reads right.",
+          href: `/admin/systems/${project.id}/plan`,
+          cta: "Review plan →",
+        }
       : !profile?.build_goal
-        ? { text: "Write the build goal below — the AI planner won't plan without knowing what this system is for.", href: "#build-goal", cta: "Write goal ↓" }
+        ? {
+            text: "Write the build goal below — the AI planner won't plan without knowing what this system is for.",
+            href: "#build-goal",
+            cta: "Write goal ↓",
+          }
         : batchable > 0
-          ? { text: `${batchable} batchable issue${batchable === 1 ? "" : "s"} banked — compile a fix batch.`, href: `/admin/batches?project=${project.id}`, cta: "Compile →" }
-          : { text: "All quiet — plan the next build from the goal.", href: `/admin/systems/${project.id}/plan`, cta: "Plan a build →" };
+          ? {
+              text: `${batchable} batchable issue${batchable === 1 ? "" : "s"} banked — compile a fix batch.`,
+              href: `/admin/batches?project=${project.id}`,
+              cta: "Compile →",
+            }
+          : {
+              text: "All quiet — plan the next build from the goal.",
+              href: `/admin/systems/${project.id}/plan`,
+              cta: "Plan a build →",
+            };
 
   const features = (profile?.features ?? []).map((f, idx) => ({ ...f, idx }));
   const envChecklist = profile?.env_checklist ?? [];
@@ -381,14 +423,19 @@ export default async function SystemPassportPage({
           label="// BUILD WITH CLAUDE"
           className="mt-8"
           actions={
-            <Link href={nextUp.href} style={{ ...mono, fontSize: 11, color: "var(--k-accent)" }}>
+            <Link
+              href={nextUp.href}
+              style={{ ...mono, fontSize: 11, color: "var(--k-accent)" }}
+            >
               {nextUp.cta}
             </Link>
           }
         >
           <div className="flex flex-col gap-3">
             <p style={{ fontFamily: T.sans, fontSize: "0.92rem", color: "var(--k-fg)" }}>
-              <span style={{ ...mono, color: "var(--k-accent)", marginRight: 10 }}>next up</span>
+              <span style={{ ...mono, color: "var(--k-accent)", marginRight: 10 }}>
+                next up
+              </span>
               {nextUp.text}
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -403,9 +450,15 @@ export default async function SystemPassportPage({
                   Latest batch: {activeBatch.status.replace(/_/g, " ")}
                 </Link>
               )}
-              <span style={{ fontFamily: T.sans, fontSize: "0.8rem", color: "var(--k-faint)" }}>
-                Plans and batches compile into one Claude Code work order — dispatch from the
-                batch page, or copy-paste into a session.
+              <span
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.8rem",
+                  color: "var(--k-faint)",
+                }}
+              >
+                Plans and batches compile into one Claude Code work order — dispatch from
+                the batch page, or copy-paste into a session.
               </span>
             </div>
           </div>
@@ -524,18 +577,81 @@ export default async function SystemPassportPage({
                     />
                   </Field>
                 </div>
-                <p
-                  style={{
-                    fontFamily: T.mono,
-                    fontSize: "10px",
-                    color: "var(--k-faint)",
-                    margin: 0,
-                  }}
+                <details
+                  style={{ border: "1px dashed var(--k-border)", padding: "10px 12px" }}
                 >
-                  From claude.ai/code/routines: a routine with this repo + an API trigger.
-                  Its saved prompt must say to act on the routine-fire-payload block — see
-                  docs/OPERATIONS.md. Enables &quot;Fire routine&quot; on fix batches.
-                </p>
+                  <summary
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "10px",
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      color: profile?.routine_fire_url
+                        ? "var(--k-muted)"
+                        : "var(--k-accent)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {profile?.routine_fire_url
+                      ? "Routine connected — how to set one up again"
+                      : "Set up the fix-batch routine for this system (2 minutes)"}
+                  </summary>
+                  <ol
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.8rem",
+                      color: "var(--k-muted)",
+                      lineHeight: 1.6,
+                      margin: "10px 0 0",
+                      paddingLeft: 18,
+                    }}
+                  >
+                    <li>
+                      Open{" "}
+                      <a
+                        href="https://claude.ai/code/routines"
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: "var(--k-accent)" }}
+                      >
+                        claude.ai/code/routines
+                      </a>{" "}
+                      → New routine. Attach the repository{" "}
+                      <strong style={{ color: "var(--k-fg)" }}>
+                        {profile?.repo_full_name ?? "(set the repo above first)"}
+                      </strong>{" "}
+                      and choose an{" "}
+                      <strong style={{ color: "var(--k-fg)" }}>API trigger</strong>.
+                    </li>
+                    <li>
+                      Paste the prompt below as the routine&apos;s saved prompt and save.
+                    </li>
+                    <li>
+                      Copy the fire URL and the generated token into the two fields above,
+                      then Save facts. &quot;Fire routine&quot; appears on this
+                      system&apos;s fix batches.
+                    </li>
+                  </ol>
+                  <div className="flex items-start gap-2" style={{ marginTop: 10 }}>
+                    <pre
+                      style={{
+                        flex: 1,
+                        margin: 0,
+                        whiteSpace: "pre-wrap",
+                        fontFamily: T.mono,
+                        fontSize: "11px",
+                        lineHeight: 1.5,
+                        color: "var(--k-fg)",
+                        background: "var(--k-bg)",
+                        border: "1px solid var(--k-border)",
+                        padding: "10px 12px",
+                      }}
+                    >
+                      {ROUTINE_PROMPT}
+                    </pre>
+                    <CopyButton text={ROUTINE_PROMPT} label="Copy prompt" />
+                  </div>
+                </details>
                 <div>
                   <SubmitButton style={btn("var(--k-accent)", T.primaryFg)}>
                     Save facts
@@ -565,8 +681,15 @@ export default async function SystemPassportPage({
                     <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
                       Save goal
                     </SubmitButton>
-                    <span style={{ fontFamily: T.sans, fontSize: "0.8rem", color: "var(--k-faint)" }}>
-                      Feeds “Plan a build with AI” — the better the goal, the better the plan.
+                    <span
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.8rem",
+                        color: "var(--k-faint)",
+                      }}
+                    >
+                      Feeds “Plan a build with AI” — the better the goal, the better the
+                      plan.
                     </span>
                   </div>
                 </form>
