@@ -439,3 +439,11 @@ reason. Without a routine on the passport the batch compiles and waits under
 Batched issues leave the tile's open list and sit inside their batch's
 folder under `// BATCHES` (session link, PR link, status, and the same
 inline triage rows). Cancelling a batch returns its issues to the open list.
+
+**Redispatch.** A dispatched or PR-open batch carries a *Redispatch* button
+(batch page and the client's batch folder). It fires the routine again with
+the same work order in a brand-new session, prefixed with a fresh-start note
+so the session works from the base branch. Issues stay batched; the new
+session link replaces the old one, which is kept in the audit trail as
+`batch.redispatched`. Use it when a run died, was reclaimed, or could not
+push.

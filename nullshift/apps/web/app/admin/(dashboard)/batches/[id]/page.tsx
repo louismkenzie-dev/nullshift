@@ -14,6 +14,7 @@ import { Reveal } from "@/components/kyma";
 import { CopyButton } from "@/components/app/CopyButton";
 import { createGithubFixIssue } from "@/lib/ops/githubDispatch";
 import { fireRoutine } from "@/lib/ops/routineDispatch";
+import { redispatchBatch } from "../actions";
 import {
   dispatchBatchToManagedAgent,
   getManagedSessionStatus,
@@ -481,42 +482,45 @@ export default async function BatchDetailPage({
     { data: profileRow },
     { data: moduleJoins },
     { data: exceptionJoins },
-  ] =
-    await Promise.all([
-      supabase.from("issues").select("*").eq("batch_id", id).order("created_at"),
-      supabase.from("tenants").select("id, name").eq("id", batch.tenant_id).single(),
-      batch.project_id
-        ? supabase
-            .from("projects")
-            .select("id, name, live_url")
-            .eq("id", batch.project_id)
-            .single()
-        : Promise.resolve({ data: null }),
-      batch.project_id
-        ? supabase
-            .from("system_profiles")
-            .select(
-              "project_id, repo_full_name, default_branch, vercel_project, supabase_ref, stack, runbook, quirks, routine_fire_url, routine_token"
-            )
-            .eq("project_id", batch.project_id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      supabase
-        .from("fix_batch_modules")
-        .select("module_id, module_key, title, position")
-        .eq("batch_id", id)
-        .order("position"),
-      supabase
-        .from("fix_batch_exceptions")
-        .select("exception_id, exception_ref")
-        .eq("batch_id", id),
-    ]);
+  ] = await Promise.all([
+    supabase.from("issues").select("*").eq("batch_id", id).order("created_at"),
+    supabase.from("tenants").select("id, name").eq("id", batch.tenant_id).single(),
+    batch.project_id
+      ? supabase
+          .from("projects")
+          .select("id, name, live_url")
+          .eq("id", batch.project_id)
+          .single()
+      : Promise.resolve({ data: null }),
+    batch.project_id
+      ? supabase
+          .from("system_profiles")
+          .select(
+            "project_id, repo_full_name, default_branch, vercel_project, supabase_ref, stack, runbook, quirks, routine_fire_url, routine_token"
+          )
+          .eq("project_id", batch.project_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("fix_batch_modules")
+      .select("module_id, module_key, title, position")
+      .eq("batch_id", id)
+      .order("position"),
+    supabase
+      .from("fix_batch_exceptions")
+      .select("exception_id, exception_ref")
+      .eq("batch_id", id),
+  ]);
   const issues = (issueRows ?? []) as IssueRow[];
   const batchModules = (moduleJoins ?? []) as {
-    module_id: string | null; module_key: string; title: string; position: number;
+    module_id: string | null;
+    module_key: string;
+    title: string;
+    position: number;
   }[];
   const batchExceptions = (exceptionJoins ?? []) as {
-    exception_id: string; exception_ref: string;
+    exception_id: string;
+    exception_ref: string;
   }[];
   const profile = (profileRow as ProfileWithDispatch | null) ?? null;
   const active = batch.status !== "shipped" && batch.status !== "cancelled";
@@ -709,6 +713,32 @@ export default async function BatchDetailPage({
               </div>
             )}
 
+            {(batch.status === "dispatched" || batch.status === "pr_open") &&
+              routineConfigured && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <form action={redispatchBatch}>
+                    <input type="hidden" name="id" value={batch.id} />
+                    <SubmitButton
+                      style={btn("transparent", "var(--k-fg)")}
+                      pendingLabel="Firing a fresh session…"
+                    >
+                      Redispatch
+                    </SubmitButton>
+                  </form>
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "10px",
+                      color: "var(--k-faint)",
+                    }}
+                  >
+                    Start fresh: fires the routine again with this same work order in a
+                    new session. Use it when a run died or could not push. The old session
+                    link stays in the audit trail.
+                  </span>
+                </div>
+              )}
+
             {batch.status === "compiled" && maConfigured && profile?.repo_full_name && (
               <div className="flex items-center gap-3 flex-wrap">
                 <form action={runManagedAgent}>
@@ -899,22 +929,45 @@ export default async function BatchDetailPage({
               <div
                 key={m.module_key}
                 className="flex items-center gap-3 flex-wrap"
-                style={{ padding: "11px 18px", borderTop: i ? "1px solid var(--k-border)" : "none" }}
+                style={{
+                  padding: "11px 18px",
+                  borderTop: i ? "1px solid var(--k-border)" : "none",
+                }}
               >
                 <StatusChip tone="accent">module</StatusChip>
                 {m.module_id ? (
                   <Link
                     href={`/admin/modules/${m.module_id}`}
-                    style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.87rem", color: "var(--k-fg)" }}
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: 600,
+                      fontSize: "0.87rem",
+                      color: "var(--k-fg)",
+                    }}
                   >
                     {m.title}
                   </Link>
                 ) : (
-                  <span style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.87rem", color: "var(--k-fg)" }}>
+                  <span
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: 600,
+                      fontSize: "0.87rem",
+                      color: "var(--k-fg)",
+                    }}
+                  >
                     {m.title}
                   </span>
                 )}
-                <span style={{ fontFamily: T.mono, fontSize: "11px", color: "var(--k-faint)" }}>{m.module_key}</span>
+                <span
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "11px",
+                    color: "var(--k-faint)",
+                  }}
+                >
+                  {m.module_key}
+                </span>
               </div>
             ))}
             {batchExceptions.map((e, i) => (
@@ -923,17 +976,29 @@ export default async function BatchDetailPage({
                 className="flex items-center gap-3 flex-wrap"
                 style={{
                   padding: "11px 18px",
-                  borderTop: i + batchModules.length ? "1px solid var(--k-border)" : "none",
+                  borderTop:
+                    i + batchModules.length ? "1px solid var(--k-border)" : "none",
                 }}
               >
                 <StatusChip tone="warning">soc 2 exception</StatusChip>
                 <Link
                   href={`/admin/soc2/exceptions/${e.exception_id}`}
-                  style={{ fontFamily: T.sans, fontWeight: 600, fontSize: "0.87rem", color: "var(--k-fg)" }}
+                  style={{
+                    fontFamily: T.sans,
+                    fontWeight: 600,
+                    fontSize: "0.87rem",
+                    color: "var(--k-fg)",
+                  }}
                 >
                   {e.exception_ref}
                 </Link>
-                <span style={{ fontFamily: T.sans, fontSize: "0.8rem", color: "var(--k-faint)" }}>
+                <span
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.8rem",
+                    color: "var(--k-faint)",
+                  }}
+                >
                   resolved &amp; verified by humans in /admin/soc2 after the fix ships
                 </span>
               </div>

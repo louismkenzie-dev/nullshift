@@ -15,6 +15,7 @@ import {
 import { needsChangeOrder } from "@/lib/ops/issueForm";
 import { SKIP_LABEL, partitionOutstanding } from "@/lib/ops/buildAll";
 import { buildEverything } from "./actions";
+import { redispatchBatch } from "../../../batches/actions";
 import { IssueQuickAdd, IssueRow, IssueRowHeader, chip } from "../../../issues/IssueRow";
 import { DraftList, IngestForm } from "../../../inbox/IngestPanels";
 import { advanceCr, advanceTask, createTask } from "../actions";
@@ -125,6 +126,7 @@ export default async function ClientIssuesPage({
     skipped?: string;
     fired?: string;
     session?: string;
+    redispatched?: string;
   }>;
 }) {
   const { id: tenantId } = await params;
@@ -373,7 +375,7 @@ export default async function ClientIssuesPage({
       </Reveal>
 
       {/* ── Build everything outstanding ────────────────────── */}
-      {(sp.built || sp.err) && (
+      {(sp.built || sp.err || sp.redispatched) && (
         <Reveal className="block" delay={0.03}>
           <div
             role="status"
@@ -385,6 +387,11 @@ export default async function ClientIssuesPage({
           >
             {sp.err ? (
               <p style={{ ...faint, color: "var(--k-danger)", margin: 0 }}>{sp.err}</p>
+            ) : sp.redispatched ? (
+              <p style={{ ...faint, color: "var(--k-fg)", margin: 0 }}>
+                Redispatched — a fresh Claude session is working the same work order. The
+                new session link is on the batch folder below.
+              </p>
             ) : (
               <p style={{ ...faint, color: "var(--k-fg)", margin: 0 }}>
                 Compiled {sp.n} issue{sp.n === "1" ? "" : "s"} into one work order
@@ -693,6 +700,36 @@ export default async function ClientIssuesPage({
                       borderTop: "1px solid var(--k-border)",
                     }}
                   >
+                    {(b.status === "dispatched" || b.status === "pr_open") &&
+                      routineReady.has(b.project_id) && (
+                        <form
+                          action={redispatchBatch}
+                          className="flex flex-wrap items-center gap-3"
+                          style={{
+                            gridColumn: "1 / -1",
+                            padding: "8px 14px",
+                            borderBottom: "1px solid var(--k-border)",
+                            background: "var(--k-surface)",
+                          }}
+                        >
+                          <input type="hidden" name="id" value={b.id} />
+                          <input
+                            type="hidden"
+                            name="return_to"
+                            value={`/admin/clients/${tenantId}/issues${projectFilter ? `?project=${projectFilter}` : ""}`}
+                          />
+                          <SubmitButton
+                            style={btn("transparent", "var(--k-fg)")}
+                            pendingLabel="Firing a fresh session…"
+                          >
+                            Redispatch
+                          </SubmitButton>
+                          <span style={{ ...faint, fontSize: "0.78rem" }}>
+                            Start fresh in a new session with the same work order — for
+                            when a run died or could not push.
+                          </span>
+                        </form>
+                      )}
                     <IssueRowHeader hasRows={items.length > 0} />
                     <div
                       className="max-md:hidden"
