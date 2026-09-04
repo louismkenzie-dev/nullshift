@@ -14,6 +14,20 @@ import type { DatabaseEvidence, DbTable } from "./types";
 
 export const IDENT_RE = /^[a-z_][a-z0-9_]{0,62}$/;
 
+/**
+ * Count a table that may not exist on this project (pg_cron is opt-in;
+ * storage is not installed on every project).
+ *
+ * `to_regclass(...) is null` alone is NOT enough: Postgres parses and plans
+ * the whole statement before running it, so a bare `select count(*) from
+ * cron.job` in the untaken CASE branch still raises 42P01 and fails the
+ * entire scan. Passing the inner query to query_to_xml as TEXT defers its
+ * parse to execution time, which CASE then never reaches.
+ */
+const optionalCount = (rel: string) =>
+  `(select case when to_regclass('${rel}') is null then 0 else ` +
+  `(xpath('/row/c/text()', query_to_xml('select count(*) as c from ${rel}', false, true, '')))[1]::text::int end)`;
+
 /** Everything the first round-trip needs, as one JSON row. */
 export const SCAN_SQL = `
 select json_build_object(
@@ -22,8 +36,8 @@ select json_build_object(
   'new_30', (select count(*) from auth.users where created_at >= now() - interval '30 days'),
   'public_tables', (select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE'),
   'db_size_mb', (select round(pg_database_size(current_database()) / 1048576.0)),
-  'cron_jobs', (select case when to_regclass('cron.job') is null then 0 else (select count(*) from cron.job) end),
-  'storage_buckets', (select case when to_regclass('storage.buckets') is null then 0 else (select count(*) from storage.buckets) end),
+  'cron_jobs', ${optionalCount("cron.job")},
+  'storage_buckets', ${optionalCount("storage.buckets")},
   'extensions', (select coalesce(json_agg(extname order by extname), '[]'::json) from pg_extension),
   'tables', (
     select coalesce(json_agg(json_build_object(

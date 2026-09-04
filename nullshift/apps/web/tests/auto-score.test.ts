@@ -6,6 +6,7 @@ import {
   parseFollowUp,
   parseScan,
   IDENT_RE,
+  SCAN_SQL,
 } from "@/lib/scoring/dbAnalysis";
 import {
   deriveScaleInputs,
@@ -167,6 +168,19 @@ describe("repository analysis", () => {
 
 describe("database analysis", () => {
   const scan = parseScan(danceScanRow)!;
+
+  // A project without pg_cron (or without storage) used to fail the WHOLE
+  // scan with 42P01: Postgres parses every branch of a CASE before running
+  // it, so `to_regclass(...) is null` never saved the untaken branch. The
+  // optional relations must therefore only ever appear inside a quoted
+  // string handed to query_to_xml.
+  it("never references an optional relation outside a deferred string", () => {
+    for (const rel of ["cron.job", "storage.buckets"]) {
+      expect(SCAN_SQL).toContain(`to_regclass('${rel}')`);
+      expect(SCAN_SQL).toContain(`query_to_xml('select count(*) as c from ${rel}'`);
+      expect(SCAN_SQL).not.toMatch(new RegExp(`from ${rel.replace(".", "\\.")}(?!')`));
+    }
+  });
 
   it("parses the scan row", () => {
     expect(scan.users_total).toBe(178);
