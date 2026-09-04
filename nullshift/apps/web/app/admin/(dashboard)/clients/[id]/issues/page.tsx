@@ -13,6 +13,8 @@ import {
   type IssueRow as Issue,
 } from "@/lib/ops/issues";
 import { needsChangeOrder } from "@/lib/ops/issueForm";
+import { SKIP_LABEL, partitionOutstanding } from "@/lib/ops/buildAll";
+import { buildEverything } from "./actions";
 import { IssueQuickAdd, IssueRow, IssueRowHeader, chip } from "../../../issues/IssueRow";
 import { DraftList, IngestForm } from "../../../inbox/IngestPanels";
 import { advanceCr, advanceTask, createTask } from "../actions";
@@ -108,11 +110,22 @@ export default async function ClientIssuesPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ status?: string; project?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    project?: string;
+    err?: string;
+    built?: string;
+    n?: string;
+    promoted?: string;
+    skipped?: string;
+    fired?: string;
+    session?: string;
+  }>;
 }) {
   const { id: tenantId } = await params;
   if (!(await requireStaff()).ok) notFound();
-  const { status: statusParam, project: projectParam } = await searchParams;
+  const sp = await searchParams;
+  const { status: statusParam, project: projectParam } = sp;
   const filter: Filter = FILTERS.some((f) => f.id === statusParam)
     ? (statusParam as Filter)
     : "open";
@@ -192,6 +205,54 @@ export default async function ClientIssuesPage({
     );
   const promiseLate = (i: Issue) => new Date(i.promised_at as string).getTime() < nowMs;
   const needsCo = open.filter(needsChangeOrder);
+
+  // "Build everything outstanding" preview — what one click would compile
+  // on the chosen system, and what the gates would hold back.
+  const buildProject = projectFilter
+    ? (projects.find((p) => p.id === projectFilter) ?? project)
+    : project;
+  const coIds = [
+    ...new Set(open.map((i) => i.change_order_id).filter(Boolean)),
+  ] as string[];
+  const [{ data: coRows }, { data: profileRows }] = await Promise.all([
+    coIds.length
+      ? supabase.from("change_orders").select("id, status").in("id", coIds)
+      : Promise.resolve({ data: [] as { id: string; status: string }[] }),
+    projectIds.length
+      ? service
+          .from("system_profiles")
+          .select("project_id, routine_fire_url, routine_token")
+          .in("project_id", projectIds)
+      : Promise.resolve({
+          data: [] as {
+            project_id: string;
+            routine_fire_url: string | null;
+            routine_token: string | null;
+          }[],
+        }),
+  ]);
+  const coStatus = new Map(
+    ((coRows ?? []) as { id: string; status: string }[]).map((c) => [c.id, c.status])
+  );
+  const routineReady = new Set(
+    (
+      (profileRows ?? []) as {
+        project_id: string;
+        routine_fire_url: string | null;
+        routine_token: string | null;
+      }[]
+    )
+      .filter((r) => r.routine_fire_url && r.routine_token)
+      .map((r) => r.project_id)
+  );
+  const buildPart = buildProject
+    ? partitionOutstanding(
+        issues.filter((i) => i.project_id === buildProject.id),
+        coStatus
+      )
+    : { ready: [], promote: [], blocked: [] };
+  const buildCount = buildPart.ready.length + buildPart.promote.length;
+  const buildRoutine = buildProject ? routineReady.has(buildProject.id) : false;
 
   const shown =
     filter === "open"
@@ -293,6 +354,127 @@ export default async function ClientIssuesPage({
           />
         </div>
       </Reveal>
+
+      {/* ── Build everything outstanding ────────────────────── */}
+      {(sp.built || sp.err) && (
+        <Reveal className="block" delay={0.03}>
+          <div
+            role="status"
+            style={{
+              ...card,
+              marginBottom: 16,
+              borderColor: sp.err ? "var(--k-danger)" : "var(--k-success)",
+            }}
+          >
+            {sp.err ? (
+              <p style={{ ...faint, color: "var(--k-danger)", margin: 0 }}>{sp.err}</p>
+            ) : (
+              <p style={{ ...faint, color: "var(--k-fg)", margin: 0 }}>
+                Compiled {sp.n} issue{sp.n === "1" ? "" : "s"} into one work order
+                {sp.promoted && sp.promoted !== "0"
+                  ? ` (${sp.promoted} marked covered by the plan)`
+                  : ""}
+                {sp.skipped && sp.skipped !== "0" ? ` · ${sp.skipped} left out` : ""}.{" "}
+                {sp.fired === "1" ? (
+                  <>
+                    Claude is building now
+                    {sp.session?.startsWith("https://claude.ai/") ? (
+                      <>
+                        {" "}
+                        —{" "}
+                        <a
+                          href={sp.session}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={monoLink}
+                        >
+                          watch the session →
+                        </a>
+                      </>
+                    ) : null}
+                    .
+                  </>
+                ) : (
+                  <>
+                    The routine did not fire — open{" "}
+                    <Link href={`/admin/batches/${sp.built}`} style={monoLink}>
+                      the batch →
+                    </Link>{" "}
+                    to dispatch it by hand.
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+        </Reveal>
+      )}
+      {buildProject && (
+        <Reveal className="block" delay={0.035}>
+          <Panel label="// BUILD EVERYTHING" style={{ marginBottom: 16 }}>
+            <form
+              action={buildEverything}
+              className="flex flex-wrap items-start justify-between gap-3"
+            >
+              {htid}
+              <input type="hidden" name="project_id" value={buildProject.id} />
+              <div className="min-w-0" style={{ flex: "1 1 320px" }}>
+                <p style={{ ...faint, color: "var(--k-fg)", margin: 0 }}>
+                  {buildCount === 0
+                    ? `Nothing outstanding on ${buildProject.name}.`
+                    : `${buildCount} outstanding on ${buildProject.name} — every change request, question and bug still open — goes into one work order and straight to Claude.`}
+                </p>
+                {buildPart.promote.length > 0 && (
+                  <p style={{ ...faint, margin: "4px 0 0" }}>
+                    {buildPart.promote.length} unclassified issue
+                    {buildPart.promote.length === 1 ? "" : "s"} will be marked covered by
+                    the plan on the way through.
+                  </p>
+                )}
+                {!buildRoutine && buildCount > 0 && (
+                  <p style={{ ...faint, margin: "4px 0 0", color: "var(--k-warning)" }}>
+                    No routine on this system&apos;s passport — the batch compiles but you
+                    will need to dispatch it by hand.
+                  </p>
+                )}
+                {buildPart.blocked.length > 0 && (
+                  <ul style={{ ...faint, margin: "6px 0 0", paddingLeft: 18 }}>
+                    {buildPart.blocked.map(({ issue, reason }) => (
+                      <li key={issue.id}>
+                        Left out: {issue.title} — {SKIP_LABEL[reason]}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {projects.length > 1 && (
+                  <p style={{ ...faint, margin: "6px 0 0", fontSize: "0.78rem" }}>
+                    Other systems:{" "}
+                    {projects
+                      .filter((p) => p.id !== buildProject.id)
+                      .map((p, i) => (
+                        <span key={p.id}>
+                          {i ? " · " : ""}
+                          <Link
+                            href={`/admin/clients/${tenantId}/issues?project=${p.id}`}
+                            style={monoLink}
+                          >
+                            {p.name}
+                          </Link>
+                        </span>
+                      ))}
+                  </p>
+                )}
+              </div>
+              <SubmitButton
+                style={btn("var(--k-accent)", "var(--k-bg)")}
+                disabled={buildCount === 0}
+                pendingLabel="Compiling and sending to Claude…"
+              >
+                Build everything outstanding
+              </SubmitButton>
+            </form>
+          </Panel>
+        </Reveal>
+      )}
 
       {/* ── Quick add — system fixed to this client ────────── */}
       {projects.length > 0 ? (

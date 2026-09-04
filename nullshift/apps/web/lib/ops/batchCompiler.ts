@@ -39,13 +39,23 @@ export function systemFactsLines(
 ): string[] {
   const facts: string[] = [];
   if (profile?.repo_full_name)
-    facts.push(`- Repository: \`${profile.repo_full_name}\` (base branch \`${profile.default_branch}\`)`);
+    facts.push(
+      `- Repository: \`${profile.repo_full_name}\` (base branch \`${profile.default_branch}\`)`
+    );
   if (liveUrl) facts.push(`- Live URL: ${liveUrl}`);
-  if (profile?.vercel_project) facts.push(`- Vercel project: \`${profile.vercel_project}\``);
-  if (profile?.supabase_ref) facts.push(`- Supabase project ref: \`${profile.supabase_ref}\``);
+  if (profile?.vercel_project)
+    facts.push(`- Vercel project: \`${profile.vercel_project}\``);
+  if (profile?.supabase_ref)
+    facts.push(`- Supabase project ref: \`${profile.supabase_ref}\``);
   if (profile?.stack && Object.keys(profile.stack).length)
-    facts.push(`- Stack: ${Object.entries(profile.stack).map(([k, v]) => `${k}: ${String(v)}`).join(", ")}`);
-  return facts.length ? facts : ["- (no system passport on file — explore the repo first)"];
+    facts.push(
+      `- Stack: ${Object.entries(profile.stack)
+        .map(([k, v]) => `${k}: ${String(v)}`)
+        .join(", ")}`
+    );
+  return facts.length
+    ? facts
+    : ["- (no system passport on file — explore the repo first)"];
 }
 
 /** The house working rules — shared by batches and build plans. */
@@ -73,6 +83,9 @@ export function coreWorkingRules(input: {
     );
   }
   if (input.hasIssues) {
+    rules.push(
+      `- Issues are typed: a BUG is restored to working; a CHANGE or TASK is built end-to-end as described (a new page, report or capability counts — build it, don't just scope it); a QUESTION is answered in plain English in the PR description under an "Answers" heading, and where the confusion points at a UX flaw, fix that too.`
+    );
     rules.push(
       `- In the PR description, list each issue by number with a one-line plain-English summary of the fix, written for a non-technical client ("Fixed: parents couldn't rebook at the Leeds venue"). These lines feed the client's update feed verbatim.`
     );

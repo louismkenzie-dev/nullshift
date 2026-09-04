@@ -422,3 +422,16 @@ with the "→ Xero" button on the client hub's invoice rows.
      Set `OUTPUT2` (20% VAT) if/when VAT registration happens.
 
 Unconfigured = fully inert: no env vars, no Xero calls, no UI buttons.
+
+### Build everything outstanding (2026-09)
+
+Each client's **Issues and Bugs** tile has a `// BUILD EVERYTHING` panel. One
+click compiles every open, human-confirmed issue on the chosen system (bugs,
+change requests and questions alike) into a single fix batch and fires the
+system's Claude Code routine from the passport straight away. Issues still at
+`unclassified` billing are marked `covered` on the way through (audited as
+`issue.bulk_covered`). Two gates still hold: additional development / mixed
+work without an accepted Change Order, and billable work whose quote the
+client has not accepted. Anything held back is listed on the panel with the
+reason. Without a routine on the passport the batch compiles and waits under
+/admin/batches for manual dispatch.
