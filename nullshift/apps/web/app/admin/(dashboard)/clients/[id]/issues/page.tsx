@@ -52,6 +52,11 @@ type Batch = {
   title: string | null;
   status: string;
   created_at: string;
+  dispatched_at: string | null;
+  shipped_at: string | null;
+  pr_url: string | null;
+  github_issue_url: string | null;
+  routine_session_url: string | null;
 };
 type Task = {
   id: string;
@@ -162,10 +167,12 @@ export default async function ClientIssuesPage({
     projectIds.length
       ? supabase
           .from("fix_batches")
-          .select("id, project_id, title, status, created_at")
+          .select(
+            "id, project_id, title, status, created_at, dispatched_at, shipped_at, pr_url, github_issue_url, routine_session_url"
+          )
           .in("project_id", projectIds)
           .order("created_at", { ascending: false })
-          .limit(20)
+          .limit(50)
       : noRows,
     projectIds.length
       ? supabase
@@ -254,20 +261,30 @@ export default async function ClientIssuesPage({
   const buildCount = buildPart.ready.length + buildPart.promote.length;
   const buildRoutine = buildProject ? routineReady.has(buildProject.id) : false;
 
+  const crList = (crs ?? []) as CRWithProject[];
+  const batches = (batchRows ?? []) as Batch[];
+  // Batched issues live in their batch's folder below, not in the open list.
+  const batchIds = new Set(batches.map((b) => b.id));
+  const inFolder = (i: Issue) => Boolean(i.batch_id && batchIds.has(i.batch_id));
+  const loose = issues.filter((i) => !inFolder(i));
+  const issuesOf = (batchId: string) => issues.filter((i) => i.batch_id === batchId);
+  const folderBatches = projectFilter
+    ? batches.filter((b) => b.project_id === projectFilter)
+    : batches;
+  const activeBatch = (b: Batch) => b.status !== "shipped" && b.status !== "cancelled";
+  const firstActiveBatch = folderBatches.find(activeBatch)?.id ?? null;
+
   const shown =
     filter === "open"
-      ? issues.filter((i) => OPEN_STATUSES.includes(i.status))
+      ? loose.filter((i) => OPEN_STATUSES.includes(i.status))
       : filter === "awaiting"
-        ? issues.filter((i) => i.status === "awaiting_client")
-        : issues;
+        ? loose.filter((i) => i.status === "awaiting_client")
+        : loose;
   const shownForProject = projectFilter
     ? shown.filter(
         (i) => (i as { project_id?: string | null }).project_id === projectFilter
       )
     : shown;
-
-  const crList = (crs ?? []) as CRWithProject[];
-  const batches = (batchRows ?? []) as Batch[];
   const taskList = (taskRows ?? []) as Task[];
   const orders = (orderRows ?? []) as OrderFormLite[];
   const liveOrderForm =
@@ -539,7 +556,7 @@ export default async function ClientIssuesPage({
                   ? "No issues logged for this client — use // LOG ISSUE above."
                   : filter === "awaiting"
                     ? "Nothing is waiting on the client."
-                    : "Nothing open — every issue is fixed, shipped or closed."}
+                    : "Nothing open outside a batch — see the folders below."}
               </p>
             )}
             {shownForProject.map((issue, i) => (
@@ -571,6 +588,164 @@ export default async function ClientIssuesPage({
               </div>
             ))}
           </div>
+        </Panel>
+      </Reveal>
+
+      {/* ── Batches — folders of issues handed to Claude ────── */}
+      <Reveal className="block" delay={0.07}>
+        <Panel
+          label="// BATCHES"
+          pad={false}
+          style={{ marginBottom: 16 }}
+          actions={
+            project ? (
+              <Link href={`/admin/batches?project=${project.id}`} style={monoLink}>
+                All batches →
+              </Link>
+            ) : undefined
+          }
+        >
+          {folderBatches.length === 0 ? (
+            <p
+              className="text-center py-7"
+              style={{ ...faint, color: "var(--k-muted)", margin: 0 }}
+            >
+              No batches yet — // BUILD EVERYTHING above compiles the open issues into
+              one.
+            </p>
+          ) : (
+            folderBatches.map((b, idx) => {
+              const items = issuesOf(b.id);
+              const done = items.filter((i) =>
+                ["fixed", "shipped", "closed"].includes(i.status)
+              ).length;
+              return (
+                <details
+                  key={b.id}
+                  open={b.id === firstActiveBatch}
+                  style={{ borderTop: idx ? "1px solid var(--k-border)" : "none" }}
+                >
+                  <summary
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1.5"
+                    style={{ padding: "10px 14px", cursor: "pointer", listStyle: "none" }}
+                  >
+                    <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>
+                      {activeBatch(b) ? "📂" : "📁"}
+                    </span>
+                    <span className="min-w-0" style={{ flex: "1 1 240px" }}>
+                      <span
+                        style={{
+                          fontFamily: T.sans,
+                          fontSize: "0.88rem",
+                          color: "var(--k-fg)",
+                          display: "block",
+                        }}
+                      >
+                        {b.title ?? "Fix batch"}
+                      </span>
+                      <span
+                        style={{
+                          fontFamily: T.mono,
+                          fontSize: 10,
+                          color: "var(--k-faint)",
+                          display: "block",
+                          marginTop: 2,
+                        }}
+                      >
+                        {projectName(b.project_id)} · {shortDate(b.created_at)} ·{" "}
+                        {items.length} issue{items.length === 1 ? "" : "s"}
+                        {items.length ? ` · ${done} done` : ""}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-3 flex-wrap">
+                      {b.routine_session_url?.startsWith("https://claude.ai/") && (
+                        <a
+                          href={b.routine_session_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={monoLink}
+                        >
+                          Session ↗
+                        </a>
+                      )}
+                      {b.pr_url && (
+                        <a
+                          href={b.pr_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={monoLink}
+                        >
+                          PR ↗
+                        </a>
+                      )}
+                      <Link href={`/admin/batches/${b.id}`} style={monoLink}>
+                        Open →
+                      </Link>
+                      <StatusChip tone={BATCH_TONE[b.status] ?? "muted"}>
+                        {b.status.replace(/_/g, " ")}
+                      </StatusChip>
+                    </span>
+                  </summary>
+                  <div
+                    className="grid"
+                    style={{
+                      gridTemplateColumns: "minmax(0, 1fr) 44px",
+                      borderTop: "1px solid var(--k-border)",
+                    }}
+                  >
+                    <IssueRowHeader hasRows={items.length > 0} />
+                    <div
+                      className="max-md:hidden"
+                      style={{
+                        background: "var(--k-surface)",
+                        borderBottom: items.length ? "1px solid var(--k-border)" : "none",
+                      }}
+                    />
+                    {items.length === 0 && (
+                      <p
+                        className="text-center py-5"
+                        style={{
+                          ...faint,
+                          color: "var(--k-muted)",
+                          gridColumn: "1 / -1",
+                        }}
+                      >
+                        No issues on this batch (modules or exceptions only).
+                      </p>
+                    )}
+                    {items.map((issue, i) => (
+                      <div key={issue.id} className="contents">
+                        <div className="min-w-0">
+                          <IssueRow
+                            issue={issue}
+                            subline={`${projectName(issue.project_id)} · ${SOURCE_LABEL[issue.source] ?? issue.source}`}
+                            first={i === 0}
+                            nowMs={nowMs}
+                            changeOrder={changeOrderTarget}
+                          />
+                        </div>
+                        <div
+                          className="flex justify-center"
+                          style={{
+                            borderTop: i ? "1px solid var(--k-border)" : "none",
+                            paddingTop: 13,
+                          }}
+                        >
+                          <Link
+                            href={bankHref(issue)}
+                            title="Open this issue in the issue bank"
+                            style={{ ...monoLink, fontSize: 12, lineHeight: 1 }}
+                          >
+                            ↗
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              );
+            })
+          )}
         </Panel>
       </Reveal>
 
@@ -782,67 +957,6 @@ export default async function ClientIssuesPage({
           </section>
         </Reveal>
       )}
-
-      {/* Fix batches — code work orders for this client's systems */}
-      <Reveal>
-        <section style={card}>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 style={{ ...h2, marginBottom: 0 }}>Fix batches</h2>
-            {project && (
-              <Link href={`/admin/batches?project=${project.id}`} style={monoLink}>
-                Compile a batch →
-              </Link>
-            )}
-          </div>
-          <p style={{ ...faint, fontSize: "0.8rem", margin: "6px 0 12px" }}>
-            Queued issues compiled into a work order for Claude — dispatch, review the PR,
-            ship.
-          </p>
-          {batches.length === 0 ? (
-            <p style={faint}>No batches compiled for this client&apos;s systems yet.</p>
-          ) : (
-            <div className="flex flex-col">
-              {batches.map((b, idx) => (
-                <Link
-                  key={b.id}
-                  href={`/admin/batches/${b.id}`}
-                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5"
-                  style={{
-                    padding: "8px 0",
-                    borderTop: idx ? "1px solid var(--k-border)" : "none",
-                    textDecoration: "none",
-                  }}
-                >
-                  <div className="min-w-0">
-                    <div
-                      style={{
-                        fontFamily: T.sans,
-                        fontSize: "0.88rem",
-                        color: "var(--k-fg)",
-                      }}
-                    >
-                      {b.title ?? "Fix batch"}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: 10,
-                        color: "var(--k-faint)",
-                        marginTop: 2,
-                      }}
-                    >
-                      {projectName(b.project_id)} · {shortDate(b.created_at)}
-                    </div>
-                  </div>
-                  <StatusChip tone={BATCH_TONE[b.status] ?? "muted"}>
-                    {b.status.replace(/_/g, " ")}
-                  </StatusChip>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-      </Reveal>
 
       {/* Delivery tasks — the internal engine, moved from /admin/tasks */}
       {projects.length > 0 && (

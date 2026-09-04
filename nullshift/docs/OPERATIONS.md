@@ -435,3 +435,7 @@ work without an accepted Change Order, and billable work whose quote the
 client has not accepted. Anything held back is listed on the panel with the
 reason. Without a routine on the passport the batch compiles and waits under
 /admin/batches for manual dispatch.
+
+Batched issues leave the tile's open list and sit inside their batch's
+folder under `// BATCHES` (session link, PR link, status, and the same
+inline triage rows). Cancelling a batch returns its issues to the open list.
