@@ -16,6 +16,7 @@ import { needsChangeOrder } from "@/lib/ops/issueForm";
 import { SKIP_LABEL, partitionOutstanding } from "@/lib/ops/buildAll";
 import { buildEverything } from "./actions";
 import { redispatchBatch } from "../../../batches/actions";
+import { OutcomeReview, type Outcome } from "./OutcomeReview";
 import { IssueQuickAdd, IssueRow, IssueRowHeader, chip } from "../../../issues/IssueRow";
 import { DraftList, IngestForm } from "../../../inbox/IngestPanels";
 import { advanceCr, advanceTask, createTask } from "../actions";
@@ -127,6 +128,11 @@ export default async function ClientIssuesPage({
     fired?: string;
     session?: string;
     redispatched?: string;
+    drafted?: string;
+    saved?: string;
+    approved?: string;
+    released?: string;
+    emailed?: string;
   }>;
 }) {
   const { id: tenantId } = await params;
@@ -265,6 +271,23 @@ export default async function ClientIssuesPage({
 
   const crList = (crs ?? []) as CRWithProject[];
   const batches = (batchRows ?? []) as Batch[];
+  const { data: outcomeRows } = batches.length
+    ? await service
+        .from("batch_outcomes")
+        .select(
+          "batch_id, issue_id, outcome, note, source, approved_at, approved_by, published_at"
+        )
+        .in(
+          "batch_id",
+          batches.map((b) => b.id)
+        )
+    : { data: [] as (Outcome & { batch_id: string })[] };
+  const outcomesByBatch = new Map<string, Outcome[]>();
+  for (const row of (outcomeRows ?? []) as (Outcome & { batch_id: string })[]) {
+    const list = outcomesByBatch.get(row.batch_id) ?? [];
+    list.push(row);
+    outcomesByBatch.set(row.batch_id, list);
+  }
   // Batched issues live in their batch's folder below, not in the open list.
   const batchIds = new Set(batches.map((b) => b.id));
   const inFolder = (i: Issue) => Boolean(i.batch_id && batchIds.has(i.batch_id));
@@ -375,7 +398,13 @@ export default async function ClientIssuesPage({
       </Reveal>
 
       {/* ── Build everything outstanding ────────────────────── */}
-      {(sp.built || sp.err || sp.redispatched) && (
+      {(sp.built ||
+        sp.err ||
+        sp.redispatched ||
+        sp.drafted ||
+        sp.saved ||
+        sp.approved ||
+        sp.released) && (
         <Reveal className="block" delay={0.03}>
           <div
             role="status"
@@ -387,6 +416,22 @@ export default async function ClientIssuesPage({
           >
             {sp.err ? (
               <p style={{ ...faint, color: "var(--k-danger)", margin: 0 }}>{sp.err}</p>
+            ) : sp.released ? (
+              <p style={{ ...faint, color: "var(--k-fg)", margin: 0 }}>
+                Released {sp.released} outcome{sp.released === "1" ? "" : "s"} to the
+                client — {sp.emailed === "1" ? "they have been emailed and it is" : "now"}{" "}
+                in their portal feed.
+              </p>
+            ) : sp.drafted ? (
+              <p style={{ ...faint, color: "var(--k-fg)", margin: 0 }}>
+                Drafted {sp.drafted} outcome{sp.drafted === "1" ? "" : "s"} for review.
+                Nothing reaches the client until you approve and release.
+              </p>
+            ) : sp.approved || sp.saved ? (
+              <p style={{ ...faint, color: "var(--k-fg)", margin: 0 }}>
+                {sp.approved ? "Approved." : "Saved."} Press Release when the batch is
+                ready for the client.
+              </p>
             ) : sp.redispatched ? (
               <p style={{ ...faint, color: "var(--k-fg)", margin: 0 }}>
                 Redispatched — a fresh Claude session is working the same work order. The
@@ -730,6 +775,14 @@ export default async function ClientIssuesPage({
                           </span>
                         </form>
                       )}
+                    <OutcomeReview
+                      batchId={b.id}
+                      batchStatus={b.status}
+                      hasPr={!!b.pr_url}
+                      issues={items}
+                      outcomes={outcomesByBatch.get(b.id) ?? []}
+                      returnTo={`/admin/clients/${tenantId}/issues${projectFilter ? `?project=${projectFilter}` : ""}`}
+                    />
                     <IssueRowHeader hasRows={items.length > 0} />
                     <div
                       className="max-md:hidden"

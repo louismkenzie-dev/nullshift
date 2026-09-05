@@ -6,14 +6,13 @@ import { createClient, createServiceClient } from "@nullshift/db";
 import { requireStaff } from "@nullshift/auth/guards";
 import { logSoc2Event } from "@/lib/soc2/events";
 import { logAudit } from "@nullshift/db/audit";
-import { sendEmail } from "@/lib/sendEmail";
-import { wrap, esc, C, FONT } from "@/lib/emailLayout";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { CopyButton } from "@/components/app/CopyButton";
 import { createGithubFixIssue } from "@/lib/ops/githubDispatch";
 import { fireRoutine } from "@/lib/ops/routineDispatch";
+import { publishApprovedOutcomes } from "@/lib/ops/publishOutcomes";
 import { redispatchBatch } from "../actions";
 import {
   dispatchBatchToManagedAgent,
@@ -317,16 +316,6 @@ async function markShipped(formData: FormData) {
       .from("issues")
       .update({ status: "shipped", resolved_at: now })
       .eq("id", issue.id);
-    if (issue.client_visible) {
-      await supabase.from("project_updates").insert({
-        tenant_id: issue.tenant_id,
-        project_id: issue.project_id,
-        type: "update",
-        title: `Fixed: ${issue.title}`,
-        body: issue.resolution_note ?? null,
-        client_id: null,
-      });
-    }
     if (issue.billing === "build_item") {
       const { data: prior } = await supabase
         .from("build_credit_events")
@@ -354,57 +343,10 @@ async function markShipped(formData: FormData) {
     metadata: { issues: issues.length },
   });
 
-  // Close the loop with the client: one plain-English email listing what just
-  // went live for them (visible issues only). Best-effort — a mail hiccup
-  // must never fail the ship.
-  const visible = issues.filter((i) => i.client_visible);
-  if (visible.length > 0) {
-    try {
-      const service = createServiceClient();
-      const { data: membership } = await service
-        .from("memberships")
-        .select("user_id")
-        .eq("tenant_id", batch.tenant_id)
-        .eq("role", "client_admin")
-        .limit(1)
-        .maybeSingle();
-      let email: string | null = null;
-      if (membership?.user_id) {
-        const { data: u } = await service.auth.admin.getUserById(membership.user_id);
-        email = u.user?.email ?? null;
-      }
-      if (!email) {
-        const { data: t } = await service
-          .from("tenants")
-          .select("contact_email")
-          .eq("id", batch.tenant_id)
-          .maybeSingle();
-        email = t?.contact_email ?? null;
-      }
-      if (email) {
-        const rows = visible
-          .map(
-            (i) =>
-              `<li style="margin:0 0 8px;font-family:${FONT};font-size:14px;line-height:1.6;color:${C.fg}"><strong>${esc(i.title)}</strong>${i.resolution_note ? `<br/><span style="color:${C.muted}">${esc(i.resolution_note)}</span>` : ""}</li>`
-          )
-          .join("");
-        await sendEmail({
-          // Their system changed. They need to know because we have a live
-          // agreement, not because we want their attention.
-          purpose: "service_relationship",
-          to: email,
-          subject: `Shipped: ${visible.length === 1 ? visible[0].title : `${visible.length} updates to your system`}`,
-          html: wrap(
-            `<tr><td style="padding:26px 32px"><h1 style="margin:0 0 12px;font-family:${FONT};font-size:20px;font-weight:700;color:${C.fg}">Just gone live</h1><ul style="margin:0;padding-left:18px">${rows}</ul><p style="margin:16px 0 0;font-family:${FONT};font-size:13px;color:${C.muted}">Full history is in your portal.</p></td></tr>`,
-            "Just gone live"
-          ),
-          text: `Just gone live:\n\n${visible.map((i) => `- ${i.title}${i.resolution_note ? ` — ${i.resolution_note}` : ""}`).join("\n")}`,
-        });
-      }
-    } catch (e) {
-      console.error("ship notification email failed (non-fatal):", e);
-    }
-  }
+  // Close the loop with the client — but only with outcomes a person read and
+  // approved on the review desk. Nothing a session wrote reaches a client
+  // unseen, and a question is announced as "Answered", never "Fixed".
+  await publishApprovedOutcomes({ supabase, batchId: id, tenantId: batch.tenant_id });
 
   revalidatePath(`/admin/batches/${id}`);
   revalidatePath("/admin/batches");

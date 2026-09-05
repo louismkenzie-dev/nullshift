@@ -17,7 +17,9 @@ export async function createGithubFixIssue(opts: {
 }): Promise<{ url: string } | null> {
   const token = process.env.GITHUB_DISPATCH_TOKEN;
   if (!token) {
-    console.warn("[ops/githubDispatch] GITHUB_DISPATCH_TOKEN not set — skipping dispatch");
+    console.warn(
+      "[ops/githubDispatch] GITHUB_DISPATCH_TOKEN not set — skipping dispatch"
+    );
     return null;
   }
   try {
@@ -35,13 +37,55 @@ export async function createGithubFixIssue(opts: {
       }),
     });
     if (!res.ok) {
-      console.error("[ops/githubDispatch] GitHub API error", res.status, await res.text());
+      console.error(
+        "[ops/githubDispatch] GitHub API error",
+        res.status,
+        await res.text()
+      );
       return null;
     }
     const json = (await res.json()) as { html_url?: string };
     return json.html_url ? { url: json.html_url } : null;
   } catch (err) {
     console.error("[ops/githubDispatch] request failed", err);
+    return null;
+  }
+}
+
+/**
+ * Read a pull request's description, so its "## Outcomes" block can be
+ * drafted into the review desk. Best-effort: null when the token is unset,
+ * the URL is not a GitHub PR, or the API refuses — staff then write the
+ * outcomes by hand. Only ever reads.
+ */
+export async function fetchPullRequestBody(prUrl: string): Promise<string | null> {
+  const token = process.env.GITHUB_DISPATCH_TOKEN;
+  if (!token) return null;
+  const m = prUrl
+    .trim()
+    .match(/^https:\/\/github\.com\/([\w.-]+)\/([\w.-]+)\/pull\/(\d+)/i);
+  if (!m) return null;
+  const [, owner, repo, number] = m;
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/pulls/${number}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        signal: AbortSignal.timeout(15_000),
+      }
+    );
+    if (!res.ok) {
+      console.error("[ops/githubDispatch] PR read failed", res.status);
+      return null;
+    }
+    const json = (await res.json()) as { body?: string | null };
+    return json.body ?? "";
+  } catch (err) {
+    console.error("[ops/githubDispatch] PR read threw", err);
     return null;
   }
 }

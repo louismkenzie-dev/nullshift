@@ -447,3 +447,27 @@ so the session works from the base branch. Issues stay batched; the new
 session link replaces the old one, which is kept in the audit trail as
 `batch.redispatched`. Use it when a run died, was reclaimed, or could not
 push.
+
+### Outcome review — nothing reaches a client unread (2026-09)
+
+A Claude Code session ends its PR with a `## Outcomes` block: one line per
+issue as `- <issue id> | fixed|answered|not_done | one sentence for the
+client`. On the client's **Issues and Bugs** tile, inside the batch folder,
+the **review desk** turns that into an editable row per issue:
+
+1. **Draft from the PR** reads the pull request recorded on the batch (or
+   paste the description into the fallback box for an older batch) and fills
+   each row. Anything the PR did not mention arrives blank — a question
+   defaults to *Answered*, everything else to *Fixed*.
+2. Edit the wording, pick the verb, then **Approve** each line. An approved
+   line must actually say something; approving does not notify anyone.
+3. **Release to the client** posts every approved line to the portal feed as
+   "Fixed: …" or "Answered: …" and sends one email. `Not done` is never
+   released — a person tells the client that in context.
+
+Drafts live in `batch_outcomes` (migration 0050, staff-only RLS), never on
+`issues`, because the member SELECT policies there are column-blind and would
+expose an unapproved draft to the client it is about. Marking a batch shipped
+publishes approved outcomes only; it no longer announces raw issue titles.
+Audit trail: `batch.outcomes_drafted`, `batch.outcome_approved`,
+`batch.outcomes_published`.
