@@ -60,6 +60,20 @@ the ops AI features degrade to manual. Optional: `ANTHROPIC_WORKSPACE_SLUG`
 — required for the Direct Debits board under Billing to do anything; without them
 the board shows "Not configured" and every Direct Debit button is disabled.
 
+**Stripe Connect (connecting a client's OWN Stripe account):**
+`STRIPE_CONNECT_CLIENT_ID` — the platform Connect client id (`ca_...`) from
+Stripe Dashboard → Connect → Settings. Optional: `STRIPE_CONNECT_REDIRECT_URI`
+(defaults to `<NEXT_PUBLIC_SITE_URL>/api/stripe/oauth/callback`) and
+`STRIPE_CONNECT_STATE_SECRET` (HMAC key for the OAuth `state` and the signed
+connect links we email clients; falls back to `STRIPE_SECRET_KEY`).
+
+**The redirect URI must also be registered in Stripe**, byte-for-byte, under
+Connect → Settings → Redirects: `https://nullshift.co.uk/api/stripe/oauth/callback`.
+Stripe rejects the authorize request outright if it does not match, and the
+client never reaches the consent screen. Unset `STRIPE_CONNECT_CLIENT_ID` and
+the Stripe Connect panel on a client's Billing tile reads "not configured" and
+both routes refuse rather than half-starting a handshake.
+
 **Xero invoicing (the invoice rail when set; Stripe is the fallback):**
 `XERO_CLIENT_ID`, `XERO_CLIENT_SECRET` — optional tuning:
 `XERO_SALES_ACCOUNT_CODE`, `XERO_PAYMENT_ACCOUNT_CODE`, `XERO_TAX_TYPE`,
@@ -98,9 +112,6 @@ Unset here, the route answers 503 and deployments are not mirrored.
 > deployment already serving production cannot see a variable added after it
 > was built. Until you redeploy, the mirror keeps answering 503 and the
 > workflow keeps failing with exactly that message.
-
-> `STRIPE_CONNECT_CLIENT_ID` (previously listed here) belongs to the dormant
-> Stripe Connect clinic scaffold — not needed until that feature ships.
 
 > **`ADMIN_EMAILS` gates `/admin`.** It must contain the email you log in with
 > (e.g. `louis@nullshift.co.uk`); without it the ops hub returns "NOT AUTHORISED".

@@ -20,6 +20,7 @@ import {
 } from "../actions";
 // Tile-owned: the money cockpit's issueInvoice with this client fixed.
 import { issueInvoice } from "./actions";
+import { StripeConnectPanel, type StripeConnection } from "./StripeConnectPanel";
 import {
   Badge,
   TilePage,
@@ -46,16 +47,38 @@ export const dynamic = "force-dynamic";
 
 export default async function ClientBillingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    stripe_connect?: string;
+    account?: string;
+    expected?: string;
+  }>;
 }) {
   const { id: tenantId } = await params;
+  const {
+    stripe_connect: stripeConnectOutcome,
+    account: stripeConnectAccount,
+    expected: stripeConnectExpected,
+  } = await searchParams;
   if (!(await requireStaff()).ok) notFound();
   const { tenant: t, project } = await loadTenantAndProjects(tenantId);
   const projectId = project?.id ?? null;
   const supabase = await createClient();
   // Payments taken in Xero flow back before this client's invoices load.
   await reconcileXeroInvoices(createServiceClient(), { tenantId, limit: 10 });
+
+  // The Connect columns (migration 0051) are not on the shared tenant loader —
+  // only this tile reads them.
+  const { data: connectRow } = await supabase
+    .from("tenants")
+    .select(
+      "stripe_connect_account_id, stripe_connect_status, stripe_connected_at, stripe_connect_livemode"
+    )
+    .eq("id", tenantId)
+    .maybeSingle();
+  const stripeConnection = (connectRow ?? null) as StripeConnection | null;
 
   const noRows = Promise.resolve({ data: [] as Record<string, unknown>[] });
   const [{ data: items }, { data: invs }, { data: subs }, { data: orderForms }] =
@@ -1017,6 +1040,18 @@ export default async function ClientBillingPage({
             ))
           )}
         </section>
+      </Reveal>
+
+      {/* The client's own Stripe account, authorised over Connect OAuth — the
+          rail the 2% application fee rides on. */}
+      <Reveal>
+        <StripeConnectPanel
+          tenantId={tenantId}
+          connection={stripeConnection}
+          outcome={stripeConnectOutcome}
+          returnedAccount={stripeConnectAccount}
+          expectedMatch={stripeConnectExpected}
+        />
       </Reveal>
     </TilePage>
   );
