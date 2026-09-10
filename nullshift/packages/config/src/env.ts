@@ -31,6 +31,8 @@ const serverSchema = clientSchema.extend({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_CONNECT_CLIENT_ID: z.string().optional(),
+  STRIPE_CONNECT_REDIRECT_URI: z.string().url().optional(),
+  STRIPE_CONNECT_STATE_SECRET: z.string().optional(),
   GITHUB_DISPATCH_TOKEN: z.string().optional(),
   CRON_SECRET: z.string().optional(),
 });
