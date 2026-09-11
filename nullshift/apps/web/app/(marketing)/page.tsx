@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import React from "react";
-import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { SplineScene } from "@/components/SplineScene";
@@ -35,6 +34,9 @@ import {
 } from "@/components/kyma";
 import { ServiceAccordion } from "@/components/kyma/ServiceAccordion";
 import { T } from "@nullshift/ui/tokens";
+import { CLIENT_STORIES, OWN_SYSTEM_PROOF_LINE } from "@nullshift/content/clientStories";
+import { StoryCard } from "@/components/marketing/StoryCard";
+import { storyHref } from "@/lib/clientStories";
 
 export const metadata: Metadata = {
   title: "Nullshift — Agentic AI that automates your business operations",
@@ -544,97 +546,38 @@ export default function Page() {
             />
           </Reveal>
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              {
-                tag: "Dance & fitness · Suffolk",
-                title: "Three venues. One booking system. Zero spreadsheets.",
-                body: "Parents book and pay through the studio's own Stripe account — memberships bill themselves on the 5th, sibling discounts apply automatically, and every register knows each child's allergies before class starts.",
-                meta: "Case study",
-              },
-              {
-                tag: "Therapy & wellness",
-                title: "A practice system its owner actually loves.",
-                body: "New Future Therapy runs on a system built for exactly how the practice works — and Laura tells the story better than we can, on camera.",
-                meta: "Video testimonial",
-              },
-              {
-                tag: "Agency operations",
-                title: "We run Nullshift on the systems we sell.",
-                body: "Client onboarding, signed agreements, invoicing, Direct Debits, accounting sync and AI-dispatched fixes — our own operations run end to end on a system we built for ourselves.",
-                meta: "Under the hood",
-              },
-            ].map((story, i) => (
-              <Reveal key={story.tag} delay={i * 0.07}>
-                <Link
-                  href="/client-stories"
-                  className="k-kard k-kard-h flex flex-col gap-3 h-full"
-                  style={{
-                    background: "var(--k-surface)",
-                    padding: "22px 24px",
-                    textDecoration: "none",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: "0.64rem",
-                      fontWeight: 500,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      color: "var(--k-accent)",
-                    }}
-                  >
-                    {story.tag}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: T.sans,
-                      fontWeight: 700,
-                      fontSize: "1.25rem",
-                      lineHeight: 1.15,
-                      letterSpacing: "-0.02em",
-                      textTransform: "uppercase",
-                      color: "var(--k-fg)",
-                    }}
-                  >
-                    {story.title}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: T.sans,
-                      fontSize: "0.9rem",
-                      lineHeight: 1.65,
-                      color: "var(--k-muted)",
-                      flex: 1,
-                    }}
-                  >
-                    {story.body}
-                  </span>
-                  <span
-                    className="inline-flex items-center gap-2"
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: "0.66rem",
-                      fontWeight: 500,
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      color: "var(--k-faint)",
-                      marginTop: 6,
-                    }}
-                  >
-                    {story.meta}
-                    <span style={{ color: "var(--k-accent)" }}>
-                      Read
-                      <span className="k-arrow" aria-hidden>
-                        {" "}
-                        →
-                      </span>
-                    </span>
-                  </span>
-                </Link>
+            {CLIENT_STORIES.map((story, i) => (
+              <Reveal key={story.slug} delay={i * 0.07}>
+                <StoryCard story={story} href={storyHref(story)} theme="dark" />
               </Reveal>
             ))}
           </div>
+          <Reveal delay={0.2}>
+            <div
+              className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
+              style={{
+                border: "1px solid var(--k-border)",
+                background: "var(--k-surface)",
+                padding: "16px 20px",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: T.sans,
+                  fontSize: "0.9rem",
+                  lineHeight: 1.55,
+                  color: "var(--k-muted)",
+                  maxWidth: "72ch",
+                }}
+              >
+                <span style={{ color: "var(--k-fg)", fontWeight: 600 }}>
+                  Under the hood.{" "}
+                </span>
+                {OWN_SYSTEM_PROOF_LINE}
+              </span>
+              <TextLink href="/about">How we run</TextLink>
+            </div>
+          </Reveal>
         </Section>
 
         {/* ═══════════════ 05 — WHAT WE BUILD (cream services) ═══════════════ */}

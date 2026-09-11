@@ -20,7 +20,8 @@
     "./legal/acceptance": "./src/legal/acceptance.ts",
     "./legal/text": "./src/legal/text.ts",
     "./legal/work": "./src/legal/work.ts",
-    "./legal/email": "./src/legal/email.ts"
+    "./legal/email": "./src/legal/email.ts",
+    "./clientStories": "./src/clientStories.ts"
   },
   "devDependencies": {
     "typescript": "^5"

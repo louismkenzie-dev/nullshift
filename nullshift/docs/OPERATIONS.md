@@ -440,7 +440,7 @@ Batched issues leave the tile's open list and sit inside their batch's
 folder under `// BATCHES` (session link, PR link, status, and the same
 inline triage rows). Cancelling a batch returns its issues to the open list.
 
-**Redispatch.** A dispatched or PR-open batch carries a *Redispatch* button
+**Redispatch.** A dispatched or PR-open batch carries a _Redispatch_ button
 (batch page and the client's batch folder). It fires the routine again with
 the same work order in a brand-new session, prefixed with a fresh-start note
 so the session works from the base branch. Issues stay batched; the new
@@ -458,7 +458,7 @@ the **review desk** turns that into an editable row per issue:
 1. **Draft from the PR** reads the pull request recorded on the batch (or
    paste the description into the fallback box for an older batch) and fills
    each row. Anything the PR did not mention arrives blank — a question
-   defaults to *Answered*, everything else to *Fixed*.
+   defaults to _Answered_, everything else to _Fixed_.
 2. Edit the wording, pick the verb, then **Approve** each line. An approved
    line must actually say something; approving does not notify anyone.
 3. **Release to the client** posts every approved line to the portal feed as
@@ -498,3 +498,30 @@ account numbers — as **Name + Value**, with an optional note.
 Migration 0052. `system_profiles.routine_token` and `calls.meeting_password`
 are still plaintext columns and should move here
 (OPS-HUB-AUDIT-2026-09-04 §B.5).
+
+## Client stories (`/client-stories`, 2026-09)
+
+One page, one data file. The gallery at the top and the homepage "04 — Client
+stories" grid both read `packages/content/src/clientStories.ts`
+(`CLIENT_STORIES`); each card deep-links to `/client-stories#<slug>`, where a
+uniform `ClientStorySection` renders: logo + sector + status stamp, three beats
+(had / built / runs itself), portrait video (Mux) beside the product in a
+`DeviceFrame`, then the ownership proof line and up to four stats.
+
+- **Only verified facts.** Usage numbers come from the client's own database;
+  dates from the ops DB. `validateClientStories` runs at the top of the page
+  module, so a duplicate slug, a non-ISO date, a fifth stat, an empty beat or
+  a non-https link fails `next build`.
+- **Assets** live in `apps/web/public/clients/`: `<slug>-logo.png` (plus an
+  optional `-logo-dark.png` for dark sections; set `plate: "dark"` for a mark
+  with white ink only), and `<slug>-site.png` for the product screenshot.
+  Until a screenshot exists `screenshot.src` is `null` and the frame shows
+  "Product preview coming"; until a Mux id exists `video.muxPlaybackId` is
+  `null` and the player shows "Video coming soon".
+- **Captions**: enable auto-generated subtitles on the Mux asset and put the
+  VTT URL in `video.captionsSrc` — the player's CC toggle stays disabled
+  without it.
+- **Adding a client**: append an entry, drop the logo in, run
+  `pnpm typecheck && cd apps/web && pnpm exec vitest run tests/client-stories.test.ts`.
+  Sections alternate dark / cream automatically. Set `projects.live_url` in the
+  ops DB to the same URL so the system passport agrees with the site.

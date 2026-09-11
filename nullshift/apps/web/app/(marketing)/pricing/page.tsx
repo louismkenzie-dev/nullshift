@@ -219,7 +219,7 @@ export default function PricingPage() {
 
             <Reveal delay={0.16}>
               <Link
-                href="/work"
+                href="/client-stories"
                 className="mt-9 inline-flex flex-col gap-1.5"
                 style={{
                   maxWidth: "60ch",
