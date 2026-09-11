@@ -362,7 +362,6 @@ export default function Page() {
                     <BtnGhost href="/book" size="sm">
                       Book a call
                     </BtnGhost>
-                    <TextLink href="/start">Try the Agent Consultation</TextLink>
                   </div>
                 </Reveal>
               </div>
@@ -650,9 +649,6 @@ export default function Page() {
           </Reveal>
           <div className="mt-12">
             <ServiceAccordion items={SERVICES} />
-          </div>
-          <div className="mt-8">
-            <TextLink href="/start">See it live — free Agent Consultation</TextLink>
           </div>
         </Section>
 
@@ -951,27 +947,6 @@ export default function Page() {
             note="Response within 24 hours · UK-based, global reach"
           />
         </div>
-
-        {/* ═══════════════ AGENT CONSULTATION (cream) ═══════════════ */}
-        <Section theme="cream" pad="md" topBorder>
-          <Reveal>
-            <div className="flex flex-col gap-7 md:flex-row md:items-center md:justify-between">
-              <div>
-                <Eyebrow label="New — Agent Consultation" />
-                <Display size="lg" className="mt-5">
-                  See your system{" "}
-                  <span style={{ color: "var(--k-muted)" }}>before you build it.</span>
-                </Display>
-                <Lead className="mt-4" style={{ maxWidth: "52ch" }}>
-                  A free consultation with the Nullshift Agent. Tell it about your
-                  business and it drafts your tailored plan — then builds a live,
-                  clickable mockup of your system so you can see it in action.
-                </Lead>
-              </div>
-              <BtnPrimary href="/start">Start your consultation</BtnPrimary>
-            </div>
-          </Reveal>
-        </Section>
       </main>
 
       <Footer />
