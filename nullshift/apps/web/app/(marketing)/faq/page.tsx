@@ -93,7 +93,7 @@ export default function FaqPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <Nav />
+      <Nav tone="cream" />
       <main>
         {/* ═══════════════ HERO (dark · layered WebGL depth) ═══════════════ */}
         <section

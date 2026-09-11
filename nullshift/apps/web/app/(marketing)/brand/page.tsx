@@ -636,7 +636,7 @@ export default function BrandPage() {
 
   return (
     <>
-      <Nav />
+      <Nav tone="cream" />
       <BrandPrintable printRef={printRef} />
       <main>
         {/* ═══ HERO (dark · layered node-network) ═══ */}

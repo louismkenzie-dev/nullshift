@@ -50,7 +50,8 @@ const DOCS = [
   {
     href: legalConfig.routes.ai,
     title: "AI Services Schedule",
-    blurb: "How AI features are supplied, their limits, and where humans stay in the loop.",
+    blurb:
+      "How AI features are supplied, their limits, and where humans stay in the loop.",
   },
   {
     href: legalConfig.routes.clientServices,
@@ -67,11 +68,7 @@ const DOCS = [
 
 export default function LegalCentre() {
   return (
-    <LegalShell
-      title="Legal Centre"
-      eyebrow="Legal"
-      active={legalConfig.routes.centre}
-    >
+    <LegalShell title="Legal Centre" eyebrow="Legal" active={legalConfig.routes.centre}>
       <DraftNotice />
 
       <p
@@ -102,10 +99,7 @@ export default function LegalCentre() {
         {legalConfig.legal.clientAgreementVersion} · Effective {effectiveDateLabel()}
       </p>
 
-      <div
-        className="mt-10"
-        style={{ borderTop: "1px solid var(--k-border)" }}
-      >
+      <div className="mt-10" style={{ borderTop: "1px solid var(--k-border)" }}>
         {DOCS.map((d) => (
           <Link
             key={d.href}

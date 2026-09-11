@@ -38,8 +38,8 @@ export default function Page() {
         }}
       >
         Change what we&apos;re allowed to store on your device. Optional categories are
-        off until you switch them on, and you can come back and switch them off again
-        at any time — no account needed.
+        off until you switch them on, and you can come back and switch them off again at
+        any time — no account needed.
       </p>
 
       {optional.length === 0 && (
@@ -54,10 +54,10 @@ export default function Page() {
         >
           At the moment this site sets nothing optional at all — only the strictly
           necessary cookies listed below, which keep you signed in and remember this
-          choice. That is why you have not been shown a consent banner: we do not ask
-          for permission we do not need. If we ever add analytics or marketing
-          technology, it will appear here first, switched off, and you&apos;ll be asked
-          before anything loads.
+          choice. That is why you have not been shown a consent banner: we do not ask for
+          permission we do not need. If we ever add analytics or marketing technology, it
+          will appear here first, switched off, and you&apos;ll be asked before anything
+          loads.
         </p>
       )}
 

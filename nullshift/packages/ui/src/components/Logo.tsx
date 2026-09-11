@@ -34,13 +34,23 @@ export function LogoMark({
 export function Logo({
   markSize = 22,
   className = "",
+  color = T.fg,
+  leftColor,
 }: {
   markSize?: number;
   className?: string;
+  /** Wordmark colour — defaults to the dark-theme foreground; pass a dark
+   *  ink on cream/light backgrounds or the lockup disappears. */
+  color?: string;
+  /** Left pill colour — follows the wordmark unless set. */
+  leftColor?: string;
 }) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <LogoMark size={markSize} />
+      <LogoMark
+        size={markSize}
+        leftColor={leftColor ?? (color === T.fg ? undefined : color)}
+      />
       <span
         style={{
           fontFamily: T.display,
@@ -48,7 +58,7 @@ export function Logo({
           fontSize: `${markSize * 0.86}px`,
           letterSpacing: "0.02em",
           lineHeight: 1,
-          color: T.fg,
+          color,
         }}
       >
         NULLSHIFT

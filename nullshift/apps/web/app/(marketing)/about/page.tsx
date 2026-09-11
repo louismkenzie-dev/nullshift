@@ -174,7 +174,7 @@ function CompareList({
 export default function AboutPage() {
   return (
     <>
-      <Nav />
+      <Nav tone="cream" />
       <main>
         {/* ═══════════════ HERO (dark · layered WebGL depth) ═══════════════ */}
         <section

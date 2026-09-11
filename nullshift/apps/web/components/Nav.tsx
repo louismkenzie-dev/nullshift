@@ -35,7 +35,14 @@ const mono: React.CSSProperties = {
   textTransform: "uppercase",
 };
 
-export function Nav() {
+/**
+ * `tone` names the background the bar first sits on. The bar itself is
+ * transparent until you scroll, so on a cream hero the default light-on-dark
+ * palette washes out (wordmark, tagline and clock all go faint). "cream"
+ * flips to dark ink until the scrolled glass appears, at which point the
+ * bar has its own dark background again and the light palette returns.
+ */
+export function Nav({ tone = "dark" }: { tone?: "dark" | "cream" } = {}) {
   const pathname = usePathname();
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(false);
@@ -147,6 +154,14 @@ export function Nav() {
     transitionDelay: ready ? `${delay}s` : "0s",
   });
 
+  // Dark ink only while the bar is transparent over a cream hero.
+  const onLight = tone === "cream" && !scrolled;
+  const ink = onLight ? "#0a0a0a" : "#f4f4e8"; // primary text / wordmark
+  const dim = onLight ? "#55554c" : "#9a9a90"; // secondary text
+  const faint = onLight ? "#8a8a7e" : "#5c5c54"; // tertiary text
+  const menuBg = onLight ? "#0a0a0a" : "#f4f4e8";
+  const menuFg = onLight ? "#f4f4e8" : "#0a0a0a";
+
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3">
@@ -168,16 +183,14 @@ export function Nav() {
             className="flex items-center gap-1.5 shrink-0"
             style={{ textDecoration: "none", ...enter(0) }}
           >
-            <Logo markSize={22} />
-            <span style={{ color: "#9a9a90", fontFamily: T.mono, fontSize: "0.7rem" }}>
-              ®
-            </span>
+            <Logo markSize={22} color={ink} />
+            <span style={{ color: dim, fontFamily: T.mono, fontSize: "0.7rem" }}>®</span>
           </Link>
 
           {/* Center status */}
           <div
             className="hidden md:flex items-center gap-6"
-            style={{ color: "#9a9a90", ...mono, ...enter(0.08) }}
+            style={{ color: dim, ...mono, ...enter(0.08) }}
           >
             <span className="inline-flex items-center gap-2">
               <span
@@ -192,9 +205,9 @@ export function Nav() {
               />
               Agentic AI · Automation · Systems
             </span>
-            <span style={{ color: "#5c5c54" }}>UK · Global reach</span>
+            <span style={{ color: faint }}>UK · Global reach</span>
             {time && (
-              <span style={{ color: "#f4f4e8" }} suppressHydrationWarning>
+              <span style={{ color: ink }} suppressHydrationWarning>
                 {time.h}
                 <span className="k-clock-colon">:</span>
                 {time.m}
@@ -211,7 +224,7 @@ export function Nav() {
                 className="hidden sm:inline-flex items-center gap-2"
                 style={{
                   ...mono,
-                  color: signedIn ? "#f4f4e8" : "#9a9a90",
+                  color: signedIn ? ink : dim,
                   textDecoration: "none",
                 }}
                 aria-label={
@@ -228,7 +241,7 @@ export function Nav() {
                     width: 6,
                     height: 6,
                     borderRadius: 999,
-                    background: signedIn ? T.primary : "#5c5c54",
+                    background: signedIn ? T.primary : faint,
                     boxShadow: signedIn ? `0 0 0 3px ${T.primary}22` : "none",
                   }}
                 />
@@ -242,8 +255,8 @@ export function Nav() {
               className="inline-flex items-center gap-2.5"
               style={{
                 ...mono,
-                color: "#0a0a0a",
-                background: "#f4f4e8",
+                color: menuFg,
+                background: menuBg,
                 height: 38,
                 paddingInline: 16,
                 borderRadius: 0,
@@ -257,8 +270,8 @@ export function Nav() {
                 aria-hidden
                 style={{ display: "inline-flex", flexDirection: "column", gap: 3 }}
               >
-                <span style={{ width: 14, height: 1.5, background: "#0a0a0a" }} />
-                <span style={{ width: 14, height: 1.5, background: "#0a0a0a" }} />
+                <span style={{ width: 14, height: 1.5, background: menuFg }} />
+                <span style={{ width: 14, height: 1.5, background: menuFg }} />
               </span>
             </button>
           </div>

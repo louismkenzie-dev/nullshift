@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default function ClientStoriesPage() {
   return (
     <>
-      <Nav />
+      <Nav tone="cream" />
       <main>
         {/* Header */}
         <Section theme="cream" pad="lg">
