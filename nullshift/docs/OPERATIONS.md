@@ -471,3 +471,30 @@ expose an unapproved draft to the client it is about. Marking a batch shipped
 publishes approved outcomes only; it no longer announces raw issue titles.
 Audit trail: `batch.outcomes_drafted`, `batch.outcome_approved`,
 `batch.outcomes_published`.
+
+### Business vault (2026-09)
+
+`/admin/vault` (nav: Admin → Business vault) holds Null Shift's own sensitive
+references — HMRC UTR, Companies House authentication code, policy and
+account numbers — as **Name + Value**, with an optional note.
+
+- **Values are never stored in a public table.** They go into Supabase Vault
+  (`vault.create_secret`), whose encryption key lives outside the database, so
+  a database dump or a read of `business_records` yields ciphertext at most.
+  The table keeps only the label, the note and a four-character hint; values
+  shorter than eight characters get no hint at all, so a PIN is never
+  half-shown.
+- **Revealing needs two-factor.** `reveal_business_record` checks
+  `is_internal_staff()` and the caller's own `aal` claim, so an aal1 session
+  cannot read a value even by calling the REST API directly. If Reveal
+  refuses, enrol TOTP under `/admin/security`.
+- **Every reveal is logged** — `business_record.revealed`, and
+  `business_record.reveal_denied` when the two-factor check fails. The value
+  itself is never written to the audit trail or to any log.
+- Writes go through `create_vault_secret` / `update_vault_secret` /
+  `delete_vault_secret`, which are granted to `service_role` only and called
+  from a server action that has already passed `requireStaff`.
+
+Migration 0052. `system_profiles.routine_token` and `calls.meeting_password`
+are still plaintext columns and should move here
+(OPS-HUB-AUDIT-2026-09-04 §B.5).
