@@ -13,12 +13,13 @@ import {
 } from "@/components/kyma";
 import { muxMp4Url, muxPosterUrl, statusStamp, storyTheme } from "@/lib/clientStories";
 import { ClientLogo } from "./ClientLogo";
-import { DeviceFrame } from "./DeviceFrame";
+import { LiveDemo } from "./demos";
 import { NullshiftPlayer } from "./NullshiftPlayer";
 
-/** The uniform story template: header + stamp, three beats, portrait video
- *  beside the product in a device frame, then the proof line and the numbers.
- *  Content is data — see `packages/content/src/clientStories.ts`. */
+/** The uniform story template: header + stamp, three beats, the live demo
+ *  reproduced from the client's own code, then the testimonial beside the
+ *  ownership proof and the numbers. Content is data — see
+ *  `packages/content/src/clientStories.ts`. */
 export function ClientStorySection({
   story,
   index,
@@ -91,16 +92,23 @@ export function ClientStorySection({
       </Reveal>
 
       {/* Beats */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-3">
         <BeatCard eyebrow="What they had" beat={story.beats.had} delay={0} />
         <BeatCard eyebrow="What we built" beat={story.beats.built} delay={0.07} />
         <BeatCard eyebrow="What runs itself now" beat={story.beats.runs} delay={0.14} />
       </div>
 
-      {/* Media */}
-      <div className="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-[5fr_7fr] lg:items-start">
+      {/* Live demo — the product, reproduced from their code, in motion */}
+      <div className="mt-14">
         <Reveal>
-          <div style={{ maxWidth: 320 }}>
+          <LiveDemo story={story} theme={theme} />
+        </Reveal>
+      </div>
+
+      {/* Testimonial + proof */}
+      <div className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-[4fr_8fr] lg:items-start">
+        <Reveal>
+          <div style={{ maxWidth: 300 }}>
             <NullshiftPlayer
               title={`${story.video.speaker}, ${story.name} — video testimonial`}
               label={`Client story · ${story.name}`}
@@ -124,67 +132,43 @@ export function ClientStorySection({
           </div>
         </Reveal>
         <Reveal delay={0.08}>
-          <DeviceFrame
-            variant={story.screenshot.frame}
-            src={story.screenshot.src}
-            alt={story.screenshot.alt}
-            url={story.liveUrl}
-            caption={story.displayUrl}
-            tint={story.brand.primary}
-          />
-          <p
-            style={{
-              fontFamily: T.sans,
-              fontSize: "0.85rem",
-              lineHeight: 1.5,
-              color: "var(--k-muted)",
-              marginTop: 12,
-            }}
+          <div
+            className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between"
+            style={{ borderTop: "1px solid var(--k-border)", paddingTop: 22 }}
           >
-            {story.screenshot.alt}
-            {story.liveUrl ? " — open it in a new tab." : ""}
-          </p>
-        </Reveal>
-      </div>
-
-      {/* Proof */}
-      <Reveal>
-        <div
-          className="mt-12 flex flex-col gap-5 md:flex-row md:items-center md:justify-between"
-          style={{ borderTop: "1px solid var(--k-border)", paddingTop: 22 }}
-        >
-          <div className="flex flex-col gap-3">
-            <MonoTag>Owned outright</MonoTag>
-            <div className="flex flex-wrap gap-2">
-              {story.proof.ownership.map((o) => (
-                <Tag key={o}>{o}</Tag>
-              ))}
+            <div className="flex flex-col gap-3">
+              <MonoTag>Owned outright</MonoTag>
+              <div className="flex flex-wrap gap-2">
+                {story.proof.ownership.map((o) => (
+                  <Tag key={o}>{o}</Tag>
+                ))}
+              </div>
+            </div>
+            <div
+              className="flex flex-wrap gap-x-6 gap-y-2"
+              style={{
+                fontFamily: T.mono,
+                fontSize: "0.68rem",
+                fontWeight: 500,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--k-muted)",
+              }}
+            >
+              <Check
+                on={story.proof.dpaSigned}
+                label="Data processing agreement signed"
+              />
+              <Check on={story.proof.carePlan} label="On a care plan" />
             </div>
           </div>
-          <div
-            className="flex flex-wrap gap-x-6 gap-y-2"
-            style={{
-              fontFamily: T.mono,
-              fontSize: "0.68rem",
-              fontWeight: 500,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: "var(--k-muted)",
-            }}
-          >
-            <Check on={story.proof.dpaSigned} label="Data processing agreement signed" />
-            <Check on={story.proof.carePlan} label="On a care plan" />
-          </div>
-        </div>
-        {story.stats.length > 0 && (
-          <div className="mt-8">
-            <StatGrid
-              stats={story.stats}
-              cols={story.stats.length >= 4 ? 4 : story.stats.length === 3 ? 3 : 2}
-            />
-          </div>
-        )}
-      </Reveal>
+          {story.stats.length > 0 && (
+            <div className="mt-8">
+              <StatGrid stats={story.stats} cols={2} />
+            </div>
+          )}
+        </Reveal>
+      </div>
     </Section>
   );
 }
@@ -201,7 +185,7 @@ function BeatCard({
   return (
     <Reveal delay={delay} className="h-full">
       <div
-        className="k-kard flex flex-col gap-3 h-full"
+        className="k-kard flex h-full flex-col gap-3"
         style={{ background: "var(--k-surface)", padding: "22px 24px" }}
       >
         <MonoTag>{eyebrow}</MonoTag>

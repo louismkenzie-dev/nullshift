@@ -505,23 +505,32 @@ One page, one data file. The gallery at the top and the homepage "04 — Client
 stories" grid both read `packages/content/src/clientStories.ts`
 (`CLIENT_STORIES`); each card deep-links to `/client-stories#<slug>`, where a
 uniform `ClientStorySection` renders: logo + sector + status stamp, three beats
-(had / built / runs itself), portrait video (Mux) beside the product in a
-`DeviceFrame`, then the ownership proof line and up to four stats.
+(had / built / runs itself), a **live demo** of the product, then the portrait
+testimonial (Mux) beside the ownership proof line and up to four stats.
 
 - **Only verified facts.** Usage numbers come from the client's own database;
   dates from the ops DB. `validateClientStories` runs at the top of the page
   module, so a duplicate slug, a non-ISO date, a fifth stat, an empty beat or
   a non-https link fails `next build`.
+- **Live demos, not screenshots.** `apps/web/components/marketing/demos/`
+  holds one demo per client, keyed by `story.demo`. Each is a screen from the
+  client's product reproduced from their codebase — their copy, palette and
+  typefaces (self-hosted via `next/font`) — driven by the client's own logic
+  ported verbatim into the `logic.ts` beside it (with the client's own test
+  cases re-run in `tests/client-demos.test.ts`). The shared engine
+  (`demos/engine.tsx`) scripts the steps, scales the canvas, and moves a
+  fake cursor; the rail under the frame narrates and drives it. Reduced
+  motion: no auto-play, the rail still steps. To refresh a demo after a
+  client ships a change, re-port the logic file and re-run the tests.
 - **Assets** live in `apps/web/public/clients/`: `<slug>-logo.png` (plus an
   optional `-logo-dark.png` for dark sections; set `plate: "dark"` for a mark
-  with white ink only), and `<slug>-site.png` for the product screenshot.
-  Until a screenshot exists `screenshot.src` is `null` and the frame shows
-  "Product preview coming"; until a Mux id exists `video.muxPlaybackId` is
-  `null` and the player shows "Video coming soon".
+  with white ink only). Until a Mux id exists `video.muxPlaybackId` is `null`
+  and the player shows "Video coming soon".
 - **Captions**: enable auto-generated subtitles on the Mux asset and put the
   VTT URL in `video.captionsSrc` — the player's CC toggle stays disabled
   without it.
-- **Adding a client**: append an entry, drop the logo in, run
-  `pnpm typecheck && cd apps/web && pnpm exec vitest run tests/client-stories.test.ts`.
-  Sections alternate dark / cream automatically. Set `projects.live_url` in the
-  ops DB to the same URL so the system passport agrees with the site.
+- **Adding a client**: append an entry, drop the logo in, write a demo under
+  `demos/` and register it in `demos/index.tsx`, then run
+  `pnpm typecheck && cd apps/web && pnpm exec vitest run`. Sections alternate
+  dark / cream automatically. Set `projects.live_url` in the ops DB to the same
+  URL so the system passport agrees with the site.

@@ -5,14 +5,16 @@
  * Every number here is one we can stand behind: usage counts come from the
  * client's own database (read on 2026-09-11), dates from the ops DB. Nothing
  * else is claimed. Adding a client = one entry in CLIENT_STORIES plus a logo
- * under `apps/web/public/clients/` (and, when they exist, a Mux playback id
- * and a product screenshot at `/clients/<slug>-site.png`).
+ * under `apps/web/public/clients/`, a live demo component keyed by `demo`
+ * (and, when it exists, a Mux playback id for the testimonial).
  *
  * Rendering helpers (status stamp, Mux URLs, validation) live in
  * `apps/web/lib/clientStories.ts`.
  */
 
 export type Beat = { title: string; body: string; chips: string[] };
+
+export type DemoKey = "tde-pricing" | "nft-reflections" | "suffolk-reports";
 
 export type ClientLogo =
   | {
@@ -57,7 +59,9 @@ export interface ClientStory {
     speaker: string;
     role: string;
   };
-  screenshot: { src: string | null; frame: "browser" | "phone"; alt: string };
+  /** Which live demo (reproduced from the client's codebase) the story shows.
+   *  The component map lives in apps/web/components/marketing/demos. */
+  demo: DemoKey;
   proof: { ownership: string[]; dpaSigned: boolean; carePlan: boolean };
   /** ≤ 4 entries. */
   stats: { value: string; label: string }[];
@@ -113,11 +117,7 @@ export const CLIENT_STORIES: ClientStory[] = [
       speaker: "Amie",
       role: "Founder, The Dance Exclusive",
     },
-    screenshot: {
-      src: null,
-      frame: "browser",
-      alt: "The Dance Exclusive parent portal",
-    },
+    demo: "tde-pricing",
     proof: {
       ownership: ["Their repo", "Their database", "Their Stripe account"],
       dpaSigned: true,
@@ -178,11 +178,7 @@ export const CLIENT_STORIES: ClientStory[] = [
       speaker: "Laura",
       role: "Co-founder, NewFuture Therapy",
     },
-    screenshot: {
-      src: null,
-      frame: "browser",
-      alt: "The NewFuture Therapy website",
-    },
+    demo: "nft-reflections",
     proof: {
       ownership: ["Their repo", "Their database", "Their domain"],
       dpaSigned: true,
@@ -214,7 +210,7 @@ export const CLIENT_STORIES: ClientStory[] = [
       src: "/clients/suffolk-tennis-logo.png",
       plate: "dark",
       width: 720,
-      height: 229,
+      height: 204,
       alt: "Suffolk Tennis LTA",
     },
     brand: { primary: "hsl(207 90% 38%)" },
@@ -240,11 +236,7 @@ export const CLIENT_STORIES: ClientStory[] = [
       speaker: "Ollie",
       role: "Suffolk Tennis LTA",
     },
-    screenshot: {
-      src: null,
-      frame: "browser",
-      alt: "The Suffolk Tennis LTA parent hub",
-    },
+    demo: "suffolk-reports",
     proof: {
       ownership: ["Their repo", "Their database", "Their Stripe account"],
       dpaSigned: true,
