@@ -1,4 +1,5 @@
 import { planChoiceOpen } from "@/lib/planGate";
+import { connectFeeFlag } from "@/lib/legal/applicationFee";
 import { SCALE_BAND_LABEL, type ScaleBand } from "@/lib/pricing/nsi";
 
 /**
@@ -286,6 +287,8 @@ export type Block = {
     contactEmail: string | null;
     carePlanChoice: string | null;
     carePlanTermsAcceptedAt: string | null;
+    /** tenants.stripe_connect_status — 'connected' | 'revoked' | null. */
+    stripeConnectStatus: string | null;
     createdAt: string;
   };
   /** Newest first. */
@@ -298,6 +301,8 @@ export type Block = {
     status: string;
     sentAt: string | null;
     acceptedAt: string | null;
+    applicationFeeEnabled: boolean;
+    applicationFeePercent: number | null;
   } | null;
   changeOrdersInReview: number;
   subscription: {
@@ -428,10 +433,26 @@ export function tileStates(block: Block): Record<TileKey, TileState> {
     return { tone: "success", label: stageLabel(p.stage), sub, href: h };
   })();
 
+  // Stripe Connect fee gate: money must not move until the Order Form (and
+  // the MSA it incorporates) is signed with the fee on it. Computed once and
+  // shown on both tiles that own it.
+  const feeFlag = connectFeeFlag({
+    connectStatus: block.tenant.stripeConnectStatus,
+    order: block.orderForm
+      ? {
+          status: block.orderForm.status,
+          application_fee_enabled: block.orderForm.applicationFeeEnabled,
+          application_fee_percent: block.orderForm.applicationFeePercent,
+        }
+      : null,
+  });
+
   // Billing -----------------------------------------------------------------
   const billing: TileState = (() => {
     const h = href("billing");
     const inv = block.invoices;
+    if (feeFlag)
+      return { tone: feeFlag.tone, label: feeFlag.label, sub: feeFlag.sub, href: h };
     if (inv.overdueCount > 0)
       return {
         tone: "danger",
@@ -578,6 +599,13 @@ export function tileStates(block: Block): Record<TileKey, TileState> {
   const docs: TileState = (() => {
     const h = href("docs");
     const d = block.docs;
+    if (feeFlag?.tone === "danger" && block.orderForm?.status !== "accepted")
+      return {
+        tone: "warning",
+        label: "Order Form + MSA not signed",
+        sub: feeFlag.sub,
+        href: h,
+      };
     if (d.awaitingApproval > 0)
       return {
         tone: "warning",

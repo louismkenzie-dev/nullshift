@@ -25,6 +25,8 @@ import {
 } from "@/lib/legal/agreement";
 import { AcceptOrderForm } from "@/components/portal/AcceptOrderForm";
 import { recordClientViews, recordDocumentEvent } from "@/lib/documentEvents";
+import { applicationFeeClause, formatPercent } from "@/lib/legal/applicationFee";
+import { contentHash } from "@nullshift/content/legal/versions";
 
 /**
  * The client's legal centre (spec §17), and the place they actually accept
@@ -114,11 +116,21 @@ async function acceptOrder(
   // as the authorisation check.
   const { data: order } = await supabase
     .from("order_forms")
-    .select("id, tenant_id, status")
+    .select("id, tenant_id, status, application_fee_enabled, application_fee_percent")
     .eq("id", orderFormId)
     .maybeSingle();
   if (!order || order.status !== "client_review")
     return { ok: false, error: "This agreement is no longer awaiting acceptance." };
+
+  // The application fee the client is signing, and the exact words they saw.
+  const feePercent =
+    order.application_fee_enabled && order.application_fee_percent != null
+      ? Number(order.application_fee_percent)
+      : null;
+  const feeClause = applicationFeeClause({
+    enabled: feePercent !== null,
+    percent: feePercent,
+  });
 
   const h = await headers();
   const ip =
@@ -137,7 +149,10 @@ async function acceptOrder(
     business_purpose_confirmed: businessPurpose,
     terms_read_confirmed: termsRead,
     ...docs.versions,
-    document_hashes: docs.hashes,
+    document_hashes: feeClause
+      ? { ...docs.hashes, APPLICATION_FEE: contentHash(feeClause) }
+      : docs.hashes,
+    application_fee_percent: feePercent,
     ip_address: ip,
     user_agent: h.get("user-agent"),
     acceptance_method: "clickwrap",
@@ -319,6 +334,13 @@ export default async function PortalLegalPage() {
               orderFormId={awaiting.id}
               clientLegalName={awaiting.client_legal_name}
               documents={docs.links}
+              feeClause={applicationFeeClause({
+                enabled: !!awaiting.application_fee_enabled,
+                percent:
+                  awaiting.application_fee_percent == null
+                    ? null
+                    : Number(awaiting.application_fee_percent),
+              })}
               disabled={!!preview}
             />
           </div>
@@ -722,7 +744,21 @@ function OrderSummary({ row }: { row: OrderFormRow }) {
         <Row k="Plan" v={row.plan} />
         <Row k="Monthly fee" v={`${gbp(row.monthly_fee)} per month`} />
         <Row k="One-off project fee" v={gbp(row.project_fee)} />
+        {row.application_fee_enabled && row.application_fee_percent != null && (
+          <Row
+            k="Application fee"
+            v={`${formatPercent(Number(row.application_fee_percent))} of each payment through your Stripe account`}
+          />
+        )}
       </dl>
+      {row.application_fee_enabled && row.application_fee_percent != null && (
+        <p style={{ ...body, marginTop: 12, color: "var(--k-muted)" }}>
+          {applicationFeeClause({
+            enabled: true,
+            percent: Number(row.application_fee_percent),
+          })}
+        </p>
+      )}
       {scope.businessOutcome && (
         <p
           style={{

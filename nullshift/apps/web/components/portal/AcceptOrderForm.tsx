@@ -28,12 +28,15 @@ export function AcceptOrderForm({
   orderFormId,
   clientLegalName,
   documents,
+  feeClause,
   disabled,
 }: {
   action: (prev: Result | null, fd: FormData) => Promise<Result>;
   orderFormId: string;
   clientLegalName: string;
   documents: { label: string; href: string }[];
+  /** The Stripe Connect application-fee clause on this Order Form, if any. */
+  feeClause?: string | null;
   disabled?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<Result | null, FormData>(
@@ -133,6 +136,29 @@ export function AcceptOrderForm({
           <span style={{ ...mono, display: "block", marginBottom: 6 }}>Email *</span>
           <input name="accepted_by_email" type="email" required style={field} />
         </label>
+      </div>
+
+      {/* What signing binds: the Order Form AND the Master Services Agreement
+          it sits under, plus the application fee where one applies. Said in
+          words here, not buried in a link, because it is money. */}
+      <div
+        style={{
+          border: "1px solid var(--k-border)",
+          padding: "12px 14px",
+          fontFamily: T.sans,
+          fontSize: "0.88rem",
+          lineHeight: 1.6,
+          color: "var(--k-fg)",
+        }}
+      >
+        <p style={{ margin: 0 }}>
+          Signing accepts this Order Form{" "}
+          <strong>and the Master Services Agreement</strong> (Service &amp; Support Terms)
+          it is made under, together with the schedules linked above.
+        </p>
+        {feeClause && (
+          <p style={{ margin: "8px 0 0", color: "var(--k-muted)" }}>{feeClause}</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-3">

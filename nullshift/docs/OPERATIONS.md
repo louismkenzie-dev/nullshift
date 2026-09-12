@@ -534,3 +534,28 @@ testimonial (Mux) beside the ownership proof line and up to four stats.
   `pnpm typecheck && cd apps/web && pnpm exec vitest run`. Sections alternate
   dark / cream automatically. Set `projects.live_url` in the ops DB to the same
   URL so the system passport agrees with the site.
+
+### Stripe Connect application fee — signed before any money moves (2026-09)
+
+The application fee is a commercial term, so it lives on the **Order Form**
+(migration 0053): tick *"This project takes an application fee via Stripe
+Connect"* and enter the percentage. The form, the client's portal and the
+acceptance email all carry the fixed disclaimer that the fee **excludes
+Stripe's own processing fees** (`APPLICATION_FEE_DISCLAIMER` in
+`apps/web/lib/legal/applicationFee.ts`).
+
+- **Send** (after the second-person review) emails the client that the Order
+  Form and the Master Services Agreement it incorporates are ready to sign,
+  naming the fee. Accepting in the portal signs both; the acceptance row stores
+  `application_fee_percent` and the hash of the clause the client saw
+  (`document_hashes.APPLICATION_FEE`).
+- **The gate.** `connectFeeGate` allows a Connect charge only when the tenant's
+  Stripe is connected AND its accepted Order Form carries the fee.
+  `createConnectPaymentIntent` now requires the percentage — there is no
+  constant to fall back on — and `chargeThroughConnect`
+  (`apps/web/lib/billing/connectCharge.ts`) is the only path that supplies it.
+  Refusals are audited as `connect.charge_refused`.
+- **Flagged in the hub.** Stripe connected with nothing signed → the Billing
+  tile goes red ("Connect fee not signed") and Docs and Legal goes amber; the
+  Connect panel on the Billing tile says exactly what is missing and links to
+  the Order Form. Fee signed but Stripe not connected → amber.

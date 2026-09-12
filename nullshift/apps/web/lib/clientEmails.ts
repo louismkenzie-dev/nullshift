@@ -54,6 +54,47 @@ This link is single-use and expires. If it has run out, use "Forgot your passwor
   return { subject, html, text };
 }
 
+/**
+ * The Order Form (and the Master Services Agreement it incorporates) is in
+ * the portal awaiting signature. Sent by sendOrderForm; names the application
+ * fee when one is on the form so nobody signs a fee they did not see coming.
+ */
+export function agreementReadyEmail(opts: {
+  name: string;
+  reference: string;
+  portalUrl: string;
+  feeClause: string | null;
+}): { subject: string; html: string; text: string } {
+  const { name, reference, portalUrl, feeClause } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const subject = `${reference}: your Order Form and Master Services Agreement are ready to sign`;
+  const feeHtml = feeClause
+    ? `<p style="margin:12px 0 0;font-family:${FONT};font-size:13px;line-height:1.6;color:${C.muted}"><strong>Please note:</strong> ${esc(feeClause)}</p>`
+    : "";
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Action needed</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Your agreement is ready to sign</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, Order Form ${esc(reference)} is in your portal, together with the Master Services Agreement it sits under. Please read both and sign when you are happy — nothing is charged and no payments run through your Stripe account until you have.</p>
+      ${feeHtml}
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(portalUrl + "/legal", "Read &amp; sign the agreement →")}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Signing records the scope, the fees and the versions of every document you agreed to.</p>
+    </td></tr>`;
+  const html = wrap(
+    inner,
+    `Order Form ${reference} and the Master Services Agreement are ready to sign.`
+  );
+  const text = `Hi ${first},
+
+Order Form ${reference} is in your Nullshift portal together with the Master Services Agreement it sits under. Please read both and sign when you are happy. Nothing is charged and no payments run through your Stripe account until you have.
+${feeClause ? "\nPlease note: " + feeClause + "\n" : ""}
+Read and sign: ${portalUrl}/legal
+`;
+  return { subject, html, text };
+}
+
 export function documentsReadyEmail(opts: { name: string; portalUrl: string }): {
   subject: string;
   html: string;

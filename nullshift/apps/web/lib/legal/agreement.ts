@@ -66,6 +66,9 @@ export type OrderFormRow = {
   payment_review_ref: string | null;
   payment_reviewed_at: string | null;
   portfolio_use: boolean;
+  /** Stripe Connect application fee agreed on this form (migration 0053). */
+  application_fee_enabled?: boolean;
+  application_fee_percent?: number | string | null;
   schedule_versions: Record<string, string> | null;
   scale_assessment_id: string | null;
   superseded_by: string | null;

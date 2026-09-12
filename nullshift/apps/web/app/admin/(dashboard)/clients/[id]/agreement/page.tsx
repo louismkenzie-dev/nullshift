@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@nullshift/db";
 import { requireStaff } from "@nullshift/auth/guards";
 import { logAudit } from "@nullshift/db/audit";
@@ -20,6 +20,13 @@ import {
 } from "@nullshift/content/legal/work";
 import { PRICING_VERSION, SCALE_BAND_LABEL } from "@/lib/pricing/nsi";
 import { recordDocumentEvent } from "@/lib/documentEvents";
+import {
+  applicationFeeClause,
+  formatPercent,
+  parseApplicationFee,
+} from "@/lib/legal/applicationFee";
+import { agreementReadyEmail } from "@/lib/clientEmails";
+import { sendEmail } from "@/lib/sendEmail";
 import {
   PAYMENT_ARCHITECTURE_LABEL,
   releaseState,
@@ -173,9 +180,21 @@ async function saveOrderForm(formData: FormData) {
   const db = createServiceClient();
   const architecture = String(formData.get("payment_architecture") || "").trim();
 
+  // The application fee is a signed commercial term: a ticked box with no
+  // number is refused here, not defaulted.
+  const fee = parseApplicationFee({
+    enabled: formData.get("application_fee_enabled") === "on",
+    percent: String(formData.get("application_fee_percent") ?? ""),
+  });
+  if (!fee.ok) {
+    redirect(`/admin/clients/${tenantId}/agreement?err=${encodeURIComponent(fee.error)}`);
+  }
+
   const { error } = await db
     .from("order_forms")
     .update({
+      application_fee_enabled: fee.fee.enabled,
+      application_fee_percent: fee.fee.percent,
       client_legal_name: String(formData.get("client_legal_name") || "").trim(),
       client_company_number:
         String(formData.get("client_company_number") || "").trim() || null,
@@ -296,6 +315,41 @@ async function sendOrderForm(formData: FormData) {
     target: `order_form:${id}`,
     tenantId,
   });
+
+  // Tell the client: the Order Form and the MSA it incorporates are waiting.
+  // Best-effort — the send has happened; a mail hiccup must not undo it.
+  try {
+    const { data: tenant } = await db
+      .from("tenants")
+      .select("contact_name, contact_email")
+      .eq("id", tenantId)
+      .maybeSingle();
+    const to =
+      form.client_legal_email || form.client_billing_email || tenant?.contact_email;
+    if (to) {
+      const mail = agreementReadyEmail({
+        name: tenant?.contact_name ?? "there",
+        reference: form.reference,
+        portalUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://nullshift.co.uk"}/portal`,
+        feeClause: applicationFeeClause({
+          enabled: !!form.application_fee_enabled,
+          percent:
+            form.application_fee_percent == null
+              ? null
+              : Number(form.application_fee_percent),
+        }),
+      });
+      await sendEmail({
+        purpose: "service_relationship",
+        to,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+      });
+    }
+  } catch (e) {
+    console.error("agreement-ready email failed (non-fatal):", e);
+  }
   revalidatePath(`/admin/clients/${tenantId}/agreement`);
 }
 
@@ -451,13 +505,13 @@ export default async function AgreementPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  /** Review gate bounce: ?blocked=review | self_approval | not_draft. */
-  searchParams: Promise<{ blocked?: string }>;
+  /** Review gate bounce: ?blocked=review | self_approval | not_draft; ?err= from a refused save. */
+  searchParams: Promise<{ blocked?: string; err?: string }>;
 }) {
   const staff = await requireStaff();
   if (!staff.ok) notFound();
   const { id: tenantId } = await params;
-  const { blocked } = await searchParams;
+  const { blocked, err } = await searchParams;
 
   const db = createServiceClient();
   const [
@@ -516,6 +570,21 @@ export default async function AgreementPage({
   return (
     <div className="flex flex-col gap-7">
       <ReviewBlockedNotice blocked={blocked} />
+      {err && (
+        <p
+          role="alert"
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.88rem",
+            color: "var(--k-danger)",
+            border: "1px solid var(--k-danger)",
+            padding: "10px 14px",
+            margin: "16px 0 0",
+          }}
+        >
+          {err}
+        </p>
+      )}
       <PageHeader
         index="/06"
         label="Agreement"
@@ -1060,6 +1129,14 @@ function OrderFormSummary({ row }: { row: OrderFormRow }) {
               : "not classified"
           }
         />
+        <Row
+          k="Application fee"
+          v={
+            row.application_fee_enabled && row.application_fee_percent != null
+              ? `${formatPercent(Number(row.application_fee_percent))} per payment via Stripe Connect (excludes Stripe's fees)`
+              : "None"
+          }
+        />
         <Row k="Sent" v={dateGB(row.sent_at)} />
       </dl>
       {scope.businessOutcome && (
@@ -1258,6 +1335,61 @@ function OrderFormEditor({ row, tenantId }: { row: OrderFormRow; tenantId: strin
           />
         </label>
       </div>
+
+      {/* Stripe Connect application fee — a signed term, so it lives on the
+          Order Form. No payment runs through Connect until the client signs
+          a form with this ticked (lib/legal/applicationFee.ts). */}
+      <fieldset
+        style={{
+          border: "1px solid var(--k-border)",
+          padding: "12px 14px",
+          margin: 0,
+        }}
+      >
+        <label className="flex items-start gap-3" style={{ cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            name="application_fee_enabled"
+            defaultChecked={!!row.application_fee_enabled}
+            style={{ marginTop: 3 }}
+          />
+          <span style={{ fontFamily: T.sans, fontSize: "0.9rem", color: "var(--k-fg)" }}>
+            This project takes an application fee via Stripe Connect
+          </span>
+        </label>
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label>
+            <span style={{ ...mono, display: "block", marginBottom: 6 }}>
+              Application fee % of each payment
+            </span>
+            <input
+              name="application_fee_percent"
+              inputMode="decimal"
+              placeholder="e.g. 2 or 2.5"
+              defaultValue={
+                row.application_fee_percent == null
+                  ? ""
+                  : String(row.application_fee_percent)
+              }
+              style={field}
+            />
+          </label>
+        </div>
+        <p
+          style={{
+            fontFamily: T.sans,
+            fontSize: "0.8rem",
+            lineHeight: 1.6,
+            color: "var(--k-muted)",
+            margin: "10px 0 0",
+          }}
+        >
+          Disclaimer shown to the client and signed with the form: the application fee is
+          charged by Nullshift on each payment through the client&apos;s connected Stripe
+          account and <strong>excludes Stripe&apos;s own processing fees</strong>, which
+          Stripe charges the client directly. Leave unticked if no fee is taken.
+        </p>
+      </fieldset>
 
       <Text
         name="business_outcome"

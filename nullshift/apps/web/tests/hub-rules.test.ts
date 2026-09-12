@@ -47,6 +47,7 @@ const block = (over: Partial<Block> = {}): Block => {
       contactEmail: "ann@acme.example",
       carePlanChoice: "hosting_api",
       carePlanTermsAcceptedAt: "2026-07-10T00:00:00Z",
+      stripeConnectStatus: null,
       createdAt: "2026-06-01T00:00:00Z",
     },
     projects: p ? [p] : [],
@@ -503,5 +504,55 @@ describe("tileStates", () => {
       block({ project: project({ stage: "build" }), subscription: null })
     );
     expect(t.carePlan).toMatchObject({ tone: "muted", label: "Opens at go-live" });
+  });
+});
+
+describe("Stripe Connect application-fee gate on the tiles", () => {
+  const signedWithFee = {
+    id: "of1",
+    reference: "OF-1",
+    status: "accepted",
+    sentAt: "2026-09-01T00:00:00Z",
+    acceptedAt: "2026-09-02T00:00:00Z",
+    applicationFeeEnabled: true,
+    applicationFeePercent: 2,
+  };
+
+  it("turns Billing red when Stripe is connected but no signed Order Form carries the fee", () => {
+    const b = block({
+      tenant: { ...block().tenant, stripeConnectStatus: "connected" },
+      orderForm: null,
+    });
+    const t = tileStates(b);
+    expect(t.billing.tone).toBe("danger");
+    expect(t.billing.label).toMatch(/Connect fee not signed/);
+    expect(t.docs.tone).toBe("warning");
+    expect(t.docs.label).toMatch(/Order Form \+ MSA not signed/);
+  });
+
+  it("stays quiet once the fee is signed and Stripe is connected", () => {
+    const b = block({
+      tenant: { ...block().tenant, stripeConnectStatus: "connected" },
+      orderForm: signedWithFee,
+    });
+    expect(tileStates(b).billing.label).not.toMatch(/Connect fee/);
+  });
+
+  it("warns when the fee is signed but Stripe is not connected yet", () => {
+    const b = block({ orderForm: signedWithFee });
+    const t = tileStates(b);
+    expect(t.billing.tone).toBe("warning");
+    expect(t.billing.label).toMatch(/Stripe not connected/);
+  });
+
+  it("does nothing for clients with no application fee at all", () => {
+    const b = block({
+      orderForm: {
+        ...signedWithFee,
+        applicationFeeEnabled: false,
+        applicationFeePercent: null,
+      },
+    });
+    expect(tileStates(b).billing.label).not.toMatch(/fee/i);
   });
 });

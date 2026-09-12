@@ -56,6 +56,7 @@ type TenantRow = {
   contact_email: string | null;
   care_plan_choice: string | null;
   care_plan_terms_accepted_at: string | null;
+  stripe_connect_status?: string | null;
   created_at: string;
 };
 
@@ -95,6 +96,8 @@ type OrderFormRow = {
   accepted_at: string | null;
   reviewed_by: string | null;
   created_at: string;
+  application_fee_enabled?: boolean | null;
+  application_fee_percent?: number | string | null;
 };
 
 type ChangeOrderRow = { tenant_id: string; status: string; reviewed_by: string | null };
@@ -148,12 +151,12 @@ type LeadRow = {
 };
 
 const TENANT_COLUMNS =
-  "id, name, type, status, vertical, contact_name, contact_email, care_plan_choice, care_plan_terms_accepted_at, created_at";
+  "id, name, type, status, vertical, contact_name, contact_email, care_plan_choice, care_plan_terms_accepted_at, stripe_connect_status, created_at";
 const PROJECT_COLUMNS =
   "id, tenant_id, name, stage, proposal_status, proposal_sent_at, accepted_at, live_url, next_action, next_action_owner, account_owner, delivery_owner, technical_owner, finance_owner, proposal_reviewed_by, created_at";
 const PROFILE_COLUMNS = "project_id, repo_full_name, supabase_ref, health, build_goal";
 const ORDER_FORM_COLUMNS =
-  "id, tenant_id, reference, status, sent_at, accepted_at, reviewed_by, created_at";
+  "id, tenant_id, reference, status, sent_at, accepted_at, reviewed_by, application_fee_enabled, application_fee_percent, created_at";
 const SUB_COLUMNS = "id, tenant_id, plan, status, provider, mrr, created_at";
 const ASSESSMENT_COLUMNS =
   "id, tenant_id, plan, scale_band, multiplier, direct_cost_floor, recommended_mrr, override_mrr, agreed_mrr, enterprise_review_required, pricing_version, plan_prices, created_at";
@@ -397,6 +400,7 @@ function buildBlock(t: TenantRow, s: Signals): Block {
       contactEmail: t.contact_email,
       carePlanChoice: t.care_plan_choice,
       carePlanTermsAcceptedAt: t.care_plan_terms_accepted_at,
+      stripeConnectStatus: t.stripe_connect_status ?? null,
       createdAt: t.created_at,
     },
     projects,
@@ -408,6 +412,11 @@ function buildBlock(t: TenantRow, s: Signals): Block {
           status: of.status,
           sentAt: of.sent_at,
           acceptedAt: of.accepted_at,
+          applicationFeeEnabled: !!of.application_fee_enabled,
+          applicationFeePercent:
+            of.application_fee_percent == null
+              ? null
+              : Number(of.application_fee_percent),
         }
       : null,
     changeOrdersInReview,

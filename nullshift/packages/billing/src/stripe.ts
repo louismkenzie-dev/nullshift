@@ -1,5 +1,4 @@
 import Stripe from "stripe";
-import { applicationFeePence } from "./fees";
 
 /**
  * Server-only Stripe client + thin helpers for Nullshift's two revenue lines:
@@ -209,23 +208,33 @@ export async function createSubscriptionCheckoutUrl(params: {
 }
 
 /**
- * Take a patient payment through a clinic's connected account, skimming the 2%
- * Nullshift application fee (the "Stripe + 2%" mechanism). Only for clients who
- * take patient payments through the system.
+ * Take a payment through a client's connected account, with the Nullshift
+ * application fee skimmed off. The percentage is a REQUIRED argument with no
+ * default: it is the figure the client signed on their Order Form, and the
+ * only caller is apps/web/lib/billing/connectCharge.ts, which refuses to reach
+ * this function without that signature. Never call this directly.
  */
 export async function createConnectPaymentIntent(params: {
   amountPence: number;
   connectedAccountId: string;
+  /** The signed Order Form's application fee, e.g. 2 or 2.5 — never a constant. */
+  applicationFeePercent: number;
   currency?: string;
   description?: string;
 }): Promise<Stripe.PaymentIntent | null> {
   const stripe = getStripe();
   if (!stripe) return null;
+  if (!(params.applicationFeePercent > 0)) {
+    throw new Error(
+      "createConnectPaymentIntent: an agreed application fee percentage is required"
+    );
+  }
+  const fee = Math.round((params.amountPence * params.applicationFeePercent) / 100);
   return stripe.paymentIntents.create({
     amount: params.amountPence,
     currency: params.currency ?? "gbp",
     description: params.description,
-    application_fee_amount: applicationFeePence(params.amountPence),
+    application_fee_amount: fee,
     transfer_data: { destination: params.connectedAccountId },
   });
 }

@@ -8,7 +8,13 @@ import {
   connectRedirectUri,
   connectSigningSecret,
 } from "@/lib/billing/stripeConnect";
+import Link from "next/link";
 import { btn, dateTimeGB } from "../_shared";
+import {
+  CONNECT_GATE_MESSAGE,
+  formatPercent,
+  type ConnectGate,
+} from "@/lib/legal/applicationFee";
 
 export type StripeConnection = {
   stripe_connect_account_id: string | null;
@@ -19,7 +25,8 @@ export type StripeConnection = {
 
 /**
  * The client's OWN Stripe account, authorised to Nullshift over Connect OAuth
- * — the rail the 2% application fee rides on.
+ * — the rail the agreed application fee rides on. The fee itself is a signed
+ * term on the Order Form; the gate below says whether money may move yet.
  *
  * Two ways in, because the person who runs a client's Stripe account is
  * usually not the person logged into anything of ours: staff can start the
@@ -35,9 +42,12 @@ export function StripeConnectPanel({
   outcome,
   returnedAccount,
   expectedMatch,
+  gate,
 }: {
   tenantId: string;
   connection: StripeConnection | null;
+  /** Whether a payment may run through Connect (signed Order Form + fee). */
+  gate: ConnectGate;
   /** ?stripe_connect= from the callback redirect. */
   outcome?: string;
   /** ?account= — what Stripe just handed back, even when persisting it failed. */
@@ -118,7 +128,37 @@ export function StripeConnectPanel({
       >
         The client authorises their existing Stripe account — they keep the account, the
         dashboard and the payouts; Nullshift gains permission to charge on it and take the
-        platform fee. This never creates a Stripe account for them.
+        application fee agreed on their Order Form. This never creates a Stripe account
+        for them.
+      </p>
+
+      {/* The money gate. Red until the signed Order Form carries the fee. */}
+      <p
+        style={{
+          fontFamily: T.sans,
+          fontSize: "0.85rem",
+          lineHeight: 1.6,
+          color: gate.canCharge ? T.success : T.danger,
+          border: `1px solid color-mix(in oklab, ${gate.canCharge ? T.success : T.danger} 40%, transparent)`,
+          background: `color-mix(in oklab, ${gate.canCharge ? T.success : T.danger} 8%, transparent)`,
+          padding: "10px 12px",
+          margin: "0 0 14px",
+        }}
+      >
+        <strong>
+          {gate.canCharge
+            ? `Application fee ${formatPercent(gate.percent ?? 0)} — signed.`
+            : "No payment may run through Connect yet."}
+        </strong>{" "}
+        {CONNECT_GATE_MESSAGE[gate.reason]}{" "}
+        {!gate.canCharge && gate.reason !== "not_connected" && (
+          <Link
+            href={`/admin/clients/${tenantId}/agreement`}
+            style={{ color: "var(--k-accent)" }}
+          >
+            Open the Order Form →
+          </Link>
+        )}
       </p>
 
       {!configured ? (
