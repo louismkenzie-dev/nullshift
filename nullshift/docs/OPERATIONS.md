@@ -559,3 +559,32 @@ Stripe's own processing fees** (`APPLICATION_FEE_DISCLAIMER` in
   tile goes red ("Connect fee not signed") and Docs and Legal goes amber; the
   Connect panel on the Billing tile says exactly what is missing and links to
   the Order Form. Fee signed but Stripe not connected → amber.
+
+### Application fees dashboard (`/admin/billing/fees`, 2026-09)
+
+Stripe's own dashboard mixes Connect application fee revenue into the
+platform balance with no per-client rollup. This page is the answer: total
+collected (lifetime and this month) and a breakdown by client, each linking
+back to their Billing tile.
+
+- **Ledger**: `connect_application_fees` (migration 0054), one row per Stripe
+  Application Fee object, keyed on the Stripe fee id so it survives a client
+  later disconnecting or reassigning their account. Staff-only RLS; only the
+  service role writes.
+- **Kept current two ways**: the Stripe webhook handles
+  `application_fee.created` / `application_fee.refunded` as they arrive
+  (`apps/web/lib/billing/connectFeeSync.ts`); a manual **Sync now** button
+  pages through the Stripe API directly (`applicationFees.list`, capped at 20
+  pages per run) as a backfill and safety net — safe to press any time.
+- **Setup the webhook path needs** (code can't do this part): on the Stripe
+  webhook endpoint, turn on *Listen to events on Connected accounts* and add
+  `application_fee.created` / `application_fee.refunded` to its events —
+  see `.env.example` under `STRIPE_WEBHOOK_SECRET`. Without it, the ledger
+  only fills via Sync now.
+- **Test-mode fees are recorded but never counted** — excluded from every
+  total and from the per-client breakdown, surfaced only as a count so
+  nobody mistakes sandbox activity for real revenue.
+- Pure aggregation (`apps/web/lib/billing/connectFees.ts`) is unit-tested:
+  net-of-refund maths, lifetime/this-month totals, per-tenant grouping, and
+  an "Unmatched account" fallback so a collected fee can never silently
+  disappear if its tenant link breaks.

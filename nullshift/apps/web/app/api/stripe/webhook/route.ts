@@ -4,6 +4,7 @@ import { createServiceClient } from "@nullshift/db";
 import { mapStripeSubStatus } from "@/lib/careSubscription";
 import { carePlan } from "@/lib/carePlans";
 import { syncInvoicePaymentToXero } from "@/lib/xeroSync";
+import { upsertApplicationFee } from "@/lib/billing/connectFeeSync";
 
 /**
  * Stripe webhook — the single authoritative consumer (point the Stripe dashboard
@@ -155,10 +156,15 @@ export async function POST(req: Request) {
           .eq("stripe_subscription_id", sub.id);
         break;
       }
-      // TODO(connect): when the clinic Stripe Connect 2% skim goes live, handle
-      // `payment_intent.succeeded` (with application_fee_amount) here to log the
-      // fee to audit_log — it was previously done by the now-retired
-      // supabase/functions/stripe-webhook edge function.
+      case "application_fee.created":
+      case "application_fee.refunded": {
+        // The revenue ledger the fee dashboard reads (connect_application_fees,
+        // migration 0054). Requires "Listen to events on Connected accounts" on
+        // this endpoint in the Stripe Dashboard — see connectFeeSync.ts.
+        const fee = event.data.object as Stripe.ApplicationFee;
+        await upsertApplicationFee(supabase, fee);
+        break;
+      }
       default:
         // Acknowledge unhandled types (200) so Stripe doesn't keep retrying.
         break;

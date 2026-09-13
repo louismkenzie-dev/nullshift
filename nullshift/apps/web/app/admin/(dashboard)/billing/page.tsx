@@ -424,6 +424,13 @@ export default async function BillingPage() {
             <StatusChip tone="warning">{awaitingDd} awaiting</StatusChip>
           )}
         </Link>
+        <Link
+          href="/admin/billing/fees"
+          className="inline-flex items-center gap-2"
+          style={{ ...headLabel, padding: "8px 0", textDecoration: "none" }}
+        >
+          Application fees
+        </Link>
       </div>
 
       {/* ── Past-due rail: the first thing to look at ─────────── */}
