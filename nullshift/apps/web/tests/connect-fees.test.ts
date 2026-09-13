@@ -32,12 +32,23 @@ describe("netFeePence", () => {
 
 describe("totalFees", () => {
   it("excludes test-mode fees by default — they are not real revenue", () => {
-    const rows = [row({ id: "a", livemode: true, amount: 1000 }), row({ id: "b", livemode: false, amount: 5000 })];
-    expect(totalFees(rows)).toEqual({ grossPence: 1000, refundedPence: 0, netPence: 1000, count: 1 });
+    const rows = [
+      row({ id: "a", livemode: true, amount: 1000 }),
+      row({ id: "b", livemode: false, amount: 5000 }),
+    ];
+    expect(totalFees(rows)).toEqual({
+      grossPence: 1000,
+      refundedPence: 0,
+      netPence: 1000,
+      count: 1,
+    });
   });
 
   it("includes test-mode fees only when explicitly asked", () => {
-    const rows = [row({ id: "a", livemode: true, amount: 1000 }), row({ id: "b", livemode: false, amount: 5000 })];
+    const rows = [
+      row({ id: "a", livemode: true, amount: 1000 }),
+      row({ id: "b", livemode: false, amount: 5000 }),
+    ];
     expect(totalFees(rows, { includeTestMode: true }).count).toBe(2);
   });
 
@@ -46,7 +57,12 @@ describe("totalFees", () => {
       row({ id: "a", amount: 1000, amount_refunded: 0 }),
       row({ id: "b", amount: 2000, amount_refunded: 500 }),
     ];
-    expect(totalFees(rows)).toEqual({ grossPence: 3000, refundedPence: 500, netPence: 2500, count: 2 });
+    expect(totalFees(rows)).toEqual({
+      grossPence: 3000,
+      refundedPence: 500,
+      netPence: 2500,
+      count: 2,
+    });
   });
 
   it("filters by a since date", () => {
@@ -54,7 +70,9 @@ describe("totalFees", () => {
       row({ id: "a", stripe_created_at: "2026-08-15T00:00:00Z", amount: 1000 }),
       row({ id: "b", stripe_created_at: "2026-09-05T00:00:00Z", amount: 2000 }),
     ];
-    expect(totalFees(rows, { since: new Date("2026-09-01T00:00:00Z") }).netPence).toBe(2000);
+    expect(totalFees(rows, { since: new Date("2026-09-01T00:00:00Z") }).netPence).toBe(
+      2000
+    );
   });
 });
 
@@ -65,20 +83,51 @@ describe("breakdownByTenant", () => {
       row({ id: "b", tenant_id: "t2", amount: 5000 }),
       row({ id: "c", tenant_id: "t1", amount: 500 }),
     ];
-    const names = new Map([["t1", "Suffolk Tennis"], ["t2", "The Dance Exclusive"]]);
+    const names = new Map([
+      ["t1", "Suffolk Tennis"],
+      ["t2", "The Dance Exclusive"],
+    ]);
     const out = breakdownByTenant(rows, names);
-    expect(out.map((g) => g.tenantName)).toEqual(["The Dance Exclusive", "Suffolk Tennis"]);
+    expect(out.map((g) => g.tenantName)).toEqual([
+      "The Dance Exclusive",
+      "Suffolk Tennis",
+    ]);
     expect(out[1].totals.netPence).toBe(1500);
     expect(out[1].totals.count).toBe(2);
   });
 
   it("never drops a collected fee — an unmatched account still appears, labelled", () => {
-    const rows = [row({ id: "a", tenant_id: null, stripe_account_id: "acct_9", amount: 1000 })];
+    const rows = [
+      row({ id: "a", tenant_id: null, stripe_account_id: "acct_9", amount: 1000 }),
+    ];
     const out = breakdownByTenant(rows, new Map());
     expect(out).toHaveLength(1);
     expect(out[0].tenantName).toMatch(/Unmatched account/);
     expect(out[0].tenantName).toContain("acct_9");
     expect(out[0].totals.netPence).toBe(1000);
+  });
+
+  it("shows Stripe's own business name for an unmatched account when we have it", () => {
+    const rows = [
+      row({
+        id: "a",
+        tenant_id: null,
+        stripe_account_id: "acct_9",
+        stripe_account_name: "Suffolk Tennis LTA",
+      }),
+    ];
+    const out = breakdownByTenant(rows, new Map());
+    expect(out[0].tenantName).toBe("Suffolk Tennis LTA");
+    expect(out[0].stripeAccountName).toBe("Suffolk Tennis LTA");
+    expect(out[0].tenantId).toBeNull();
+  });
+
+  it("a matched tenant's own name always wins over the Stripe label", () => {
+    const rows = [
+      row({ id: "a", tenant_id: "t1", stripe_account_name: "SUFFOLK TENNIS LTA T/A" }),
+    ];
+    const out = breakdownByTenant(rows, new Map([["t1", "Suffolk Tennis"]]));
+    expect(out[0].tenantName).toBe("Suffolk Tennis");
   });
 
   it("excludes test-mode rows from the breakdown", () => {
@@ -91,13 +140,19 @@ describe("breakdownByTenant", () => {
       row({ id: "a", tenant_id: "t1", stripe_created_at: "2026-09-01T00:00:00Z" }),
       row({ id: "b", tenant_id: "t1", stripe_created_at: "2026-09-10T00:00:00Z" }),
     ];
-    expect(breakdownByTenant(rows, new Map())[0].lastCollectedAt).toBe("2026-09-10T00:00:00Z");
+    expect(breakdownByTenant(rows, new Map())[0].lastCollectedAt).toBe(
+      "2026-09-10T00:00:00Z"
+    );
   });
 });
 
 describe("testModeCount", () => {
   it("counts only non-live rows", () => {
-    const rows = [row({ id: "a", livemode: true }), row({ id: "b", livemode: false }), row({ id: "c", livemode: false })];
+    const rows = [
+      row({ id: "a", livemode: true }),
+      row({ id: "b", livemode: false }),
+      row({ id: "c", livemode: false }),
+    ];
     expect(testModeCount(rows)).toBe(2);
   });
 });

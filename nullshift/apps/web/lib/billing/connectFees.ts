@@ -16,6 +16,8 @@ export type FeeRow = {
   currency: string;
   livemode: boolean;
   stripe_created_at: string; // ISO
+  /** The connected account's own business label, cached at sync time. */
+  stripe_account_name?: string | null;
 };
 
 /** What Nullshift actually kept, after any refund of the fee itself. */
@@ -66,6 +68,8 @@ export type TenantFeeBreakdown = {
   tenantId: string | null;
   tenantName: string;
   stripeAccountId: string;
+  /** Stripe's own label for the account — how an unmatched one is recognised. */
+  stripeAccountName: string | null;
   totals: FeeTotals;
   lastCollectedAt: string | null;
 };
@@ -87,16 +91,19 @@ export function breakdownByTenant(
     const existing = groups.get(key);
     const name = row.tenant_id
       ? (tenantNames.get(row.tenant_id) ?? "Unknown client")
-      : `Unmatched account (${row.stripe_account_id})`;
+      : (row.stripe_account_name ?? `Unmatched account (${row.stripe_account_id})`);
     if (existing) {
       existing.totals = addRow(existing.totals, row);
       if (row.stripe_created_at > (existing.lastCollectedAt ?? ""))
         existing.lastCollectedAt = row.stripe_created_at;
+      if (!existing.stripeAccountName && row.stripe_account_name)
+        existing.stripeAccountName = row.stripe_account_name;
     } else {
       groups.set(key, {
         tenantId: row.tenant_id,
         tenantName: name,
         stripeAccountId: row.stripe_account_id,
+        stripeAccountName: row.stripe_account_name ?? null,
         totals: addRow(emptyTotals(), row),
         lastCollectedAt: row.stripe_created_at,
       });

@@ -39,7 +39,9 @@ async function resolveTenantId(
 /** Upsert one Stripe Application Fee object. Never throws — logs and returns false. */
 export async function upsertApplicationFee(
   service: Service,
-  fee: Stripe.ApplicationFee
+  fee: Stripe.ApplicationFee,
+  /** The connected account's own business label, when the caller has it. */
+  accountName?: string | null
 ): Promise<boolean> {
   try {
     const accountId = typeof fee.account === "string" ? fee.account : fee.account?.id;
@@ -59,6 +61,9 @@ export async function upsertApplicationFee(
         currency: fee.currency,
         livemode: fee.livemode,
         stripe_created_at: new Date(fee.created * 1000).toISOString(),
+        // Only overwrite a cached label when we actually looked one up, so a
+        // webhook (which has no name) can't blank what a sync resolved.
+        ...(accountName ? { stripe_account_name: accountName } : {}),
       },
       { onConflict: "id" }
     );
@@ -70,6 +75,25 @@ export async function upsertApplicationFee(
   } catch (e) {
     console.error("[connect-fees] upsert threw:", e);
     return false;
+  }
+}
+
+/**
+ * The connected account's own label, for recognising it in the dashboard.
+ * Best-effort: a platform can retrieve its connected accounts, but a revoked
+ * or deleted one will 404 — not a reason to fail the whole sync.
+ */
+async function accountLabel(stripe: Stripe, accountId: string): Promise<string | null> {
+  try {
+    const acct = await stripe.accounts.retrieve(accountId);
+    return (
+      acct.business_profile?.name ||
+      acct.settings?.dashboard?.display_name ||
+      acct.email ||
+      null
+    );
+  } catch {
+    return null;
   }
 }
 
@@ -102,6 +126,9 @@ export async function reconcileApplicationFees(
   let pages = 0;
   let startingAfter: string | undefined;
 
+  // One lookup per distinct connected account per run, not per fee.
+  const labels = new Map<string, string | null>();
+
   try {
     do {
       const page = await stripe.applicationFees.list({
@@ -111,7 +138,11 @@ export async function reconcileApplicationFees(
       pages += 1;
       fetched += page.data.length;
       for (const fee of page.data) {
-        if (await upsertApplicationFee(service, fee)) upserted += 1;
+        const accountId = typeof fee.account === "string" ? fee.account : fee.account?.id;
+        if (accountId && !labels.has(accountId))
+          labels.set(accountId, await accountLabel(stripe, accountId));
+        const label = accountId ? labels.get(accountId) : null;
+        if (await upsertApplicationFee(service, fee, label)) upserted += 1;
       }
       startingAfter = page.has_more ? page.data[page.data.length - 1]?.id : undefined;
     } while (startingAfter && pages < maxPages);
@@ -126,4 +157,74 @@ export async function reconcileApplicationFees(
     metadata: { fetched, upserted, pages },
   });
   return { fetched, upserted, pages };
+}
+
+export type AssignResult = { ok: true; relinked: number } | { ok: false; error: string };
+
+/**
+ * Point a connected Stripe account at a client.
+ *
+ * Needed because accounts connected directly in Stripe (rather than through
+ * the OAuth flow in 0051) are unknown to us until someone says who they
+ * belong to. Records the account on the tenant AND back-links every fee
+ * already ingested under it — without that second half, assigning would fix
+ * only future fees and leave the collected history sitting in "Unmatched".
+ */
+export async function assignAccountToTenant(
+  service: Service,
+  input: { stripeAccountId: string; tenantId: string }
+): Promise<AssignResult> {
+  const { stripeAccountId, tenantId } = input;
+  if (!/^acct_[A-Za-z0-9]{8,}$/.test(stripeAccountId))
+    return { ok: false, error: "That is not a Stripe account id." };
+
+  // The account id is unique across tenants (0051) — refuse rather than steal
+  // it from another client, which would silently re-attribute their revenue.
+  const { data: clash } = await service
+    .from("tenants")
+    .select("id, name")
+    .eq("stripe_connect_account_id", stripeAccountId)
+    .neq("id", tenantId)
+    .maybeSingle();
+  if (clash)
+    return {
+      ok: false,
+      error: `${stripeAccountId} is already assigned to ${clash.name}. Unassign it there first.`,
+    };
+
+  const { data: before } = await service
+    .from("tenants")
+    .select("stripe_connect_account_id")
+    .eq("id", tenantId)
+    .maybeSingle();
+
+  const { error: tenantErr } = await service
+    .from("tenants")
+    .update({
+      stripe_connect_account_id: stripeAccountId,
+      stripe_connect_status: "connected",
+      stripe_connected_at: new Date().toISOString(),
+    })
+    .eq("id", tenantId);
+  if (tenantErr) return { ok: false, error: tenantErr.message };
+
+  const { data: relinked, error: feeErr } = await service
+    .from("connect_application_fees")
+    .update({ tenant_id: tenantId })
+    .eq("stripe_account_id", stripeAccountId)
+    .is("tenant_id", null)
+    .select("id");
+  if (feeErr) return { ok: false, error: feeErr.message };
+
+  await logAuditAsService({
+    action: "connect_fees.account_assigned",
+    target: `tenant:${tenantId}`,
+    tenantId,
+    metadata: {
+      stripe_account_id: stripeAccountId,
+      previous: before?.stripe_connect_account_id ?? null,
+      relinked: relinked?.length ?? 0,
+    },
+  });
+  return { ok: true, relinked: relinked?.length ?? 0 };
 }

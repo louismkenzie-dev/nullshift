@@ -8,7 +8,10 @@ import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { SubmitButton } from "@/components/admin/SubmitButton";
 import { Reveal } from "@/components/kyma";
-import { reconcileApplicationFees } from "@/lib/billing/connectFeeSync";
+import {
+  assignAccountToTenant,
+  reconcileApplicationFees,
+} from "@/lib/billing/connectFeeSync";
 import {
   breakdownByTenant,
   gbpFromPence,
@@ -49,10 +52,39 @@ async function syncNow() {
   redirect(`/admin/billing/fees?${q}`);
 }
 
+/**
+ * Point an unmatched connected account at a client. Accounts connected
+ * directly in Stripe (rather than through our OAuth flow) arrive unknown —
+ * this is how they get a name, and how their already-collected fees get
+ * attributed rather than sitting in "Unmatched" forever.
+ */
+async function assignAccount(formData: FormData) {
+  "use server";
+  if (!(await requireStaff()).ok) return;
+  const stripeAccountId = String(formData.get("stripe_account_id") || "");
+  const tenantId = String(formData.get("tenant_id") || "");
+  if (!stripeAccountId || !tenantId) return;
+  const result = await assignAccountToTenant(createServiceClient(), {
+    stripeAccountId,
+    tenantId,
+  });
+  revalidatePath("/admin/billing/fees");
+  redirect(
+    result.ok
+      ? `/admin/billing/fees?assigned=${result.relinked}`
+      : `/admin/billing/fees?err=${encodeURIComponent(result.error)}`
+  );
+}
+
 export default async function ApplicationFeesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ synced?: string; fetched?: string; err?: string }>;
+  searchParams: Promise<{
+    synced?: string;
+    fetched?: string;
+    err?: string;
+    assigned?: string;
+  }>;
 }) {
   if (!(await requireStaff()).ok) return null;
   const sp = await searchParams;
@@ -62,16 +94,15 @@ export default async function ApplicationFeesPage({
     service
       .from("connect_application_fees")
       .select(
-        "id, tenant_id, stripe_account_id, amount, amount_refunded, currency, livemode, stripe_created_at"
+        "id, tenant_id, stripe_account_id, stripe_account_name, amount, amount_refunded, currency, livemode, stripe_created_at"
       )
       .order("stripe_created_at", { ascending: false }),
-    service.from("tenants").select("id, name"),
+    service.from("tenants").select("id, name").neq("type", "internal").order("name"),
   ]);
 
   const rows = (feeRows ?? []) as FeeRow[];
-  const tenantNames = new Map(
-    ((tenantRows ?? []) as { id: string; name: string }[]).map((t) => [t.id, t.name])
-  );
+  const tenants = (tenantRows ?? []) as { id: string; name: string }[];
+  const tenantNames = new Map(tenants.map((t) => [t.id, t.name]));
 
   const lifetime = totalFees(rows);
   const thisMonth = totalFees(rows, { since: startOfMonth() });
@@ -110,6 +141,23 @@ export default async function ApplicationFeesPage({
             }}
           >
             {sp.err}
+          </p>
+        </Reveal>
+      )}
+      {sp.assigned && !sp.err && (
+        <Reveal className="block" delay={0.03}>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.85rem",
+              color: "var(--k-fg)",
+              border: "1px solid var(--k-border)",
+              padding: "10px 14px",
+              margin: "16px 0 0",
+            }}
+          >
+            Account assigned — {sp.assigned} previously unmatched fee
+            {sp.assigned === "1" ? "" : "s"} now counted against that client.
           </p>
         </Reveal>
       )}
@@ -261,6 +309,7 @@ export default async function ApplicationFeesPage({
                       marginTop: 2,
                     }}
                   >
+                    {!g.tenantId ? `${g.stripeAccountId} · ` : ""}
                     {g.totals.count} fee{g.totals.count === 1 ? "" : "s"} · last{" "}
                     {dateGB(g.lastCollectedAt)}
                     {g.totals.refundedPence > 0
@@ -277,7 +326,58 @@ export default async function ApplicationFeesPage({
                 >
                   {gbpFromPence(g.totals.netPence)}
                 </span>
-                {!g.tenantId && <StatusChip tone="warning">Unmatched account</StatusChip>}
+                {!g.tenantId && (
+                  <form
+                    action={assignAccount}
+                    className="flex items-center gap-2 flex-wrap"
+                  >
+                    <input
+                      type="hidden"
+                      name="stripe_account_id"
+                      value={g.stripeAccountId}
+                    />
+                    <select
+                      name="tenant_id"
+                      required
+                      defaultValue=""
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.82rem",
+                        padding: "6px 8px",
+                        background: "var(--k-bg)",
+                        color: "var(--k-fg)",
+                        border: "1px solid var(--k-border)",
+                        borderRadius: 2,
+                      }}
+                    >
+                      <option value="" disabled>
+                        Assign to client…
+                      </option>
+                      {tenants.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                    <SubmitButton
+                      style={{
+                        fontFamily: T.mono,
+                        fontSize: 10,
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                        padding: "6px 10px",
+                        background: "transparent",
+                        color: "var(--k-fg)",
+                        border: "1px solid var(--k-border)",
+                        borderRadius: 2,
+                        cursor: "pointer",
+                      }}
+                      pendingLabel="Assigning…"
+                    >
+                      Assign
+                    </SubmitButton>
+                  </form>
+                )}
               </div>
             ))
           )}

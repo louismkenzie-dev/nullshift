@@ -581,6 +581,14 @@ back to their Billing tile.
   `application_fee.created` / `application_fee.refunded` to its events —
   see `.env.example` under `STRIPE_WEBHOOK_SECRET`. Without it, the ledger
   only fills via Sync now.
+- **Attributing an account to a client.** Fees name only a Stripe account id
+  (`acct_…`), and accounts connected directly in the Stripe Dashboard — rather
+  than through the OAuth flow in 0051 — are unknown to us, so their fees land
+  as "Unmatched". Sync caches each account's own business name from Stripe so
+  it is recognisable, and the row carries an **Assign to client** picker:
+  assigning records the account on the tenant *and* back-links every fee
+  already collected under it (migration 0055, audited as
+  `connect_fees.account_assigned`). A one-off per client.
 - **Test-mode fees are recorded but never counted** — excluded from every
   total and from the per-client breakdown, surfaced only as a count so
   nobody mistakes sandbox activity for real revenue.
