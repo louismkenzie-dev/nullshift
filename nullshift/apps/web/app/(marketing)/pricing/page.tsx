@@ -6,7 +6,15 @@ import { Parallax } from "@/components/Parallax";
 import { NeuralField } from "@/components/NeuralField";
 import { T } from "@nullshift/ui/tokens";
 import { PROOF_PILLARS, BRAND_LINE, CLINIC } from "@nullshift/content/marketing";
-import { PRICING_FAQS, PRICING_FROM, PRICING_PUBLIC } from "@nullshift/content/pricing";
+import {
+  PRICING_FAQS,
+  PRICING_FROM,
+  PRICING_PUBLIC,
+  BUILD_WARRANTY,
+  HANDOVER,
+  RUN_COVERS,
+  TRANSACT_NOTE,
+} from "@nullshift/content/pricing";
 import { PricingTiers } from "@/components/marketing/PricingTiers";
 import { PricingOnApplication } from "@/components/marketing/PricingOnApplication";
 import { pricingRobots } from "@/lib/pricingVisibility";
@@ -56,7 +64,7 @@ const OWNERSHIP = [
   "The full source code, in your repository",
   "Your data, exportable any time, in a standard format",
   "A signed DPA before anything goes live",
-  "Payments through your own Stripe — no 2\u20133% skim",
+  "Payments through your own Stripe — you keep the merchant relationship",
   "Cancel the monthly plan and keep the whole system",
 ];
 
@@ -273,11 +281,222 @@ export default function PricingPage() {
           </Container>
         </section>
 
+        {/* ═══════════════ THE BUILD (cream) ═══════════════ */}
+        <Section theme="cream" pad="lg" topBorder>
+          <Reveal>
+            <SectionHeader
+              index="01"
+              label="The build"
+              title="Build it once. Own it outright."
+              lead="The monthly tiers start once your system is live. The build that gets it there is a one-off, quoted to your scope — a booking form and a multi-site operations platform are not the same job, so neither are their prices. You get a fixed figure up front, and it only moves if you ask for something new."
+              maxLead="66ch"
+            />
+          </Reveal>
+          <Reveal delay={0.08}>
+            <div
+              className="mt-12 grid grid-cols-1 md:grid-cols-2"
+              style={{
+                borderTop: "1px solid var(--k-border)",
+                borderLeft: "1px solid var(--k-border)",
+              }}
+            >
+              <PriceCard
+                name="One-off build"
+                price="Quoted"
+                unit="to your scope"
+                desc="We design, build and migrate your website and systems. Fixed price agreed before we start, live in 2–4 weeks, and when it's done it's yours — for good."
+                items={BUILD}
+                featured
+              />
+              <PriceCard
+                name="On handover"
+                price="All yours"
+                unit="from day one"
+                desc="Ownership isn't a promise we make at the end — it's how the build is set up from the first commit. Nothing sits in our name that you'd have to buy back."
+                items={OWNERSHIP}
+              />
+            </div>
+          </Reveal>
+          {/* The warranty is the answer to "what if it doesn't work?", and the
+              handover is the answer to "what if I don't want a plan?" — both
+              belong with the build, not buried in the monthly. */}
+          <Reveal delay={0.12}>
+            <div
+              className="grid grid-cols-1 md:grid-cols-2"
+              style={{
+                borderLeft: "1px solid var(--k-border)",
+                borderBottom: "1px solid var(--k-border)",
+                borderRight: "1px solid var(--k-border)",
+              }}
+            >
+              <div
+                className="p-8 md:p-10"
+                style={{ borderRight: "1px solid var(--k-border)" }}
+              >
+                <Tag>{BUILD_WARRANTY.title}</Tag>
+                <p
+                  className="mt-5"
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "1rem",
+                    lineHeight: 1.6,
+                    color: "var(--k-fg)",
+                    maxWidth: "46ch",
+                  }}
+                >
+                  {BUILD_WARRANTY.lead}
+                </p>
+                <ul
+                  className="mt-6 flex flex-col gap-2.5"
+                  style={{ listStyle: "none", margin: 0, padding: 0 }}
+                >
+                  {BUILD_WARRANTY.covered.map((it) => (
+                    <li
+                      key={it}
+                      className="flex items-start gap-3"
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.9rem",
+                        color: "var(--k-fg)",
+                      }}
+                    >
+                      <span
+                        aria-hidden
+                        style={{ color: "var(--k-accent)", marginTop: 1 }}
+                      >
+                        ✓
+                      </span>
+                      {it}
+                    </li>
+                  ))}
+                  {BUILD_WARRANTY.notCovered.map((it) => (
+                    <li
+                      key={it}
+                      className="flex items-start gap-3"
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.9rem",
+                        color: "var(--k-muted)",
+                      }}
+                    >
+                      <span aria-hidden style={{ color: "var(--k-faint)", marginTop: 1 }}>
+                        ✕
+                      </span>
+                      {it}
+                    </li>
+                  ))}
+                </ul>
+                <p
+                  className="mt-6"
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.88rem",
+                    lineHeight: 1.6,
+                    color: "var(--k-muted)",
+                    maxWidth: "46ch",
+                  }}
+                >
+                  {BUILD_WARRANTY.after}
+                </p>
+              </div>
+
+              <div className="p-8 md:p-10">
+                <Tag>
+                  {PRICING_PUBLIC
+                    ? `${HANDOVER.title} — ${HANDOVER.fee}`
+                    : HANDOVER.title}
+                </Tag>
+                <p
+                  className="mt-5"
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "1rem",
+                    lineHeight: 1.6,
+                    color: "var(--k-fg)",
+                    maxWidth: "46ch",
+                  }}
+                >
+                  {HANDOVER.lead}
+                </p>
+                <ul
+                  className="mt-6 flex flex-col gap-2.5"
+                  style={{ listStyle: "none", margin: 0, padding: 0 }}
+                >
+                  {HANDOVER.items.map((it) => (
+                    <li
+                      key={it}
+                      className="flex items-start gap-3"
+                      style={{
+                        fontFamily: T.sans,
+                        fontSize: "0.9rem",
+                        color: "var(--k-fg)",
+                      }}
+                    >
+                      <span
+                        aria-hidden
+                        style={{ color: "var(--k-accent)", marginTop: 1 }}
+                      >
+                        ▸
+                      </span>
+                      {it}
+                    </li>
+                  ))}
+                </ul>
+                <p
+                  className="mt-6"
+                  style={{
+                    fontFamily: T.mono,
+                    fontSize: "0.72rem",
+                    lineHeight: 1.7,
+                    letterSpacing: "0.02em",
+                    color: "var(--k-muted)",
+                    maxWidth: "46ch",
+                  }}
+                >
+                  {HANDOVER.note}
+                </p>
+              </div>
+            </div>
+          </Reveal>
+
+          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <Link href="/start" className="kb kb-primary">
+              Get a fixed quote
+              <span className="k-arrow" aria-hidden>
+                →
+              </span>
+            </Link>
+            <span
+              style={{
+                fontFamily: T.mono,
+                fontSize: "0.72rem",
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: "var(--k-muted)",
+              }}
+            >
+              Payments run through your own Stripe — you keep the merchant relationship
+            </span>
+          </div>
+          <p
+            className="mt-5"
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.88rem",
+              lineHeight: 1.6,
+              color: "var(--k-muted)",
+              maxWidth: "72ch",
+            }}
+          >
+            {TRANSACT_NOTE}
+          </p>
+        </Section>
+
         {/* ═══════════════ MONTHLY TIERS (dark) ═══════════════ */}
         <Section theme="dark" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
-              index="01"
+              index="02"
               label="Monthly plans"
               title={
                 PRICING_PUBLIC ? (
@@ -299,6 +518,49 @@ export default function PricingPage() {
               }
               maxLead="68ch"
             />
+          </Reveal>
+          <Reveal delay={0.06}>
+            <div
+              className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+              style={{
+                borderTop: "1px solid var(--k-border)",
+                borderLeft: "1px solid var(--k-border)",
+              }}
+            >
+              {RUN_COVERS.map((c) => (
+                <div
+                  key={c.title}
+                  className="p-7 md:p-8"
+                  style={{
+                    borderRight: "1px solid var(--k-border)",
+                    borderBottom: "1px solid var(--k-border)",
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: 700,
+                      fontSize: "1.02rem",
+                      letterSpacing: "-0.01em",
+                      color: "var(--k-fg)",
+                    }}
+                  >
+                    {c.title}
+                  </h3>
+                  <p
+                    className="mt-3"
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.89rem",
+                      lineHeight: 1.6,
+                      color: "var(--k-muted)",
+                    }}
+                  >
+                    {c.body}
+                  </p>
+                </div>
+              ))}
+            </div>
           </Reveal>
           <Reveal delay={0.08}>
             <div className="mt-12">
@@ -343,65 +605,8 @@ export default function PricingPage() {
           </div>
         </Section>
 
-        {/* ═══════════════ THE BUILD (dark) ═══════════════ */}
+        {/* ═══════════════ SUPPORT BOUNDARY (dark) ═══════════════ */}
         <Section theme="dark" pad="lg" topBorder>
-          <Reveal>
-            <SectionHeader
-              index="02"
-              label="Before the monthly"
-              title="Build it once. Own it outright."
-              lead="The monthly tiers start once your system is live. The build that gets it there is a one-off, quoted to your scope — a booking form and a multi-site operations platform are not the same job, so neither are their prices. You get a fixed figure up front, and it only moves if you ask for something new."
-              maxLead="66ch"
-            />
-          </Reveal>
-          <Reveal delay={0.08}>
-            <div
-              className="mt-12 grid grid-cols-1 md:grid-cols-2"
-              style={{
-                borderTop: "1px solid var(--k-border)",
-                borderLeft: "1px solid var(--k-border)",
-              }}
-            >
-              <PriceCard
-                name="One-off build"
-                price="Quoted"
-                unit="to your scope"
-                desc="We design, build and migrate your website and systems. Fixed price agreed before we start, live in 2–4 weeks, and when it's done it's yours — for good."
-                items={BUILD}
-                featured
-              />
-              <PriceCard
-                name="On handover"
-                price="All yours"
-                unit="from day one"
-                desc="Ownership isn't a promise we make at the end — it's how the build is set up from the first commit. Nothing sits in our name that you'd have to buy back."
-                items={OWNERSHIP}
-              />
-            </div>
-          </Reveal>
-          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <Link href="/start" className="kb kb-primary k-dark">
-              Get a fixed quote
-              <span className="k-arrow" aria-hidden>
-                →
-              </span>
-            </Link>
-            <span
-              style={{
-                fontFamily: T.mono,
-                fontSize: "0.72rem",
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-                color: "var(--k-muted)",
-              }}
-            >
-              Payments run through your own Stripe — keep the relationship, no 2–3% skim
-            </span>
-          </div>
-        </Section>
-
-        {/* ═══════════════ SUPPORT BOUNDARY (cream) ═══════════════ */}
-        <Section theme="cream" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
               index="03"

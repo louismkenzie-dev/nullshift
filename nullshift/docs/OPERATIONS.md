@@ -624,3 +624,33 @@ sitting in the sitemap or Google's index is not withheld.
 **Not changed, and still outstanding:** no monthly figure has been altered. The
 meeting agreed the rates are too low but settled no replacements, so
 `PRICING_TIERS` and the vertical ladders hold exactly what they held before.
+
+### Build warranty, handover and the platform fee (2026-09)
+
+Three commercial terms added with the pricing rework, all in
+`packages/content/src/pricing.ts`:
+
+**`BUILD_WARRANTY` — 90 days, subscription-independent.** A system that does
+not do what its signed scope says it does is a defect in what we sold, not a
+service the client rents back from us, so the warranty deliberately does not
+require a plan. This also makes the subscription honest: what it covers is
+different work — the platform, dependencies and third-party APIs underneath a
+system keep moving whether or not anyone touches the code, and keeping up with
+that is upkeep, not a defect. The 90 days is a starting figure; change `days`
+and the copy follows.
+
+**`HANDOVER` — £600, new order forms only.** The client already owns the code
+and holds every account, so the fee is not for releasing anything: it buys the
+transfer work — moving the running costs we were covering onto their own
+billing, the written runbook, and a live session with whoever picks it up. The
+build warranty runs its full term either way. Existing clients keep the terms
+they signed; this must not be applied retroactively.
+
+**`TRANSACT_NOTE` — fee exists, rate quoted per client.** No percentage is
+published. The rate is quoted against what the client pays today and written
+into their order form, and `apps/web/lib/legal/applicationFee.ts` refuses to
+charge a fee that has not been signed — so the page can say "never applied to a
+client who has not signed it" and mean it literally.
+
+While `PRICING_PUBLIC` is false the £600 is withheld like every other figure;
+the term still appears, without its number.

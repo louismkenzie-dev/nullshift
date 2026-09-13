@@ -46,6 +46,91 @@ export const PRICING_ON_APPLICATION = {
   cta: { label: "Get a quote", href: "/book" },
 } as const;
 
+/**
+ * BUILD WARRANTY.
+ *
+ * A defect in what we delivered is not a service the client rents — it is the
+ * thing they bought, not working. So the warranty is deliberately independent
+ * of any subscription: nobody has to be on a plan to have us put right work
+ * that never matched its signed scope. The subscription then sells on its own
+ * merits, because what it covers is genuinely different: the platform,
+ * dependencies and third-party APIs underneath a system keep moving whether or
+ * not anyone touches the code, and that is upkeep, not a defect.
+ */
+export const BUILD_WARRANTY = {
+  days: 90,
+  title: "90-day build warranty",
+  lead: "If your system does not do what your signed scope says it does, we fix it — free, and whether or not you are on a monthly plan. A defect in what we delivered is ours to put right.",
+  covered: [
+    "Anything that does not match the behaviour signed off in your scope",
+    "Errors, crashes and broken flows in what we built",
+    "Data that did not come across correctly in the migration",
+    "Every fix pushed to your own repository, which you already own",
+  ],
+  notCovered: [
+    "New capability, or a change to what was agreed — quoted as a project",
+    "Breakage caused by changes someone else makes after handover",
+    "The running costs themselves — hosting, domains, third-party keys",
+    "Upkeep once the warranty ends — platform, dependency and API changes",
+  ],
+  after:
+    "After 90 days the monthly plan is what keeps it covered — and it covers the part a warranty cannot: the platform, the dependencies and the third-party APIs your system sits on all keep moving, whether or not anyone touches your code.",
+} as const;
+
+/**
+ * HANDOVER.
+ *
+ * The monthly plan has never been the price of keeping the system — the client
+ * already owns it. Taking it in-house is a real piece of work, so it is priced
+ * as one rather than being used to make leaving awkward. New order forms only:
+ * clients who signed before this existed keep the terms they signed.
+ */
+export const HANDOVER = {
+  fee: "\u00a3600",
+  title: "Or run it yourself",
+  lead: "You are never on a monthly plan just to keep your system \u2014 it is already yours, in your accounts. Taking over the running of it is real work, though, so we do it as a paid handover rather than absorbing it.",
+  items: [
+    "The running costs we were covering moved onto your own billing",
+    "A written runbook: deploys, environments, secrets and scheduled jobs",
+    "A live handover session with your own developer or IT provider",
+    "Your build warranty runs its full term either way",
+  ],
+  note: "Applies to new order forms. Clients who signed before this keep the terms they signed.",
+} as const;
+
+/**
+ * What the monthly actually buys, in four words a client can hold onto. The
+ * support boundary below says where development starts; this says what the fee
+ * is for in the first place.
+ */
+export const RUN_COVERS = [
+  {
+    title: "It stays online",
+    body: "Hosting, domain, database, SSL and the running costs, monitored and backed up — one bill instead of six accounts you have to remember to renew.",
+  },
+  {
+    title: "It stays safe",
+    body: "Security patching, dependency upgrades and platform changes applied before they become your problem. This is the work nobody sees until it is skipped.",
+  },
+  {
+    title: "It gets fixed",
+    body: "Anything that stops working against what was signed off is remediated as part of your plan — on every tier, for as long as you are on one.",
+  },
+  {
+    title: "Someone is committed",
+    body: "A named response target rather than a favour, and on the upper tiers a named developer who already knows your system and does not need re-briefing.",
+  },
+] as const;
+
+/**
+ * Payments. We take a platform fee on transactions we build and run, agreed in
+ * the order form before any money can move (see lib/legal/applicationFee.ts —
+ * the code refuses to charge without it). The rate is quoted per client against
+ * what they pay today, so no percentage is published here.
+ */
+export const TRANSACT_NOTE =
+  "Where we build and run your payments, a platform fee applies on transactions. It is quoted against what you pay today and agreed in your order form before any money moves \u2014 never applied to a client who has not signed it.";
+
 export type PlanFeature = {
   text: string;
   /** false renders the row struck through with a ✕ — what this tier does NOT include. */
@@ -403,6 +488,18 @@ export const PRICING_FAQS = [
   },
   {
     q: "What happens if I cancel?",
-    a: "You keep everything: the code, the data and every account, because they were always in your name. We hand over the running costs we were covering — hosting, database, email, AI keys — and help you move them onto your own accounts.",
+    a: "You keep everything: the code, the data and every account, because they were always in your name. Nothing is switched off and nothing has to be bought back. Moving the running costs we were covering onto your own accounts — hosting, database, email, AI keys — is real work, so on new order forms that is a one-off paid handover rather than something we absorb. Clients who signed before that keep the terms they signed.",
+  },
+  {
+    q: "What if the system doesn't do what we agreed?",
+    a: "Then it is a defect and we fix it, free, for 90 days from go-live — whether or not you are on a monthly plan. You bought a system that works to its signed scope; that is not a service you rent back from us. What the plan covers afterwards is different work: the platform, the dependencies and the third-party APIs your system sits on all keep moving whether or not anyone touches your code, and keeping up with that is upkeep, not a defect.",
+  },
+  {
+    q: "Do I have to be on a plan to get bugs fixed?",
+    a: "Not during the build warranty — for the first 90 days a defect against your signed scope is ours to put right either way. After that, yes: fixing things is part of what a plan buys, on every tier including the lowest. If you would rather run the system yourself, take the paid handover and it is genuinely yours to maintain.",
+  },
+  {
+    q: "Do you take a cut of our payments?",
+    a: "Where we build and run your payments, a platform fee applies on transactions. It is quoted against what you pay today rather than set from a list, and it is written into your order form and signed before any money can move — the system refuses to apply a fee no one has agreed to. Your Stripe account stays yours and you keep the merchant relationship.",
   },
 ];
