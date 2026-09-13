@@ -630,14 +630,21 @@ meeting agreed the rates are too low but settled no replacements, so
 Three commercial terms added with the pricing rework, all in
 `packages/content/src/pricing.ts`:
 
-**`BUILD_WARRANTY` — 90 days, subscription-independent.** A system that does
+**`BUILD_WARRANTY` — 60 days, subscription-independent.** A system that does
 not do what its signed scope says it does is a defect in what we sold, not a
 service the client rents back from us, so the warranty deliberately does not
 require a plan. This also makes the subscription honest: what it covers is
 different work — the platform, dependencies and third-party APIs underneath a
 system keep moving whether or not anyone touches the code, and keeping up with
-that is upkeep, not a defect. The 90 days is a starting figure; change `days`
-and the copy follows.
+that is upkeep, not a defect. Change `days` and the copy follows.
+
+It does not compete with signing the plan at go-live, and the copy must never
+let it read as if it might. The warranty covers our mistakes; the plan covers
+the client's running. A client on neither has nothing paying for the
+infrastructure the system sits on, so go-live offers exactly two states: on a
+plan, or handed over. There is no free-hosting third option, which is what stops
+"I'll just rely on the warranty" being a path anyone can take — `alongside` says
+this on the page and there is an FAQ for the prospect who asks it out loud.
 
 **`HANDOVER` — £600, new order forms only.** The client already owns the code
 and holds every account, so the fee is not for releasing anything: it buys the

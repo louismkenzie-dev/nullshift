@@ -56,11 +56,22 @@ export const PRICING_ON_APPLICATION = {
  * merits, because what it covers is genuinely different: the platform,
  * dependencies and third-party APIs underneath a system keep moving whether or
  * not anyone touches the code, and that is upkeep, not a defect.
+ *
+ * It does not compete with signing the plan at go-live, and the copy must never
+ * let it read as if it might. The warranty covers OUR mistakes; the plan covers
+ * the client's RUNNING — hosting, database, domain, SSL, patching. A client who
+ * declined both would have nothing paying for the infrastructure the system sits
+ * on, which is why the order form offers exactly two states at go-live: on a
+ * plan, or handed over (see HANDOVER). There is no free-hosting third option,
+ * so "I'll rely on the warranty for 60 days" is not a path anyone can take.
  */
 export const BUILD_WARRANTY = {
-  days: 90,
-  title: "90-day build warranty",
+  days: 60,
+  title: "60-day build warranty",
   lead: "If your system does not do what your signed scope says it does, we fix it — free, and whether or not you are on a monthly plan. A defect in what we delivered is ours to put right.",
+  /** Guards the warranty against ever reading as an alternative to the plan. */
+  alongside:
+    "It runs alongside your plan from go-live, not instead of it. The warranty covers our mistakes; the plan covers your running — hosting, database, domain, SSL, security patching. Nothing is keeping your system online without one.",
   covered: [
     "Anything that does not match the behaviour signed off in your scope",
     "Errors, crashes and broken flows in what we built",
@@ -74,7 +85,7 @@ export const BUILD_WARRANTY = {
     "Upkeep once the warranty ends — platform, dependency and API changes",
   ],
   after:
-    "After 90 days the monthly plan is what keeps it covered — and it covers the part a warranty cannot: the platform, the dependencies and the third-party APIs your system sits on all keep moving, whether or not anyone touches your code.",
+    "After 60 days the monthly plan is what keeps it covered — and it covers the part a warranty cannot: the platform, the dependencies and the third-party APIs your system sits on all keep moving, whether or not anyone touches your code.",
 } as const;
 
 /**
@@ -492,11 +503,15 @@ export const PRICING_FAQS = [
   },
   {
     q: "What if the system doesn't do what we agreed?",
-    a: "Then it is a defect and we fix it, free, for 90 days from go-live — whether or not you are on a monthly plan. You bought a system that works to its signed scope; that is not a service you rent back from us. What the plan covers afterwards is different work: the platform, the dependencies and the third-party APIs your system sits on all keep moving whether or not anyone touches your code, and keeping up with that is upkeep, not a defect.",
+    a: "Then it is a defect and we fix it, free, for 60 days from go-live — whether or not you are on a monthly plan. You bought a system that works to its signed scope; that is not a service you rent back from us. What the plan covers afterwards is different work: the platform, the dependencies and the third-party APIs your system sits on all keep moving whether or not anyone touches your code, and keeping up with that is upkeep, not a defect.",
+  },
+  {
+    q: "Can I skip the plan and just rely on the warranty?",
+    a: "They are not the same cover, so it does not really work. The warranty is us putting right our own mistakes. The plan is what keeps your system running at all — hosting, database, domain, SSL, backups, monitoring, security patching. Without one, nothing is paying for the infrastructure your system sits on. So at go-live you either start a plan or take the paid handover and run it yourself. There is no version where it stays live and nobody is looking after it.",
   },
   {
     q: "Do I have to be on a plan to get bugs fixed?",
-    a: "Not during the build warranty — for the first 90 days a defect against your signed scope is ours to put right either way. After that, yes: fixing things is part of what a plan buys, on every tier including the lowest. If you would rather run the system yourself, take the paid handover and it is genuinely yours to maintain.",
+    a: "Not during the build warranty — for the first 60 days a defect against your signed scope is ours to put right either way. After that, yes: fixing things is part of what a plan buys, on every tier including the lowest. If you would rather run the system yourself, take the paid handover and it is genuinely yours to maintain.",
   },
   {
     q: "Do you take a cut of our payments?",

@@ -392,6 +392,20 @@ export default function PricingPage() {
                     fontFamily: T.sans,
                     fontSize: "0.88rem",
                     lineHeight: 1.6,
+                    color: "var(--k-fg)",
+                    maxWidth: "46ch",
+                    borderLeft: "2px solid var(--k-accent)",
+                    paddingLeft: 14,
+                  }}
+                >
+                  {BUILD_WARRANTY.alongside}
+                </p>
+                <p
+                  className="mt-4"
+                  style={{
+                    fontFamily: T.sans,
+                    fontSize: "0.88rem",
+                    lineHeight: 1.6,
                     color: "var(--k-muted)",
                     maxWidth: "46ch",
                   }}
