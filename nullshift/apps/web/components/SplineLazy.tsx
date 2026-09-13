@@ -2,6 +2,7 @@
 
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import type { Application } from "@splinetool/runtime";
+import { SplineBoundary } from "./SplineBoundary";
 
 const Spline = lazy(() => import("@splinetool/react-spline"));
 
@@ -31,6 +32,8 @@ export function SplineLazy({
   const ref = useRef<HTMLDivElement>(null);
   const [show, setShow] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // A scene that never arrives must not leave the loader spinning forever.
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -50,28 +53,30 @@ export function SplineLazy({
 
   return (
     <div ref={ref} className={className} style={{ position: "relative", ...style }}>
-      {!loaded && (
+      {!loaded && !failed && (
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="loader" aria-hidden />
         </div>
       )}
       {show && (
-        <Suspense fallback={null}>
-          <Spline
-            scene={scene}
-            onLoad={(app) => {
-              setLoaded(true);
-              onReady?.(app);
-            }}
-            style={{
-              width: "100%",
-              height: "100%",
-              pointerEvents: interactive ? "auto" : "none",
-              opacity: loaded ? 1 : 0,
-              transition: "opacity 0.6s ease",
-            }}
-          />
-        </Suspense>
+        <SplineBoundary onError={() => setFailed(true)}>
+          <Suspense fallback={null}>
+            <Spline
+              scene={scene}
+              onLoad={(app) => {
+                setLoaded(true);
+                onReady?.(app);
+              }}
+              style={{
+                width: "100%",
+                height: "100%",
+                pointerEvents: interactive ? "auto" : "none",
+                opacity: loaded ? 1 : 0,
+                transition: "opacity 0.6s ease",
+              }}
+            />
+          </Suspense>
+        </SplineBoundary>
       )}
     </div>
   );

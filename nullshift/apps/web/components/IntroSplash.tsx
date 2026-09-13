@@ -19,6 +19,32 @@ const EASE_IN_EXPO = [0.76, 0, 0.24, 1] as const; // aggressive depart
 const HOLD_MS = 1400;
 const HOLD_REDUCED_MS = 700;
 
+/* ── Failsafe ──────────────────────────────────────────────────────
+   The splash covers the viewport and locks the page, and both are
+   undone by JavaScript: a timer lifts it, an effect cleanup restores
+   scroll. That is fine until the main thread stalls or dies — a heavy
+   third-party scene compiling, a script throwing mid-hydration — at
+   which point the timer never fires and the visitor is left staring
+   at a solid emerald screen with the whole site sealed behind it.
+   So the browser is given the same instructions in pure CSS: the
+   splash slides away on its own at FAILSAFE_MS, and the scroll lock
+   releases just after. Neither needs a single line of JS to run. In
+   the normal case React has unmounted all of this seconds earlier and
+   none of it is ever seen. A loading screen must never be able to
+   trap the site. */
+const FAILSAFE_MS = 4000;
+const UNLOCK_MS = FAILSAFE_MS + 400;
+
+const FAILSAFE_CSS = `
+@keyframes ns-intro-failsafe {
+  to { transform: translateY(-100%); visibility: hidden; pointer-events: none; }
+}
+@keyframes ns-intro-unlock { to { overflow: visible; } }
+body[data-intro-lock] {
+  overflow: hidden;
+  animation: ns-intro-unlock 0.01s linear ${UNLOCK_MS}ms forwards;
+}`;
+
 export function IntroSplash() {
   const reduce = useReducedMotion();
   const [show, setShow] = useState(true);
@@ -36,13 +62,14 @@ export function IntroSplash() {
     return () => clearTimeout(id);
   }, [reduce]);
 
-  // Lock body scroll while the splash covers the viewport.
+  // Lock body scroll while the splash covers the viewport. The lock lives on
+  // an attribute rather than an inline style so the CSS above can release it
+  // on its own timeline if we never get the chance to.
   useEffect(() => {
     if (!show) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    document.body.setAttribute("data-intro-lock", "");
     return () => {
-      document.body.style.overflow = prev;
+      document.body.removeAttribute("data-intro-lock");
     };
   }, [show]);
 
@@ -79,8 +106,14 @@ export function IntroSplash() {
             gap: 18,
             overflow: "hidden",
             willChange: "transform",
+            // Delay-phase only until FAILSAFE_MS; `forwards` (not `both`) means
+            // it applies nothing while it waits, so framer owns the transform
+            // for the entire normal lifetime of the splash.
+            animation: `ns-intro-failsafe 0.4s ${FAILSAFE_MS}ms cubic-bezier(0.76,0,0.24,1) forwards`,
           }}
         >
+          <style>{FAILSAFE_CSS}</style>
+
           {/* Wordmark */}
           <motion.div
             initial={{ opacity: reduce ? 1 : 0, y: offset(8) }}
