@@ -9,6 +9,8 @@ import {
   type VerticalConfig,
 } from "@nullshift/content/marketing";
 import { RevenueCalculator } from "@nullshift/ui/components/RevenueCalculator";
+import { PRICING_PUBLIC } from "@nullshift/content/pricing";
+import { PricingOnApplication } from "@/components/marketing/PricingOnApplication";
 
 const PrimaryBtn = ({ href, children }: { href: string; children: React.ReactNode }) => (
   <Link
@@ -213,7 +215,13 @@ export function VerticalLanding({ config }: { config: VerticalConfig }) {
           style={{ paddingBottom: "clamp(28px, 5vw, 56px)" }}
         >
           <Reveal>
-            <RevenueCalculator calc={c.calc} />
+            <RevenueCalculator
+              calc={
+                PRICING_PUBLIC
+                  ? c.calc
+                  : { ...c.calc, pitch: c.calc.pitchWithheld ?? c.calc.pitch }
+              }
+            />
           </Reveal>
         </section>
 
@@ -338,11 +346,20 @@ export function VerticalLanding({ config }: { config: VerticalConfig }) {
             coming in. You own the code and every account — cancel anytime and keep it
             all.
           </p>
+          {!PRICING_PUBLIC && (
+            <div style={{ marginTop: 32 }}>
+              <PricingOnApplication compact />
+            </div>
+          )}
           <div
             className="grid md:grid-cols-3 gap-4"
-            style={{ marginTop: 32, alignItems: "stretch" }}
+            style={{
+              marginTop: 32,
+              alignItems: "stretch",
+              display: PRICING_PUBLIC ? undefined : "none",
+            }}
           >
-            {c.plans.map((p) => (
+            {(PRICING_PUBLIC ? c.plans : []).map((p) => (
               <Reveal key={p.tier}>
                 <div
                   style={{

@@ -6,8 +6,10 @@ import { Parallax } from "@/components/Parallax";
 import { NeuralField } from "@/components/NeuralField";
 import { T } from "@nullshift/ui/tokens";
 import { PROOF_PILLARS, BRAND_LINE, CLINIC } from "@nullshift/content/marketing";
-import { PRICING_FAQS, PRICING_FROM } from "@nullshift/content/pricing";
+import { PRICING_FAQS, PRICING_FROM, PRICING_PUBLIC } from "@nullshift/content/pricing";
 import { PricingTiers } from "@/components/marketing/PricingTiers";
+import { PricingOnApplication } from "@/components/marketing/PricingOnApplication";
+import { pricingRobots } from "@/lib/pricingVisibility";
 import { SupportBoundary } from "@/components/marketing/SupportBoundary";
 import { ClipReveal } from "@/components/anim/ClipReveal";
 import {
@@ -27,14 +29,18 @@ import {
 
 export const metadata: Metadata = {
   title: "Pricing — Nullshift",
-  description:
-    "One build to own your website and systems outright, then a monthly plan from \u00a330 that covers your running costs and keeps everything online. Four tiers \u2014 Core, Pro, Max and Enterprise \u2014 no per-seat fees, cancel any month.",
+  description: PRICING_PUBLIC
+    ? "One build to own your website and systems outright, then a monthly plan from \u00a330 that covers your running costs and keeps everything online. Four tiers \u2014 Core, Pro, Max and Enterprise \u2014 no per-seat fees, cancel any month."
+    : "One build to own your website and systems outright, then a monthly plan that covers your running costs and keeps everything online. Priced to your scope and quoted in writing \u2014 no per-seat fees, cancel any month.",
   alternates: { canonical: "/pricing" },
+  robots: pricingRobots(),
 };
 
-const faqs: FAQItem[] = [...PRICING_FAQS, ...CLINIC.faqs].map(
-  (f: { q: string; a: string }) => ({ q: f.q, a: f.a })
-);
+// A withheld price list that is still quoted back in the FAQ is not withheld,
+// so while PRICING_PUBLIC is false any Q&A carrying a figure sits this out.
+const faqs: FAQItem[] = [...PRICING_FAQS, ...CLINIC.faqs]
+  .map((f: { q: string; a: string }) => ({ q: f.q, a: f.a }))
+  .filter((f) => PRICING_PUBLIC || !`${f.q}${f.a}`.includes("\u00a3"));
 
 const BUILD = [
   "Custom website, designed & built from scratch",
@@ -210,10 +216,14 @@ export default function PricingPage() {
             <Reveal delay={0.1}>
               <Lead className="mt-7" style={{ maxWidth: "58ch", fontSize: "1.125rem" }}>
                 One build to own your website and systems outright — quoted to your scope,
-                never off a price list. Then a monthly plan from {PRICING_FROM} keeps it
-                running: your plan sets the service your platform needs, and your rate
-                scales with the size and importance of the system. No per-seat fees,
-                cancel any month.
+                never off a price list.{" "}
+                {PRICING_PUBLIC ? (
+                  <>Then a monthly plan from {PRICING_FROM} keeps it running: your</>
+                ) : (
+                  <>Then a monthly plan keeps it running: your</>
+                )}{" "}
+                plan sets the service your platform needs, and your rate scales with the
+                size and importance of the system. No per-seat fees, cancel any month.
               </Lead>
             </Reveal>
 
@@ -270,18 +280,29 @@ export default function PricingPage() {
               index="01"
               label="Monthly plans"
               title={
-                <>
-                  Four tiers.{" "}
-                  <span style={{ color: "var(--k-muted)" }}>Pick your pace.</span>
-                </>
+                PRICING_PUBLIC ? (
+                  <>
+                    Four tiers.{" "}
+                    <span style={{ color: "var(--k-muted)" }}>Pick your pace.</span>
+                  </>
+                ) : (
+                  <>
+                    Four tiers.{" "}
+                    <span style={{ color: "var(--k-muted)" }}>Rates being reworked.</span>
+                  </>
+                )
               }
-              lead="Your plan is based on the service your platform needs. Your monthly rate then scales with the size, usage, complexity and commercial importance of the system — so the figures below are where each level starts, and we tell you your rate before you commit. Every level is month-to-month. Open “what this adds” on any card to see what it gets you over the level below."
+              lead={
+                PRICING_PUBLIC
+                  ? "Your plan is based on the service your platform needs. Your monthly rate then scales with the size, usage, complexity and commercial importance of the system — so the figures below are where each level starts, and we tell you your rate before you commit. Every level is month-to-month. Open “what this adds” on any card to see what it gets you over the level below."
+                  : "Your plan is based on the service your platform needs; your monthly rate then scales with the size, usage, complexity and commercial importance of the system. Every level is month-to-month. We are reworking the published rates, so the figures are coming out of this page until the new ones are settled — ask and we will quote you properly."
+              }
               maxLead="68ch"
             />
           </Reveal>
           <Reveal delay={0.08}>
             <div className="mt-12">
-              <PricingTiers />
+              {PRICING_PUBLIC ? <PricingTiers /> : <PricingOnApplication />}
             </div>
           </Reveal>
         </Section>

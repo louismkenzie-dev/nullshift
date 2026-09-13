@@ -45,6 +45,11 @@ export interface VerticalConfig {
     sliders: CalcSlider[];
     /** copy under the result */
     pitch: string;
+    /**
+     * The same line with our own monthly figure taken out, used while
+     * PRICING_PUBLIC is false. Omit where `pitch` quotes no price of ours.
+     */
+    pitchWithheld?: string;
   };
   faqs: { q: string; a: string }[];
   /** What the monthly report covers (plans footnote). */
@@ -179,6 +184,8 @@ export const TRADES: VerticalConfig = {
     ],
     pitch:
       'A "Never Miss a Job" plan from £149/mo that catches even a fraction of these pays for itself many times over — and you own everything.',
+    pitchWithheld:
+      'A "Never Miss a Job" plan that catches even a fraction of these pays for itself many times over — and you own everything.',
   },
   faqs: [
     {
@@ -305,6 +312,8 @@ export const WELLNESS: VerticalConfig = {
     ],
     pitch:
       'A "Zero No-Show" plan from £129/mo recovers most of this automatically — booking site, deposits and reminders included. And it\'s yours to keep.',
+    pitchWithheld:
+      'A "Zero No-Show" plan recovers most of this automatically — booking site, deposits and reminders included. And it\'s yours to keep.',
   },
   faqs: [
     {

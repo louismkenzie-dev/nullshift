@@ -538,8 +538,8 @@ testimonial (Mux) beside the ownership proof line and up to four stats.
 ### Stripe Connect application fee — signed before any money moves (2026-09)
 
 The application fee is a commercial term, so it lives on the **Order Form**
-(migration 0053): tick *"This project takes an application fee via Stripe
-Connect"* and enter the percentage. The form, the client's portal and the
+(migration 0053): tick _"This project takes an application fee via Stripe
+Connect"_ and enter the percentage. The form, the client's portal and the
 acceptance email all carry the fixed disclaimer that the fee **excludes
 Stripe's own processing fees** (`APPLICATION_FEE_DISCLAIMER` in
 `apps/web/lib/legal/applicationFee.ts`).
@@ -577,7 +577,7 @@ back to their Billing tile.
   pages through the Stripe API directly (`applicationFees.list`, capped at 20
   pages per run) as a backfill and safety net — safe to press any time.
 - **Setup the webhook path needs** (code can't do this part): on the Stripe
-  webhook endpoint, turn on *Listen to events on Connected accounts* and add
+  webhook endpoint, turn on _Listen to events on Connected accounts_ and add
   `application_fee.created` / `application_fee.refunded` to its events —
   see `.env.example` under `STRIPE_WEBHOOK_SECRET`. Without it, the ledger
   only fills via Sync now.
@@ -586,7 +586,7 @@ back to their Billing tile.
   than through the OAuth flow in 0051 — are unknown to us, so their fees land
   as "Unmatched". Sync caches each account's own business name from Stripe so
   it is recognisable, and the row carries an **Assign to client** picker:
-  assigning records the account on the tenant *and* back-links every fee
+  assigning records the account on the tenant _and_ back-links every fee
   already collected under it (migration 0055, audited as
   `connect_fees.account_assigned`). A one-off per client.
 - **Test-mode fees are recorded but never counted** — excluded from every
@@ -596,3 +596,31 @@ back to their Billing tile.
   net-of-refund maths, lifetime/this-month totals, per-tenant grouping, and
   an "Unmatched account" fallback so a collected fee can never silently
   disappear if its tenant link breaks.
+
+## Public pricing switch (2026-09)
+
+Agreed 13 Sep 2026: the published rates are below what the work is worth, so
+every figure comes off the marketing site until the new model is settled.
+
+One line controls it — `PRICING_PUBLIC` in `packages/content/src/pricing.ts`.
+Set it back to `true` and push to republish; nothing else has to change.
+
+While it is `false`:
+
+| Surface                            | Behaviour                                                                                                                                                                                           |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/pricing`                         | Keeps its URL. The tier ladder is replaced by the "pricing on application" panel, the hero drops the from-price, the section lead explains the rework, and any FAQ quoting a figure is filtered out |
+| `/pricing` robots                  | `noindex, follow` — search engines drop the page rather than serving the old rates from cache                                                                                                       |
+| Nav / footer                       | The Pricing link is filtered out; the nav renumbers so there is no gap, and a footer column that empties drops entirely                                                                             |
+| `sitemap.xml`                      | `/pricing` is excluded                                                                                                                                                                              |
+| Funnel nurture CTA                 | "See pricing" becomes "What it costs" — it still points at the page, which now explains the position                                                                                                |
+| `/trades`, `/wellness`, `/clinics` | Their setup + monthly ladders are gated too. These routes currently redirect to `/`, so this only matters if `VerticalLanding` is revived                                                           |
+
+The rules live in `apps/web/lib/pricingVisibility.ts` and are tested in
+`apps/web/tests/pricing-visibility.test.ts` — nav, footer, sitemap and robots
+all read the same switch, because a figure withheld from the page but still
+sitting in the sitemap or Google's index is not withheld.
+
+**Not changed, and still outstanding:** no monthly figure has been altered. The
+meeting agreed the rates are too low but settled no replacements, so
+`PRICING_TIERS` and the vertical ladders hold exactly what they held before.

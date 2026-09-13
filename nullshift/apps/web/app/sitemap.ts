@@ -1,10 +1,13 @@
 import type { MetadataRoute } from "next";
+import { visibleRoutes } from "@/lib/pricingVisibility";
 
 const BASE_URL = "https://nullshift.co.uk";
 
-// Public, indexable routes only. Admin/portal/api/funnel/brief/onboard/etc. are
+// Public, indexable routes only. /pricing drops out of this list whenever it
+// carries no figures — see lib/pricingVisibility.
+// Original note: Admin/portal/api/funnel/brief/onboard/etc. are
 // intentionally excluded (and blocked in robots.ts).
-const ROUTES = [
+const ALL_ROUTES = [
   "", // homepage
   "/about",
   "/pricing",
@@ -15,6 +18,8 @@ const ROUTES = [
   "/book",
   "/legal",
 ];
+
+const ROUTES = visibleRoutes(ALL_ROUTES);
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();

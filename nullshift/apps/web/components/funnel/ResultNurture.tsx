@@ -7,6 +7,7 @@ import type { ScalingPlan as ScalingPlanData } from "@nullshift/content/scalingP
 import { type Answers, type Recommendation } from "@/lib/funnel";
 import { ScalingPlan } from "@/components/funnel/ScalingPlan";
 import { SavedPlanLink } from "@/components/funnel/SavedPlanLink";
+import { PRICING_PUBLIC } from "@nullshift/content/pricing";
 
 /** Nurture result — never a dead-end. Still gives the full personalised Free
  *  Scaling Plan and a saved link, with a softer CTA than the qualified path. */
@@ -127,7 +128,7 @@ export function ResultNurture({
             textDecoration: "none",
           }}
         >
-          See pricing →
+          {PRICING_PUBLIC ? "See pricing" : "What it costs"} →
         </Link>
         <Link
           href={{

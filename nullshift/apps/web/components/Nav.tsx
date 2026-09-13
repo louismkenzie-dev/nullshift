@@ -8,15 +8,17 @@ import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
 import { createClient } from "@nullshift/db/client";
 import { ScrambleHover } from "@/components/anim/ScrambleHover";
+import { visibleLinks } from "@/lib/pricingVisibility";
 
-const LINKS = [
-  { n: "01", label: "What we build", href: "/#capabilities" },
-  { n: "02", label: "Agent Consultation", href: "/start" },
-  { n: "03", label: "Client stories", href: "/client-stories" },
-  { n: "04", label: "Pricing", href: "/pricing" },
-  { n: "05", label: "About", href: "/about" },
-  { n: "06", label: "FAQ", href: "/faq" },
-];
+// Numbered after filtering, so hiding a link never leaves a gap in the ladder.
+const LINKS = visibleLinks([
+  { label: "What we build", href: "/#capabilities" },
+  { label: "Agent Consultation", href: "/start" },
+  { label: "Client stories", href: "/client-stories" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "About", href: "/about" },
+  { label: "FAQ", href: "/faq" },
+]).map((l, i) => ({ ...l, n: String(i + 1).padStart(2, "0") }));
 
 const SOCIALS = [
   { n: "1.0", label: "LinkedIn" },

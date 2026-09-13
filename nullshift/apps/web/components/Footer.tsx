@@ -4,11 +4,12 @@ import Link from "next/link";
 import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
 import { Parallax } from "@/components/Parallax";
+import { visibleLinks } from "@/lib/pricingVisibility";
 
 /* Kyma-style footer — dark, mono link columns, giant wordmark, status
    bar. Themed via the .k-dark CSS vars. Server-safe. */
 
-const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
+const RAW_COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "Product",
     links: [
@@ -42,6 +43,12 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     ],
   },
 ];
+
+/* Pricing hides while the rates are being reworked; a column that empties out
+   drops with it rather than leaving a bare heading. */
+const COLUMNS = RAW_COLUMNS.map((c) => ({ ...c, links: visibleLinks(c.links) })).filter(
+  (c) => c.links.length > 0
+);
 
 const monoLink: React.CSSProperties = {
   fontFamily: T.mono,

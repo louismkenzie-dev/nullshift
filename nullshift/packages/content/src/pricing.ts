@@ -18,6 +18,34 @@
  * apps/web/lib/carePlans.ts so the two can never drift apart silently.
  */
 
+/**
+ * PUBLIC PRICING SWITCH.
+ *
+ * Set false to take every published figure off the marketing site while the
+ * commercial model is being reworked — agreed 13 Sep 2026, on the grounds that
+ * the published rates are below what the work is worth and should not be
+ * setting a new prospect's expectations before the new ones are settled.
+ *
+ * While it is false:
+ *   • /pricing keeps its URL but shows "pricing on application" — no figures,
+ *     and noindex so search engines drop the old numbers rather than cache them
+ *   • the vertical landing pages (/trades, /wellness, /clinics) hide their
+ *     setup + monthly ladders
+ *   • Pricing leaves the nav, the footer and the sitemap
+ *
+ * Everything below is left intact so the rework happens on the real content.
+ * Flip this back to true to republish — that is the whole switch, one line.
+ */
+export const PRICING_PUBLIC = false;
+
+/** Shown wherever a figure is withheld while PRICING_PUBLIC is false. */
+export const PRICING_ON_APPLICATION = {
+  eyebrow: "Pricing on application",
+  title: "We price each system to its scope.",
+  body: "We are part-way through reworking how we charge, and we would rather quote you properly than point you at a number that is about to change. Tell us what you need and we will price it — scope, build and monthly, in writing, before you commit to anything.",
+  cta: { label: "Get a quote", href: "/book" },
+} as const;
+
 export type PlanFeature = {
   text: string;
   /** false renders the row struck through with a ✕ — what this tier does NOT include. */
