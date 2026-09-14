@@ -23,7 +23,14 @@ import { T } from "@nullshift/ui/tokens";
 import { CLIENT_STORIES, OWN_SYSTEM_PROOF_LINE } from "@nullshift/content/clientStories";
 import { StoryCard } from "@/components/marketing/StoryCard";
 import { storyHref } from "@/lib/clientStories";
-import { SystemWalkthrough } from "@/components/marketing/SystemWalkthrough";
+import { StepReveal } from "@/components/marketing/StepReveal";
+import {
+  ScreenBook,
+  ScreenPaid,
+  ScreenTonight,
+  ScreenRegister,
+  ScreenMessage,
+} from "@/components/marketing/stepScreens";
 import { BeforeAfter } from "@/components/marketing/BeforeAfter";
 
 export const metadata: Metadata = {
@@ -87,14 +94,16 @@ const PROCESS = [
   },
 ];
 
-/* Hero headline line — matches Display size="hero", as its own clip-reveal block. */
+/* Hero headline line. Uppercase at weight 500 and line-height 0.9 with no
+   negative tracking, so the caps stack as one sculptural block rather than
+   sitting as three separate lines — the whole signature of the look. */
 const heroLine: React.CSSProperties = {
   display: "block",
   fontFamily: T.sans,
-  fontWeight: 700,
-  fontSize: "clamp(2.3rem,5.9vw,4.3rem)",
-  lineHeight: 1.02,
-  letterSpacing: "-0.03em",
+  fontWeight: 500,
+  fontSize: "clamp(2.4rem,6.6vw,5rem)",
+  lineHeight: 0.9,
+  letterSpacing: "normal",
   textTransform: "uppercase",
   color: "var(--k-fg)",
 };
@@ -137,8 +146,12 @@ export default function Home() {
           />
           <Container
             style={{
+              minHeight: "100svh",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
               paddingTop: "clamp(116px,15vh,168px)",
-              paddingBottom: "clamp(40px,6vw,72px)",
+              paddingBottom: "clamp(56px,9vh,104px)",
               position: "relative",
               zIndex: 2,
             }}
@@ -167,7 +180,15 @@ export default function Home() {
             </div>
 
             <Reveal delay={0.1}>
-              <Lead className="mt-7" style={{ maxWidth: "56ch", fontSize: "1.125rem" }}>
+              <Lead
+                className="mt-12"
+                style={{
+                  maxWidth: "34ch",
+                  fontSize: "clamp(1.05rem,1.7vw,1.5rem)",
+                  lineHeight: 1.26,
+                  color: "var(--k-fg)",
+                }}
+              >
                 Your customers book and pay online. Your staff get a register on their
                 phone. The confirmations, reminders and reports send themselves. It is one
                 system, built around how you actually work — and you own it outright.
@@ -199,39 +220,150 @@ export default function Home() {
           </Container>
         </section>
 
-        {/* ═══════════════ 02 — THE WALKTHROUGH (cream) ═══════════════ */}
-        <Section theme="cream" id="capabilities" pad="lg" topBorder>
+        {/* ═══════════════ 02 — WHAT WE BUILD (statement) ═══════════════ */}
+        <Section
+          theme="dark"
+          id="capabilities"
+          pad="lg"
+          topBorder
+          style={{ minHeight: "72svh", display: "flex", alignItems: "center" }}
+        >
           <Reveal>
-            <SectionHeader
-              index="02"
-              label="What we build"
-              title="One system, from the booking to the message home."
-              lead="Most businesses we meet are holding this chain together with a spreadsheet, a WhatsApp group and a bank transfer. Here is the same chain as one system."
-              maxLead="64ch"
-            />
+            <span
+              style={{
+                fontFamily: T.mono,
+                fontSize: "0.66rem",
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "var(--k-accent)",
+              }}
+            >
+              [02] What we build
+            </span>
+          </Reveal>
+          <ClipReveal delay={0.06} className="mt-8">
+            <h2
+              style={{
+                margin: 0,
+                fontFamily: T.sans,
+                fontWeight: 500,
+                fontSize: "clamp(2rem,5vw,3.6rem)",
+                lineHeight: 0.9,
+                letterSpacing: "normal",
+                textTransform: "uppercase",
+                color: "var(--k-fg)",
+                maxWidth: "16ch",
+              }}
+            >
+              One system. Five things it does.
+            </h2>
+          </ClipReveal>
+          <Reveal delay={0.14}>
+            <p
+              className="mt-10"
+              style={{
+                fontFamily: T.sans,
+                fontWeight: 400,
+                fontSize: "clamp(1.05rem,1.7vw,1.5rem)",
+                lineHeight: 1.26,
+                color: "var(--k-fg)",
+                maxWidth: "34ch",
+              }}
+            >
+              Most businesses we meet hold this chain together with a spreadsheet, a
+              WhatsApp group and a bank transfer. Here it is, one screen at a time.
+            </p>
+          </Reveal>
+          <Reveal delay={0.2}>
+            <p
+              className="mt-10"
+              style={{
+                fontFamily: T.mono,
+                fontSize: "0.68rem",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: "var(--k-faint)",
+              }}
+            >
+              Scroll ↓
+            </p>
+          </Reveal>
+        </Section>
+
+        <StepReveal
+          index="01"
+          kicker="They book"
+          heading="On their phone. At ten at night."
+          body="Your customer picks the class, the session or the appointment themselves, on your own website — and nobody has to ring you back in the morning."
+          aside="Live spaces · every way you price it · no app to download"
+          screen={<ScreenBook />}
+        />
+
+        <StepReveal
+          index="02"
+          kicker="You get paid"
+          heading="Before they leave the page."
+          body="The card is charged the moment they book, and the money settles into your own bank account. No invoice to raise, no transfer to chase on a Sunday night."
+          aside="One-offs · memberships · termly · deposits"
+          screen={<ScreenPaid />}
+        />
+
+        <StepReveal
+          index="03"
+          kicker="You see who is coming"
+          heading="Who is in the room. Who has paid."
+          body="Every booking lands on one screen, always current. The question that used to take three tabs and a phone call now takes a glance."
+          aside="One screen · never out of date"
+          screen={<ScreenTonight />}
+        />
+
+        <StepReveal
+          index="04"
+          kicker="The register gets marked"
+          heading="A thumb. Not a clipboard."
+          body="Staff tap each name as people arrive. Allergies, medical notes and who is allowed to collect a child sit on the row, in front of whoever is teaching."
+          aside="Safeguarding flags · authorised collectors · QR check-in"
+          screen={<ScreenRegister />}
+        />
+
+        <StepReveal
+          index="05"
+          kicker="The message goes home"
+          heading="Sent by nobody. Proven anyway."
+          body="Confirmations, reminders and reports send themselves — and each one records whether it actually arrived, so nobody can say they were never told."
+          aside="Delivery tracked · bounces caught · no one presses send"
+          screen={<ScreenMessage />}
+        />
+
+        <Section theme="dark" pad="lg" topBorder>
+          <Reveal>
+            <p
+              style={{
+                fontFamily: T.sans,
+                fontWeight: 400,
+                fontSize: "clamp(1.05rem,1.7vw,1.5rem)",
+                lineHeight: 1.26,
+                color: "var(--k-fg)",
+                maxWidth: "40ch",
+              }}
+            >
+              Not every business is classes and registers. Swap the words and the shape is
+              the same — appointments, memberships, enquiries, orders, courses. If the
+              same people come back to you, we can build it.
+            </p>
           </Reveal>
           <Reveal delay={0.08}>
-            <div className="mt-12">
-              <SystemWalkthrough />
-            </div>
-          </Reveal>
-          <Reveal delay={0.12}>
             <p
               className="mt-8"
               style={{
-                fontFamily: T.sans,
-                fontSize: "1rem",
-                lineHeight: 1.6,
-                color: "var(--k-muted)",
-                maxWidth: "72ch",
+                fontFamily: T.mono,
+                fontSize: "0.64rem",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--k-faint)",
               }}
             >
-              <span style={{ color: "var(--k-fg)", fontWeight: 600 }}>
-                Not every business is classes and registers.{" "}
-              </span>
-              Swap the words and the shape is the same — appointments, memberships,
-              enquiries, orders, courses. If the same people come back to you, we can
-              build it.
+              * Screens illustrate the flow — yours are built around your business
             </p>
           </Reveal>
         </Section>
