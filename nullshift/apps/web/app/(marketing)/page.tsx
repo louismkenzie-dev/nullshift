@@ -2,293 +2,116 @@ import type { Metadata } from "next";
 import React from "react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { SplineScene } from "@/components/SplineScene";
 import { Parallax } from "@/components/Parallax";
 import { NeuralField } from "@/components/NeuralField";
-import { ScrollStory, PinnedReveal } from "@/components/ScrollFX";
-import { DesktopOnly } from "@/components/DesktopOnly";
 import { ClipReveal } from "@/components/anim/ClipReveal";
-import { SplineShowcase } from "@/components/SplineShowcase";
 import { ClaudePartnerBadge } from "@/components/ClaudePartnerBadge";
 import {
   Reveal,
   Section,
   Container,
   Eyebrow,
-  Display,
   Lead,
   SectionHeader,
-  BtnPrimary,
   BtnGhost,
   BarButton,
   TextLink,
-  MonoTag,
-  StatBig,
-  Marquee,
-  BrandStrip,
   Watermark,
   CTABand,
-  Accordion,
-  type ServiceItem,
-  type FAQItem,
 } from "@/components/kyma";
-import { ServiceAccordion } from "@/components/kyma/ServiceAccordion";
 import { T } from "@nullshift/ui/tokens";
 import { CLIENT_STORIES, OWN_SYSTEM_PROOF_LINE } from "@nullshift/content/clientStories";
 import { StoryCard } from "@/components/marketing/StoryCard";
 import { storyHref } from "@/lib/clientStories";
+import { SystemWalkthrough } from "@/components/marketing/SystemWalkthrough";
+import { BeforeAfter } from "@/components/marketing/BeforeAfter";
 
 export const metadata: Metadata = {
-  title: "Nullshift — Agentic AI that automates your business operations",
+  title: "Nullshift — We build the system your business runs on",
   description:
-    "Bring any idea — or just a pain point. We build agentic AI systems that automate the operational work draining your staff cost, time and revenue. Any industry. Owned by you.",
+    "Bookings, payments, registers, records and the messages that go home — one system built around how your business actually works. You own it outright, and we run it for you.",
   alternates: { canonical: "/" },
 };
 
 /* ── Data ───────────────────────────────────────────────────────── */
-const MARQUEE = [
-  "Agentic AI",
-  "Process automation",
-  "Custom systems",
-  "Tool & data integrations",
-  "Customer-facing AI",
-  "Document processing",
-  "Workflow orchestration",
-  "Websites & portals",
-];
 
-const COMMITMENT = [
-  { value: "100%", label: "Custom-built for you" },
-  { value: "Weeks", label: "Not months to live" },
-  { value: "Liability", label: "Carried by us" },
-  { value: "Yours", label: "Code, data & accounts" },
-];
-
-const PAIN: ServiceItem[] = [
+/* What a client ends up owning. Ownership is the one thing no booking
+   platform will ever match us on, so it gets its own section rather
+   than a bullet buried in a feature list. */
+const OWNERSHIP = [
   {
     n: "01",
-    label: "Staff cost",
-    title: "Salary on busywork",
-    desc: "Every manual process is wages spent on work a system should do. You end up hiring to keep up, not to grow.",
+    title: "The system is yours",
+    body: "The code and every account it runs on are in your name from the first day, not ours. Nothing has to be bought back later.",
   },
   {
     n: "02",
-    label: "Wasted time",
-    title: "Hours no one sees",
-    desc: "Admin, data entry, chasing, copying between tools — hours a week per person, gone, on work no customer ever notices.",
+    title: "The money is yours",
+    body: "Card payments settle straight into your own bank account. You keep the relationship with your customer, and nobody stands in the middle of it.",
   },
   {
     n: "03",
-    label: "Leakage",
-    title: "Revenue slipping out",
-    desc: "Manual means missed follow-ups, dropped balls and human error — money and trust leaking where no one's watching.",
+    title: "The data is yours",
+    body: "Your customer list, your history, your records — exportable any time, in a normal format. We sign a data agreement before anything goes live.",
   },
   {
     n: "04",
-    label: "The ceiling",
-    title: "It all funnels back to you",
-    desc: "As you grow, everything refers back to the founders. Too many people, too many moving parts — and growth stalls under its own weight.",
+    title: "You can leave",
+    body: "Stop the monthly plan and you keep the whole system. No per-person fees, no contract that locks you in, no holding your business hostage.",
   },
 ];
 
-const SERVICES: ServiceItem[] = [
-  {
-    n: "01",
-    label: "Agentic AI",
-    title: "Agents that do the work",
-    desc: "Autonomous agents that take on multi-step work end to end — deciding, acting and reporting back, not just answering questions.",
-  },
-  {
-    n: "02",
-    label: "Automation",
-    title: "Process automation",
-    desc: "The repetitive ops, admin and hand-offs your team does by hand — mapped, built and run for you, around the clock.",
-  },
-  {
-    n: "03",
-    label: "Systems",
-    title: "Custom systems",
-    desc: "Bespoke software your operation runs on — built to fit exactly how you work, not bent around someone else's tool.",
-  },
-  {
-    n: "04",
-    label: "Integrations",
-    title: "Everything connected",
-    desc: "We wire your tools, data and AI into one system, so nothing lives in a silo or gets re-keyed by hand.",
-  },
-  {
-    n: "05",
-    label: "Customer AI",
-    title: "Customer-facing AI",
-    desc: "Support, qualification, onboarding and drafting — on-brand, instant and 24/7, handled by agents that know your business.",
-  },
-  {
-    n: "06",
-    label: "Front end",
-    title: "Websites & portals",
-    desc: "The fast website and the logins your customers actually use — owned, and wired into everything running behind them.",
-  },
-];
-
+/* Four steps in plain English. The old version described a "deep dive"
+   that would "map operational workflows and design agentic systems" —
+   true, and meaningless to someone who runs a dance school. */
 const PROCESS = [
   {
-    num: "001",
-    title: "Deep dive",
-    desc: "Our automation specialists map your operations and find exactly what should become a system — even if you only brought a pain point.",
-  },
-  {
-    num: "002",
-    title: "Design the agents",
-    desc: "We design the systems and agentic workflows, scope it tightly, and show you what you'll get before a line is built.",
-  },
-  {
-    num: "003",
-    title: "Build & integrate",
-    desc: "Our developers build it fast with cutting-edge AI, wire it into your tools and migrate your data — no downtime.",
-  },
-  {
-    num: "004",
-    title: "Run & scale",
-    desc: "We run it, carry the liability, and keep optimising — so the system scales as you do, and you own all of it.",
-  },
-];
-
-const GUARANTEES: ServiceItem[] = [
-  {
     n: "01",
-    label: "Watertight",
-    title: "We carry the liability",
-    desc: "We take responsibility for data breaches, security and compliance — a watertight system, not a prototype you're left to defend.",
+    title: "We learn how you work",
+    body: "A conversation, not a questionnaire. What happens between someone getting in touch and you getting paid — and which bits are eating your evenings.",
   },
   {
     n: "02",
-    label: "Proven AI",
-    title: "Real AI R&D, not a prompt",
-    desc: "A genuine R&D background applying the latest AI and agentic techniques — complex, pioneering systems, built fast and at low cost.",
+    title: "We show you it first",
+    body: "You see the screens and the price before anything is built. Fixed quote, agreed up front, and it only moves if you ask for something new.",
   },
   {
     n: "03",
-    label: "Owned",
-    title: "You own all of it",
-    desc: "Code, data and every account are yours outright. No per-seat fees, no lock-in, no holding your business hostage.",
+    title: "We build it and move your data across",
+    body: "Usually live in two to four weeks, with everything you already have brought over. Your customers get the new thing, not a gap.",
+  },
+  {
+    n: "04",
+    title: "We run it, you use it",
+    body: "Hosting, security, fixes and the things that run on a timer are ours to worry about. You get on with the business.",
   },
 ];
 
-const PRICING = [
-  {
-    name: "One-off build",
-    price: "You own it",
-    unit: "outright",
-    desc: "We design, build and integrate the systems and agents that run your operations. When it's done, the code, data and accounts are yours — for good.",
-    points: [
-      "Scoped to your business",
-      "Built fast with cutting-edge AI",
-      "Live in weeks, not months",
-    ],
-    featured: true,
-  },
-  {
-    name: "Care plan",
-    price: "Monthly",
-    unit: "we run it",
-    desc: "We host and run it, keep the agents optimised, and carry your liability cover and running costs (hosting, storage, email, servers).",
-    points: [
-      "Hosting, storage & servers",
-      "Liability & compliance cover",
-      "Cancel anytime, keep everything",
-    ],
-    featured: false,
-  },
-  {
-    name: "Consulting",
-    price: "Free plan",
-    unit: "to start",
-    desc: "No idea where to begin? Our specialists deep-dive your operations and map exactly what to automate — start with a free tailored plan.",
-    points: ["Operations deep-dive", "What to automate, ranked", "No commitment"],
-    featured: false,
-  },
-];
-
-const HUNT = [
-  "Bottlenecks that funnel back to you",
-  "Manual hand-offs between tools",
-  "Repetitive admin & data entry",
-  "Work that scales with headcount",
-  "Anything a person does the same way twice",
-];
-
-const FAQS: FAQItem[] = [
-  {
-    cat: "No idea?",
-    q: "I just have problems, not a spec — can you still help?",
-    a: "That's the ideal starting point. Our automation consultants deep-dive your operations, work out what can and should become a system, and rank it by impact. You bring the pain points; we bring the ideas, the build and the agents that run it. Start with a free tailored plan and we'll show you exactly what we'd automate.",
-  },
-  {
-    cat: "Why us",
-    q: "Why not just build it myself with AI tools?",
-    a: "AI tools can draft code — they can't take responsibility for it. We're a team of senior developers with a real R&D background in agentic AI, building complex, pioneering systems fast and at low cost — and we carry the liability for data breaches, security and compliance. You get a watertight, production-grade system that scales, not a prototype you're left to defend.",
-  },
-  {
-    cat: "Liability",
-    q: "Who's responsible if something goes wrong?",
-    a: "We are. We take on a portion of your liability — responsible for data breaches, security and compliance on the systems we build and run for you. We host in the UK/EU, encrypt in transit and at rest, keep an audit trail, and sign a DPA before go-live. Your business gets the watertight system it requires.",
-  },
-  {
-    cat: "Ownership",
-    q: "Do I actually own what you build?",
-    a: "Yes — completely. You own the code, the data and every account it runs on. You can cancel the care plan at any time and keep everything, with a full export and the running system handed over. No per-seat fees, no lock-in, no hostage situation.",
-  },
-  {
-    cat: "Scale",
-    q: "We've hit a ceiling — too much refers back to us. Can you fix that?",
-    a: "That's exactly what we're for. We automate the bottlenecks and hand-offs that funnel back to the founders, turn the manual work into systems and agents, and optimise your operations for scale — so growth stops stalling under its own weight and your business is set up for exponential, not linear, growth.",
-  },
-  {
-    cat: "Industry",
-    q: "Does this work for my industry?",
-    a: "Yes. The work that drains time and money — admin, ops, data, follow-ups, customer handling — looks similar across every industry. We've automated it for businesses in very different sectors; the agentic approach adapts to whatever your operation actually does.",
-  },
-];
-
-/* ── helpers ────────────────────────────────────────────────────── */
-function Stars() {
-  return (
-    <span
-      aria-hidden
-      style={{ color: "var(--k-accent)", letterSpacing: 2, fontSize: "0.8rem" }}
-    >
-      ★★★★★
-    </span>
-  );
-}
-
-// Hero headline line — matches Display size="hero", as its own clip-reveal block.
+/* Hero headline line — matches Display size="hero", as its own clip-reveal block. */
 const heroLine: React.CSSProperties = {
   display: "block",
   fontFamily: T.sans,
   fontWeight: 700,
-  fontSize: "clamp(2.5rem,6.4vw,4.7rem)",
-  lineHeight: 1.0,
+  fontSize: "clamp(2.3rem,5.9vw,4.3rem)",
+  lineHeight: 1.02,
   letterSpacing: "-0.03em",
   textTransform: "uppercase",
   color: "var(--k-fg)",
 };
 
 /* ════════════════════════════════════════════════════════════════ */
-export default function Page() {
+
+export default function Home() {
   return (
     <>
       <Nav />
-
       <main>
-        {/* ═══════════════ HERO (dark · layered WebGL depth) ═══════════════ */}
+        {/* ═══════════════ HERO (dark) ═══════════════ */}
         <section
           className="k-dark relative overflow-hidden"
           style={{ background: "var(--k-bg)", color: "var(--k-fg)" }}
         >
-          {/* deep layer — agentic node-network, routes data pulses + parallax */}
           <NeuralField className="absolute inset-0" style={{ zIndex: 0 }} />
-          {/* mid layer — parallaxing hairline grid */}
           <Parallax
             distance={-28}
             className="pointer-events-none absolute inset-0"
@@ -303,7 +126,6 @@ export default function Page() {
               }}
             />
           </Parallax>
-          {/* keep the field from ever fighting the headline */}
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0"
@@ -322,233 +144,126 @@ export default function Page() {
             }}
           >
             <Reveal>
-              <Eyebrow index="01" label="Bring the idea — or just the pain point" />
+              <Eyebrow index="01" label="Custom business systems" />
             </Reveal>
 
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1.25fr_0.75fr] gap-10 lg:gap-12 items-start">
-              <div>
-                <h1 style={{ margin: 0 }}>
-                  <ClipReveal delay={0.05}>
-                    <span style={heroLine}>Any idea. Any pain point.</span>
-                  </ClipReveal>
-                  <ClipReveal delay={0.2}>
-                    <span style={heroLine}>
-                      <span style={{ color: "var(--k-accent)" }}>[automated]</span> by AI
-                      you <span style={{ color: "var(--k-accent)" }}>[own]</span>.
-                    </span>
-                  </ClipReveal>
-                </h1>
-                <Reveal delay={0.26}>
-                  <div className="mt-6 mb-5">
-                    <ClaudePartnerBadge />
-                  </div>
-                </Reveal>
-                <Reveal delay={0.1}>
-                  <Lead
-                    className="mt-7"
-                    style={{ maxWidth: "56ch", fontSize: "1.125rem" }}
-                  >
-                    Bring us anything that eats your team&apos;s time — the admin, the
-                    ops, the work that keeps funnelling back to you — and we build agentic
-                    AI systems that run it end to end. Cut staff cost, time and leakage.
-                    Any industry. Owned outright by you.
-                  </Lead>
-                </Reveal>
-                <Reveal delay={0.16}>
-                  <div className="mt-9" style={{ maxWidth: 460 }}>
-                    <BarButton href="/start" meta="60 sec">
-                      Get my free plan
-                    </BarButton>
-                  </div>
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <BtnGhost href="/book" size="sm">
-                      Book a call
-                    </BtnGhost>
-                  </div>
-                </Reveal>
-              </div>
-
-              {/* Right — interactive 3D Spline scene (desktop only, never stacks) */}
-              <Parallax
-                distance={-26}
-                className="hidden lg:block relative self-stretch"
-                style={{ minHeight: "clamp(440px,40vw,560px)" }}
-              >
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0"
-                  style={{
-                    background: `radial-gradient(52% 52% at 60% 44%, ${T.primary}33 0%, transparent 62%)`,
-                  }}
-                />
-                <div
-                  className="absolute"
-                  style={{
-                    inset: "-10% -8% -16% -10%",
-                    WebkitMaskImage:
-                      "radial-gradient(58% 58% at 56% 46%, #000 46%, rgba(0,0,0,0) 100%)",
-                    maskImage:
-                      "radial-gradient(58% 58% at 56% 46%, #000 46%, rgba(0,0,0,0) 100%)",
-                  }}
-                >
-                  <DesktopOnly>
-                    <SplineScene
-                      scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
-                      className="!w-full !h-full"
-                    />
-                  </DesktopOnly>
-                </div>
-              </Parallax>
+            <div className="mt-6" style={{ maxWidth: "22ch" }}>
+              <h1 style={{ margin: 0 }}>
+                <ClipReveal delay={0.05}>
+                  <span style={heroLine}>We build the system</span>
+                </ClipReveal>
+                <ClipReveal delay={0.18}>
+                  <span style={heroLine}>
+                    your business runs{" "}
+                    <span style={{ color: "var(--k-accent)" }}>by hand</span>.
+                  </span>
+                </ClipReveal>
+              </h1>
             </div>
 
-            {/* trust */}
-            <div className="mt-12 flex items-end justify-between gap-6 flex-wrap">
-              <div className="flex items-center gap-4">
-                <Stars />
-                <span
-                  style={{
-                    fontFamily: T.mono,
-                    fontSize: "0.7rem",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: "var(--k-muted)",
-                  }}
-                >
-                  Agentic automation for businesses across every industry
-                </span>
+            <Reveal delay={0.1}>
+              <Lead className="mt-7" style={{ maxWidth: "56ch", fontSize: "1.125rem" }}>
+                Your customers book and pay online. Your staff get a register on their
+                phone. The confirmations, reminders and reports send themselves. It is one
+                system, built around how you actually work — and you own it outright.
+              </Lead>
+            </Reveal>
+
+            <Reveal delay={0.16}>
+              <div className="mt-9" style={{ maxWidth: 460 }}>
+                <BarButton href="/start" meta="60 sec">
+                  Show me what you&apos;d build
+                </BarButton>
               </div>
-            </div>
-            <Parallax distance={42} className="mt-2 overflow-hidden">
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <BtnGhost href="/book" size="sm">
+                  Book a call
+                </BtnGhost>
+              </div>
+            </Reveal>
+
+            <Reveal delay={0.24}>
+              <div className="mt-10">
+                <ClaudePartnerBadge />
+              </div>
+            </Reveal>
+
+            <Parallax distance={42} className="mt-8 overflow-hidden">
               <Watermark>Nullshift</Watermark>
             </Parallax>
           </Container>
         </section>
 
-        {/* ═══════════════ BRAND STRIP (emerald, ANIM 16) ═══════════════ */}
-        <BrandStrip />
-
-        {/* ═══════════════ MARQUEE (cream strip) ═══════════════ */}
-        <Section theme="cream" pad="none" topBorder>
-          <div style={{ paddingBlock: 22 }}>
-            <Marquee items={MARQUEE} />
-          </div>
+        {/* ═══════════════ 02 — THE WALKTHROUGH (cream) ═══════════════ */}
+        <Section theme="cream" id="capabilities" pad="lg" topBorder>
+          <Reveal>
+            <SectionHeader
+              index="02"
+              label="What we build"
+              title="One system, from the booking to the message home."
+              lead="Most businesses we meet are holding this chain together with a spreadsheet, a WhatsApp group and a bank transfer. Here is the same chain as one system."
+              maxLead="64ch"
+            />
+          </Reveal>
+          <Reveal delay={0.08}>
+            <div className="mt-12">
+              <SystemWalkthrough />
+            </div>
+          </Reveal>
+          <Reveal delay={0.12}>
+            <p
+              className="mt-8"
+              style={{
+                fontFamily: T.sans,
+                fontSize: "1rem",
+                lineHeight: 1.6,
+                color: "var(--k-muted)",
+                maxWidth: "72ch",
+              }}
+            >
+              <span style={{ color: "var(--k-fg)", fontWeight: 600 }}>
+                Not every business is classes and registers.{" "}
+              </span>
+              Swap the words and the shape is the same — appointments, memberships,
+              enquiries, orders, courses. If the same people come back to you, we can
+              build it.
+            </p>
+          </Reveal>
         </Section>
 
-        {/* ═══════════════ 02 — WHY US / TEAM (cream) ═══════════════ */}
-        <Section theme="cream" pad="lg" topBorder className="overflow-hidden">
+        {/* ═══════════════ 03 — BEFORE / AFTER (dark) ═══════════════ */}
+        <Section theme="dark" id="problem" pad="lg" topBorder>
           <Reveal>
-            <Eyebrow index="02" label="Why us, not DIY" />
+            <SectionHeader
+              index="03"
+              label="What changes"
+              title="The jobs that stop being yours."
+              lead="Every client we have taken on arrived running on the same three things: a spreadsheet, WhatsApp and manual bank transfers. This is what happened to the work."
+              maxLead="64ch"
+            />
           </Reveal>
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
-            <Reveal delay={0.05}>
-              <Display size="xl" style={{ maxWidth: "14ch" }}>
-                We build the systems others{" "}
-                <span style={{ color: "var(--k-accent)" }}>can&apos;t.</span>
-              </Display>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <div>
-                <p
-                  style={{
-                    fontFamily: T.sans,
-                    fontSize: "clamp(1.25rem,2.2vw,1.7rem)",
-                    fontWeight: 400,
-                    lineHeight: 1.3,
-                    letterSpacing: "-0.02em",
-                    color: "var(--k-muted)",
-                  }}
-                >
-                  A team of{" "}
-                  <span style={{ color: "var(--k-fg)" }}>senior developers</span> using
-                  cutting-edge AI and agentic techniques to build complex, pioneering
-                  systems — fast, and at a fraction of agency cost. Whatever you can
-                  imagine, however complicated,{" "}
-                  <span style={{ color: "var(--k-fg)" }}>we know how to build it</span> —
-                  and we carry the liability so it&apos;s watertight.
-                </p>
-                <div className="mt-6">
-                  <TextLink href="/about">More about Nullshift</TextLink>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-
-          {/* Giant stats */}
-          <Reveal delay={0.1}>
-            <div className="mt-14 grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-10">
-              {COMMITMENT.map((s) => (
-                <StatBig key={s.label} value={s.value} label={s.label} size="md" />
-              ))}
+          <Reveal delay={0.08}>
+            <div className="mt-12">
+              <BeforeAfter />
             </div>
           </Reveal>
         </Section>
 
-        {/* ═══════════════ INTERCONNECTED SYSTEMS (dark · Spline showcase) ═══════════════ */}
-        <SplineShowcase
-          scene="/spline/interconnect.splinecode"
-          objectName="Group"
-          side="right"
-          axis="y"
-          spin={0.05}
-          rotate={0}
-          scrollSpin={0.006}
-          label="Connected systems"
-          heading={
-            <>
-              Your whole operation,{" "}
-              <span style={{ color: "var(--k-accent)" }}>woven into one.</span>
-            </>
-          }
-          lead="We don't bolt on another point tool. We wire your data, apps and workflows into a single connected system — where every part talks to every other and the work moves on its own."
-          items={[
-            {
-              n: "01",
-              title: "Everything connects",
-              desc: "Your tools, data and teams join one fabric, so information moves the moment it's needed — no copy-paste, no silos, no re-keying.",
-            },
-            {
-              n: "02",
-              title: "Work flows end to end",
-              desc: "Hand-offs disappear. A trigger in one place cascades through the whole system, start to finish, with nothing left to chase by hand.",
-            },
-            {
-              n: "03",
-              title: "It scales as one network",
-              desc: "Add a tool, a channel or a team and it plugs into the same web — the system grows with you instead of fragmenting into more silos.",
-            },
-          ]}
-        />
-
-        {/* ═══════════════ 03 — THE COST OF DOING IT BY HAND (dark · pinned reveal) ═══════════════ */}
-        <Section theme="dark" id="problem" pad="lg" topBorder>
-          <PinnedReveal
-            index="03"
-            label="The cost of doing it by hand"
-            heading={
-              <>
-                Manual work is{" "}
-                <span style={{ color: "var(--k-muted)" }}>leaking money.</span>
-              </>
-            }
-            lead="The repetitive operational work your staff do by hand is quietly costing you — in salary, in hours, and in the deals that slip through the cracks."
-            items={PAIN.map((p) => ({ n: p.n, title: p.label, desc: p.desc }))}
-          />
-        </Section>
-
-        {/* ═══════════════ 04 — CLIENT STORIES (dark editorial rail) ═══════════════ */}
-        <Section theme="dark" id="stories" pad="lg" topBorder>
+        {/* ═══════════════ 04 — CLIENT STORIES (cream) ═══════════════ */}
+        <Section theme="cream" id="stories" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
               index="04"
-              label="Client stories"
-              title="Real businesses. Incredible systems."
-              lead="Not templates — bespoke platforms doing real daily work for the businesses that own them outright. Here's what that looks like."
+              label="Systems we have built"
+              title="Three real businesses. Three systems they own."
+              lead="A dance school across nine Essex towns, a county tennis organisation, and a counselling practice. Different work, same problem underneath."
+              maxLead="64ch"
             />
           </Reveal>
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
             {CLIENT_STORIES.map((story, i) => (
               <Reveal key={story.slug} delay={i * 0.07}>
-                <StoryCard story={story} href={storyHref(story)} theme="dark" />
+                <StoryCard story={story} href={storyHref(story)} theme="cream" />
               </Reveal>
             ))}
           </div>
@@ -580,295 +295,140 @@ export default function Page() {
           </Reveal>
         </Section>
 
-        {/* ═══════════════ 05 — WHAT WE BUILD (cream services) ═══════════════ */}
-        <Section theme="cream" id="capabilities" pad="lg" topBorder>
+        {/* ═══════════════ 05 — WHAT YOU OWN (dark) ═══════════════ */}
+        <Section theme="dark" id="why" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
               index="05"
-              label="What we build"
-              title="Automate anything you run by hand"
-              lead="From a single agent to a whole connected system — we build, integrate and run the automation your operation needs, whatever it is."
+              label="What you own"
+              title="It is yours. Not rented from us."
+              lead="Booking platforms keep your customers, your data and a slice of your money, and you stop paying the day you stop using them. This is the opposite arrangement."
+              maxLead="64ch"
             />
           </Reveal>
-          <div className="mt-12">
-            <ServiceAccordion items={SERVICES} />
-          </div>
-        </Section>
-
-        {/* ═══════════════ 06 — HOW IT WORKS (dark · pinned story beats) ═══════════════ */}
-        <Section theme="dark" id="process" pad="lg" topBorder>
-          <ScrollStory
-            index="06"
-            label="How it works"
-            heading={
-              <>
-                From a pain point to a system that{" "}
-                <span style={{ color: "var(--k-accent)" }}>runs itself.</span>
-              </>
-            }
-            beats={PROCESS.map((step, i) => ({
-              n: String(i + 1).padStart(2, "0"),
-              title: step.title,
-              desc: step.desc,
-            }))}
-          />
-          <div className="mt-7">
-            <MonoTag>You bring the problem · we bring the system</MonoTag>
-          </div>
-        </Section>
-
-        {/* ═══════════════ 07 — NO IDEA? / SCALE (cream) ═══════════════ */}
-        <Section theme="cream" id="scale" pad="lg" topBorder>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <Reveal>
-              <div>
-                <Eyebrow index="07" label="No idea? Just pain points?" />
-                <Display size="xl" className="mt-6" style={{ maxWidth: "13ch" }}>
-                  You don&apos;t need the idea.{" "}
-                  <span style={{ color: "var(--k-accent)" }}>We find it.</span>
-                </Display>
-                <Lead className="mt-6">
-                  Just point at what&apos;s painful. Our automation consultants deep-dive
-                  your operations, work out what can and should become a system, and
-                  automate everything that can be. We optimise your business for scale —
-                  past the ceiling where everything refers back to you — and set it up for
-                  exponential growth. You know you need to move into the AI era; we do the
-                  how.
-                </Lead>
-                <div className="mt-9 flex flex-wrap gap-3">
-                  <BtnPrimary href="/start">Get my free plan</BtnPrimary>
-                  <BtnGhost href="/book">Book a discovery call</BtnGhost>
-                </div>
-              </div>
-            </Reveal>
-            <Reveal delay={0.1} direction="left">
-              <div style={{ border: "1px solid var(--k-border)" }}>
+          <div
+            className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+            style={{
+              borderTop: "1px solid var(--k-border)",
+              borderLeft: "1px solid var(--k-border)",
+            }}
+          >
+            {OWNERSHIP.map((o, i) => (
+              <Reveal key={o.n} delay={i * 0.06}>
                 <div
-                  className="p-6"
-                  style={{ borderBottom: "1px solid var(--k-border)" }}
-                >
-                  <span
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: "0.7rem",
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      color: "var(--k-accent)",
-                    }}
-                  >
-                    What we hunt for
-                  </span>
-                </div>
-                <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                  {HUNT.map((h) => (
-                    <li
-                      key={h}
-                      className="flex items-center gap-3 px-6 py-4"
-                      style={{
-                        fontFamily: T.sans,
-                        fontSize: "0.95rem",
-                        color: "var(--k-fg)",
-                        borderBottom: "1px solid var(--k-border)",
-                      }}
-                    >
-                      <span aria-hidden style={{ color: "var(--k-accent)" }}>
-                        ▸
-                      </span>
-                      {h}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Reveal>
-          </div>
-        </Section>
-
-        {/* ═══════════════ CUBES — DESIGN & BUILD (dark · Spline showcase) ═══════════════ */}
-        <SplineShowcase
-          scene="/spline/cubic-scroll.splinecode"
-          objectName="Cubes"
-          side="left"
-          rotate={2.0}
-          label="Design & build"
-          heading={
-            <>
-              Systems and websites,{" "}
-              <span style={{ color: "var(--k-accent)" }}>built from scratch.</span>
-            </>
-          }
-          lead="The custom software your operation runs on — and the fast website and portals your customers actually use. Designed, built and wired together."
-          items={[
-            {
-              n: "01",
-              title: "Designed to fit",
-              desc: "Built around exactly how you work — not bent around someone else's off-the-shelf tool.",
-            },
-            {
-              n: "02",
-              title: "Built to own",
-              desc: "Cutting-edge AI builds it fast. When it's done, the code, data and accounts are yours outright.",
-            },
-            {
-              n: "03",
-              title: "Wired together",
-              desc: "Front end, systems and agents connected into one — nothing siloed, nothing re-keyed by hand.",
-            },
-          ]}
-        />
-
-        {/* ═══════════════ 08 — WHY US / GUARANTEES (dark · pinned reveal) ═══════════════ */}
-        <Section theme="dark" id="why" pad="lg" topBorder>
-          <PinnedReveal
-            index="08"
-            label="Why Nullshift"
-            heading={
-              <>
-                Built fast. Built watertight.{" "}
-                <span style={{ color: "var(--k-accent)" }}>Built yours.</span>
-              </>
-            }
-            lead="Not testimonials — commitments. This is what you get in writing, every time."
-            items={GUARANTEES.map((g) => ({ n: g.n, title: g.title, desc: g.desc }))}
-          />
-        </Section>
-
-        {/* ═══════════════ 09 — PRICING (cream) ═══════════════ */}
-        <Section theme="cream" id="pricing" pad="lg" topBorder>
-          <Reveal>
-            <SectionHeader
-              index="09"
-              label="Pricing"
-              title="Build it. Own it. We run it."
-              lead="One build to own the systems and agents outright, then a simple care plan that runs them, carries your liability and covers the running costs. Every project scoped to you."
-            />
-          </Reveal>
-          <Reveal delay={0.08}>
-            <div
-              className="mt-12 grid grid-cols-1 md:grid-cols-3"
-              style={{
-                borderTop: "1px solid var(--k-border)",
-                borderLeft: "1px solid var(--k-border)",
-              }}
-            >
-              {PRICING.map((p) => (
-                <div
-                  key={p.name}
-                  className="relative flex flex-col p-7 md:p-8"
                   style={{
                     borderRight: "1px solid var(--k-border)",
                     borderBottom: "1px solid var(--k-border)",
-                    background: p.featured ? "var(--k-surface)" : "transparent",
+                    padding: "clamp(22px,2.4vw,30px)",
+                    height: "100%",
                   }}
                 >
                   <span
                     style={{
                       fontFamily: T.mono,
-                      fontSize: "0.7rem",
+                      fontSize: "0.66rem",
                       letterSpacing: "0.1em",
-                      textTransform: "uppercase",
                       color: "var(--k-accent)",
                     }}
                   >
-                    [{p.name}]
+                    {o.n}
                   </span>
-                  <div className="mt-5 flex items-baseline gap-2">
-                    <span
-                      style={{
-                        fontFamily: T.sans,
-                        fontWeight: 800,
-                        fontSize: "clamp(1.7rem,2.6vw,2.3rem)",
-                        letterSpacing: "-0.03em",
-                        textTransform: "uppercase",
-                        color: "var(--k-fg)",
-                      }}
-                    >
-                      {p.price}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: T.mono,
-                        fontSize: "0.74rem",
-                        textTransform: "uppercase",
-                        color: "var(--k-muted)",
-                      }}
-                    >
-                      {p.unit}
-                    </span>
-                  </div>
-                  <p
+                  <h3
                     className="mt-4"
                     style={{
                       fontFamily: T.sans,
+                      fontWeight: 700,
+                      fontSize: "1.05rem",
+                      letterSpacing: "-0.02em",
+                      color: "var(--k-fg)",
+                      margin: 0,
+                    }}
+                  >
+                    {o.title}
+                  </h3>
+                  <p
+                    className="mt-3"
+                    style={{
+                      fontFamily: T.sans,
                       fontSize: "0.9rem",
-                      lineHeight: 1.5,
+                      lineHeight: 1.6,
                       color: "var(--k-muted)",
                     }}
                   >
-                    {p.desc}
+                    {o.body}
                   </p>
-                  <ul
-                    className="mt-6 flex flex-col gap-2.5"
-                    style={{ listStyle: "none", margin: 0, padding: 0 }}
-                  >
-                    {p.points.map((pt) => (
-                      <li
-                        key={pt}
-                        className="flex items-start gap-2.5"
-                        style={{
-                          fontFamily: T.mono,
-                          fontSize: "0.74rem",
-                          letterSpacing: "0.02em",
-                          color: "var(--k-fg)",
-                        }}
-                      >
-                        <span aria-hidden style={{ color: "var(--k-accent)" }}>
-                          ▸
-                        </span>
-                        {pt}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
-              ))}
-            </div>
-          </Reveal>
-          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <BtnPrimary href="/start">Get a tailored plan</BtnPrimary>
-            <span
-              style={{
-                fontFamily: T.mono,
-                fontSize: "0.72rem",
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-                color: "var(--k-muted)",
-              }}
-            >
-              Every build is scoped and quoted to you — no off-the-shelf pricing
-            </span>
+              </Reveal>
+            ))}
           </div>
         </Section>
 
-        {/* ═══════════════ 10 — FAQ (dark) ═══════════════ */}
-        <Section theme="dark" id="faq" pad="lg" topBorder>
-          <div className="grid grid-cols-1 lg:grid-cols-[0.8fr_1.2fr] gap-10 lg:gap-16">
-            <Reveal>
-              <div className="lg:sticky lg:top-28 self-start">
-                <SectionHeader
-                  index="10"
-                  label="FAQ"
-                  title="Everything you need to know"
-                  lead="Can't find your answer? Book a free 15-minute call and we'll answer everything about your business directly."
-                />
-                <div className="mt-8">
-                  <BtnGhost href="/faq" arrow>
-                    All questions
-                  </BtnGhost>
+        {/* ═══════════════ 06 — HOW IT WORKS (cream) ═══════════════ */}
+        <Section theme="cream" id="process" pad="lg" topBorder>
+          <Reveal>
+            <SectionHeader
+              index="06"
+              label="How it works"
+              title="Four steps, and only one of them is yours."
+              lead="You do not need to know what any of it is called. That is our job."
+              maxLead="60ch"
+            />
+          </Reveal>
+          <div
+            className="mt-12 grid grid-cols-1 md:grid-cols-2"
+            style={{
+              borderTop: "1px solid var(--k-border)",
+              borderLeft: "1px solid var(--k-border)",
+            }}
+          >
+            {PROCESS.map((p, i) => (
+              <Reveal key={p.n} delay={i * 0.06}>
+                <div
+                  style={{
+                    borderRight: "1px solid var(--k-border)",
+                    borderBottom: "1px solid var(--k-border)",
+                    padding: "clamp(24px,2.6vw,34px)",
+                    height: "100%",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.66rem",
+                      letterSpacing: "0.1em",
+                      color: "var(--k-accent)",
+                    }}
+                  >
+                    {p.n}
+                  </span>
+                  <h3
+                    className="mt-4"
+                    style={{
+                      fontFamily: T.sans,
+                      fontWeight: 700,
+                      fontSize: "1.15rem",
+                      letterSpacing: "-0.02em",
+                      color: "var(--k-fg)",
+                      margin: 0,
+                    }}
+                  >
+                    {p.title}
+                  </h3>
+                  <p
+                    className="mt-3"
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.94rem",
+                      lineHeight: 1.6,
+                      color: "var(--k-muted)",
+                      maxWidth: "46ch",
+                    }}
+                  >
+                    {p.body}
+                  </p>
                 </div>
-              </div>
-            </Reveal>
-            <Reveal delay={0.08}>
-              <Accordion items={FAQS} defaultOpen={null} />
-            </Reveal>
+              </Reveal>
+            ))}
           </div>
         </Section>
 
@@ -876,18 +436,18 @@ export default function Page() {
         <div style={{ borderTop: "1px solid var(--k-border)" }}>
           <CTABand
             theme="dark"
-            index="11"
-            label="Join the curve"
+            index="07"
+            label="Start here"
             title={
               <>
-                Move your business into the{" "}
-                <span style={{ color: "var(--k-accent)" }}>AI era.</span>
+                Tell us what you do{" "}
+                <span style={{ color: "var(--k-accent)" }}>by hand.</span>
               </>
             }
-            lead="Tell us an idea or just a pain point — under a minute — and we'll show you exactly what we'd automate and what it'd save. No commitment."
-            primary={{ label: "Get my free plan", href: "/start" }}
+            lead="Takes under a minute. We will come back with what we would build, what it would do for you, and what it would cost. No commitment."
+            primary={{ label: "Show me what you'd build", href: "/start" }}
             secondary={{ label: "Book a call", href: "/book" }}
-            note="Response within 24 hours · UK-based, global reach"
+            note="Response within 24 hours · UK-based"
           />
         </div>
       </main>
