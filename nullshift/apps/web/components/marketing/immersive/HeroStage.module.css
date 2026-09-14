@@ -1,0 +1,339 @@
+.hero {
+  position: relative;
+  background: var(--k-bg);
+  color: var(--k-fg);
+  height: 145svh;
+}
+.stage {
+  position: sticky;
+  top: 0;
+  min-height: 820px;
+  height: 100svh;
+  overflow: hidden;
+}
+.art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.zoom {
+  position: absolute;
+  inset: -3%;
+  transform-origin: 45% 54%;
+}
+.pointer {
+  position: absolute;
+  inset: 0;
+  transform: translate(var(--object-x, 0), var(--object-y, 0));
+  transition: transform 0.8s cubic-bezier(0.2, 0.65, 0.3, 1);
+}
+.image {
+  object-fit: cover;
+  object-position: center;
+  transform: translateX(-11%);
+  mask-image: linear-gradient(to right, transparent, #000 12%, #000 87%, transparent);
+}
+.art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      0deg,
+      var(--k-bg),
+      transparent 23%,
+      transparent 85%,
+      rgba(10, 10, 10, 0.35)
+    ),
+    linear-gradient(
+      90deg,
+      rgba(10, 10, 10, 0.22),
+      transparent 35%,
+      transparent 58%,
+      rgba(10, 10, 10, 0.6) 84%
+    );
+}
+.masthead {
+  position: absolute;
+  top: 116px;
+  left: clamp(24px, 4vw, 72px);
+  right: 4vw;
+}
+.masthead > p {
+  margin: 0 0 6px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+.wordmark {
+  font-size: clamp(100px, 15.4vw, 240px);
+  font-weight: 600;
+  letter-spacing: -0.085em;
+  line-height: 0.85;
+}
+.wordmark > span {
+  font-size: 18px;
+  vertical-align: top;
+  display: inline-block;
+  margin: 14px 0 0 24px;
+  letter-spacing: 0;
+}
+.copy {
+  position: absolute;
+  top: 42%;
+  right: clamp(28px, 4vw, 72px);
+  width: clamp(290px, 25vw, 395px);
+}
+.index {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--k-muted);
+}
+.copy h1 {
+  font-size: clamp(30px, 3.1vw, 48px);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  margin: 21px 0;
+}
+.copy h1 em {
+  font-style: normal;
+  color: var(--k-accent);
+}
+.copy > p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--k-muted);
+  margin: 22px 0;
+}
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--k-fg);
+  padding: 15px 0;
+  font-size: 12px;
+  font-weight: 500;
+}
+.cta:hover {
+  color: var(--k-accent);
+  border-color: var(--k-accent);
+}
+.call {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--k-muted);
+  margin-top: 20px;
+}
+.proof {
+  position: absolute;
+  left: clamp(24px, 4vw, 72px);
+  bottom: 125px;
+  width: 240px;
+  border-top: 1px solid var(--k-border-strong);
+  padding-top: 20px;
+}
+.proof > p {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin: 0 0 24px;
+}
+.proof > p > span {
+  color: var(--k-muted);
+}
+.footer {
+  position: absolute;
+  bottom: 28px;
+  left: clamp(24px, 4vw, 72px);
+  right: clamp(24px, 4vw, 72px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+.footer > span {
+  font-size: 8px;
+  color: var(--k-faint);
+}
+.scroll,
+.demo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.scroll {
+  color: var(--k-muted);
+}
+.demo {
+  border: 1px solid var(--k-border-strong);
+  background: rgba(10, 10, 10, 0.4);
+  padding: 17px 20px;
+}
+.demo:hover {
+  border-color: var(--k-accent);
+}
+.hero a:focus-visible {
+  outline: 2px solid var(--k-accent);
+  outline-offset: 5px;
+}
+@media (min-width: 1600px) {
+  .copy {
+    top: 44%;
+  }
+  .image {
+    transform: translateX(-7%);
+  }
+}
+@media (max-width: 1100px) and (min-width: 900px) {
+  .copy {
+    width: 270px;
+    right: 30px;
+  }
+  .proof {
+    width: 200px;
+  }
+  .proof > p {
+    font-size: 16px;
+  }
+  .image {
+    transform: translateX(-15%);
+  }
+}
+@media (max-width: 899px) {
+  .hero {
+    height: auto;
+  }
+  .stage {
+    position: relative;
+    min-height: 1040px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 100px 24px 24px;
+  }
+  .masthead {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    order: 0;
+  }
+  .masthead > p {
+    font-size: 8px;
+    margin-bottom: 12px;
+  }
+  .wordmark {
+    font-size: 20vw;
+  }
+  .wordmark > span {
+    font-size: 10px;
+    margin: 4px 0 0 12px;
+  }
+  .art {
+    top: 155px;
+    height: 420px;
+    bottom: auto;
+  }
+  .zoom {
+    inset: 0;
+  }
+  .image {
+    object-fit: cover;
+    object-position: center;
+    transform: none;
+    mask-image: linear-gradient(0deg, transparent, #000 20%, #000 80%, transparent);
+  }
+  .art::after {
+    background: linear-gradient(
+      90deg,
+      var(--k-bg),
+      transparent 15%,
+      transparent 85%,
+      var(--k-bg)
+    );
+  }
+  .copy {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    margin-top: 385px;
+    order: 1;
+  }
+  .copy h1 {
+    font-size: 42px;
+    margin: 16px 0;
+  }
+  .copy h1 br:first-of-type {
+    display: none;
+  }
+  .copy > p {
+    font-size: 14px;
+    margin: 18px 0;
+  }
+  .index {
+    font-size: 8px;
+  }
+  .cta {
+    font-size: 12px;
+  }
+  .call {
+    margin-top: 18px;
+  }
+  .proof {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    width: auto;
+    order: 2;
+    margin-top: 36px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: space-between;
+    padding-top: 18px;
+  }
+  .proof > p {
+    font-size: 11px;
+    margin: 0;
+  }
+  .footer {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    right: auto;
+    order: 3;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 24px;
+  }
+  .footer > span,
+  .scroll {
+    display: none;
+  }
+  .demo {
+    width: 100%;
+    justify-content: center;
+    padding: 16px;
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    height: auto;
+  }
+  .stage {
+    position: relative;
+  }
+  .pointer {
+    transform: none;
+    transition: none;
+  }
+}

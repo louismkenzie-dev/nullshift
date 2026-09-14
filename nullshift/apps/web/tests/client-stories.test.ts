@@ -118,7 +118,9 @@ describe("validation", () => {
 describe("the facts on record", () => {
   it("only ships numbers we verified", () => {
     const tde = byId("the-dance-exclusive").stats.map((s) => s.value);
-    expect(tde).toEqual(["139", "235", "582", "17"]);
+    // Public site says 14; the earlier internal snapshot says 17. No public
+    // venue-count claim until the active-versus-configured total is confirmed.
+    expect(tde).toEqual(["139", "235", "582", "Essex"]);
     const suffolk = byId("suffolk-tennis").stats.map((s) => s.value);
     expect(suffolk).toEqual(["1,340", "9", "6", "24"]);
     expect(byId("newfuture-therapy").video.muxPlaybackId).toBe(LAURA);

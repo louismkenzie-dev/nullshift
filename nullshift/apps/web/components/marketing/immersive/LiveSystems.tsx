@@ -1,6 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { CLIENT_STORIES } from "@nullshift/content/clientStories";
+import { DeviceFrame } from "@/components/marketing/DeviceFrame";
+import React, { useEffect, useState } from "react";
 import { useSpring, useTrail, animated, config } from "@react-spring/web";
 import { T } from "@nullshift/ui/tokens";
 import { useInView, usePrefersReducedMotion } from "@/lib/motion";
@@ -27,6 +30,7 @@ const mono: React.CSSProperties = {
 
 function Shell({
   client,
+  slug,
   sector,
   title,
   body,
@@ -34,12 +38,14 @@ function Shell({
   children,
 }: {
   client: string;
+  slug: string;
   sector: string;
   title: string;
   body: string;
   status: string;
   children: React.ReactNode;
 }) {
+  const story = CLIENT_STORIES.find((entry) => entry.slug === slug);
   return (
     <div
       className="ns-live"
@@ -95,9 +101,49 @@ function Shell({
         >
           {status}
         </p>
+        <div style={{ marginTop: 24, maxWidth: 300 }}>
+          <p
+            style={{
+              ...mono,
+              fontSize: "0.52rem",
+              color: "var(--k-muted)",
+              marginBottom: 10,
+            }}
+          >
+            Illustrated system behaviour
+          </p>
+          {children}
+        </div>
       </div>
-      <div style={{ minWidth: 0, display: "flex", justifyContent: "center" }}>
-        {children}
+      <div style={{ minWidth: 0 }}>
+        {story?.screenshot && (
+          <figure style={{ margin: "0 0 24px" }}>
+            <DeviceFrame
+              url={story.liveUrl}
+              caption={story.displayUrl}
+              tint={story.brand.primary}
+            >
+              <Image
+                src={story.screenshot.src}
+                alt={story.screenshot.alt}
+                width={story.screenshot.width}
+                height={story.screenshot.height}
+                sizes="(max-width: 900px) 90vw, 45vw"
+                style={{ display: "block", width: "100%", height: "auto" }}
+              />
+            </DeviceFrame>
+            <figcaption
+              style={{
+                ...mono,
+                fontSize: "0.52rem",
+                color: "var(--k-muted)",
+                marginTop: 10,
+              }}
+            >
+              Public website · captured September 2026
+            </figcaption>
+          </figure>
+        )}
       </div>
     </div>
   );
@@ -129,19 +175,23 @@ function Stage({ children, label }: { children: React.ReactNode; label: string }
 
 /* ── Money settling into the studio's own account ───────────────── */
 function MoneyStage({ play }: { play: boolean }) {
+  const reduced = usePrefersReducedMotion();
   const amount = useSpring({
+    immediate: reduced,
     from: { v: 0 },
     to: { v: play ? 133.99 : 0 },
     config: { mass: 1, tension: 90, friction: 26 },
     delay: 180,
   });
   const count = useSpring({
+    immediate: reduced,
     from: { v: 0 },
     to: { v: play ? 274 : 0 },
     config: config.slow,
     delay: 260,
   });
   const bar = useSpring({
+    immediate: reduced,
     from: { w: "0%" },
     to: { w: play ? "100%" : "0%" },
     config: { tension: 60, friction: 22 },
@@ -204,7 +254,9 @@ function MoneyStage({ play }: { play: boolean }) {
 
 /* ── A ticket scanned at the gate ───────────────────────────────── */
 function ScanStage({ play }: { play: boolean }) {
-  const [scanned, setScanned] = useState(false);
+  const reduced = usePrefersReducedMotion();
+  const [didScan, setScanned] = useState(false);
+  const scanned = reduced || didScan;
   useEffect(() => {
     if (!play) return;
     const id = setTimeout(() => setScanned(true), 900);
@@ -212,10 +264,12 @@ function ScanStage({ play }: { play: boolean }) {
   }, [play]);
 
   const ring = useSpring({
+    immediate: reduced,
     to: { scale: scanned ? 1 : 0.7, opacity: scanned ? 1 : 0 },
     config: { tension: 220, friction: 14 },
   });
   const sweep = useSpring({
+    immediate: reduced,
     from: { y: -110 },
     to: { y: play && !scanned ? 110 : -110 },
     loop: play && !scanned,
@@ -321,14 +375,17 @@ function ScanStage({ play }: { play: boolean }) {
 
 /* ── An enquiry sealed before it leaves the page ────────────────── */
 function SealStage({ play }: { play: boolean }) {
+  const reduced = usePrefersReducedMotion();
   const lines = ["Name", "Email", "What brings you here", "Consent to contact"];
   const trail = useTrail(lines.length, {
+    immediate: reduced,
     from: { opacity: 0, x: -14 },
     to: { opacity: play ? 1 : 0, x: play ? 0 : -14 },
     config: config.stiff,
     delay: 200,
   });
   const seal = useSpring({
+    immediate: reduced,
     to: { opacity: play ? 1 : 0, y: play ? 0 : 10 },
     config: config.wobbly,
     delay: 1100,
@@ -384,8 +441,9 @@ export function LiveSystems() {
   return (
     <div ref={ref}>
       <Shell
+        slug="the-dance-exclusive"
         client="The Dance Exclusive"
-        sector="Dance school · nine Essex towns"
+        sector="Dance school · across Essex"
         title="Money that arrives without being chased."
         body="Parents book and pay on their phones. Memberships bill themselves every month. The studio stopped reconciling bank transfers on a Sunday night."
         status="Live · carrying real payments"
@@ -394,6 +452,7 @@ export function LiveSystems() {
       </Shell>
 
       <Shell
+        slug="suffolk-tennis"
         client="Suffolk Tennis"
         sector="LTA county partnership"
         title="A ticket, scanned at the gate."
@@ -404,6 +463,7 @@ export function LiveSystems() {
       </Shell>
 
       <Shell
+        slug="newfuture-therapy"
         client="NewFuture Therapy"
         sector="Counselling practice · Wakefield"
         title="Sealed before it leaves the page."

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useRef } from "react";
-import { motion, useTransform, useReducedMotion } from "framer-motion";
+import { motion, useTransform } from "framer-motion";
+import { usePrefersReducedMotion } from "@/lib/motion";
 import { useScrollProgress } from "./useScrollProgress";
 
 /**
@@ -22,7 +23,7 @@ export function Parallax({
   style?: React.CSSProperties;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
+  const reduce = usePrefersReducedMotion();
   const scrollYProgress = useScrollProgress(ref, ["start end", "end start"]);
   const y = useTransform(
     scrollYProgress,

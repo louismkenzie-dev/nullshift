@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { usePrefersReducedMotion } from "@/lib/motion";
 import { T } from "@nullshift/ui/tokens";
 import { ScrambleText } from "@/components/anim/ScrambleText";
 
@@ -43,10 +44,14 @@ const FAILSAFE_CSS = `
 body[data-intro-lock] {
   overflow: hidden;
   animation: ns-intro-unlock 0.01s linear ${UNLOCK_MS}ms forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-intro-splash] { display: none !important; }
+  body[data-intro-lock] { overflow: visible; animation: none; }
 }`;
 
 export function IntroSplash() {
-  const reduce = useReducedMotion();
+  const reduce = usePrefersReducedMotion();
   const [show, setShow] = useState(true);
 
   // Hold, then begin the exit. Runs once on mount (landing / refresh).
@@ -66,7 +71,7 @@ export function IntroSplash() {
   // an attribute rather than an inline style so the CSS above can release it
   // on its own timeline if we never get the chance to.
   useEffect(() => {
-    if (!show) return;
+    if (!show || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     document.body.setAttribute("data-intro-lock", "");
     return () => {
       document.body.removeAttribute("data-intro-lock");

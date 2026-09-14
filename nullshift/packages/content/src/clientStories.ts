@@ -43,6 +43,14 @@ export interface ClientStory {
   summary: string;
   liveUrl: string | null;
   displayUrl: string;
+  /** Public marketing screenshot; no authenticated customer records. */
+  screenshot?: {
+    src: string;
+    width: number;
+    height: number;
+    alt: string;
+    capturedAt: string;
+  };
   stage: "live" | "care";
   /** ISO month, e.g. "2026-06". */
   liveSince: string;
@@ -75,11 +83,18 @@ export const OWN_SYSTEM_PROOF_LINE =
 export const CLIENT_STORIES: ClientStory[] = [
   {
     slug: "the-dance-exclusive",
+    screenshot: {
+      src: "/clients/the-dance-exclusive-site.png",
+      width: 1440,
+      height: 900,
+      alt: "The Dance Exclusive public website",
+      capturedAt: "2026-09-14",
+    },
     name: "The Dance Exclusive",
     sector: "Dance school · Essex",
     contactFirstName: "Amie",
     summary:
-      "A dance school across 17 Essex venues, now booking, paying and keeping its registers on a system it owns.",
+      "A dance school across Essex, now booking, paying and keeping its registers on a system it owns.",
     liveUrl: "https://app.thedanceexclusive.co.uk",
     displayUrl: "app.thedanceexclusive.co.uk",
     stage: "care",
@@ -97,9 +112,9 @@ export const CLIENT_STORIES: ClientStory[] = [
     brand: { primary: "hsl(193 100% 44%)" },
     beats: {
       had: {
-        title: "Seventeen venues, run by hand",
-        body: "Classes, holiday camps, workshops and parties across 17 venues — booked and tracked by hand, with staff chasing parents for payment and paperwork.",
-        chips: ["17 venues", "Camps · workshops · parties", "Booked by hand"],
+        title: "Multiple venues, run by hand",
+        body: "Classes, holiday camps, workshops and parties across Essex venues — booked and tracked by hand, with staff chasing parents for payment and paperwork.",
+        chips: ["Across Essex", "Camps · workshops · parties", "Booked by hand"],
       },
       built: {
         title: "Three portals, one database",
@@ -127,15 +142,22 @@ export const CLIENT_STORIES: ClientStory[] = [
       { value: "139", label: "Active parents · 30 days" },
       { value: "235", label: "Bookings" },
       { value: "582", label: "Class sessions" },
-      { value: "17", label: "Venues" },
+      { value: "Essex", label: "Multiple venues" },
     ],
     homeCard: {
-      title: "Seventeen venues. One booking system. Zero spreadsheets.",
+      title: "Across Essex. One booking system. Zero spreadsheets.",
       meta: "Client story",
     },
   },
   {
     slug: "newfuture-therapy",
+    screenshot: {
+      src: "/clients/newfuture-therapy-site.png",
+      width: 1440,
+      height: 900,
+      alt: "NewFuture Therapy public website",
+      capturedAt: "2026-09-14",
+    },
     name: "NewFuture Therapy",
     sector: "Counselling practice · Wakefield & online",
     contactFirstName: "Laura",
@@ -145,7 +167,14 @@ export const CLIENT_STORIES: ClientStory[] = [
     displayUrl: "newfuturetherapy.co.uk",
     stage: "live",
     liveSince: "2026-06",
-    logo: { kind: "wordmark", text: "NewFuture", sub: "Therapy", glyph: "leaf" },
+    logo: {
+      kind: "image",
+      src: "/clients/newfuture-therapy-logo.png",
+      darkSrc: "/clients/newfuture-therapy-logo-dark.png",
+      width: 1000,
+      height: 255,
+      alt: "NewFuture Therapy",
+    },
     brand: { primary: "#6B8C6F", accent: "#3A5A40" },
     beats: {
       had: {
@@ -196,6 +225,13 @@ export const CLIENT_STORIES: ClientStory[] = [
   },
   {
     slug: "suffolk-tennis",
+    screenshot: {
+      src: "/clients/suffolk-tennis-site.png",
+      width: 1440,
+      height: 900,
+      alt: "Suffolk Tennis public website",
+      capturedAt: "2026-09-14",
+    },
     name: "Suffolk Tennis LTA",
     sector: "County tennis pathway · Suffolk",
     contactFirstName: "Ollie",

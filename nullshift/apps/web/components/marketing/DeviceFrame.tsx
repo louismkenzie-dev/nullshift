@@ -88,7 +88,7 @@ export function DeviceFrame({
                 whiteSpace: "nowrap",
               }}
             >
-              Open the live product ↗
+              Open site ↗
             </span>
           </a>
         ) : (

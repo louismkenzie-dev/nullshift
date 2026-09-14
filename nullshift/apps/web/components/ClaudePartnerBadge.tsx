@@ -27,10 +27,10 @@ function ClaudeMark({ size = 16 }: { size?: number }) {
         return (
           <line
             key={i}
-            x1={cx + Math.cos(a) * inner}
-            y1={cy + Math.sin(a) * inner}
-            x2={cx + Math.cos(a) * outer}
-            y2={cy + Math.sin(a) * outer}
+            x1={(cx + Math.cos(a) * inner).toFixed(4)}
+            y1={(cy + Math.sin(a) * inner).toFixed(4)}
+            x2={(cx + Math.cos(a) * outer).toFixed(4)}
+            y2={(cy + Math.sin(a) * outer).toFixed(4)}
             stroke={CLAUDE_ORANGE}
             strokeWidth={width}
             strokeLinecap="round"

@@ -1,0 +1,135 @@
+.reel {
+  background: var(--k-bg);
+  color: var(--k-fg);
+  padding: clamp(56px, 8vw, 120px) clamp(24px, 5vw, 80px);
+  border-top: 1px solid var(--k-border);
+}
+.top {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--k-muted);
+  margin-bottom: 55px;
+}
+.top a {
+  color: var(--k-accent);
+}
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  align-items: center;
+  gap: clamp(30px, 5vw, 80px);
+}
+.copy h2 {
+  font-size: clamp(36px, 4.2vw, 68px);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  font-weight: 500;
+  margin: 0 0 24px;
+}
+.copy em {
+  font-style: normal;
+  color: var(--k-accent);
+}
+.copy > p {
+  font-size: 14px;
+  line-height: 1.55;
+  max-width: 29ch;
+  color: var(--k-muted);
+}
+.choices {
+  margin-top: 35px;
+}
+.choices button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  text-align: left;
+  padding: 17px 0;
+  border-top: 1px solid var(--k-border);
+  color: var(--k-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.choices button > span:first-child {
+  font-size: 9px;
+}
+.choices button > span:last-child {
+  margin-left: auto;
+}
+.choices button[aria-pressed="true"] {
+  color: var(--k-accent);
+}
+.figure {
+  min-width: 0;
+  margin: 0;
+}
+.clip {
+  position: relative;
+  border: 1px solid var(--k-border-strong);
+  background: var(--k-surface);
+  aspect-ratio: 1100/680;
+}
+.clip video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1100/680;
+}
+.playback {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  background: var(--k-fg);
+  color: var(--k-bg);
+  padding: 9px 12px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.figure figcaption {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--k-muted);
+  margin-top: 18px;
+}
+.figure figcaption span {
+  display: block;
+  font-size: 9px;
+  color: var(--k-faint);
+  margin-top: 9px;
+}
+.reel button:focus-visible,
+.reel a:focus-visible {
+  outline: 2px solid var(--k-accent);
+  outline-offset: 5px;
+}
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .top {
+    font-size: 8px;
+    line-height: 1.5;
+    gap: 10px;
+    margin-bottom: 35px;
+  }
+  .copy h2 {
+    font-size: 48px;
+  }
+  .copy h2 br {
+    display: none;
+  }
+  .choices {
+    margin-top: 24px;
+  }
+  .copy > p {
+    max-width: none;
+  }
+  .playback {
+    bottom: 8px;
+    right: 8px;
+  }
+}

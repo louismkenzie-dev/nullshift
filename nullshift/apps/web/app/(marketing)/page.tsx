@@ -2,27 +2,15 @@ import type { Metadata } from "next";
 import React from "react";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { Parallax } from "@/components/Parallax";
-import { NeuralField } from "@/components/NeuralField";
 import { ClipReveal } from "@/components/anim/ClipReveal";
-import { ClaudePartnerBadge } from "@/components/ClaudePartnerBadge";
-import {
-  Reveal,
-  Section,
-  Container,
-  SectionHeader,
-  BtnGhost,
-  BarButton,
-  TextLink,
-  Watermark,
-  CTABand,
-} from "@/components/kyma";
+import { Reveal, Section, SectionHeader, TextLink, CTABand } from "@/components/kyma";
 import { T } from "@nullshift/ui/tokens";
 import { OWN_SYSTEM_PROOF_LINE } from "@nullshift/content/clientStories";
 import { StepReveal } from "@/components/marketing/StepReveal";
 import { HeroStage } from "@/components/marketing/immersive/HeroStage";
 import { SystemAssembly } from "@/components/marketing/immersive/SystemAssembly";
 import { LiveSystems } from "@/components/marketing/immersive/LiveSystems";
+import { DemoReel } from "@/components/marketing/immersive/DemoReel";
 import {
   ScreenBook,
   ScreenPaid,
@@ -93,20 +81,6 @@ const PROCESS = [
   },
 ];
 
-/* Hero headline line. Uppercase at weight 500 and line-height 0.9 with no
-   negative tracking, so the caps stack as one sculptural block rather than
-   sitting as three separate lines — the whole signature of the look. */
-const heroLine: React.CSSProperties = {
-  display: "block",
-  fontFamily: T.sans,
-  fontWeight: 500,
-  fontSize: "clamp(2.4rem,6.6vw,5rem)",
-  lineHeight: 0.9,
-  letterSpacing: "normal",
-  textTransform: "uppercase",
-  color: "var(--k-fg)",
-};
-
 /* ════════════════════════════════════════════════════════════════ */
 
 export default function Home() {
@@ -115,65 +89,7 @@ export default function Home() {
       <Nav />
       <main>
         {/* ═══════════════ HERO (dark) ═══════════════ */}
-        <section
-          className="k-dark relative overflow-hidden"
-          style={{ background: "var(--k-bg)", color: "var(--k-fg)" }}
-        >
-          <NeuralField className="absolute inset-0" style={{ zIndex: 0 }} />
-          <Parallax
-            distance={-28}
-            className="pointer-events-none absolute inset-0"
-            style={{ zIndex: 1 }}
-          >
-            <div
-              className="k-vgrid absolute inset-0"
-              style={{
-                opacity: 0.4,
-                WebkitMaskImage: "linear-gradient(180deg,#000,transparent 82%)",
-                maskImage: "linear-gradient(180deg,#000,transparent 82%)",
-              }}
-            />
-          </Parallax>
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{
-              zIndex: 1,
-              background:
-                "radial-gradient(125% 95% at 50% 0%, transparent 28%, var(--k-bg) 94%)",
-            }}
-          />
-          <Container
-            style={{
-              minHeight: "100svh",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              paddingTop: "clamp(116px,15vh,168px)",
-              paddingBottom: "clamp(56px,9vh,104px)",
-              position: "relative",
-              zIndex: 2,
-            }}
-          >
-            <HeroStage />
-
-            <div className="mt-12 flex flex-col gap-4" style={{ maxWidth: 460 }}>
-              <BarButton href="/start" meta="60 sec">
-                Show me what you&apos;d build
-              </BarButton>
-              <div className="flex flex-wrap items-center gap-3">
-                <BtnGhost href="/book" size="sm">
-                  Book a call
-                </BtnGhost>
-                <ClaudePartnerBadge />
-              </div>
-            </div>
-
-            <Parallax distance={42} className="mt-8 overflow-hidden">
-              <Watermark>Nullshift</Watermark>
-            </Parallax>
-          </Container>
-        </section>
+        <HeroStage />
 
         <SystemAssembly />
 
@@ -212,7 +128,7 @@ export default function Home() {
                 maxWidth: "18ch",
               }}
             >
-              Abstract is easy. Here is a real one.
+              One booking. Everything connected.
             </h2>
           </ClipReveal>
           <Reveal delay={0.14}>
@@ -227,9 +143,9 @@ export default function Home() {
                 maxWidth: "36ch",
               }}
             >
-              This one happens to be a school taking bookings. Yours might be jobs,
-              orders, patients, members, stock or something nobody has built before. The
-              shape holds; the parts change.
+              Try a fictional studio taking bookings. Yours might be jobs, orders,
+              patients, members, stock or something nobody has built before. The shape
+              holds; the parts change.
             </p>
           </Reveal>
           <Reveal delay={0.2}>
@@ -243,10 +159,12 @@ export default function Home() {
                 color: "var(--k-faint)",
               }}
             >
-              Scroll &#8595;
+              <TextLink href="/demo">Try the interactive demo ↗</TextLink>
             </p>
           </Reveal>
         </Section>
+
+        <DemoReel />
 
         <StepReveal
           index="01"
