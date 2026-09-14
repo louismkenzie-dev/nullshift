@@ -451,6 +451,8 @@ export default function AboutPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/louis-mckenzie.jpg"
+                  loading="lazy"
+                  decoding="async"
                   alt="Louis McKenzie — Founder & Lead Developer of Nullshift"
                   className="absolute inset-0 w-full h-full object-cover"
                   style={{ objectPosition: "center 25%" }}

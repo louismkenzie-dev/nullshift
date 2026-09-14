@@ -72,7 +72,7 @@ export function DeviceFrame({
             rel="noopener noreferrer"
             className="group ml-1 flex min-w-0 flex-1 items-center gap-3"
             style={{ textDecoration: "none" }}
-            aria-label={`Visit ${caption} — opens in a new tab`}
+            aria-label={`${caption} — Open site ↗ (opens in a new tab)`}
           >
             {address}
             <span

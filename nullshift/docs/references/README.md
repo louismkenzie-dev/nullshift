@@ -99,6 +99,9 @@ ORYZO's models/videos:
 Passed locally: `pnpm typecheck`, 428 Vitest tests across 35 files, ESLint on every
 changed TS/TSX file, and `pnpm --filter @nullshift/web build` (including legal guard).
 Vite prints its existing future-config warning about `__dirname`; tests pass.
+After adding the closed-menu accessibility fix, lint also reports the three existing
+Nav state-in-effect warnings; there are no lint errors. Those lifecycle behaviours
+were not refactored as part of a one-line focusability fix.
 
 Production-build browser matrix: Chromium 1440px, Chromium 390px, Chromium reduced
 motion, WebKit 1440px, WebKit 390px reduced motion. Checks include visible hero,
@@ -128,6 +131,8 @@ to the deployment report; do not confuse the local build with deployed performan
 Paths below are relative to the monorepo `nullshift/` directory.
 
 - `apps/web/app/(marketing)/page.tsx`: new hero, fictional demo positioning/reel.
+- `apps/web/app/(marketing)/about/page.tsx`: lazily load the below-fold portrait;
+  React's automatic preload was fetching this 2.2MB image during homepage route prefetch.
 - `apps/web/app/demo/page.tsx`: standalone noindex playground route.
 - `apps/web/components/marketing/immersive/HeroStage.tsx`, `HeroStage.module.css`:
   object-led layout, responsive/static fallback and scoped scroll animation.
@@ -139,6 +144,7 @@ Paths below are relative to the monorepo `nullshift/` directory.
 - `apps/web/components/marketing/immersive/LiveSystems.tsx`: real public screenshots
   alongside retained illustrated behaviours; reduced-motion spring handling.
 - `apps/web/components/marketing/DeviceFrame.tsx`: shorter address-bar link label.
+- `apps/web/components/Nav.tsx`: closed menu is inert, removing hidden keyboard targets.
 - `apps/web/components/ClaudePartnerBadge.tsx`: stable SVG coordinate precision.
 - `apps/web/components/IntroSplash.tsx`, `Parallax.tsx`: reduced-motion hydration fixes.
 - `packages/content/src/clientStories.ts`: screenshot metadata, real NewFuture logo,

@@ -69,7 +69,8 @@ export function HeroStage() {
                 alt=""
                 fill
                 sizes="100vw"
-                preload
+                loading="eager"
+                fetchPriority="high"
                 className={styles.image}
               />
             </div>

@@ -289,6 +289,7 @@ export function Nav({ tone = "dark" }: { tone?: "dark" | "cream" } = {}) {
           pointerEvents: open ? "auto" : "none",
         }}
         aria-hidden={!open}
+        inert={!open}
       >
         {/* Left panel — dark info card (desktop only) */}
         <div
