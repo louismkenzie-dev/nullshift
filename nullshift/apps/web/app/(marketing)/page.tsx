@@ -10,8 +10,6 @@ import {
   Reveal,
   Section,
   Container,
-  Eyebrow,
-  Lead,
   SectionHeader,
   BtnGhost,
   BarButton,
@@ -20,10 +18,11 @@ import {
   CTABand,
 } from "@/components/kyma";
 import { T } from "@nullshift/ui/tokens";
-import { CLIENT_STORIES, OWN_SYSTEM_PROOF_LINE } from "@nullshift/content/clientStories";
-import { StoryCard } from "@/components/marketing/StoryCard";
-import { storyHref } from "@/lib/clientStories";
+import { OWN_SYSTEM_PROOF_LINE } from "@nullshift/content/clientStories";
 import { StepReveal } from "@/components/marketing/StepReveal";
+import { HeroStage } from "@/components/marketing/immersive/HeroStage";
+import { SystemAssembly } from "@/components/marketing/immersive/SystemAssembly";
+import { LiveSystems } from "@/components/marketing/immersive/LiveSystems";
 import {
   ScreenBook,
   ScreenPaid,
@@ -34,9 +33,9 @@ import {
 import { BeforeAfter } from "@/components/marketing/BeforeAfter";
 
 export const metadata: Metadata = {
-  title: "Nullshift — We build the system your business runs on",
+  title: "Nullshift — We build anything your business needs",
   description:
-    "Bookings, payments, registers, records and the messages that go home — one system built around how your business actually works. You own it outright, and we run it for you.",
+    "Bespoke business systems, designed and built around how you actually work — bookings, payments, records, people, stock, jobs. Beautiful to use, yours to own, and we run it for you.",
   alternates: { canonical: "/" },
 };
 
@@ -156,63 +155,19 @@ export default function Home() {
               zIndex: 2,
             }}
           >
-            <Reveal>
-              <Eyebrow index="01" label="Custom business systems" />
-            </Reveal>
+            <HeroStage />
 
-            {/* No width cap here: `ch` on this wrapper resolves against the
-                body font size, not the headline's, so a cap measured in ch
-                collapses to a couple of hundred pixels — and ClipReveal's
-                overflow:hidden then slices the words rather than wrapping
-                them. The headline is sized by its own clamp instead. */}
-            <div className="mt-6">
-              <h1 style={{ margin: 0 }}>
-                <ClipReveal delay={0.05}>
-                  <span style={heroLine}>We build the system</span>
-                </ClipReveal>
-                <ClipReveal delay={0.18}>
-                  <span style={heroLine}>
-                    your business runs{" "}
-                    <span style={{ color: "var(--k-accent)" }}>by hand</span>.
-                  </span>
-                </ClipReveal>
-              </h1>
-            </div>
-
-            <Reveal delay={0.1}>
-              <Lead
-                className="mt-12"
-                style={{
-                  maxWidth: "34ch",
-                  fontSize: "clamp(1.05rem,1.7vw,1.5rem)",
-                  lineHeight: 1.26,
-                  color: "var(--k-fg)",
-                }}
-              >
-                Your customers book and pay online. Your staff get a register on their
-                phone. The confirmations, reminders and reports send themselves. It is one
-                system, built around how you actually work — and you own it outright.
-              </Lead>
-            </Reveal>
-
-            <Reveal delay={0.16}>
-              <div className="mt-9" style={{ maxWidth: 460 }}>
-                <BarButton href="/start" meta="60 sec">
-                  Show me what you&apos;d build
-                </BarButton>
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="mt-12 flex flex-col gap-4" style={{ maxWidth: 460 }}>
+              <BarButton href="/start" meta="60 sec">
+                Show me what you&apos;d build
+              </BarButton>
+              <div className="flex flex-wrap items-center gap-3">
                 <BtnGhost href="/book" size="sm">
                   Book a call
                 </BtnGhost>
-              </div>
-            </Reveal>
-
-            <Reveal delay={0.24}>
-              <div className="mt-10">
                 <ClaudePartnerBadge />
               </div>
-            </Reveal>
+            </div>
 
             <Parallax distance={42} className="mt-8 overflow-hidden">
               <Watermark>Nullshift</Watermark>
@@ -220,13 +175,15 @@ export default function Home() {
           </Container>
         </section>
 
-        {/* ═══════════════ 02 — WHAT WE BUILD (statement) ═══════════════ */}
+        <SystemAssembly />
+
+        {/* ═══════════════ 03 — ONE EXAMPLE, END TO END ═══════════════ */}
         <Section
           theme="dark"
           id="capabilities"
           pad="lg"
           topBorder
-          style={{ minHeight: "72svh", display: "flex", alignItems: "center" }}
+          style={{ minHeight: "70svh", display: "flex", alignItems: "center" }}
         >
           <Reveal>
             <span
@@ -238,7 +195,7 @@ export default function Home() {
                 color: "var(--k-accent)",
               }}
             >
-              [02] What we build
+              [03] One example, end to end
             </span>
           </Reveal>
           <ClipReveal delay={0.06} className="mt-8">
@@ -252,10 +209,10 @@ export default function Home() {
                 letterSpacing: "normal",
                 textTransform: "uppercase",
                 color: "var(--k-fg)",
-                maxWidth: "16ch",
+                maxWidth: "18ch",
               }}
             >
-              One system. Five things it does.
+              Abstract is easy. Here is a real one.
             </h2>
           </ClipReveal>
           <Reveal delay={0.14}>
@@ -267,11 +224,12 @@ export default function Home() {
                 fontSize: "clamp(1.05rem,1.7vw,1.5rem)",
                 lineHeight: 1.26,
                 color: "var(--k-fg)",
-                maxWidth: "34ch",
+                maxWidth: "36ch",
               }}
             >
-              Most businesses we meet hold this chain together with a spreadsheet, a
-              WhatsApp group and a bank transfer. Here it is, one screen at a time.
+              This one happens to be a school taking bookings. Yours might be jobs,
+              orders, patients, members, stock or something nobody has built before. The
+              shape holds; the parts change.
             </p>
           </Reveal>
           <Reveal delay={0.2}>
@@ -285,17 +243,17 @@ export default function Home() {
                 color: "var(--k-faint)",
               }}
             >
-              Scroll ↓
+              Scroll &#8595;
             </p>
           </Reveal>
         </Section>
 
         <StepReveal
           index="01"
-          kicker="They book"
+          kicker="Someone asks for something"
           heading="On their phone. At ten at night."
-          body="Your customer picks the class, the session or the appointment themselves, on your own website — and nobody has to ring you back in the morning."
-          aside="Live spaces · every way you price it · no app to download"
+          body="A booking, an appointment, a quote, an order — whatever your version is, they do it themselves, and nobody has to ring them back in the morning."
+          aside="Example shown — a class booking"
           screen={<ScreenBook />}
         />
 
@@ -303,110 +261,92 @@ export default function Home() {
           index="02"
           kicker="You get paid"
           heading="Before they leave the page."
-          body="The card is charged the moment they book, and the money settles into your own bank account. No invoice to raise, no transfer to chase on a Sunday night."
-          aside="One-offs · memberships · termly · deposits"
+          body="The card is charged there and then, and the money settles into your own account. No invoice to raise, no transfer to chase on a Sunday night."
+          aside="One-offs · subscriptions · deposits · staged payments"
           screen={<ScreenPaid />}
         />
 
         <StepReveal
           index="03"
-          kicker="You see who is coming"
-          heading="Who is in the room. Who has paid."
-          body="Every booking lands on one screen, always current. The question that used to take three tabs and a phone call now takes a glance."
-          aside="One screen · never out of date"
+          kicker="Your team sees it"
+          heading="One screen. Always right."
+          body="Everything that has come in lands in one place, current to the second. The question that used to take three tabs and a phone call now takes a glance."
+          aside="Built around your words, not a template's"
           screen={<ScreenTonight />}
         />
 
         <StepReveal
           index="04"
-          kicker="The register gets marked"
+          kicker="The work gets recorded"
           heading="A thumb. Not a clipboard."
-          body="Staff tap each name as people arrive. Allergies, medical notes and who is allowed to collect a child sit on the row, in front of whoever is teaching."
-          aside="Safeguarding flags · authorised collectors · QR check-in"
+          body="Whoever is doing the work records it as it happens, on a phone — and the things that matter are right there on the row instead of in somebody's head."
+          aside="Example shown — a register with safeguarding flags"
           screen={<ScreenRegister />}
         />
 
         <StepReveal
           index="05"
-          kicker="The message goes home"
+          kicker="Everyone gets told"
           heading="Sent by nobody. Proven anyway."
-          body="Confirmations, reminders and reports send themselves — and each one records whether it actually arrived, so nobody can say they were never told."
+          body="Confirmations, reminders, receipts and reports send themselves — and each one records whether it actually arrived, so nobody can say they were never told."
           aside="Delivery tracked · bounces caught · no one presses send"
           screen={<ScreenMessage />}
         />
 
-        <Section theme="dark" pad="lg" topBorder>
+        {/* ═══════════════ 04 — LIVE SYSTEMS ═══════════════ */}
+        <Section theme="dark" id="stories" pad="lg" topBorder>
           <Reveal>
+            <span
+              style={{
+                fontFamily: T.mono,
+                fontSize: "0.66rem",
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "var(--k-accent)",
+              }}
+            >
+              [04] Running right now
+            </span>
+          </Reveal>
+          <ClipReveal delay={0.06} className="mt-8">
+            <h2
+              style={{
+                margin: 0,
+                fontFamily: T.sans,
+                fontWeight: 500,
+                fontSize: "clamp(2rem,5vw,3.6rem)",
+                lineHeight: 0.9,
+                letterSpacing: "normal",
+                textTransform: "uppercase",
+                color: "var(--k-fg)",
+                maxWidth: "18ch",
+              }}
+            >
+              Three businesses. Nothing alike.
+            </h2>
+          </ClipReveal>
+          <Reveal delay={0.14}>
             <p
+              className="mt-10"
               style={{
                 fontFamily: T.sans,
                 fontWeight: 400,
                 fontSize: "clamp(1.05rem,1.7vw,1.5rem)",
                 lineHeight: 1.26,
                 color: "var(--k-fg)",
-                maxWidth: "40ch",
+                maxWidth: "36ch",
               }}
             >
-              Not every business is classes and registers. Swap the words and the shape is
-              the same — appointments, memberships, enquiries, orders, courses. If the
-              same people come back to you, we can build it.
+              A dance school, a county tennis body and a counselling practice. Same
+              studio, three systems that share nothing but the care that went into them.
             </p>
           </Reveal>
-          <Reveal delay={0.08}>
-            <p
-              className="mt-8"
-              style={{
-                fontFamily: T.mono,
-                fontSize: "0.64rem",
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "var(--k-faint)",
-              }}
-            >
-              * Screens illustrate the flow — yours are built around your business
-            </p>
-          </Reveal>
-        </Section>
-
-        {/* ═══════════════ 03 — BEFORE / AFTER (dark) ═══════════════ */}
-        <Section theme="dark" id="problem" pad="lg" topBorder>
-          <Reveal>
-            <SectionHeader
-              index="03"
-              label="What changes"
-              title="The jobs that stop being yours."
-              lead="Every client we have taken on arrived running on the same three things: a spreadsheet, WhatsApp and manual bank transfers. This is what happened to the work."
-              maxLead="64ch"
-            />
-          </Reveal>
-          <Reveal delay={0.08}>
-            <div className="mt-12">
-              <BeforeAfter />
-            </div>
-          </Reveal>
-        </Section>
-
-        {/* ═══════════════ 04 — CLIENT STORIES (cream) ═══════════════ */}
-        <Section theme="cream" id="stories" pad="lg" topBorder>
-          <Reveal>
-            <SectionHeader
-              index="04"
-              label="Systems we have built"
-              title="Three real businesses. Three systems they own."
-              lead="A dance school across nine Essex towns, a county tennis organisation, and a counselling practice. Different work, same problem underneath."
-              maxLead="64ch"
-            />
-          </Reveal>
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {CLIENT_STORIES.map((story, i) => (
-              <Reveal key={story.slug} delay={i * 0.07}>
-                <StoryCard story={story} href={storyHref(story)} theme="cream" />
-              </Reveal>
-            ))}
+          <div className="mt-4">
+            <LiveSystems />
           </div>
-          <Reveal delay={0.2}>
+          <Reveal delay={0.1}>
             <div
-              className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
+              className="mt-10 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
               style={{
                 border: "1px solid var(--k-border)",
                 background: "var(--k-surface)",
@@ -427,16 +367,34 @@ export default function Home() {
                 </span>
                 {OWN_SYSTEM_PROOF_LINE}
               </span>
-              <TextLink href="/about">How we run</TextLink>
+              <TextLink href="/client-stories">All three stories</TextLink>
             </div>
           </Reveal>
         </Section>
 
-        {/* ═══════════════ 05 — WHAT YOU OWN (dark) ═══════════════ */}
-        <Section theme="dark" id="why" pad="lg" topBorder>
+        {/* ═══════════════ 05 — BEFORE / AFTER (dark) ═══════════════ */}
+        <Section theme="dark" id="problem" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
               index="05"
+              label="What changes"
+              title="The jobs that stop being yours."
+              lead="Every client we have taken on arrived running on the same three things: a spreadsheet, WhatsApp and manual bank transfers. This is what happened to the work."
+              maxLead="64ch"
+            />
+          </Reveal>
+          <Reveal delay={0.08}>
+            <div className="mt-12">
+              <BeforeAfter />
+            </div>
+          </Reveal>
+        </Section>
+
+        {/* ═══════════════ 06 — WHAT YOU OWN (cream) ═══════════════ */}
+        <Section theme="dark" id="why" pad="lg" topBorder>
+          <Reveal>
+            <SectionHeader
+              index="06"
               label="What you own"
               title="It is yours. Not rented from us."
               lead="Booking platforms keep your customers, your data and a slice of your money, and you stop paying the day you stop using them. This is the opposite arrangement."
@@ -504,7 +462,7 @@ export default function Home() {
         <Section theme="cream" id="process" pad="lg" topBorder>
           <Reveal>
             <SectionHeader
-              index="06"
+              index="07"
               label="How it works"
               title="Four steps, and only one of them is yours."
               lead="You do not need to know what any of it is called. That is our job."
@@ -573,7 +531,7 @@ export default function Home() {
         <div style={{ borderTop: "1px solid var(--k-border)" }}>
           <CTABand
             theme="dark"
-            index="07"
+            index="08"
             label="Start here"
             title={
               <>
