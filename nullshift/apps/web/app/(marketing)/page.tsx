@@ -147,7 +147,12 @@ export default function Home() {
               <Eyebrow index="01" label="Custom business systems" />
             </Reveal>
 
-            <div className="mt-6" style={{ maxWidth: "22ch" }}>
+            {/* No width cap here: `ch` on this wrapper resolves against the
+                body font size, not the headline's, so a cap measured in ch
+                collapses to a couple of hundred pixels — and ClipReveal's
+                overflow:hidden then slices the words rather than wrapping
+                them. The headline is sized by its own clamp instead. */}
+            <div className="mt-6">
               <h1 style={{ margin: 0 }}>
                 <ClipReveal delay={0.05}>
                   <span style={heroLine}>We build the system</span>
