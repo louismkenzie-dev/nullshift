@@ -4,6 +4,7 @@ import { requireStaff } from "@nullshift/auth/guards";
 import { createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { PREVIEW_COOKIE } from "@/lib/clientPreview";
+import { safePreviewTarget } from "@/lib/previewTarget";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,10 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: tenantId } = await params;
+  // Optional landing page, so a staff member previewing from the care plan
+  // screen arrives on the plan chooser rather than the portal front door.
+  // Allowlisted — see lib/previewTarget: an unchecked ?to= is an open redirect.
+  const target = safePreviewTarget(new URL(req.url).searchParams.get("to"));
   // Relative to the request, never NEXT_PUBLIC_SITE_URL: on a Vercel preview
   // deployment that env var points at production, and a staff member clicking
   // "view as client" on a preview build would be thrown out to the live site.
@@ -62,11 +67,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     action: "client_preview.started",
     target: `tenant:${tenantId}`,
     tenantId,
-    metadata: { staff: staff.email, via: "link" },
+    metadata: { staff: staff.email, via: "link", target },
   });
 
   // A fresh document every time — never a cached portal frame.
-  const res = NextResponse.redirect(new URL("/portal", base));
+  const res = NextResponse.redirect(new URL(target, base));
   res.headers.set("Cache-Control", "no-store");
   return res;
 }
