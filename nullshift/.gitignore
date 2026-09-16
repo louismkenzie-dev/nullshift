@@ -24,6 +24,8 @@ dist/
 
 # misc
 .DS_Store
+# Licensed mockup exports and fictional capture assets: local prototype only.
+.local-showcase/
 *.pem
 
 # debug
