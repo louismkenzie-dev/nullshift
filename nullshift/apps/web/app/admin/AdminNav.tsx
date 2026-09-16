@@ -76,6 +76,7 @@ const groups: NavGroup[] = [
     items: [
       { label: "Pipeline", href: "/admin/pipeline", Icon: Funnel },
       { label: "Billing", href: "/admin/billing", Icon: Receipt },
+      { label: "Economics", href: "/admin/economics", Icon: LayoutDashboard },
     ],
   },
   {
