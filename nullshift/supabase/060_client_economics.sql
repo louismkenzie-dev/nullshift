@@ -56,6 +56,8 @@ create table if not exists public.quote_assessments (
 
 create index if not exists quote_assessments_created_idx
   on public.quote_assessments(created_at desc);
+create index if not exists quote_assessments_tenant_idx
+  on public.quote_assessments(tenant_id);
 alter table public.quote_assessments enable row level security;
 revoke all on public.quote_assessments from anon, authenticated;
 
