@@ -9,13 +9,14 @@ import {
   dampProgress,
   parentFrame,
   PARENT_CHAPTERS,
+  showcaseAsset,
 } from "@/lib/showcasePrototype";
 import styles from "./ShowcasePrototype.module.css";
 
-const asset = (name: string) => `/showcase-prototype/assets/${name}?v=2`;
 const clips = ["parent-home", "parent-report"];
 
-export function ParentHubShowcase() {
+export function ParentHubShowcase({ embedded = false }: { embedded?: boolean }) {
+  const asset = (name: string) => showcaseAsset(name, embedded);
   const story = useRef<HTMLElement>(null);
   const camera = useRef<HTMLDivElement>(null);
   const videos = useRef<(HTMLVideoElement | null)[]>([]);

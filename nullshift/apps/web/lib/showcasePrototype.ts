@@ -25,6 +25,13 @@ export function showcaseEnabled(
 
 export const clamp = (value: number, low = 0, high = 1) =>
   Math.min(high, Math.max(low, value));
+
+/** Finished fictional exports only; original captures and PSDs stay private. */
+export function showcaseAsset(name: string, embedded = false) {
+  return embedded
+    ? `/media/client-stories/suffolk-tennis/${name.replace(/\.png$/, ".webp")}`
+    : `/showcase-prototype/assets/${name}?v=2`;
+}
 export const smooth = (value: number) => {
   const x = clamp(value);
   return x * x * (3 - 2 * x);

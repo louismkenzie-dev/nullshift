@@ -1,0 +1,206 @@
+.hero {
+  height: calc(100svh + 2400px);
+  position: relative;
+  background: #030605;
+  color: #f2f4f0;
+  --title-opacity: 1;
+  --title-blur: 0px;
+  --title-lift: 0px;
+  --closing-opacity: 0;
+  --film-scale: 1;
+  --progress: 0;
+}
+.scene {
+  height: 100svh;
+  min-height: 420px;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+.film {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(var(--film-scale));
+  opacity: 0.8;
+}
+.shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #03060566 0%, #03060533 40%, #03060599 100%);
+}
+.title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 90px 24px;
+  opacity: var(--title-opacity);
+  filter: blur(var(--title-blur));
+  transform: translateY(var(--title-lift));
+  pointer-events: none;
+}
+.eyebrow {
+  font:
+    500 10px/1.5 var(--font-mono),
+    monospace;
+  letter-spacing: 0.21em;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+.title h1 {
+  font-size: clamp(30px, 7vw, 96px);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+  text-shadow: 0 2px 36px #0008;
+}
+.closing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 32px;
+  padding: 100px 24px;
+  opacity: var(--closing-opacity);
+}
+.closing p {
+  font-size: clamp(40px, 5.7vw, 78px);
+  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+}
+.closing em {
+  color: #62dbaf;
+  font-style: normal;
+}
+.closing a {
+  font-size: 13px;
+  letter-spacing: 0.015em;
+  padding: 12px 0;
+  border-bottom: 1px solid #f2f4f077;
+}
+.closing a span {
+  margin-left: 20px;
+}
+.bottom {
+  position: absolute;
+  bottom: 38px;
+  left: 5vw;
+  right: 5vw;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  font:
+    500 10px/1.5 var(--font-mono),
+    monospace;
+  letter-spacing: 0.12em;
+}
+.scrollHint {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  opacity: calc(1 - var(--progress));
+}
+.scrollHint span {
+  font-size: 23px;
+}
+.skip {
+  padding: 10px 0;
+  color: #ffffffbb;
+}
+.progress {
+  position: absolute;
+  bottom: 0;
+  height: 2px;
+  left: 0;
+  right: 0;
+  background: #10b981;
+  transform: scaleX(var(--progress));
+  transform-origin: left;
+}
+.hero a:focus-visible {
+  outline: 2px solid #62dbaf;
+  outline-offset: 8px;
+}
+.hero[data-motion="reduced"],
+.hero[data-failed="true"] {
+  height: auto;
+}
+.hero[data-motion="reduced"] .scene,
+.hero[data-failed="true"] .scene {
+  height: auto;
+  min-height: 100svh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 120px 24px;
+  gap: 36px;
+}
+.hero[data-motion="reduced"] .title,
+.hero[data-failed="true"] .title,
+.hero[data-motion="reduced"] .closing,
+.hero[data-failed="true"] .closing {
+  position: relative;
+  inset: auto;
+  opacity: 1;
+  filter: none;
+  transform: none;
+  padding: 0;
+}
+.hero[data-motion="reduced"] .closing p,
+.hero[data-failed="true"] .closing p {
+  font-size: 26px;
+}
+.hero[data-motion="reduced"] .scrollHint,
+.hero[data-failed="true"] .scrollHint {
+  visibility: hidden;
+}
+@media (max-width: 600px) {
+  .hero {
+    height: calc(100svh + 1800px);
+  }
+  .title h1 {
+    font-size: clamp(36px, 10vw, 60px);
+    max-width: 340px;
+  }
+  .eyebrow {
+    font-size: 8px;
+    letter-spacing: 0.14em;
+  }
+  .bottom {
+    bottom: 25px;
+    font-size: 8px;
+  }
+  .closing p {
+    font-size: 48px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    height: 100svh;
+  }
+  .film {
+    transform: none;
+  }
+  .title {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+  .progress {
+    display: none;
+  }
+}

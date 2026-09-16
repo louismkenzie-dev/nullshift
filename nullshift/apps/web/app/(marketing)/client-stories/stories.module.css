@@ -1,0 +1,133 @@
+.page {
+  background: #f3f3e9;
+  color: #292d1c;
+}
+.cover {
+  min-height: 100svh;
+  padding: 140px max(6vw, 24px) 44px;
+  display: flex;
+  flex-direction: column;
+}
+.eyebrow {
+  font:
+    500 11px/1.5 var(--font-mono),
+    monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+.cover h1 {
+  font-size: clamp(88px, 15vw, 220px);
+  line-height: 0.87;
+  font-weight: 500;
+  letter-spacing: -0.075em;
+  margin: auto 0;
+  padding: 65px 0;
+}
+.cover h1 em {
+  font-family: Georgia, serif;
+  font-weight: 400;
+  color: #616b3c;
+}
+.coverFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 32px;
+}
+.coverFooter p {
+  font-size: clamp(16px, 1.6vw, 23px);
+  line-height: 1.5;
+}
+.coverFooter a {
+  display: flex;
+  gap: 50px;
+  align-items: center;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid #292d1c55;
+  padding: 18px 0;
+}
+.story,
+.placeholders article {
+  scroll-margin-top: 84px;
+}
+.next {
+  padding: 100px max(6vw, 24px);
+  border-top: 1px solid #292d1c33;
+}
+.next h2 {
+  font-size: clamp(36px, 5vw, 70px);
+  letter-spacing: -0.045em;
+  margin: 24px 0 60px;
+}
+.placeholders {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.placeholders article {
+  min-height: 320px;
+  background: #e9e9df;
+  border: 1px solid #292d1c22;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+}
+.placeholders h3 {
+  font-size: clamp(25px, 3vw, 42px);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  margin: 60px 0 15px;
+}
+.placeholders p {
+  color: #626655;
+  line-height: 1.6;
+}
+.placeholderLabel {
+  margin-top: auto;
+  padding-top: 32px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #71765e;
+}
+.cta {
+  padding-top: 90px;
+  display: flex;
+  justify-content: space-between;
+  gap: 28px;
+  align-items: center;
+  font-size: clamp(18px, 2vw, 26px);
+}
+.cta a {
+  font-size: 14px;
+  border-bottom: 1px solid currentColor;
+  padding: 12px 0;
+}
+.page a:focus-visible {
+  outline: 2px solid #616b3c;
+  outline-offset: 6px;
+}
+@media (max-width: 640px) {
+  .cover {
+    padding-top: 110px;
+  }
+  .coverFooter,
+  .cta {
+    align-items: start;
+    flex-direction: column;
+  }
+  .coverFooter a {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .placeholders {
+    grid-template-columns: 1fr;
+  }
+  .next {
+    padding-top: 70px;
+    padding-bottom: 70px;
+  }
+}

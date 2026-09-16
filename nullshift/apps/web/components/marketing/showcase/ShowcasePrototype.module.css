@@ -6,6 +6,18 @@
   color: var(--ink);
   font-family: var(--font-sans), Arial, sans-serif;
 }
+.embedded .stage,
+.embedded .parentStage {
+  top: 72px;
+  height: calc(100svh - 72px);
+  min-height: 0;
+}
+.embedded .intro {
+  padding-top: 90px;
+}
+.embedded .intro h2 {
+  font-size: clamp(42px, 6.2vw, 88px);
+}
 .page button,
 .page a {
   -webkit-tap-highlight-color: transparent;
@@ -72,14 +84,14 @@
   background: #608040;
   border-radius: 50%;
 }
-.intro h1 {
+.intro :is(h1, h2) {
   font-size: clamp(58px, 7.9vw, 118px);
   line-height: 1.02;
   letter-spacing: -0.065em;
   font-weight: 500;
   margin: 25px 0 38px;
 }
-.intro h1 em {
+.intro :is(h1, h2) em {
   font-family: Georgia, serif;
   font-weight: 400;
   letter-spacing: -0.055em;
@@ -738,7 +750,7 @@
   .intro {
     padding: 60px 6% 40px;
   }
-  .intro h1 {
+  .intro :is(h1, h2) {
     font-size: clamp(48px, 10.7vw, 74px);
     margin-top: 25px;
   }

@@ -11,14 +11,17 @@ import {
   dampProgress,
   screenMatrix,
   showcaseFrame,
+  showcaseAsset,
 } from "@/lib/showcasePrototype";
 import { ParentHubShowcase } from "./ParentHubShowcase";
 import styles from "./ShowcasePrototype.module.css";
 
-const asset = (name: string) => `/showcase-prototype/assets/${name}?v=2`;
 const clips = ["programme", "ledger", "progress"];
 
-export function ShowcasePrototype() {
+export function ShowcasePrototype({ embedded = false }: { embedded?: boolean }) {
+  const asset = (name: string) => showcaseAsset(name, embedded);
+  const Container = embedded ? "div" : "main";
+  const Heading = embedded ? "h2" : "h1";
   const story = useRef<HTMLElement>(null);
   const photo = useRef<HTMLDivElement>(null);
   const screen = useRef<HTMLDivElement>(null);
@@ -163,31 +166,33 @@ export function ShowcasePrototype() {
   };
 
   return (
-    <main className={styles.page}>
-      <header className={styles.header}>
-        <Link
-          href="/"
-          className={styles.wordmark}
-          aria-label="Nullshift home"
-          prefetch={false}
-        >
-          nullshift<span>®</span>
-        </Link>
-        <span className={styles.study}>Client stories / Suffolk Tennis</span>
-        <a href="#showcase" className={styles.headerLink}>
-          Explore the work <ArrowDown size={14} />
-        </a>
-      </header>
+    <Container className={`${styles.page} ${embedded ? styles.embedded : ""}`}>
+      {!embedded && (
+        <header className={styles.header}>
+          <Link
+            href="/"
+            className={styles.wordmark}
+            aria-label="Nullshift home"
+            prefetch={false}
+          >
+            nullshift<span>®</span>
+          </Link>
+          <span className={styles.study}>Client stories / Suffolk Tennis</span>
+          <a href="#showcase" className={styles.headerLink}>
+            Explore the work <ArrowDown size={14} />
+          </a>
+        </header>
+      )}
 
       <section className={styles.intro} aria-labelledby="showcase-title">
         <p className={styles.eyebrow}>
           <span /> Suffolk Tennis · A Nullshift client story
         </p>
-        <h1 id="showcase-title">
+        <Heading id="showcase-title">
           One county.
           <br />
           Every player. <em>Connected.</em>
-        </h1>
+        </Heading>
         <div className={styles.introBottom}>
           <p>
             From the team running county tennis
@@ -327,38 +332,39 @@ export function ShowcasePrototype() {
         </div>
       </section>
 
-      <ParentHubShowcase />
+      <ParentHubShowcase embedded={embedded} />
 
-      <section className={styles.outro}>
-        <p className={styles.eyebrow}>Your business. Built to move forward.</p>
-        <h2>
-          We build it.
-          <br />
-          We run it.
-          <br />
-          <span>We grow it with you.</span>
-        </h2>
-        <div className={styles.outroBottom}>
-          <p>
-            One team, from the first conversation
+      {!embedded && (
+        <section className={styles.outro}>
+          <p className={styles.eyebrow}>Your business. Built to move forward.</p>
+          <h2>
+            We build it.
             <br />
-            to whatever comes next.
-          </p>
-          <button onClick={() => goTo(0)}>
-            Experience it again <RotateCcw size={17} />
-          </button>
-        </div>
-        <div className={styles.notes}>
-          <span>Local prototype — not a published case study.</span>
-          <span>
-            Actual Suffolk Tennis UI. Fictional people and payments. No live services.
-          </span>
-          <Link href="/" prefetch={false}>
-            Back to Nullshift <ArrowUpRight size={13} />
-          </Link>
-        </div>
-      </section>
-
+            We run it.
+            <br />
+            <span>We grow it with you.</span>
+          </h2>
+          <div className={styles.outroBottom}>
+            <p>
+              One team, from the first conversation
+              <br />
+              to whatever comes next.
+            </p>
+            <button onClick={() => goTo(0)}>
+              Experience it again <RotateCcw size={17} />
+            </button>
+          </div>
+          <div className={styles.notes}>
+            <span>Local prototype — not a published case study.</span>
+            <span>
+              Actual Suffolk Tennis UI. Fictional people and payments. No live services.
+            </span>
+            <Link href="/" prefetch={false}>
+              Back to Nullshift <ArrowUpRight size={13} />
+            </Link>
+          </div>
+        </section>
+      )}
       <dialog
         ref={dialog}
         className={styles.inspector}
@@ -392,6 +398,6 @@ export function ShowcasePrototype() {
           the page scroll.
         </p>
       </dialog>
-    </main>
+    </Container>
   );
 }

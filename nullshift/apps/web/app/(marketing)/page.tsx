@@ -7,7 +7,7 @@ import { Reveal, Section, SectionHeader, TextLink, CTABand } from "@/components/
 import { T } from "@nullshift/ui/tokens";
 import { OWN_SYSTEM_PROOF_LINE } from "@nullshift/content/clientStories";
 import { StepReveal } from "@/components/marketing/StepReveal";
-import { HeroStage } from "@/components/marketing/immersive/HeroStage";
+import { ScrollFilmHero } from "@/components/marketing/immersive/ScrollFilmHero";
 import { SystemAssembly } from "@/components/marketing/immersive/SystemAssembly";
 import { LiveSystems } from "@/components/marketing/immersive/LiveSystems";
 import { DemoReel } from "@/components/marketing/immersive/DemoReel";
@@ -89,7 +89,8 @@ export default function Home() {
       <Nav />
       <main>
         {/* ═══════════════ HERO (dark) ═══════════════ */}
-        <HeroStage />
+        <ScrollFilmHero />
+        <div id="home-after-hero" tabIndex={-1} />
 
         <SystemAssembly />
 

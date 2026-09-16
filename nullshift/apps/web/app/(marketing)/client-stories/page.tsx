@@ -1,20 +1,14 @@
 import type { Metadata } from "next";
-import React from "react";
-import { CLIENT_STORIES } from "@nullshift/content/clientStories";
+import Link from "next/link";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
-import { Reveal, Section, Eyebrow, Display, Lead, CTABand } from "@/components/kyma";
-import { ClientStoryGallery } from "@/components/marketing/ClientStoryGallery";
-import { ClientStorySection } from "@/components/marketing/ClientStorySection";
-import { validateClientStories } from "@/lib/clientStories";
-
-// A bad entry fails `next build` rather than shipping.
-validateClientStories(CLIENT_STORIES);
+import { ShowcasePrototype } from "@/components/marketing/showcase/ShowcasePrototype";
+import styles from "./stories.module.css";
 
 export const metadata: Metadata = {
   title: "Client stories — Nullshift",
   description:
-    "Three businesses, three systems they own outright: The Dance Exclusive, NewFuture Therapy and Suffolk Tennis LTA. What they had, what we built, and what runs itself now — with the real numbers.",
+    "Explore the systems we build, run and grow. Start with Suffolk Tennis: one connected platform for administrators and parents, shown with fictional demo data.",
   alternates: { canonical: "/client-stories" },
 };
 
@@ -22,50 +16,55 @@ export default function ClientStoriesPage() {
   return (
     <>
       <Nav tone="cream" />
-      <main>
-        {/* Hero + gallery */}
-        <Section theme="cream" pad="lg">
-          <Reveal>
-            <Eyebrow label="Client stories" />
-            <Display size="xl" className="mt-5">
-              Three businesses.{" "}
-              <span style={{ color: "var(--k-muted)" }}>Three systems they own.</span>
-            </Display>
-            <Lead className="mt-5" style={{ maxWidth: "58ch" }}>
-              Not case-study decks — the actual systems, the people running them, and the
-              numbers from their own databases. Each one lives in the client&apos;s repo,
-              on the client&apos;s database, taking payment through the client&apos;s own
-              account.
-            </Lead>
-          </Reveal>
-          <div className="mt-12">
-            <ClientStoryGallery stories={CLIENT_STORIES} theme="cream" />
+      <main className={styles.page}>
+        <section className={styles.cover} aria-labelledby="stories-title">
+          <p className={styles.eyebrow}>Nullshift / Selected work</p>
+          <h1 id="stories-title">
+            Client
+            <br />
+            <em>stories.</em>
+          </h1>
+          <div className={styles.coverFooter}>
+            <p>
+              Different businesses.
+              <br />
+              Software built around each one.
+            </p>
+            <a href="#suffolk-tennis">
+              <span>01 / Suffolk Tennis</span>
+              <span aria-hidden="true">↓</span>
+            </a>
           </div>
-        </Section>
-
-        {/* One uniform section per client — dark first, then alternating */}
-        {CLIENT_STORIES.map((story, i) => (
-          <ClientStorySection key={story.slug} story={story} index={i} />
-        ))}
-
-        {/* CTA */}
-        <div style={{ borderTop: "1px solid var(--k-border)" }}>
-          <CTABand
-            theme="dark"
-            index={String(CLIENT_STORIES.length + 1).padStart(2, "0")}
-            label="Your story next"
-            title={
-              <>
-                Your business could be the{" "}
-                <span style={{ color: "var(--k-accent)" }}>next one here.</span>
-              </>
-            }
-            lead="Start with the free Agent Consultation — a tailored plan and a live mockup of your system, in under a minute of questions."
-            primary={{ label: "Start your consultation", href: "/start" }}
-            secondary={{ label: "Book a call", href: "/book" }}
-            note="Free · no commitment · UK-based, global reach"
-          />
-        </div>
+        </section>
+        <article
+          id="suffolk-tennis"
+          className={styles.story}
+          aria-label="Suffolk Tennis case study"
+        >
+          <ShowcasePrototype embedded />
+        </article>
+        <section className={styles.next} aria-labelledby="next-stories">
+          <p className={styles.eyebrow}>More from Nullshift</p>
+          <h2 id="next-stories">The next chapters.</h2>
+          <div className={styles.placeholders}>
+            <article id="the-dance-exclusive">
+              <span className={styles.eyebrow}>02 / Coming soon</span>
+              <h3>The Dance Exclusive</h3>
+              <p>A closer look at the system behind the studio.</p>
+              <span className={styles.placeholderLabel}>Case study in preparation</span>
+            </article>
+            <article id="newfuture-therapy">
+              <span className={styles.eyebrow}>03 / Coming soon</span>
+              <h3>NewFuture Therapy</h3>
+              <p>A closer look at software built around a practice.</p>
+              <span className={styles.placeholderLabel}>Case study in preparation</span>
+            </article>
+          </div>
+          <div className={styles.cta}>
+            <p>Your next chapter starts with a conversation.</p>
+            <Link href="/start">Tell us what you have in mind ↗</Link>
+          </div>
+        </section>
       </main>
       <Footer />
     </>
