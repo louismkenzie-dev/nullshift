@@ -10,6 +10,8 @@ import { logAuditAsService } from "@nullshift/db/audit";
 import { carePlan } from "@/lib/carePlans";
 import { contractedMrr } from "@/lib/pricing/contracted";
 import { recordCarePlanPayment } from "@/lib/carePlanInvoice";
+import { flagOn } from "@/lib/flags";
+import { handleGoCardlessWebhookInbox } from "@/lib/integrations/webhook";
 
 /**
  * GoCardless webhook (point the dashboard endpoint at /api/gocardless/webhook).
@@ -35,6 +37,14 @@ type GoCardlessEvent = {
 };
 
 export async function POST(req: Request) {
+  // Admin redesign Phase 4 (brief §10.2, §12.4): with OPS_V2_FLAGS containing
+  // `integrationWorkers` the durable inbox handles the request — verify on
+  // the raw body, capture every event, acknowledge, then process from
+  // authoritative resource reads. billing_requests.fulfilled then records a
+  // mandate and NEVER creates a subscription. With the flag off (the
+  // default) everything below runs exactly as before.
+  if (flagOn("integrationWorkers")) return handleGoCardlessWebhookInbox(req);
+
   if (!process.env.GOCARDLESS_WEBHOOK_SECRET) {
     return new Response("GoCardless is not configured.", { status: 503 });
   }

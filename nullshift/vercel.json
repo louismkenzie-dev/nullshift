@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/soc2-sweep",
       "schedule": "30 6 * * *"
+    },
+    {
+      "path": "/api/cron/ops-worker",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
