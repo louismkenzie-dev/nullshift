@@ -37,13 +37,13 @@ reference agents (`operations-manager`, `finance-assistant`,
 `project-coordinator`, `privacy-review`) that production seeded via app code —
 on a fresh DB, insert those four `agents` rows (any minimal stub) before 0020,
 or its `agent_routines` seed fails its FK.
-   This is the multi-tenant core the app runs on (tenants, memberships, projects,
-   tasks, change_requests, invoices, issues, fix_batches, RLS hardening, Stripe/
-   GoCardless/Xero columns). Note the interleaving: `0003` backfills from legacy
-   `clients`, `0010` patches legacy `project_updates` policies (no-ops if 009 hasn't
-   run yet — apply the legacy series first), `0014` §8 drops `schema.sql`'s
-   permissive policies, and `0020` commits two columns that were hand-applied to
-   production outside any migration file.
+This is the multi-tenant core the app runs on (tenants, memberships, projects,
+tasks, change_requests, invoices, issues, fix_batches, RLS hardening, Stripe/
+GoCardless/Xero columns). Note the interleaving: `0003` backfills from legacy
+`clients`, `0010` patches legacy `project_updates` policies (no-ops if 009 hasn't
+run yet — apply the legacy series first), `0014` §8 drops `schema.sql`'s
+permissive policies, and `0020` commits two columns that were hand-applied to
+production outside any migration file.
 
 **0040–0043 (renumbered 2026-09-02):** the ops-hub delivery layer, compliance reviews, SAR
 completeness and project-updates bucket hardening were authored on a local branch as
@@ -75,3 +75,36 @@ The app's load-bearing drift checks (all discovered the hard way):
 
 `packages/db/src/rls.test.mjs` runs a real cross-tenant isolation test when
 `SUPABASE_DB_URL` is set (it silently skips otherwise).
+
+## Admin redesign series 0057–0065 — NOT APPLIED (2026-09-17)
+
+Authored on `feat/admin-redesign` against the live schema described in
+`docs/ADMIN-REDESIGN-PHASE0-2026-09-17.md` §11. **None of these files has been applied
+to any database**, branch or production. Nothing in the app reads or writes their
+objects unless the matching `OPS_V2_FLAGS` entry is set (all off).
+
+Apply order and dependencies (from `pnpm -C apps/web migrations:dry-run`, which parses
+the SQL with no database connection and reports forbidden statements, RLS, money and
+timestamp rules, numbering, ledger-name collisions and order):
+
+| File                                   | Depends on                                                                                                                  | Flag                 |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `0057_opportunities_quotes.sql`        | 0001                                                                                                                        | `commercialV2`       |
+| `0058_next_actions_work_class.sql`     | 0001, 0014, 0030                                                                                                            | `workIntake`         |
+| `0059_service_arrangements.sql`        | 0001, 0030                                                                                                                  | `commercialV2`       |
+| `0060_build_acceptance_checklists.sql` | 0001 (no FK to 0059 on purpose)                                                                                             | `acceptanceGate`     |
+| `0062_billing_obligations.sql`         | 0001, 0013 (replaces `invoices_one_build_per_project`; documented backfill links live legacy build invoices to obligations) | `billingActivation`  |
+| `0063_integration_operations.sql`      | 0001 (RLS with no policies: service role only)                                                                              | `integrationWorkers` |
+| `0064_service_activations.sql`         | 0001, **0059**                                                                                                              | `billingActivation`  |
+| `0065_finance_exceptions.sql`          | 0001, **0062** (no FK to 0064 on purpose)                                                                                   | `billingActivation`  |
+
+Order: 0057 → 0058 → 0059 → 0060 → 0062 → 0063 → 0064 → 0065. `0056` (PR #20
+`client_economics`) is applied in production but has no file here; `0061` is unassigned.
+The production ledger is name-based and not reproducible from this directory (two
+`0020`s, renamed `0040–0043`, eighteen applied names with no file): read
+`supabase_migrations.schema_migrations` and number the ledger entries against it, not
+against the file names (Phase 0 decision N-h), before applying anything. Rehearse on a
+branch database first and run `apps/web/scripts/legacy-invariants.sql` for each of the
+three protected clients before and after; only `invoices.obligation_id` (0062) and
+`order_forms.commercial_version` (0059, default `v1`) may differ. Rollback DDL is in
+each file's header and is for a database that never went live with the flag.

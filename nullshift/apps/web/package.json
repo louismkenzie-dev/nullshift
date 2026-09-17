@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "legal:guard": "node scripts/legal-guard.mjs"
+    "legal:guard": "node scripts/legal-guard.mjs",
+    "migrations:dry-run": "node scripts/migration-dry-run.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

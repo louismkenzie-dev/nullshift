@@ -661,3 +661,31 @@ client who has not signed it" and mean it literally.
 
 While `PRICING_PUBLIC` is false the £600 is withheld like every other figure;
 the term still appears, without its number.
+
+## Admin redesign v2 (flags off)
+
+Branch `feat/admin-redesign`, 17 September 2026. A fixture-driven redesign of the
+admin lives at `/admin/next/*` (Today, clients, quotes, finance, agreements, sales,
+delivery, automations, settings, a phone-width portal preview) inside the existing
+login → MFA → staff gate. It is reachable by URL for staff and is not linked from
+`AdminNav`. Everything renders "Fictional demo data" and performs no writes unless a
+flag is on.
+
+- **Flags:** `OPS_V2_FLAGS` (server-side, comma-separated; `apps/web/lib/flags.ts`):
+  `newShell`, `commercialV2`, `calculator`, `workIntake`, `acceptanceGate`,
+  `integrationWorkers`, `billingActivation`. All OFF in every environment. With them
+  off, every legacy route, action, webhook and cron behaves exactly as before; the
+  three legacy clients are untouched. `integrationWorkers` must be paired with
+  `billingActivation`, and a flag must never be set where its migrations are not
+  applied.
+- **Migrations 0057–0065 are NOT APPLIED** to any database (see `supabase/README.md`).
+  `pnpm -C apps/web migrations:dry-run` inspects them without a database;
+  `apps/web/scripts/legacy-invariants.sql` snapshots a protected client before/after.
+- **Runbook:** `docs/admin-redesign/phase5-runbook.md` (enable/disable per area,
+  monitoring queries, stale-integration detection, dead-letter ownership, financial
+  compensation — never a rollback that erases history, UI rollback without touching
+  records). **Approvals:** `docs/admin-redesign/phase5-pilot-checklist.md` (all NOT
+  GRANTED). **Handoff:** `docs/ADMIN-REDESIGN-HANDOFF-2026-09-17.md`.
+- Daily loop addition once any finance flag is on: check `finance_exceptions` for
+  unowned or `urgent` rows and `integration_operations` for `dead_letter` before
+  anything else.
