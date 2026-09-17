@@ -1,85 +1,172 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  BriefcaseBusiness,
+  ChevronRight,
+  CircleHelp,
+  FileText,
+  House,
+  LayoutGrid,
+  Plus,
+  Search,
+  Settings2,
+  Users,
+  Wallet,
+  Workflow,
+} from "lucide-react";
 import s from "./next.module.css";
 
-const PRIMARY: { label: string; href: string }[] = [
-  { label: "Today", href: "/admin/next" },
-  { label: "Sales & Quotes", href: "/admin/next/sales" },
-  { label: "Clients", href: "/admin/next/clients" },
-  { label: "Delivery", href: "/admin/next/delivery" },
-  { label: "Finance", href: "/admin/next/finance" },
-  { label: "Agreements", href: "/admin/next/agreements" },
-  { label: "Automations", href: "/admin/next/automations" },
+const PRIMARY = [
+  { label: "Today", href: "/admin/next", icon: House },
+  { label: "Clients", href: "/admin/next/clients", icon: Users },
+  { label: "Sales & quotes", href: "/admin/next/sales", icon: BriefcaseBusiness },
+  { label: "Delivery", href: "/admin/next/delivery", icon: LayoutGrid },
+  { label: "Finance", href: "/admin/next/finance", icon: Wallet },
+  { label: "Agreements", href: "/admin/next/agreements", icon: FileText },
 ];
-
-function active(pathname: string, href: string): boolean {
-  if (href === "/admin/next") return pathname === href;
+function active(path: string, href: string) {
+  if (href === "/admin/next") return path === href;
   if (href === "/admin/next/sales")
-    return pathname.startsWith(href) || pathname.startsWith("/admin/next/quotes");
-  return pathname.startsWith(href);
+    return path.startsWith(href) || path.startsWith("/admin/next/quotes");
+  return path.startsWith(href);
 }
-
 export function Rail() {
-  const pathname = usePathname();
+  const path = usePathname();
   return (
-    <nav className={s.rail} aria-label="Primary">
-      <div className={s.brand}>
-        <span className={s.brandDot} aria-hidden="true" />
-        Nullshift
-      </div>
+    <nav className={s.rail} aria-label="Operations navigation">
+      <Link href="/admin/next" className={s.brand}>
+        <Image src="/logos/nullshift-pill-dark.svg" alt="" width={22} height={27} />
+        <span>
+          Nullshift<span className={s.brandSub}>Operations</span>
+        </span>
+      </Link>
+      <span className={s.railLabel}>Workspace</span>
       <div className={s.railList}>
-        {PRIMARY.map((item) => (
+        {PRIMARY.map(({ label, href, icon: Icon }) => (
           <Link
-            key={item.label}
-            href={item.href}
-            className={`${s.railLink} ${active(pathname, item.href) ? s.railLinkActive : ""}`}
-            aria-current={active(pathname, item.href) ? "page" : undefined}
+            key={href}
+            href={href}
+            aria-current={active(path, href) ? "page" : undefined}
+            className={[s.railLink, active(path, href) ? s.railLinkActive : ""].join(" ")}
           >
-            {item.label}
+            <Icon size={18} strokeWidth={1.6} />
+            <span>{label}</span>
+            {active(path, href) && <span className={s.activeDot} />}
           </Link>
         ))}
       </div>
       <div className={s.railFoot}>
-        <Link
-          href="/admin/next/portal"
-          className={`${s.railLink} ${active(pathname, "/admin/next/portal") ? s.railLinkActive : ""}`}
-        >
-          Client portal preview
+        <Link href="/admin/next/automations" className={s.railLink}>
+          <Workflow size={17} />
+          Automations
         </Link>
-        <Link
-          href="/admin/next/settings"
-          className={`${s.railLink} ${active(pathname, "/admin/next/settings") ? s.railLinkActive : ""}`}
-        >
+        <Link href="/admin/next/settings" className={s.railLink}>
+          <Settings2 size={17} />
           Settings
         </Link>
         <Link href="/admin" className={s.railLink}>
-          Current admin →
+          <CircleHelp size={17} />
+          Existing admin tools
         </Link>
+        <div className={s.railNote}>
+          A little less admin.
+          <br />A lot more clarity.
+        </div>
       </div>
     </nav>
   );
 }
-
-const BOTTOM = [
-  { label: "Today", href: "/admin/next" },
-  { label: "Clients", href: "/admin/next/clients" },
-  { label: "Work", href: "/admin/next/delivery" },
-  { label: "More", href: "/admin/next/settings" },
-];
-
-export function BottomNav() {
-  const pathname = usePathname();
+export function OperationsHeader() {
+  const path = usePathname();
+  const section = PRIMARY.find((item) => active(path, item.href));
   return (
-    <nav className={s.bottomNav} aria-label="Primary (mobile)">
-      {BOTTOM.map((b) => (
+    <header className={s.header}>
+      <div className={s.crumbs}>
+        <span>Workspace</span>
+        <ChevronRight size={13} />
+        <strong>{section?.label ?? "Tools"}</strong>
+      </div>
+      <form action="/admin/next/clients" className={s.headerSearch}>
+        <Search size={16} />
+        <input name="q" aria-label="Search clients" placeholder="Search clients…" />
+      </form>
+      <div className={s.headerRight}>
+        <Link href="/admin/next/clients/new" className={s.headerAdd}>
+          <Plus size={16} />
+          <span>Add client</span>
+        </Link>
         <Link
-          key={b.label}
-          href={b.href}
-          className={`${s.bottomLink} ${active(pathname, b.href) ? s.bottomLinkActive : ""}`}
+          href="/admin/security"
+          className={s.accountButton}
+          aria-label="Account and security"
         >
-          {b.label}
+          <span>NS</span>
+        </Link>
+      </div>
+    </header>
+  );
+}
+export function DataContext({
+  real,
+  billingEnabled,
+}: {
+  real: boolean;
+  billingEnabled: boolean;
+}) {
+  const path = usePathname();
+  const actualRoutes = [
+    "/admin/next",
+    "/admin/next/clients",
+    "/admin/next/clients/new",
+    "/admin/next/sales",
+    "/admin/next/delivery",
+    "/admin/next/finance",
+    "/admin/next/agreements",
+    "/admin/next/settings",
+    "/admin/next/automations",
+  ];
+  const actual =
+    real &&
+    (actualRoutes.includes(path) || /^\/admin\/next\/clients\/[0-9a-f-]{36}$/.test(path));
+  return (
+    <div className={actual ? s.dataContext : s.demoContext}>
+      <span className={s.contextDot} />
+      {actual ? "Your existing records" : "Design preview · Fictional data"}
+      <span className={s.contextDivider}>/</span>
+      <span>
+        {actual
+          ? billingEnabled
+            ? "Existing agreements unchanged"
+            : "New billing automation is off"
+          : "Example workflow — not your client records"}
+      </span>
+    </div>
+  );
+}
+export function BottomNav() {
+  const path = usePathname();
+  const entries = [
+    PRIMARY[0],
+    PRIMARY[1],
+    PRIMARY[3],
+    { label: "More", href: "/admin/next/settings", icon: LayoutGrid },
+  ];
+  return (
+    <nav className={s.bottomNav} aria-label="Mobile navigation">
+      {entries.map(({ label, href, icon: Icon }) => (
+        <Link
+          key={href}
+          href={href}
+          className={[s.bottomLink, active(path, href) ? s.bottomLinkActive : ""].join(
+            " "
+          )}
+          aria-current={active(path, href) ? "page" : undefined}
+        >
+          <Icon size={19} strokeWidth={1.7} />
+          {label}
         </Link>
       ))}
     </nav>

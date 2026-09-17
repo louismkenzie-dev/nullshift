@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { flagOn } from "@/lib/flags";
+import { realDataEnabled } from "@/lib/next/live-data";
+import { LiveAgreements } from "../LiveViews";
 import { CLIENTS } from "@/lib/next/fixtures";
 import {
   AGREEMENTS,
@@ -69,6 +71,7 @@ export default async function AgreementsLibrary({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const filters = parseFilters(await searchParams);
+  if (realDataEnabled()) return <LiveAgreements />;
   const today = FIXTURE_TODAY;
   const rows = sortAgreements(filterAgreements(AGREEMENTS, filters, today));
   const active = Object.values(filters).filter(Boolean).length;

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { CLIENTS } from "@/lib/next/fixtures";
 import s from "../next.module.css";
+import { realDataEnabled } from "@/lib/next/live-data";
+import { LiveClients } from "../LiveViews";
 
 const tone = (state: string): string => {
   if (["accepted", "current", "live", "healthy", "active"].includes(state))
@@ -19,7 +21,12 @@ const tone = (state: string): string => {
   return "";
 };
 
-export default function ClientsPage() {
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  if (realDataEnabled()) return <LiveClients query={(await searchParams).q} />;
   return (
     <>
       <div className={s.pageHead}>

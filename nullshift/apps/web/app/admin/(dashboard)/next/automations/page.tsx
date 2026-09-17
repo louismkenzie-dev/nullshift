@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { flagOn } from "@/lib/flags";
+import { activeFlags, flagOn } from "@/lib/flags";
+import { realDataEnabled } from "@/lib/next/live-data";
+import { LiveAutomations } from "../LiveViews";
 import {
   APPROVALS,
   AUTOMATIONS,
@@ -44,6 +46,7 @@ export default async function AutomationsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const sp = await searchParams;
+  if (realDataEnabled()) return <LiveAutomations flags={activeFlags()} />;
   const tab = first(sp.tab) ?? "workflows";
   const previewId = first(sp.preview);
   const preview = previewId ? automationById(previewId) : undefined;

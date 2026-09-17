@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { flagOn } from "@/lib/flags";
+import { realDataEnabled } from "@/lib/next/live-data";
+import { LiveDelivery } from "../LiveViews";
 import {
   CAPACITY,
   COVERAGE_LABEL,
@@ -34,6 +36,7 @@ export default async function DeliveryPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const sp = await searchParams;
+  if (realDataEnabled()) return <LiveDelivery />;
   const tab = first(sp.tab) ?? "projects";
 
   return (

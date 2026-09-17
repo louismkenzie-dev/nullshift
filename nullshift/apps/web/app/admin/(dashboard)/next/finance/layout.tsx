@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { openExceptionCount } from "@/lib/next/fixtures-finance";
 import { FinanceTabs } from "./FinanceTabs";
 import s from "../next.module.css";
+import { realDataEnabled } from "@/lib/next/live-data";
 
 export const metadata: Metadata = {
   title: "Finance — Nullshift Operations (prototype)",
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
  * group. Every page below reads fixtures only and never writes.
  */
 export default function FinanceLayout({ children }: { children: React.ReactNode }) {
+  if (realDataEnabled()) return <>{children}</>;
   return (
     <>
       <div className={s.pageHead}>

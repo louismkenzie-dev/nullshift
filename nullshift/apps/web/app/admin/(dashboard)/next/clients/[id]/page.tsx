@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { clientById, gbp, type Task } from "@/lib/next/fixtures";
 import s from "../../next.module.css";
+import { realDataEnabled } from "@/lib/next/live-data";
+import { LiveClient } from "../../LiveViews";
 
 const tone = (state: string): string => {
   if (["accepted", "current", "live", "healthy", "active", "complete"].includes(state))
@@ -29,6 +31,7 @@ export default async function ClientWorkspace({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (realDataEnabled() && /^[0-9a-f-]{36}$/.test(id)) return <LiveClient id={id} />;
   const c = clientById(id);
   if (!c) notFound();
 

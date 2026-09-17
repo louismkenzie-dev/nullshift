@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { clientCreationEnabled, realDataEnabled } from "@/lib/next/live-data";
+import { LiveSettings } from "../LiveViews";
 import { activeFlags, OPS_V2_FLAG_KEYS } from "@/lib/flags";
 import {
   SECRETS_NOTE,
@@ -16,6 +18,10 @@ export default async function SettingsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const sp = await searchParams;
+  if (realDataEnabled())
+    return (
+      <LiveSettings flags={activeFlags()} creationEnabled={clientCreationEnabled()} />
+    );
   const sectionId = first(sp.section) ?? SETTINGS_SECTIONS[0].id;
   const section = settingsSectionById(sectionId) ?? SETTINGS_SECTIONS[0];
   const on = new Set(activeFlags());

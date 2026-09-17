@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { flagOn } from "@/lib/flags";
+import { realDataEnabled } from "@/lib/next/live-data";
+import { LiveSales } from "../LiveViews";
 import {
   CATALOGUE,
   CATALOGUE_VERSION,
@@ -36,6 +38,7 @@ export default async function SalesPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const sp = await searchParams;
+  if (realDataEnabled()) return <LiveSales />;
   const tab = first(sp.tab) ?? "pipeline";
   const view = first(sp.view) === "board" ? "board" : "list";
   const commercialV2 = flagOn("commercialV2");

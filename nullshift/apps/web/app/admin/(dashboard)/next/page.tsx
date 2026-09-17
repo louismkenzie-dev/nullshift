@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ATTENTION, METRICS, WEEK, gbp } from "@/lib/next/fixtures";
 import s from "./next.module.css";
+import { realDataEnabled } from "@/lib/next/live-data";
+import { LiveToday } from "./LiveViews";
 
 const kindChip: Record<string, string> = {
   incident: s.chipDanger,
@@ -12,6 +14,7 @@ const kindChip: Record<string, string> = {
 };
 
 export default function TodayPage() {
+  if (realDataEnabled()) return <LiveToday />;
   return (
     <>
       <div className={s.pageHead}>

@@ -10,6 +10,8 @@ import {
 import { Amount, ExceptionStateChip, SourceNote } from "./ui";
 import s from "../next.module.css";
 import f from "./finance.module.css";
+import { realDataEnabled } from "@/lib/next/live-data";
+import { LiveFinance } from "../LiveViews";
 
 /**
  * Finance › Overview (brief §5.6). Six distinct figures, each with currency,
@@ -17,6 +19,7 @@ import f from "./finance.module.css";
  * module so they cannot disagree with the detail pages.
  */
 export default function FinanceOverview() {
+  if (realDataEnabled()) return <LiveFinance />;
   const metrics = overviewMetrics();
   const openExceptions = EXCEPTIONS.filter((e) => e.state !== "resolved");
 
