@@ -19,7 +19,6 @@ import styles from "./Nav.module.css";
 // Numbered after filtering, so hiding a link never leaves a gap in the ladder.
 const LINKS = visibleLinks([
   { label: "What we build", href: "/#platform-features" },
-  { label: "Agent Consultation", href: "/start" },
   { label: "Client stories", href: "/client-stories" },
   { label: "Pricing", href: "/pricing" },
   { label: "About", href: "/about" },
@@ -33,7 +32,7 @@ const SOCIALS = [
   { n: "1.3", label: "GitHub" },
 ];
 
-const EMAIL = "louis@nullshift.co.uk";
+const EMAIL = "hello@nullshift.co.uk";
 
 const mono: React.CSSProperties = {
   fontFamily: T.mono,

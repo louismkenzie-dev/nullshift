@@ -15,7 +15,6 @@ const RAW_COLUMNS: { title: string; links: { label: string; href: string }[] }[]
     title: "Product",
     links: [
       { label: "What we build", href: "/#platform-features" },
-      { label: "Agent Consultation", href: "/start" },
       { label: "Client stories", href: "/client-stories" },
       { label: "Pricing", href: "/pricing" },
     ],
