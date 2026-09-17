@@ -2,7 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { HERO_FILM, heroFrame, filmTime, unitProgress } from "@/lib/scrollFilmHero";
+import {
+  HERO_FILM,
+  PORTRAIT_FILM_QUERY,
+  heroFrame,
+  filmTime,
+  unitProgress,
+} from "@/lib/scrollFilmHero";
+import { createFilmScrubber, setFilmStyle } from "@/lib/filmScrubber";
 import styles from "./ScrollFilmHero.module.css";
 
 /** Native sticky scrolling: never captures gestures or changes body overflow. */
@@ -10,81 +17,139 @@ export function ScrollFilmHero() {
   const root = useRef<HTMLElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const closing = useRef<HTMLDivElement>(null);
+  const actions = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const section = root.current;
     const film = video.current;
     const end = closing.current;
-    if (!section || !film || !end) return;
+    const links = actions.current;
+    if (!section || !film || !end || !links) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+    const portrait = matchMedia(PORTRAIT_FILM_QUERY);
     let raf = 0;
-    let current = 0;
-    let target = 0;
-    let wantedTime = 0;
+    let previous = -1;
+    let range = Math.max(1, section.offsetHeight - innerHeight);
+    let active = false;
     let failed = false;
-    let disposed = false;
-
-    const seek = () => {
-      if (disposed || reduced.matches || failed || film.seeking || film.readyState < 2)
-        return;
-      if (Math.abs(film.currentTime - wantedTime) > 1 / 60) film.currentTime = wantedTime;
-    };
+    const canPaint = () => active && !document.hidden && !reduced.matches && !failed;
+    const scrub = createFilmScrubber(film, { fps: HERO_FILM.fps, canSeek: canPaint });
     const paint = () => {
       raf = 0;
-      const staticView = reduced.matches || failed;
-      current = staticView ? 0 : current + (target - current) * 0.18;
-      if (Math.abs(target - current) < 0.0003) current = target;
+      if (!canPaint()) return;
+      const current = unitProgress(-section.getBoundingClientRect().top / range);
+      if (current === previous) return;
+      previous = current;
       const frame = heroFrame(current);
-      section.dataset.progress = current.toFixed(4);
-      section.style.setProperty("--title-opacity", String(frame.title));
-      section.style.setProperty("--title-blur", `${frame.blur}px`);
-      section.style.setProperty("--title-lift", `${frame.lift}px`);
-      section.style.setProperty("--closing-opacity", String(frame.closing));
-      section.style.setProperty("--film-scale", String(frame.scale));
-      section.style.setProperty("--progress", String(frame.progress));
-      end.inert = !staticView && frame.closing < 0.9;
-      end.setAttribute("aria-hidden", String(end.inert));
-      wantedTime = filmTime(current, film.duration);
-      seek();
-      if (!staticView && current !== target) raf = requestAnimationFrame(paint);
+      if (section.dataset.progress !== current.toFixed(4))
+        section.dataset.progress = current.toFixed(4);
+      setFilmStyle(section, "--title-opacity", String(frame.title));
+      setFilmStyle(section, "--title-blur", `${frame.blur}px`);
+      setFilmStyle(section, "--title-lift", `${frame.lift}px`);
+      setFilmStyle(section, "--actions-opacity", String(frame.actions));
+      const actionsHidden = frame.actions < 0.1;
+      if (links.inert !== actionsHidden) links.inert = actionsHidden;
+      if (links.getAttribute("aria-hidden") !== String(actionsHidden))
+        links.setAttribute("aria-hidden", String(actionsHidden));
+      setFilmStyle(section, "--closing-opacity", String(frame.closing));
+      setFilmStyle(section, "--middle-opacity", String(frame.middle));
+      setFilmStyle(section, "--film-scale", String(frame.scale));
+      setFilmStyle(section, "--film-reveal", String(frame.filmReveal));
+      setFilmStyle(section, "--progress", String(frame.progress));
+      const inert = frame.closing < 0.9;
+      if (end.inert !== inert) end.inert = inert;
+      if (end.getAttribute("aria-hidden") !== String(inert))
+        end.setAttribute("aria-hidden", String(inert));
+      scrub.request(filmTime(current, film.duration));
     };
-    const update = () => {
+    const schedule = () => {
+      if (canPaint() && !raf) raf = requestAnimationFrame(paint);
+    };
+    const load = () => {
+      if (!canPaint()) return;
+      const source = portrait.matches ? HERO_FILM.portraitSrc : HERO_FILM.src;
+      if (film.getAttribute("src") === source) return;
+      scrub.reset();
+      previous = -1;
+      film.poster = portrait.matches ? HERO_FILM.portraitPoster : HERO_FILM.poster;
+      film.width = portrait.matches ? 406 : 1280;
+      film.height = 720;
+      film.src = source;
+      film.preload = "auto";
+      film.load();
+    };
+    const sync = () => {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      previous = -1;
+      if (document.hidden) return;
+      const motion = reduced.matches ? "reduced" : "full";
+      if (section.dataset.motion !== motion) section.dataset.motion = motion;
       const rect = section.getBoundingClientRect();
-      target = unitProgress(-rect.top / Math.max(1, section.offsetHeight - innerHeight));
-      if (!raf) raf = requestAnimationFrame(paint);
-    };
-    const preference = () => {
-      section.dataset.motion = reduced.matches ? "reduced" : "full";
-      film.preload = reduced.matches ? "none" : "auto";
-      update();
+      range = Math.max(1, section.offsetHeight - innerHeight);
+      active = rect.bottom > 0 && rect.top < innerHeight;
+      if (reduced.matches) {
+        scrub.reset();
+        const hadSource = film.hasAttribute("src");
+        film.removeAttribute("src");
+        film.removeAttribute("poster");
+        film.preload = "none";
+        if (hadSource) film.load();
+        end.inert = false;
+        end.setAttribute("aria-hidden", "false");
+        links.inert = false;
+        links.setAttribute("aria-hidden", "false");
+      } else {
+        load();
+        schedule();
+      }
     };
     const ready = () => {
-      section.dataset.ready = "true";
-      update();
+      previous = -1;
+      schedule();
     };
     const error = () => {
       failed = true;
       section.dataset.failed = "true";
-      update();
+      end.inert = false;
+      end.setAttribute("aria-hidden", "false");
+      links.inert = false;
+      links.setAttribute("aria-hidden", "false");
     };
+    const observer = new IntersectionObserver(([entry]) => {
+      active = entry.isIntersecting;
+      if (!active) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        return;
+      }
+      previous = -1;
+      load();
+      schedule();
+    });
+    const sizing = new ResizeObserver(sync);
+    observer.observe(section);
+    sizing.observe(section);
     film.addEventListener("loadeddata", ready);
-    film.addEventListener("seeked", seek);
     film.addEventListener("error", error);
-    window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    reduced.addEventListener("change", preference);
-    preference();
-    if (film.readyState >= 2) ready();
-    if (film.error) error();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", sync);
+    document.addEventListener("visibilitychange", sync);
+    reduced.addEventListener("change", sync);
+    portrait.addEventListener("change", sync);
+    sync();
     return () => {
-      disposed = true;
       cancelAnimationFrame(raf);
+      observer.disconnect();
+      sizing.disconnect();
+      scrub.destroy();
       film.removeEventListener("loadeddata", ready);
-      film.removeEventListener("seeked", seek);
       film.removeEventListener("error", error);
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-      reduced.removeEventListener("change", preference);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", sync);
+      document.removeEventListener("visibilitychange", sync);
+      reduced.removeEventListener("change", sync);
+      portrait.removeEventListener("change", sync);
     };
   }, []);
 
@@ -99,8 +164,6 @@ export function ScrollFilmHero() {
         <video
           ref={video}
           className={styles.film}
-          src={HERO_FILM.src}
-          poster={HERO_FILM.poster}
           style={{ objectFit: HERO_FILM.fit }}
           preload="none"
           muted
@@ -113,8 +176,22 @@ export function ScrollFilmHero() {
         <div className={styles.title}>
           <p className={styles.eyebrow}>Bespoke systems. Boundless possibilities.</p>
           <h1>BUILT AROUND YOU.</h1>
+          <div ref={actions} className={styles.actions} data-hero-actions>
+            <Link href="/book" prefetch={false} className={styles.demoAction}>
+              Discuss your project <span aria-hidden="true">↗</span>
+            </Link>
+            <Link href="/portal/login" prefetch={false} className={styles.portalAction}>
+              Existing Clients and Partners <span aria-hidden="true">↗</span>
+            </Link>
+          </div>
         </div>
-        <div ref={closing} className={styles.closing}>
+        <div className={styles.middle} data-hero-message>
+          <p>
+            Custom, Integrated <br />
+            Software for <em>any operation</em>
+          </p>
+        </div>
+        <div ref={closing} className={styles.closing} inert aria-hidden="true">
           <p>
             We build it.
             <br />

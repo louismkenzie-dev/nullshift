@@ -1,0 +1,598 @@
+.section {
+  scroll-margin-top: 72px;
+}
+
+.introduction {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: clamp(32px, 5vw, 72px);
+  align-items: end;
+}
+
+.headline {
+  max-width: 16ch;
+  overflow-wrap: anywhere;
+}
+
+.headline span {
+  color: var(--k-accent);
+}
+
+.introCopy p + p,
+.services p,
+.footer p {
+  font-family: var(--font-sans);
+  color: var(--k-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.introCopy p + p {
+  margin: 24px 0 0;
+  max-width: 48ch;
+}
+
+.study {
+  margin-top: clamp(48px, 7vw, 88px);
+}
+
+.studyToolbar,
+.studyCaption,
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.studyToolbar {
+  padding-bottom: 24px;
+}
+
+.label,
+.switcher button,
+.studyCaption > span,
+.canvasCaption,
+.identityDescriptor {
+  font: 500 0.65rem/1.6 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.switcher {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.switcher button {
+  min-height: 44px;
+  padding: 12px 18px;
+  border: 1px solid var(--k-border-strong);
+  color: var(--k-fg);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 150ms,
+    color 150ms;
+}
+
+.switcher button[aria-pressed="true"] {
+  background: var(--k-fg);
+  color: var(--k-bg);
+}
+
+.switcher button:hover {
+  border-color: var(--k-fg);
+}
+
+.switcher button:focus-visible {
+  outline: 2px solid var(--k-fg);
+  outline-offset: 3px;
+}
+
+/* Concept artwork stays within the Kyma palette; no global brand overrides. */
+.canvas {
+  --study-bg: var(--k-bg);
+  --study-fg: var(--k-fg);
+  --study-muted: var(--k-muted);
+  --study-border: var(--k-border);
+  --study-panel: var(--k-surface);
+  padding: clamp(24px, 4vw, 56px);
+  background: var(--k-surface);
+  border: 1px solid var(--k-border);
+}
+
+.canvas[data-direction="rebrand"] {
+  --study-bg: var(--k-fg);
+  --study-fg: var(--k-bg);
+  --study-muted: color-mix(in srgb, var(--k-bg) 60%, var(--k-fg));
+  --study-border: color-mix(in srgb, var(--k-bg) 20%, transparent);
+  --study-panel: color-mix(in srgb, var(--k-fg) 96%, var(--k-bg));
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding-bottom: 32px;
+}
+
+.wordmark {
+  font: 500 clamp(2rem, 4vw, 3.3rem)/1 var(--font-sans);
+  letter-spacing: 0.16em;
+}
+
+[data-direction="rebrand"] .wordmark {
+  font-weight: 800;
+  letter-spacing: -0.07em;
+}
+
+.identityDescriptor {
+  max-width: 22ch;
+  color: var(--k-muted);
+}
+
+.swatches {
+  display: flex;
+  margin-left: auto;
+}
+
+.swatches i {
+  width: 24px;
+  height: 24px;
+  background: var(--k-fg);
+  border: 1px solid var(--k-border);
+}
+
+.swatches i:nth-child(2) {
+  background: var(--k-bg);
+}
+
+.swatches i:nth-child(3) {
+  background: var(--k-accent);
+}
+
+.screens {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 0.42fr);
+  gap: 28px;
+  align-items: start;
+  font-family: var(--font-sans);
+}
+
+.teamScreen,
+.customerScreen {
+  min-width: 0;
+  background: var(--study-bg);
+  color: var(--study-fg);
+  border: 1px solid var(--study-border);
+  transition:
+    background 240ms,
+    color 240ms;
+}
+
+.teamScreen {
+  margin-top: 28px;
+}
+
+.screenBar,
+.customerNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--study-border);
+  font: 500 0.56rem/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+.screenBar b {
+  margin-left: 12px;
+  font-weight: 500;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  border-right: 1px solid var(--study-border);
+  padding: 28px 16px;
+  font-size: 0.65rem;
+  color: var(--study-muted);
+}
+
+.navActive {
+  color: var(--study-fg);
+  font-weight: 700;
+}
+
+.sidebarBottom {
+  margin-top: auto;
+  line-height: 1.5;
+}
+
+.workspace {
+  padding: 28px;
+}
+
+.workspaceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.micro {
+  font: 500 0.5rem/1.6 var(--font-mono);
+  letter-spacing: 0.07em;
+  color: var(--study-muted);
+}
+
+.workspaceHeader p {
+  margin: 12px 0 24px;
+  font-size: clamp(1.4rem, 2.7vw, 2.4rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.studioGlyph {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+}
+
+.studioGlyph i {
+  position: absolute;
+  inset: 0 24px;
+  border: 1px solid var(--study-fg);
+  border-radius: 50%;
+}
+
+.studioGlyph i:nth-child(2) {
+  transform: rotate(60deg);
+}
+
+.studioGlyph i:nth-child(3) {
+  transform: rotate(-60deg);
+}
+
+[data-direction="rebrand"] .studioGlyph i {
+  border-radius: 0;
+  border-color: var(--k-accent);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--study-border);
+  padding-block: 16px;
+}
+
+.metrics strong {
+  display: block;
+  font-size: 1.6rem;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.metrics span {
+  font-size: 0.55rem;
+  color: var(--study-muted);
+}
+
+.scheduleHeading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-block: 24px 12px;
+  font-size: 0.6rem;
+}
+
+.scheduleHeading span:last-child {
+  color: var(--study-muted);
+}
+
+.session {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  gap: 12px;
+  align-items: center;
+  padding-block: 13px;
+  border-top: 1px solid var(--study-border);
+  font-size: 0.58rem;
+}
+
+.session strong,
+.session div span {
+  display: block;
+}
+
+.session strong {
+  font-size: 0.68rem;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.session div span {
+  color: var(--study-muted);
+}
+
+.customerNav {
+  padding: 18px;
+}
+
+.customerNav > span:first-child {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+
+[data-direction="rebrand"] .customerNav > span:first-child {
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.customerArt {
+  position: relative;
+  height: 180px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--study-panel);
+  border-bottom: 1px solid var(--study-border);
+}
+
+.sculpture {
+  position: relative;
+  width: 126px;
+  height: 126px;
+  transform: rotate(-28deg);
+}
+
+.sculpture i {
+  position: absolute;
+  width: 80px;
+  height: 120px;
+  border: 1px solid var(--study-fg);
+  border-radius: 50%;
+}
+
+.sculpture i:nth-child(2) {
+  left: 24px;
+}
+.sculpture i:nth-child(3) {
+  left: 48px;
+}
+
+[data-direction="rebrand"] .sculpture i {
+  border-radius: 0;
+  border-color: var(--k-accent);
+  transform: skewY(-15deg);
+}
+
+.customerArt > span {
+  position: absolute;
+  bottom: 12px;
+  font: 500 0.45rem/1.4 var(--font-mono);
+  letter-spacing: 0.1em;
+}
+
+.customerContent {
+  padding: 20px;
+}
+
+.customerHeadline {
+  margin: 0 0 10px;
+  max-width: 11ch;
+  font-size: 1.8rem;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+[data-direction="rebrand"] .customerHeadline {
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.customerLead {
+  color: var(--study-muted);
+  font-size: 0.65rem;
+}
+
+.booking {
+  display: grid;
+  gap: 7px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--study-border);
+}
+
+.booking span {
+  font-size: 0.56rem;
+  color: var(--study-muted);
+}
+
+.booking strong {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.mockButton {
+  display: flex;
+  justify-content: space-between;
+  padding: 13px;
+  margin-top: 20px;
+  background: var(--study-fg);
+  color: var(--study-bg);
+  font-size: 0.65rem;
+}
+
+.canvasCaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+  color: var(--k-muted);
+}
+
+.studyCaption {
+  align-items: baseline;
+  padding-top: 20px;
+  color: var(--k-muted);
+}
+
+.studyCaption p {
+  font: 400 0.9rem/1.5 var(--font-sans);
+  margin: 0;
+  max-width: 55ch;
+}
+
+.studyCaption > span {
+  max-width: 32ch;
+  text-align: right;
+}
+
+.services {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 40px;
+  margin-top: 72px;
+}
+
+.services > div {
+  padding-top: 24px;
+  border-top: 1px solid var(--k-border);
+}
+
+.services p {
+  margin: 16px 0 0;
+  font-size: 0.95rem;
+}
+
+.footer {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--k-border);
+}
+
+.footer p {
+  margin: 0;
+}
+
+@media (max-width: 1000px) {
+  .screens {
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 16px;
+  }
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    display: none;
+  }
+  .workspace {
+    padding: 20px;
+  }
+  .identityDescriptor {
+    display: none;
+  }
+  .introduction {
+    grid-template-columns: 1fr;
+  }
+  .introCopy {
+    max-width: 60ch;
+  }
+}
+
+@media (max-width: 700px) {
+  .studyToolbar,
+  .studyCaption,
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .studyCaption > span {
+    text-align: left;
+    max-width: none;
+  }
+  .switcher {
+    width: 100%;
+  }
+  .switcher button {
+    flex: 1;
+    padding-inline: 8px;
+  }
+  .canvas {
+    padding: 20px 14px;
+  }
+  .identity {
+    gap: 12px;
+    padding-bottom: 24px;
+  }
+  .swatches i {
+    width: 16px;
+    height: 16px;
+  }
+  .screens {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+  .teamScreen {
+    margin: 0;
+  }
+  .screenBar {
+    padding: 14px;
+    font-size: 0.45rem;
+  }
+  .screenBar b {
+    margin-left: 4px;
+  }
+  .workspace {
+    padding: 18px 14px;
+  }
+  .workspaceHeader p {
+    font-size: 1.8rem;
+  }
+  .studioGlyph {
+    width: 56px;
+    height: 56px;
+  }
+  .studioGlyph i {
+    inset-inline: 18px;
+  }
+  .customerScreen {
+    width: min(100%, 290px);
+    justify-self: center;
+  }
+  .customerArt {
+    height: 170px;
+  }
+  .canvasCaption {
+    font-size: 0.55rem;
+  }
+  .services {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    margin-top: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switcher button,
+  .teamScreen,
+  .customerScreen {
+    transition: none;
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
@@ -9,10 +9,16 @@ import { Logo } from "@nullshift/ui/components/Logo";
 import { createClient } from "@nullshift/db/client";
 import { ScrambleHover } from "@/components/anim/ScrambleHover";
 import { visibleLinks } from "@/lib/pricingVisibility";
+import {
+  navCompactState,
+  navScrollState,
+  type NavScrollState,
+} from "@/lib/navVisibility";
+import styles from "./Nav.module.css";
 
 // Numbered after filtering, so hiding a link never leaves a gap in the ladder.
 const LINKS = visibleLinks([
-  { label: "What we build", href: "/#capabilities" },
+  { label: "What we build", href: "/#platform-features" },
   { label: "Agent Consultation", href: "/start" },
   { label: "Client stories", href: "/client-stories" },
   { label: "Pricing", href: "/pricing" },
@@ -41,14 +47,22 @@ const mono: React.CSSProperties = {
  * `tone` names the background the bar first sits on. The bar itself is
  * transparent until you scroll, so on a cream hero the default light-on-dark
  * palette washes out (wordmark, tagline and clock all go faint). "cream"
- * flips to dark ink until the scrolled glass appears, at which point the
- * bar has its own dark background again and the light palette returns.
+ * flips to dark ink until scrolling. On the homepage the compact controls
+ * are white with difference blending, so they invert the actual scene below.
  */
 export function Nav({ tone = "dark" }: { tone?: "dark" | "cream" } = {}) {
   const pathname = usePathname();
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [navHidden, setNavHidden] = useState(false);
+  const hiddenRef = useRef(false);
+  const compactRef = useRef(false);
+  const header = useRef<HTMLElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const compactMenuButton = useRef<HTMLButtonElement>(null);
+  const home = pathname === "/";
   const [time, setTime] = useState<{ h: string; m: string } | null>(null);
   const [ready, setReady] = useState(false);
   // null = unknown (don't render the chip yet, avoids a flash); true/false once resolved.
@@ -118,13 +132,61 @@ export function Nav({ tone = "dark" }: { tone?: "dark" | "cream" } = {}) {
   }, [reduce]);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    onScroll();
+    let state: NavScrollState = {
+      anchor: window.scrollY,
+      previous: window.scrollY,
+      direction: 0,
+      hidden: false,
+    };
+    let compact = home
+      ? navCompactState(compactRef.current, window.scrollY)
+      : window.scrollY > 40;
+    compactRef.current = compact;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const y = window.scrollY;
+      const nextCompact = home ? navCompactState(compact, y) : y > 40;
+      if (compact !== nextCompact) {
+        compact = nextCompact;
+        compactRef.current = compact;
+        setScrolled(compact);
+      }
+      const next = navScrollState(
+        state,
+        y,
+        !home || open || !!header.current?.contains(document.activeElement)
+      );
+      if (next.hidden !== hiddenRef.current) {
+        hiddenRef.current = next.hidden;
+        setNavHidden(next.hidden);
+      }
+      state = next;
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    const reveal = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse" || event.clientY > 24 || !state.hidden) return;
+      state = { ...state, anchor: window.scrollY, hidden: false };
+      hiddenRef.current = false;
+      setNavHidden(false);
+    };
+    // Initial deep links should have a compact, visible header, not a broad band.
+    frame = requestAnimationFrame(() => {
+      setScrolled(compact);
+      update();
+    });
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    if (home) window.addEventListener("pointermove", reveal, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pointermove", reveal);
+    };
+  }, [home, open]);
 
-  // Live clock — ticks every second; colon blinks via CSS (ANIM 14).
+  // The displayed precision is minutes; do not rerender the entire nav every second.
   useEffect(() => {
     const tick = () => {
       const parts = new Intl.DateTimeFormat("en-GB", {
@@ -135,19 +197,51 @@ export function Nav({ tone = "dark" }: { tone?: "dark" | "cream" } = {}) {
       }).formatToParts(new Date());
       const h = parts.find((p) => p.type === "hour")?.value ?? "00";
       const m = parts.find((p) => p.type === "minute")?.value ?? "00";
-      setTime({ h, m });
+      setTime((previous) =>
+        previous?.h === h && previous.m === m ? previous : { h, m }
+      );
     };
     tick();
-    const id = setInterval(tick, 1000);
+    const id = setInterval(tick, 30000);
     return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
+    if (!open) return;
+    const originalOverflow = document.body.style.overflow;
+    const returnFocus = home && scrolled ? compactMenuButton.current : menuButton.current;
+    document.body.style.overflow = "hidden";
+    const first = menu.current?.querySelector<HTMLElement>(
+      'button[aria-label="Close menu"]'
+    );
+    first?.focus({ preventScroll: true });
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !menu.current) return;
+      const links = [
+        ...menu.current.querySelectorAll<HTMLElement>("a[href], button"),
+      ].filter((element) => element.getClientRects().length > 0);
+      const first = links[0],
+        last = links.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
     };
-  }, [open]);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.removeEventListener("keydown", onKey);
+      returnFocus?.focus({ preventScroll: true });
+    };
+  }, [open, home, scrolled]);
 
   const enter = (delay: number): React.CSSProperties => ({
     opacity: ready ? 1 : 0,
@@ -156,136 +250,191 @@ export function Nav({ tone = "dark" }: { tone?: "dark" | "cream" } = {}) {
     transitionDelay: ready ? `${delay}s` : "0s",
   });
 
-  // Dark ink only while the bar is transparent over a cream hero.
+  const compact = home && scrolled;
+  // Keep the full header's palette stable while its layer fades away.
   const onLight = tone === "cream" && !scrolled;
-  const ink = onLight ? "#0a0a0a" : "#f4f4e8"; // primary text / wordmark
-  const dim = onLight ? "#55554c" : "#9a9a90"; // secondary text
+  const ink = onLight ? "#0a0a0a" : "#f4f4e8";
+  const dim = onLight ? "#55554c" : "#9a9a90";
   const faint = onLight ? "#8a8a7e" : "#5c5c54"; // tertiary text
   const menuBg = onLight ? "#0a0a0a" : "#f4f4e8";
   const menuFg = onLight ? "#f4f4e8" : "#0a0a0a";
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3">
-        <nav
-          className="mx-auto flex items-center justify-between transition-all duration-300"
-          style={{
-            maxWidth: 1400,
-            height: 56,
-            paddingInline: 18,
-            borderRadius: 0,
-            background: scrolled ? "rgba(10,10,10,0.72)" : "transparent",
-            border: `1px solid ${scrolled ? "rgba(244,244,232,0.12)" : "transparent"}`,
-            backdropFilter: scrolled ? "blur(14px)" : "none",
-          }}
-        >
-          {/* Brand */}
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 shrink-0"
-            style={{ textDecoration: "none", ...enter(0) }}
-          >
-            <Logo markSize={22} color={ink} />
-            <span style={{ color: dim, fontFamily: T.mono, fontSize: "0.7rem" }}>®</span>
-          </Link>
-
-          {/* Center status */}
+      <header
+        ref={header}
+        className={styles.header}
+        data-site-header
+        data-home={home}
+        data-compact={compact}
+        data-hidden={home && navHidden && !open}
+        onFocusCapture={() => {
+          hiddenRef.current = false;
+          setNavHidden(false);
+        }}
+      >
+        <nav aria-label="Primary navigation">
           <div
-            className="hidden md:flex items-center gap-6"
-            style={{ color: dim, ...mono, ...enter(0.08) }}
+            className={`${styles.bar} ${styles.fullBar}`}
+            data-nav-layer="full"
+            inert={compact}
+            aria-hidden={compact}
+            style={{
+              borderRadius: 0,
+              background: scrolled && !compact ? "rgba(10,10,10,0.96)" : "transparent",
+              border: `1px solid ${scrolled && !compact ? "rgba(244,244,232,0.12)" : "transparent"}`,
+            }}
           >
-            <span className="inline-flex items-center gap-2">
-              <span
-                className="k-livedot"
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: 999,
-                  background: T.primary,
-                  boxShadow: `0 0 0 3px ${T.primary}22`,
-                }}
-              />
-              Agentic AI · Automation · Systems
-            </span>
-            <span style={{ color: faint }}>UK · Global reach</span>
-            {time && (
-              <span style={{ color: ink }} suppressHydrationWarning>
-                {time.h}
-                <span className="k-clock-colon">:</span>
-                {time.m}
+            {/* Brand */}
+            <Link
+              href="/"
+              className={`flex items-center gap-1.5 shrink-0 ${styles.brand}`}
+              style={{ textDecoration: "none", ...enter(0) }}
+            >
+              <Logo markSize={22} color={ink} />
+              <span style={{ color: dim, fontFamily: T.mono, fontSize: "0.7rem" }}>
+                ®
               </span>
-            )}
-          </div>
+            </Link>
 
-          {/* Right cluster — auth status chip + MENU */}
-          <div className="flex items-center gap-3 sm:gap-4 shrink-0" style={enter(0.16)}>
-            {/* Signed-in / signed-out indicator (links into the client portal) */}
-            {signedIn !== null && (
-              <Link
-                href={signedIn ? (isStaff ? "/admin" : "/portal") : "/portal/login"}
-                className="hidden sm:inline-flex items-center gap-2"
-                style={{
-                  ...mono,
-                  color: signedIn ? ink : dim,
-                  textDecoration: "none",
-                }}
-                aria-label={
-                  signedIn
-                    ? isStaff
-                      ? "Signed in — open admin hub"
-                      : "Signed in — open client portal"
-                    : "Sign in to client portal"
-                }
-              >
+            {/* Center status */}
+            <div
+              className={`hidden lg:flex items-center gap-6 ${styles.status}`}
+              style={{ color: dim, ...mono, ...enter(0.08) }}
+            >
+              <span className="inline-flex items-center gap-2">
                 <span
-                  aria-hidden
+                  className="k-livedot"
                   style={{
                     width: 6,
                     height: 6,
                     borderRadius: 999,
-                    background: signedIn ? T.primary : faint,
-                    boxShadow: signedIn ? `0 0 0 3px ${T.primary}22` : "none",
+                    background: T.primary,
+                    boxShadow: `0 0 0 3px ${T.primary}22`,
                   }}
                 />
-                {signedIn ? "Signed in" : "Sign in"}
-              </Link>
-            )}
-
-            {/* MENU button */}
-            <button
-              onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2.5"
-              style={{
-                ...mono,
-                color: menuFg,
-                background: menuBg,
-                height: 38,
-                paddingInline: 16,
-                borderRadius: 0,
-                border: "none",
-                cursor: "pointer",
-              }}
-              aria-label="Open menu"
-            >
-              <ScrambleHover text="Menu" hoverText="View" />
-              <span
-                aria-hidden
-                style={{ display: "inline-flex", flexDirection: "column", gap: 3 }}
-              >
-                <span style={{ width: 14, height: 1.5, background: menuFg }} />
-                <span style={{ width: 14, height: 1.5, background: menuFg }} />
+                Agentic AI · Automation · Systems
               </span>
-            </button>
+              <span style={{ color: faint }}>UK · Global reach</span>
+              {time && (
+                <span style={{ color: ink }} suppressHydrationWarning>
+                  {time.h}
+                  <span className="k-clock-colon">:</span>
+                  {time.m}
+                </span>
+              )}
+            </div>
+
+            {/* Right cluster — auth status chip + MENU */}
+            <div
+              className={`flex items-center gap-3 sm:gap-4 shrink-0 ${styles.actions}`}
+              style={enter(0.16)}
+            >
+              {/* Signed-in / signed-out indicator (links into the client portal) */}
+              {signedIn !== null && (
+                <Link
+                  href={signedIn ? (isStaff ? "/admin" : "/portal") : "/portal/login"}
+                  className={`hidden sm:inline-flex items-center gap-2 ${styles.auth}`}
+                  style={{
+                    ...mono,
+                    color: signedIn ? ink : dim,
+                    textDecoration: "none",
+                  }}
+                  aria-label={
+                    signedIn
+                      ? isStaff
+                        ? "Signed in — open admin hub"
+                        : "Signed in — open client portal"
+                      : "Sign in to client portal"
+                  }
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: 999,
+                      background: signedIn ? T.primary : faint,
+                      boxShadow: signedIn ? `0 0 0 3px ${T.primary}22` : "none",
+                    }}
+                  />
+                  {signedIn ? "Signed in" : "Sign in"}
+                </Link>
+              )}
+
+              {/* MENU button */}
+              <button
+                ref={menuButton}
+                onClick={() => setOpen(true)}
+                className="inline-flex items-center gap-2.5"
+                style={{
+                  ...mono,
+                  color: menuFg,
+                  background: menuBg,
+                  height: 44,
+                  paddingInline: 16,
+                  borderRadius: 0,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+                aria-label="Open menu"
+                aria-expanded={open}
+                aria-controls="site-menu"
+              >
+                <ScrambleHover text="Menu" hoverText="View" />
+                <span
+                  aria-hidden
+                  style={{ display: "inline-flex", flexDirection: "column", gap: 3 }}
+                >
+                  <span style={{ width: 14, height: 1.5, background: menuFg }} />
+                  <span style={{ width: 14, height: 1.5, background: menuFg }} />
+                </span>
+              </button>
+            </div>
           </div>
+          {home && (
+            <div
+              className={styles.compactBar}
+              data-nav-layer="compact"
+              inert={!compact}
+              aria-hidden={!compact}
+            >
+              <button
+                ref={compactMenuButton}
+                onClick={() => setOpen(true)}
+                className={styles.compactMenu}
+                aria-label="Open menu"
+                aria-expanded={open}
+                aria-controls="site-menu"
+              >
+                <ScrambleHover text="Menu" hoverText="View" />
+                <span aria-hidden className={styles.compactHamburger}>
+                  <span />
+                  <span />
+                </span>
+              </button>
+              <Link href="/" className={styles.compactBrand}>
+                <Logo markSize={22} color="#ffffff" />
+                <span className={styles.registration}>®</span>
+              </Link>
+            </div>
+          )}
         </nav>
       </header>
 
       {/* Fullscreen overlay menu — slides in from the RIGHT (ANIM 7) */}
       <div
+        ref={menu}
+        id="site-menu"
+        role="dialog"
+        aria-label="Site menu"
+        aria-modal={open ? true : undefined}
         className="fixed inset-0 z-[60] grid md:grid-cols-[320px_1fr]"
         style={{
           transform: open ? "translateX(0)" : "translateX(100%)",
-          transition: `transform ${open ? 0.45 : 0.3}s var(--ease-out-expo)`,
+          transition: reduce
+            ? "none"
+            : `transform ${open ? 0.3 : 0.2}s var(--ease-out-expo)`,
           pointerEvents: open ? "auto" : "none",
         }}
         aria-hidden={!open}

@@ -11,6 +11,13 @@ export const nullshiftEslintConfig = defineConfig([
   ...nextTs,
   globalIgnores([".next/**", "out/**", "build/**", "dist/**", "next-env.d.ts"]),
   {
+    files: ["**/*.cjs"],
+    // CommonJS verification scripts intentionally use Node's require().
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  {
+    // Match Next's React plugin scope; tooling .mjs/.cjs files do not load it.
+    files: ["**/*.{js,jsx,ts,tsx}"],
     // These newer/stylistic rules fire on long-standing patterns in code that
     // predates the monorepo (the `// label` design motif, inline sub-components,
     // setState-in-effect). They are surfaced as warnings — not gate failures —

@@ -1,0 +1,26 @@
+.billboard {
+  margin: 0;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: clip;
+  background: var(--k-bg);
+  scroll-margin-top: 72px;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 55%;
+}
+
+@media (max-width: 700px), (max-aspect-ratio: 4/3) {
+  .billboard {
+    aspect-ratio: 4 / 3;
+  }
+
+  .image {
+    object-fit: contain;
+  }
+}

@@ -5,6 +5,7 @@ import { T } from "@nullshift/ui/tokens";
 import { Logo } from "@nullshift/ui/components/Logo";
 import { Parallax } from "@/components/Parallax";
 import { visibleLinks } from "@/lib/pricingVisibility";
+import { CTABand } from "@/components/kyma";
 
 /* Kyma-style footer — dark, mono link columns, giant wordmark, status
    bar. Themed via the .k-dark CSS vars. Server-safe. */
@@ -13,7 +14,7 @@ const RAW_COLUMNS: { title: string; links: { label: string; href: string }[] }[]
   {
     title: "Product",
     links: [
-      { label: "What we build", href: "/#capabilities" },
+      { label: "What we build", href: "/#platform-features" },
       { label: "Agent Consultation", href: "/start" },
       { label: "Client stories", href: "/client-stories" },
       { label: "Pricing", href: "/pricing" },
@@ -58,7 +59,7 @@ const monoLink: React.CSSProperties = {
   textDecoration: "none",
 };
 
-export function Footer() {
+export function Footer({ demoCta = false }: { demoCta?: boolean }) {
   return (
     <footer
       className="k-dark relative overflow-hidden"
@@ -68,6 +69,24 @@ export function Footer() {
         borderTop: "1px solid var(--k-border)",
       }}
     >
+      {demoCta ? (
+        <div id="book-a-demo">
+          <CTABand
+            theme="cream"
+            label="Built around your business"
+            title={
+              <>
+                See what’s possible.
+                <br />
+                For your business.
+              </>
+            }
+            lead="Explore what a system built around your operation could look like."
+            primary={{ label: "Book a demo", href: "/book" }}
+            note="A conversation, not a commitment."
+          />
+        </div>
+      ) : null}
       <div
         className="relative"
         style={{
@@ -103,16 +122,18 @@ export function Footer() {
               Agentic AI systems that automate the operational work draining your business
               — built fast, run by us, owned by you.
             </p>
-            <Link
-              href="/start"
-              className="kb kb-primary mt-7"
-              style={{ display: "inline-flex" }}
-            >
-              Get my free plan
-              <span className="k-arrow" aria-hidden>
-                →
-              </span>
-            </Link>
+            {!demoCta ? (
+              <Link
+                href="/start"
+                className="kb kb-primary mt-7"
+                style={{ display: "inline-flex" }}
+              >
+                Get my free plan
+                <span className="k-arrow" aria-hidden>
+                  →
+                </span>
+              </Link>
+            ) : null}
           </div>
 
           {/* Columns */}

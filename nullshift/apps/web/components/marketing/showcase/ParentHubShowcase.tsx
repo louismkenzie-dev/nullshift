@@ -1,21 +1,42 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { MobileParentHubShowcase } from "./MobileParentHubShowcase";
 import { ArrowDown, Expand, X } from "lucide-react";
 import {
   clamp,
   clipTime,
-  dampProgress,
+  preparedShowcaseClips,
   parentFrame,
   PARENT_CHAPTERS,
   showcaseAsset,
+  showcaseImageLoader,
+  showcaseInlineVideo,
 } from "@/lib/showcasePrototype";
+import { createFilmScrubber } from "@/lib/filmScrubber";
 import styles from "./ShowcasePrototype.module.css";
 
 const clips = ["parent-home", "parent-report"];
+const mobileQuery = "(max-width: 900px)";
+const subscribeMobile = (callback: () => void) => {
+  const query = matchMedia(mobileQuery);
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+};
+const mobileSnapshot = () => matchMedia(mobileQuery).matches;
+const serverSnapshot = () => false;
 
 export function ParentHubShowcase({ embedded = false }: { embedded?: boolean }) {
+  const mobile = useSyncExternalStore(subscribeMobile, mobileSnapshot, serverSnapshot);
+  return mobile ? (
+    <MobileParentHubShowcase embedded={embedded} />
+  ) : (
+    <DesktopParentHubShowcase embedded={embedded} />
+  );
+}
+
+function DesktopParentHubShowcase({ embedded = false }: { embedded?: boolean }) {
   const asset = (name: string) => showcaseAsset(name, embedded);
   const story = useRef<HTMLElement>(null);
   const camera = useRef<HTMLDivElement>(null);
@@ -26,125 +47,192 @@ export function ParentHubShowcase({ embedded = false }: { embedded?: boolean }) 
   const dialog = useRef<HTMLDialogElement>(null);
   const [chapter, setChapter] = useState(0);
   const [mediaError, setMediaError] = useState(false);
+  const [imagesReady, setImagesReady] = useState(false);
+  const [inspectClip, setInspectClip] = useState<string | null>(null);
 
   useEffect(() => {
     const section = story.current;
     const device = camera.current;
-    if (!section || !device) return;
+    // Do not acquire desktop imagery while the responsive branch hydrates.
+    if (!section || !device || matchMedia(mobileQuery).matches) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-    let raf = 0,
-      displayed = 0,
-      lastTime = 0,
-      lastChapter = -1,
-      initialised = false;
+    let raf = 0;
+    let previousProgress = -1;
+    let lastChapter = 0;
     let active = false;
-    const targets = new Map<HTMLVideoElement, number>();
-    const seek = (video: HTMLVideoElement) => {
-      const target = targets.get(video);
-      if (
-        target !== undefined &&
-        !video.seeking &&
-        Number.isFinite(video.duration) &&
-        Math.abs(video.currentTime - target) > 0.025
-      )
-        video.currentTime = target;
+    let nearby = false;
+    let dirty = true;
+    let needsPaint = true;
+    let top = 0;
+    let travel = 1;
+    let selected = 0;
+    let mediaKey = "";
+    const media = videos.current.filter((video): video is HTMLVideoElement => !!video);
+    const scrubbers = media.map((video, index) =>
+      createFilmScrubber(video, {
+        fps: 30,
+        canSeek: () =>
+          active && !document.hidden && !reduced.matches && selected === index,
+      })
+    );
+    const style = (node: HTMLElement, property: string, value: string) => {
+      if (node.style.getPropertyValue(property) !== value)
+        node.style.setProperty(property, value);
+    };
+    const measure = () => {
+      if (!dirty || (!active && !nearby) || document.hidden) return;
+      top = scrollY + section.getBoundingClientRect().top;
+      travel = Math.max(1, section.offsetHeight - innerHeight);
+      dirty = false;
+    };
+    const prepare = (progress: number) => {
+      if (document.hidden) return;
+      const wanted =
+        nearby && !reduced.matches ? preparedShowcaseClips(progress, true) : [];
+      const sources = media.map((_, index) =>
+        wanted.includes(index)
+          ? showcaseInlineVideo(
+              clips[index],
+              embedded,
+              innerWidth <= 700,
+              devicePixelRatio > 2
+            )
+          : ""
+      );
+      const key = sources.join("|");
+      if (key === mediaKey) return;
+      mediaKey = key;
+      media.forEach((video, index) => {
+        if ((video.getAttribute("src") ?? "") === sources[index]) return;
+        scrubbers[index].reset();
+        if (sources[index]) {
+          video.preload = "auto";
+          video.src = sources[index];
+        } else {
+          video.pause();
+          video.removeAttribute("src");
+        }
+        video.load();
+      });
     };
     const apply = () => {
       raf = 0;
-      const rect = section.getBoundingClientRect();
-      const target = reduced.matches
-        ? manual.current
-        : clamp(-rect.top / Math.max(1, section.offsetHeight - innerHeight));
-      const now = performance.now();
-      displayed =
-        !initialised || reduced.matches
-          ? target
-          : dampProgress(displayed, target, now - lastTime);
-      initialised = true;
-      lastTime = now;
-      const frame = parentFrame(displayed);
-      section.dataset.progress = displayed.toFixed(4);
-      section.dataset.chapter = String(frame.chapter);
+      if (!active || document.hidden) return;
+      measure();
+      const progress = reduced.matches ? manual.current : clamp((scrollY - top) / travel);
+      if (!needsPaint && previousProgress === progress) return;
+      needsPaint = false;
+      previousProgress = progress;
+      const frame = parentFrame(progress);
+      selected = frame.chapter === 2 ? 1 : 0;
+      prepare(progress);
+      if (section.dataset.progress !== progress.toFixed(4))
+        section.dataset.progress = progress.toFixed(4);
+      if (section.dataset.chapter !== String(frame.chapter))
+        section.dataset.chapter = String(frame.chapter);
       if (frame.chapter !== lastChapter) {
         lastChapter = frame.chapter;
         setChapter(frame.chapter);
       }
       // Keep the portrait UI at its original aspect ratio. On phones it almost fills
       // the viewport; on desktops it fills the available height next to the story.
-      device.style.setProperty(
-        "--phone-reveal",
-        String(reduced.matches ? 1 : frame.zoom)
-      );
-      section.style.setProperty(
-        "--parent-zoom",
-        String(reduced.matches ? 1 : frame.zoom)
-      );
-      const selected = frame.chapter === 2 ? 1 : 0;
+      style(device, "--phone-reveal", String(reduced.matches ? 1 : frame.zoom));
+      style(section, "--parent-zoom", String(reduced.matches ? 1 : frame.zoom));
+      const transition = clamp((progress - 0.63) / 0.035);
       layers.current.forEach((layer, i) => {
-        if (layer)
-          layer.style.opacity = String(i === 0 ? 1 : clamp((displayed - 0.63) / 0.035));
-        const video = videos.current[i];
-        if (video && active && i === selected && Number.isFinite(video.duration)) {
-          targets.set(
-            video,
-            reduced.matches
-              ? 0
-              : clipTime(
-                  displayed,
-                  i === 0 ? 0.3 : 0.63,
-                  i === 0 ? 0.63 : 1,
-                  video.duration
-                )
+        if (layer) {
+          style(
+            layer,
+            "visibility",
+            i === selected || (i === 0 && transition < 1) ? "visible" : "hidden"
           );
-          seek(video);
+          style(layer, "opacity", String(i === 0 ? 1 : transition));
         }
+        const video = videos.current[i];
+        if (
+          video &&
+          !reduced.matches &&
+          i === selected &&
+          Number.isFinite(video.duration)
+        )
+          scrubbers[i].request(
+            clipTime(progress, i === 0 ? 0.3 : 0.63, i === 0 ? 0.63 : 1, video.duration)
+          );
       });
-      if (displayed !== target) raf = requestAnimationFrame(apply);
     };
     const schedule = () => {
-      if (!raf) raf = requestAnimationFrame(apply);
+      if (active && !document.hidden && !raf) raf = requestAnimationFrame(apply);
     };
-    refresh.current = schedule;
-    // Keep the second section's large footage out of the initial page load.
+    const invalidate = () => {
+      needsPaint = true;
+      schedule();
+    };
+    refresh.current = invalidate;
+    const resize = () => {
+      dirty = true;
+      invalidate();
+    };
     const mediaObserver = new IntersectionObserver(
-      (entries) => {
-        active = entries[0].isIntersecting;
-        if (active)
-          for (const video of videos.current) {
-            if (video && !video.getAttribute("src")) {
-              video.src = video.dataset.src!;
-              video.load();
-            }
-          }
-        schedule();
+      ([entry]) => {
+        nearby = entry.isIntersecting;
+        if (nearby) {
+          setImagesReady(true);
+          dirty = true;
+          measure();
+        }
+        prepare(clamp((scrollY - top) / travel));
       },
-      { rootMargin: "100% 0px" }
+      { rootMargin: "800px 0px" }
     );
-    mediaObserver.observe(section);
-    const media = videos.current.filter((v): v is HTMLVideoElement => !!v);
-    const handlers = media.map((video) => {
-      const done = () => seek(video);
-      video.addEventListener("seeked", done);
-      video.addEventListener("loadedmetadata", schedule);
-      return done;
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      active = entry.isIntersecting;
+      section.dataset.active = String(active && !document.hidden);
+      if (active) resize();
+      else {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
     });
+    const preference = () => {
+      prepare(previousProgress);
+      resize();
+    };
+    const visibility = () => {
+      section.dataset.active = String(active && !document.hidden);
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      } else {
+        dirty = true;
+        prepare(previousProgress);
+        invalidate();
+      }
+    };
+    mediaObserver.observe(section);
+    visibilityObserver.observe(section);
+    const sizing = new ResizeObserver(resize);
+    sizing.observe(section);
+    sizing.observe(section.firstElementChild!);
+    sizing.observe(document.body);
+    media.forEach((video) => video.addEventListener("loadedmetadata", invalidate));
     window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
-    reduced.addEventListener("change", schedule);
-    schedule();
+    window.addEventListener("resize", resize);
+    reduced.addEventListener("change", preference);
+    document.addEventListener("visibilitychange", visibility);
     return () => {
       cancelAnimationFrame(raf);
       mediaObserver.disconnect();
+      visibilityObserver.disconnect();
+      sizing.disconnect();
       window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-      reduced.removeEventListener("change", schedule);
-      media.forEach((video, i) => {
-        video.removeEventListener("seeked", handlers[i]);
-        video.removeEventListener("loadedmetadata", schedule);
-      });
+      window.removeEventListener("resize", resize);
+      reduced.removeEventListener("change", preference);
+      document.removeEventListener("visibilitychange", visibility);
+      media.forEach((video) => video.removeEventListener("loadedmetadata", invalidate));
+      scrubbers.forEach((scrubber) => scrubber.destroy());
       refresh.current = () => {};
     };
-  }, []);
+  }, [embedded]);
 
   const goTo = (index: number) => {
     const section = story.current;
@@ -218,14 +306,19 @@ export function ParentHubShowcase({ embedded = false }: { embedded?: boolean }) 
           </div>
           <div className={styles.phoneViewport}>
             <div ref={camera} className={styles.phoneCamera}>
-              <Image
-                src={asset("portrait-iphone.jpg")}
-                alt="A robotic hand holding a portrait iPhone showing the Suffolk Tennis Parent Hub"
-                width={3000}
-                height={2000}
-                unoptimized
-                className={styles.phoneHardware}
-              />
+              {imagesReady && (
+                <Image
+                  src={asset("portrait-iphone.jpg")}
+                  alt="A robotic hand holding a portrait iPhone showing the Suffolk Tennis Parent Hub"
+                  width={3000}
+                  height={2000}
+                  loader={embedded ? showcaseImageLoader : undefined}
+                  unoptimized={!embedded}
+                  sizes="(max-width: 700px) 210vw, 170vw"
+                  loading="eager"
+                  className={styles.phoneHardware}
+                />
+              )}
               <div className={styles.phoneScreen} aria-hidden="true">
                 {clips.map((clip, index) => (
                   <div
@@ -235,21 +328,23 @@ export function ParentHubShowcase({ embedded = false }: { embedded?: boolean }) 
                       layers.current[index] = el;
                     }}
                   >
-                    <Image
-                      src={asset(
-                        `${index === 0 && chapter === 1 ? "parent-bookings" : clip}.png`
-                      )}
-                      alt=""
-                      fill
-                      unoptimized
-                      sizes="440px"
-                    />
+                    {imagesReady && (
+                      <Image
+                        src={asset(
+                          `${index === 0 && chapter === 1 ? "parent-bookings" : clip}.png`
+                        )}
+                        alt=""
+                        fill
+                        loader={embedded ? showcaseImageLoader : undefined}
+                        unoptimized={!embedded}
+                        sizes="(max-width: 700px) 82vw, 440px"
+                        loading="eager"
+                      />
+                    )}
                     <video
                       ref={(el) => {
                         videos.current[index] = el;
                       }}
-                      data-src={asset(`${clip}.mp4`)}
-                      poster={asset(`${clip}.png`)}
                       muted
                       playsInline
                       preload="none"
@@ -260,20 +355,30 @@ export function ParentHubShowcase({ embedded = false }: { embedded?: boolean }) 
                   </div>
                 ))}
               </div>
-              <Image
-                src={asset("portrait-iphone.jpg")}
-                alt=""
-                width={3000}
-                height={2000}
-                unoptimized
-                className={styles.phoneForeground}
-                aria-hidden="true"
-              />
+              {imagesReady && (
+                <Image
+                  src={asset("portrait-iphone.jpg")}
+                  alt=""
+                  width={3000}
+                  height={2000}
+                  loader={embedded ? showcaseImageLoader : undefined}
+                  unoptimized={!embedded}
+                  sizes="(max-width: 700px) 210vw, 170vw"
+                  loading="eager"
+                  className={styles.phoneForeground}
+                  aria-hidden="true"
+                />
+              )}
             </div>
           </div>
           <div className={styles.parentFooter}>
             <span>Scroll to move closer. Keep scrolling to explore.</span>
-            <button onClick={() => dialog.current?.showModal()}>
+            <button
+              onClick={() => {
+                setInspectClip(clips[chapter === 2 ? 1 : 0]);
+                dialog.current?.showModal();
+              }}
+            >
               <Expand size={15} /> View mobile screen
             </button>
           </div>
@@ -294,7 +399,10 @@ export function ParentHubShowcase({ embedded = false }: { embedded?: boolean }) 
         onClick={(event) => {
           if (event.target === event.currentTarget) dialog.current?.close();
         }}
-        onClose={() => dialog.current?.querySelector("video")?.pause()}
+        onClose={() => {
+          dialog.current?.querySelector("video")?.pause();
+          setInspectClip(null);
+        }}
       >
         <div className={styles.inspectorHeader}>
           <div>
@@ -308,16 +416,18 @@ export function ParentHubShowcase({ embedded = false }: { embedded?: boolean }) 
             <X size={22} />
           </button>
         </div>
-        <video
-          key={chapter === 2 ? 1 : 0}
-          src={asset(`${clips[chapter === 2 ? 1 : 0]}.mp4`)}
-          poster={asset(`${clips[chapter === 2 ? 1 : 0]}.png`)}
-          controls
-          muted
-          playsInline
-          preload="none"
-          aria-label="Silent Parent Hub mobile demonstration with fictional data"
-        />
+        {inspectClip && (
+          <video
+            key={inspectClip}
+            src={asset(`${inspectClip}.mp4`)}
+            poster={asset(`${inspectClip}.png`)}
+            controls
+            muted
+            playsInline
+            preload="auto"
+            aria-label="Silent Parent Hub mobile demonstration with fictional data"
+          />
+        )}
       </dialog>
     </>
   );

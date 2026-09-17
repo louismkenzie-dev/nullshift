@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { escapeLike } from "@nullshift/db/leads";
+import { readProjectEnquiry } from "@/lib/projectEnquiry";
 
 /**
  * Open a lead as a client: reuse the existing client tenant if one already shares
@@ -43,12 +44,20 @@ export async function openLead(formData: FormData) {
   if (!tenantId) {
     const answers =
       (lead.quiz_answers as { answers?: Record<string, string> } | null)?.answers ?? {};
-    const describe = answers.describe?.trim();
+    const projectEnquiry = readProjectEnquiry(lead.quiz_answers);
+    const describe = projectEnquiry?.challenge || answers.describe?.trim();
     const businessName =
-      (lead.plan as { businessName?: string | null } | null)?.businessName ?? null;
+      projectEnquiry?.business ||
+      (lead.plan as { businessName?: string | null } | null)?.businessName ||
+      null;
     const name = businessName || lead.name || "Client";
     const notes =
-      `Converted from ${lead.vertical ? `${lead.vertical} ` : ""}funnel lead.` +
+      (projectEnquiry
+        ? "Converted from project enquiry."
+        : `Converted from ${lead.vertical ? `${lead.vertical} ` : ""}funnel lead.`) +
+      (projectEnquiry
+        ? `\nBudget: ${projectEnquiry.budget || "Not supplied"}\nTiming: ${projectEnquiry.timing || "Not supplied"}\nRequested call (not confirmed): ${[projectEnquiry.preferredDate, projectEnquiry.preferredTime].filter(Boolean).join(" ") || "Arrange by email"}`
+        : "") +
       (describe ? `\n\nIn their words:\n"${describe}"` : "");
 
     const { data: created } = await supabase

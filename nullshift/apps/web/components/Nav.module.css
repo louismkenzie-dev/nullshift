@@ -1,0 +1,188 @@
+.header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  padding: 12px;
+  pointer-events: none;
+  transition:
+    transform 200ms ease,
+    opacity 160ms ease;
+}
+
+.bar {
+  max-width: 1400px;
+  height: 56px;
+  margin-inline: auto;
+  padding-inline: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  pointer-events: auto;
+}
+
+.header[data-home="true"] {
+  /* Keep blending stable throughout the handover. The opening scene is black,
+     so its original palette is unchanged; compact controls invert later scenes. */
+  mix-blend-mode: difference;
+}
+
+.fullBar {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  transition:
+    opacity 240ms ease 140ms,
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1) 140ms,
+    visibility 0s;
+}
+
+.header[data-compact="true"] .fullBar {
+  opacity: 0;
+  transform: translateY(-8px);
+  visibility: hidden;
+  transition-delay: 0s, 0s, 240ms;
+}
+
+.fullBar[inert],
+.fullBar[inert] :is(.brand, .actions, .status, .auth) {
+  pointer-events: none;
+}
+
+.compactBar {
+  position: absolute;
+  inset: 12px 12px auto;
+  height: 48px;
+  padding-inline: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  opacity: 0;
+  transform: translateY(-8px);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 180ms ease,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s 180ms;
+}
+
+.header[data-compact="true"] .compactBar {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  transition-delay: 140ms, 140ms, 0s;
+}
+
+/* Keyboard navigation should never land on a still-fading invisible control. */
+.header[data-compact="true"] .compactBar:focus-within,
+.header[data-compact="false"] .fullBar:focus-within {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  transition: none;
+}
+
+.compactBrand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  text-decoration: none;
+  color: #fff;
+}
+
+.registration {
+  font:
+    0.7rem var(--font-mono),
+    monospace;
+}
+
+.compactBrand rect {
+  fill: #fff;
+  stroke: #808080;
+  stroke-width: 0.6px;
+}
+
+/* Pure inversion disappears over 50% grey. A fine midtone keyline becomes
+   dark there while staying unobtrusive over black/white, without a backplate. */
+:is(.compactBrand, .compactMenu) {
+  -webkit-text-stroke: 0.45px #808080;
+  paint-order: stroke fill;
+}
+
+.compactMenu {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding-inline: 16px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font:
+    500 0.68rem var(--font-mono),
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.compactHamburger {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.compactHamburger > span {
+  width: 14px;
+  height: 1.5px;
+  background: currentColor;
+  box-shadow: 0 0 0 0.6px #808080;
+}
+
+.compactBar:not([inert]) :is(.compactBrand, .compactMenu) {
+  pointer-events: auto;
+}
+
+.header[data-compact="true"] :is(a, button):focus-visible {
+  outline-color: #fff;
+}
+
+.header[data-hidden="true"]:not(:focus-within) {
+  transform: translateY(calc(-100% - 12px));
+  opacity: 0;
+}
+
+.header[data-hidden="true"]:not(:focus-within) :is(.bar, .compactBrand, .compactMenu) {
+  pointer-events: none;
+}
+
+.header a:focus-visible,
+.header button:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 4px;
+}
+
+@media (max-width: 700px) {
+  .header {
+    padding: 8px 12px;
+  }
+  .bar {
+    padding-inline: 8px;
+    gap: 12px;
+  }
+  .compactBar {
+    inset: 8px 12px auto;
+    gap: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header,
+  .header .fullBar,
+  .header .compactBar {
+    transition: none;
+  }
+}

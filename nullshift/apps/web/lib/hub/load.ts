@@ -1,4 +1,5 @@
 import { createServiceClient } from "@nullshift/db";
+import { readProjectEnquiry } from "@/lib/projectEnquiry";
 import { carePlan } from "@/lib/carePlans";
 import { OPEN_STATUSES, isUnreviewedDraft, type IssueStatus } from "@/lib/ops/issues";
 import { pricesFromAssessment } from "@/lib/pricing/contracted";
@@ -632,8 +633,12 @@ export async function loadClientBlocks(): Promise<ClientBlocks> {
       vertical: l.vertical,
       status: l.status,
       leadScore: l.lead_score,
-      businessName: l.plan?.businessName ?? null,
-      requestedDate: l.quiz_answers?.requested_date ?? null,
+      businessName:
+        readProjectEnquiry(l.quiz_answers)?.business || l.plan?.businessName || null,
+      requestedDate:
+        readProjectEnquiry(l.quiz_answers)?.preferredDate ??
+        l.quiz_answers?.requested_date ??
+        null,
       createdAt: l.created_at,
     }));
 

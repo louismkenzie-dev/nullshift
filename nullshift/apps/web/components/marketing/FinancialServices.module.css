@@ -1,0 +1,184 @@
+.section {
+  scroll-margin-top: 72px;
+  overflow: clip;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: clamp(40px, 6vw, 88px);
+  align-items: center;
+}
+
+.copy {
+  min-width: 0;
+}
+
+.copy .title {
+  max-width: 13ch;
+}
+
+.title span,
+.number {
+  color: var(--k-accent);
+}
+
+.cta {
+  margin-top: 32px;
+}
+
+.visualColumn {
+  min-width: 0;
+}
+
+.figure {
+  margin: 0;
+}
+
+.scene {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #0a0a0a;
+}
+
+.poster,
+.film {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.film {
+  opacity: 0;
+}
+
+.scene[data-ready="true"]:not([data-failed="true"]) .film {
+  opacity: 1;
+}
+
+.scene[data-motion="reduced"] .film {
+  display: none;
+}
+
+.label,
+.number {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.provider {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid var(--k-border);
+  margin-top: 28px;
+  padding-top: 24px;
+}
+
+.label {
+  color: var(--k-muted);
+}
+
+.provider p {
+  margin: 6px 0 0;
+  font-family: var(--font-sans);
+  font-size: 1.2rem;
+}
+
+.stripe {
+  display: block;
+  flex-shrink: 0;
+  padding: 8px;
+}
+
+.stripe img {
+  display: block;
+  width: 64px;
+  height: auto;
+}
+
+.stripe:focus-visible {
+  outline: 2px solid var(--k-accent);
+  outline-offset: 6px;
+}
+
+.foundations {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: clamp(56px, 8vw, 100px);
+  border-top: 1px solid var(--k-border);
+  border-bottom: 1px solid var(--k-border);
+}
+
+.foundation {
+  padding: 32px;
+  border-left: 1px solid var(--k-border);
+}
+
+.foundation:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.foundation:last-child {
+  padding-right: 0;
+}
+
+.number {
+  display: block;
+  margin-bottom: 24px;
+}
+
+.foundation p,
+.note {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--k-muted);
+}
+
+.foundation p {
+  margin: 16px 0 0;
+  font-size: 0.95rem;
+  max-width: 38ch;
+}
+
+.note {
+  font-size: 0.8rem;
+  margin: 24px 0 0;
+  max-width: 100ch;
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .foundations {
+    grid-template-columns: 1fr;
+  }
+
+  .foundation,
+  .foundation:first-child,
+  .foundation:last-child {
+    padding: 28px 0;
+    border-left: 0;
+  }
+
+  .foundation + .foundation {
+    border-top: 1px solid var(--k-border);
+  }
+
+  .number {
+    margin-bottom: 16px;
+  }
+}

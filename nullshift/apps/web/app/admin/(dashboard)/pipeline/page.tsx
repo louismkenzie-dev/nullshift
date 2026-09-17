@@ -6,6 +6,7 @@ import { T } from "@nullshift/ui/tokens";
 import { PageHeader } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
 import { openLead } from "./actions";
+import { readProjectEnquiry } from "@/lib/projectEnquiry";
 
 /**
  * Lead pipeline (CRM-lite) — a board over leads.status. Lead detail surfaces the
@@ -127,13 +128,18 @@ async function deleteLead(formData: FormData) {
 }
 
 function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
+  const projectEnquiry = readProjectEnquiry(lead.quiz_answers);
   const a = lead.quiz_answers?.answers ?? {};
   const spend = a.software_spend ? SPEND_LABEL[a.software_spend] : null;
   const pain = a.admin_pain ? PAIN_LABEL[a.admin_pain] : null;
-  const describe = a.describe?.trim();
-  const business = lead.plan?.businessName?.trim();
-  const reqDate = lead.quiz_answers?.requested_date;
-  const reqTime = lead.quiz_answers?.requested_time;
+  const describe = projectEnquiry?.challenge || a.describe?.trim();
+  const business = projectEnquiry?.business || lead.plan?.businessName?.trim();
+  const reqDate = projectEnquiry
+    ? projectEnquiry.preferredDate
+    : lead.quiz_answers?.requested_date;
+  const reqTime = projectEnquiry
+    ? projectEnquiry.preferredTime
+    : lead.quiz_answers?.requested_time;
   const prefSlot = reqDate
     ? `${new Date(reqDate).toLocaleDateString("en-GB", {
         day: "numeric",
@@ -142,7 +148,7 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
     : null;
   // A requested slot means they've asked for a call but it's NOT confirmed until
   // an admin books it on their profile (which flips status to call_booked).
-  const callConfirmed = lead.status === "call_booked";
+  const callConfirmed = !projectEnquiry && lead.status === "call_booked";
   return (
     <div
       className="k-kard-h"
@@ -248,6 +254,9 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
         </div>
       )}
       <div className="flex flex-wrap gap-1" style={{ marginTop: 8 }}>
+        {projectEnquiry && <Tag>Project enquiry</Tag>}
+        {projectEnquiry?.budget && <Tag>{projectEnquiry.budget}</Tag>}
+        {projectEnquiry?.timing && <Tag>{projectEnquiry.timing}</Tag>}
         {lead.vertical && <Tag>{lead.vertical}</Tag>}
         {prefSlot && (
           <Tag tone={callConfirmed ? "accent" : "warning"}>
@@ -301,7 +310,7 @@ function Card({ lead, tenantId }: { lead: Lead; tenantId: string | null }) {
           )}
         </div>
       )}
-      {!lead.agent_enrichment?.summary && describe && (
+      {(projectEnquiry || !lead.agent_enrichment?.summary) && describe && (
         <p
           title={describe}
           style={{

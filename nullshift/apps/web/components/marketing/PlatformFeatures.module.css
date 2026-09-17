@@ -1,0 +1,266 @@
+.header {
+  text-align: center;
+  max-width: 900px;
+  margin: 0 auto 56px;
+}
+.accent {
+  color: var(--k-accent);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 1120px;
+  margin-inline: auto;
+}
+.card {
+  grid-column: span 2;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--k-border);
+  background: var(--k-surface);
+}
+.cardContent {
+  padding: 36px 28px;
+  text-align: center;
+}
+.card p {
+  margin: 16px 0 0;
+  font: 400 0.95rem/1.55 var(--font-sans);
+  color: var(--k-muted);
+}
+.card h3 {
+  text-wrap: balance;
+}
+.artSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--k-muted);
+}
+.customArt {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 144px;
+  max-width: 240px;
+  margin: 0 auto;
+}
+.customArt .artSvg {
+  position: absolute;
+  width: 100%;
+  color: var(--k-accent);
+}
+.customArt > span {
+  font: 700 3.4rem/1 var(--font-sans);
+  letter-spacing: -0.04em;
+}
+.ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 128px;
+  height: 128px;
+  margin: 8px auto;
+  border: 1px solid var(--k-border);
+  border-radius: 50%;
+}
+.ring::before,
+.smallRing::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border: 1px solid var(--k-border);
+  border-radius: 50%;
+}
+.ring .artSvg {
+  width: 96px;
+}
+.automationArt {
+  height: 144px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.automationArt .artSvg {
+  height: 100px;
+  object-fit: contain;
+}
+.workflow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font: 500 0.57rem/1.4 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.workflow svg {
+  width: 16px;
+  height: 16px;
+  color: var(--k-accent);
+}
+.wideCard {
+  grid-column: span 3;
+}
+.split {
+  display: grid;
+  grid-template-columns: 1fr 0.9fr;
+  height: 100%;
+  padding: 32px;
+  gap: 24px;
+  min-height: 350px;
+}
+.wideCopy {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+  min-width: 0;
+}
+.smallRing {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--k-border);
+  border-radius: 50%;
+  margin: 8px;
+  color: var(--k-accent);
+}
+.monitorArt {
+  position: relative;
+  align-self: center;
+  border-top: 1px solid var(--k-border);
+  border-left: 1px solid var(--k-border);
+  padding: 40px 0 24px 16px;
+  margin-right: -32px;
+}
+.monitorArt .artSvg {
+  width: 140%;
+  margin: 20px 0;
+}
+.windowDots {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  display: flex;
+  gap: 5px;
+}
+.windowDots i {
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--k-border-strong);
+  border-radius: 50%;
+}
+.mono {
+  font: 500 0.53rem/1.6 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--k-muted);
+}
+.peopleArt {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+}
+.peopleArt::before {
+  content: "";
+  position: absolute;
+  inset: -32px auto;
+  left: 50%;
+  width: 1px;
+  background: var(--k-border);
+}
+.person {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  position: relative;
+  width: 100%;
+}
+.person:nth-child(2) {
+  flex-direction: row-reverse;
+}
+.person > span {
+  border: 1px solid var(--k-border);
+  padding: 7px;
+  background: var(--k-surface);
+  font: 500 0.55rem/1.4 var(--font-mono);
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.person i {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--k-border-strong);
+  border-radius: 50%;
+  background: var(--k-surface);
+  color: var(--k-accent);
+}
+.scope {
+  max-width: 65ch;
+  margin: 28px auto 0;
+  text-align: center;
+  font: 400 0.8rem/1.6 var(--font-sans);
+  color: var(--k-muted);
+}
+@media (max-width: 1050px) {
+  .card {
+    grid-column: span 3;
+  }
+  .card:first-child {
+    grid-column: 1 / -1;
+  }
+  .wideCard {
+    grid-column: 1 / -1;
+  }
+  .cardContent {
+    max-width: 520px;
+    margin-inline: auto;
+  }
+  .split {
+    min-height: 280px;
+  }
+}
+@media (max-width: 580px) {
+  .card {
+    grid-column: 1 / -1;
+  }
+  .cardContent {
+    padding: 32px 24px;
+  }
+  .split {
+    grid-template-columns: 1fr;
+    padding: 28px;
+    gap: 32px;
+  }
+  .wideCopy {
+    gap: 28px;
+  }
+  .monitorArt {
+    margin-right: -28px;
+  }
+  .monitorArt .artSvg {
+    width: 100%;
+    max-height: 170px;
+  }
+  .peopleArt {
+    padding: 20px 0;
+    min-height: 220px;
+    max-width: 240px;
+    width: 100%;
+    justify-self: center;
+  }
+  .peopleArt::before {
+    inset-block: 0;
+  }
+}

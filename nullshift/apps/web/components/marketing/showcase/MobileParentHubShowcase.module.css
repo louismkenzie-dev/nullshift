@@ -1,0 +1,123 @@
+.section {
+  padding: 64px 20px 48px;
+  background: #f4f4e8;
+  color: #181b18;
+  scroll-margin-top: 72px;
+}
+.section > * {
+  max-width: 480px;
+  margin-inline: auto;
+}
+.eyebrow {
+  font:
+    500 10px/1.5 var(--font-mono),
+    monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #59605a;
+  margin: 0 0 24px;
+}
+.intro h2 {
+  margin: 0 0 20px;
+  font:
+    650 clamp(36px, 9.6vw, 56px)/1.04 var(--font-sans),
+    sans-serif;
+  letter-spacing: -0.05em;
+}
+.intro h2 span {
+  color: #087e5d;
+}
+.intro > p:last-child {
+  font-size: 16px;
+  line-height: 1.65;
+  color: #565c56;
+  margin: 0 0 28px;
+}
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 4px;
+  border: 1px solid #d4d8cb;
+  border-radius: 12px;
+  background: #e7e9dd;
+  gap: 4px;
+}
+.tabs button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #50564f;
+  font:
+    600 14px/1.2 var(--font-sans),
+    sans-serif;
+}
+.tabs button[aria-selected="true"] {
+  background: #171d19;
+  color: #f4f4e8;
+}
+.tabs button:focus-visible {
+  outline: 2px solid #087e5d;
+  outline-offset: 3px;
+}
+.description {
+  padding: 24px 0 20px;
+  min-height: 146px;
+}
+.description h3 {
+  font-size: clamp(22px, 6vw, 28px);
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.description p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #565c56;
+  margin: 0;
+}
+.preview {
+  margin: 0;
+  border: 1px solid #d3d7cc;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 16px 40px #1724190a;
+}
+.previewLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e3e6df;
+  font:
+    500 10px/1.5 var(--font-mono),
+    monospace;
+  color: #626b63;
+}
+.screen {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.preview figcaption {
+  padding: 14px 12px;
+  border-top: 1px solid #e3e6df;
+  text-align: center;
+  font:
+    400 10px/1.5 var(--font-mono),
+    monospace;
+  color: #646c64;
+}
+.ending {
+  padding-top: 24px;
+  margin-bottom: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #59605a;
+}
+.ending span {
+  display: block;
+  color: #181b18;
+}

@@ -8,17 +8,27 @@ import {
   CHAPTERS,
   clamp,
   clipTime,
-  dampProgress,
+  preparedShowcaseClips,
   screenMatrix,
   showcaseFrame,
   showcaseAsset,
+  showcaseImageLoader,
+  showcaseInlineVideo,
 } from "@/lib/showcasePrototype";
+import { createFilmScrubber } from "@/lib/filmScrubber";
 import { ParentHubShowcase } from "./ParentHubShowcase";
 import styles from "./ShowcasePrototype.module.css";
 
 const clips = ["programme", "ledger", "progress"];
 
-export function ShowcasePrototype({ embedded = false }: { embedded?: boolean }) {
+export function ShowcasePrototype({
+  embedded = false,
+  introduction = "case-study",
+}: {
+  embedded?: boolean;
+  introduction?: "case-study" | "home";
+}) {
+  const homeIntro = introduction === "home";
   const asset = (name: string) => showcaseAsset(name, embedded);
   const Container = embedded ? "div" : "main";
   const Heading = embedded ? "h2" : "h1";
@@ -33,8 +43,9 @@ export function ShowcasePrototype({ embedded = false }: { embedded?: boolean }) 
   const manualProgress = useRef(0);
   const update = useRef<() => void>(() => {});
   const [chapter, setChapter] = useState(0);
-  const [inspectClip, setInspectClip] = useState("programme");
+  const [inspectClip, setInspectClip] = useState<string | null>(null);
   const [mediaError, setMediaError] = useState(false);
+  const [imagesReady, setImagesReady] = useState(false);
 
   useEffect(() => {
     const element = story.current;
@@ -43,111 +54,207 @@ export function ShowcasePrototype({ embedded = false }: { embedded?: boolean }) 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const narrow = window.matchMedia("(max-width: 700px)");
     let raf = 0;
-    let displayed = 0;
-    let lastTime = 0;
-    let initialised = false;
-    let previousChapter = -1;
-    const targets = new Map<HTMLVideoElement, number>();
-    const seek = (video: HTMLVideoElement) => {
-      const desired = targets.get(video);
-      if (desired === undefined || !Number.isFinite(video.duration) || video.seeking)
-        return;
-      if (Math.abs(video.currentTime - desired) > 0.025) video.currentTime = desired;
+    let active = false;
+    let nearby = false;
+    let dirty = true;
+    let needsPaint = true;
+    let top = 0;
+    let travel = 1;
+    let cameraWidth = 0;
+    let stageHeight = 0;
+    let previousProgress = -1;
+    let previousChapter = 0;
+    let selected = -1;
+    let mediaKey = "";
+    const media = videos.current.filter((video): video is HTMLVideoElement => !!video);
+    const scrubbers = media.map((video, index) =>
+      createFilmScrubber(video, {
+        fps: 30,
+        canSeek: () =>
+          active && !document.hidden && !reduced.matches && selected === index,
+      })
+    );
+    const style = (node: HTMLElement, property: string, value: string) => {
+      if (node.style.getPropertyValue(property) !== value)
+        node.style.setProperty(property, value);
+    };
+    const measure = () => {
+      if (!dirty || (!active && !nearby) || document.hidden) return;
+      top = scrollY + element.getBoundingClientRect().top;
+      travel = Math.max(1, element.offsetHeight - innerHeight);
+      cameraWidth = camera.offsetWidth;
+      stageHeight = element.firstElementChild?.clientHeight ?? innerHeight;
+      if (screen.current) {
+        style(
+          screen.current,
+          "transform",
+          `matrix3d(${screenMatrix(cameraWidth).join(",")})`
+        );
+        style(screen.current, "visibility", "visible");
+      }
+      dirty = false;
+    };
+    const prepare = (progress: number) => {
+      if (document.hidden) return;
+      const wanted = nearby && !reduced.matches ? preparedShowcaseClips(progress) : [];
+      const sources = media.map((_, index) =>
+        wanted.includes(index)
+          ? showcaseInlineVideo(
+              clips[index],
+              embedded,
+              narrow.matches,
+              devicePixelRatio > 2
+            )
+          : ""
+      );
+      const key = sources.join("|");
+      if (key === mediaKey) return;
+      mediaKey = key;
+      media.forEach((video, index) => {
+        if ((video.getAttribute("src") ?? "") === sources[index]) return;
+        scrubbers[index].reset();
+        if (sources[index]) {
+          video.preload = "auto";
+          video.src = sources[index];
+        } else {
+          video.pause();
+          video.removeAttribute("src");
+        }
+        video.load();
+      });
     };
     const apply = () => {
       raf = 0;
-      const rect = element.getBoundingClientRect();
-      const target = reduced.matches
+      if (!active || document.hidden) return;
+      measure();
+      const progress = reduced.matches
         ? manualProgress.current
-        : clamp(-rect.top / Math.max(1, element.offsetHeight - window.innerHeight));
-      const now = performance.now();
-      displayed =
-        reduced.matches || !initialised
-          ? target
-          : dampProgress(displayed, target, now - lastTime);
-      initialised = true;
-      lastTime = now;
-      const progress = displayed;
+        : clamp((scrollY - top) / travel);
+      if (!needsPaint && previousProgress === progress) return;
+      needsPaint = false;
+      previousProgress = progress;
       const frame = showcaseFrame(progress);
+      selected = frame.chapter - 1;
+      prepare(progress);
       if (previousChapter !== frame.chapter) {
         previousChapter = frame.chapter;
         setChapter(frame.chapter);
       }
-      element.dataset.chapter = String(frame.chapter);
-      element.dataset.progress = progress.toFixed(4);
+      if (element.dataset.chapter !== String(frame.chapter))
+        element.dataset.chapter = String(frame.chapter);
+      if (element.dataset.progress !== progress.toFixed(4))
+        element.dataset.progress = progress.toFixed(4);
       // Phones retain the story, with a tighter initial crop and less travel.
-      const stageHeight = element.firstElementChild?.clientHeight ?? window.innerHeight;
       const maxDesktopZoom = Math.max(
         1,
-        (stageHeight * 0.49) / ((camera.offsetWidth / 1.5) * 0.359)
+        (stageHeight * 0.49) / ((cameraWidth / 1.5) * 0.359)
       );
       const zoom = narrow.matches
         ? reduced.matches
           ? 1.2
           : 1.1 + (frame.zoom - 1) * 0.15
         : Math.min(maxDesktopZoom, reduced.matches ? 1.2 : frame.zoom);
-      camera.style.setProperty("--camera-zoom", String(zoom));
-      if (meter.current) meter.current.style.transform = `scaleX(${progress})`;
-      if (logo.current) logo.current.style.opacity = String(frame.logoOpacity);
+      style(camera, "--camera-zoom", String(zoom));
+      if (meter.current) style(meter.current, "transform", `scaleX(${progress})`);
+      if (logo.current) {
+        style(logo.current, "opacity", String(frame.logoOpacity));
+        style(logo.current, "visibility", frame.logoOpacity > 0 ? "visible" : "hidden");
+      }
+      const transition =
+        selected >= 0 ? clamp((progress - CHAPTERS[selected + 1].start) / 0.035) : 0;
       layers.current.forEach((layer, index) => {
         if (!layer) return;
         const entry = CHAPTERS[index + 1];
-        const incoming = clamp((progress - entry.start) / 0.035);
-        layer.style.opacity = String(incoming);
+        const visible = index === selected || (index === selected - 1 && transition < 1);
+        style(layer, "visibility", visible ? "visible" : "hidden");
+        style(layer, "opacity", String(index === selected ? transition : 1));
         const video = videos.current[index];
-        if (video && Number.isFinite(video.duration) && frame.chapter === index + 1) {
-          targets.set(
-            video,
-            reduced.matches
-              ? 0
-              : clipTime(progress, entry.start, entry.end, video.duration)
+        if (
+          video &&
+          !reduced.matches &&
+          Number.isFinite(video.duration) &&
+          selected === index
+        )
+          scrubbers[index].request(
+            clipTime(progress, entry.start, entry.end, video.duration)
           );
-          seek(video);
-        }
       });
-      if (displayed !== target) raf = requestAnimationFrame(apply);
     };
     const schedule = () => {
-      if (!raf) raf = requestAnimationFrame(apply);
+      if (active && !document.hidden && !raf) raf = requestAnimationFrame(apply);
     };
-    update.current = apply;
-    const resize = () => {
-      if (screen.current) {
-        screen.current.style.transform = `matrix3d(${screenMatrix(camera.offsetWidth).join(",")})`;
-        screen.current.style.visibility = "visible";
-      }
+    const invalidate = () => {
+      needsPaint = true;
       schedule();
+    };
+    update.current = invalidate;
+    const resize = () => {
+      dirty = true;
+      invalidate();
     };
     const observers = new ResizeObserver(resize);
     observers.observe(camera);
     observers.observe(element);
-    const media = videos.current.filter((video): video is HTMLVideoElement => !!video);
-    const completed = new Map<HTMLVideoElement, () => void>();
-    for (const video of media) {
-      const done = () => seek(video);
-      completed.set(video, done);
-      video.addEventListener("loadedmetadata", schedule);
-      video.addEventListener("seeked", done);
-    }
+    observers.observe(document.body);
+    media.forEach((video) => video.addEventListener("loadedmetadata", invalidate));
+    const mediaObserver = new IntersectionObserver(
+      ([entry]) => {
+        nearby = entry.isIntersecting;
+        if (nearby) {
+          setImagesReady(true);
+          dirty = true;
+          measure();
+        }
+        prepare(clamp((scrollY - top) / travel));
+      },
+      { rootMargin: "800px 0px" }
+    );
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      active = entry.isIntersecting;
+      element.dataset.active = String(active && !document.hidden);
+      if (active) resize();
+      else {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    });
+    const preference = () => {
+      prepare(previousProgress);
+      resize();
+    };
+    const visibility = () => {
+      element.dataset.active = String(active && !document.hidden);
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      } else {
+        dirty = true;
+        prepare(previousProgress);
+        invalidate();
+      }
+    };
+    mediaObserver.observe(element);
+    visibilityObserver.observe(element);
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", resize, { passive: true });
-    reduced.addEventListener("change", resize);
+    reduced.addEventListener("change", preference);
     narrow.addEventListener("change", resize);
-    resize();
+    document.addEventListener("visibilitychange", visibility);
     return () => {
       cancelAnimationFrame(raf);
       observers.disconnect();
+      mediaObserver.disconnect();
+      visibilityObserver.disconnect();
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", resize);
-      reduced.removeEventListener("change", resize);
+      reduced.removeEventListener("change", preference);
       narrow.removeEventListener("change", resize);
-      for (const video of media) {
-        video.removeEventListener("loadedmetadata", schedule);
-        video.removeEventListener("seeked", completed.get(video)!);
-      }
+      document.removeEventListener("visibilitychange", visibility);
+      media.forEach((video) => video.removeEventListener("loadedmetadata", invalidate));
+      scrubbers.forEach((scrubber) => scrubber.destroy());
       update.current = () => {};
     };
-  }, []);
+  }, [embedded]);
 
   const goTo = (index: number) => {
     if (!story.current) return;
@@ -184,20 +291,40 @@ export function ShowcasePrototype({ embedded = false }: { embedded?: boolean }) 
         </header>
       )}
 
-      <section className={styles.intro} aria-labelledby="showcase-title">
+      <section
+        className={`${styles.intro} ${homeIntro ? styles.homeIntro : ""}`}
+        aria-labelledby="showcase-title"
+      >
         <p className={styles.eyebrow}>
           <span /> Suffolk Tennis · A Nullshift client story
         </p>
         <Heading id="showcase-title">
-          One county.
-          <br />
-          Every player. <em>Connected.</em>
+          {homeIntro ? (
+            <>
+              Simplify complex processes into <em>one neat package</em>
+            </>
+          ) : (
+            <>
+              One county.
+              <br />
+              Every player. <em>Connected.</em>
+            </>
+          )}
         </Heading>
         <div className={styles.introBottom}>
           <p>
-            From the team running county tennis
-            <br />
-            to the families on the court. One connected platform.
+            {homeIntro ? (
+              <>
+                Bookings, payments, player records and parent communications — brought
+                together in one Suffolk Tennis platform.
+              </>
+            ) : (
+              <>
+                From the team running county tennis
+                <br />
+                to the families on the court. One connected platform.
+              </>
+            )}
           </p>
           <a href="#showcase">
             Scroll to see it in action <ArrowDown size={17} />
@@ -214,15 +341,19 @@ export function ShowcasePrototype({ embedded = false }: { embedded?: boolean }) 
       >
         <div className={styles.stage}>
           <div className={styles.photo} ref={photo}>
-            <Image
-              src={asset("studio-display.jpg")}
-              alt="Two people at a desk looking at a Studio Display"
-              width={3000}
-              height={2000}
-              unoptimized
-              preload
-              className={styles.photograph}
-            />
+            {imagesReady && (
+              <Image
+                src={asset("studio-display.jpg")}
+                alt="Two people at a desk looking at a Studio Display"
+                width={3000}
+                height={2000}
+                loader={embedded ? showcaseImageLoader : undefined}
+                unoptimized={!embedded}
+                sizes="(max-width: 700px) 215vw, 160vw"
+                loading="eager"
+                className={styles.photograph}
+              />
+            )}
             <div ref={screen} className={styles.screen} aria-hidden="true">
               <div className={styles.screenBase} />
               {clips.map((clip, index) => (
@@ -233,23 +364,25 @@ export function ShowcasePrototype({ embedded = false }: { embedded?: boolean }) 
                     layers.current[index] = el;
                   }}
                 >
-                  <Image
-                    src={asset(`${clip}.png`)}
-                    alt=""
-                    fill
-                    unoptimized
-                    sizes="1600px"
-                    loading="eager"
-                  />
+                  {imagesReady &&
+                    (index === Math.max(0, chapter - 1) || index === chapter - 2) && (
+                      <Image
+                        src={asset(`${clip}.png`)}
+                        alt=""
+                        fill
+                        loader={embedded ? showcaseImageLoader : undefined}
+                        unoptimized={!embedded}
+                        sizes="(max-width: 700px) 96vw, 60vw"
+                        loading="eager"
+                      />
+                    )}
                   <video
                     ref={(el) => {
                       videos.current[index] = el;
                     }}
-                    src={asset(`${clip}.mp4`)}
-                    poster={asset(`${clip}.png`)}
                     muted
                     playsInline
-                    preload="auto"
+                    preload="none"
                     tabIndex={-1}
                     disablePictureInPicture
                     onError={() => setMediaError(true)}
@@ -372,7 +505,10 @@ export function ShowcasePrototype({ embedded = false }: { embedded?: boolean }) 
         onClick={(event) => {
           if (event.target === event.currentTarget) dialog.current?.close();
         }}
-        onClose={() => dialog.current?.querySelector("video")?.pause()}
+        onClose={() => {
+          dialog.current?.querySelector("video")?.pause();
+          setInspectClip(null);
+        }}
       >
         <div className={styles.inspectorHeader}>
           <div>
@@ -383,16 +519,18 @@ export function ShowcasePrototype({ embedded = false }: { embedded?: boolean }) 
             <X size={22} />
           </button>
         </div>
-        <video
-          key={inspectClip}
-          src={asset(`${inspectClip}.mp4`)}
-          poster={asset(`${inspectClip}.png`)}
-          controls
-          muted
-          playsInline
-          preload="metadata"
-          aria-label={`${inspectClip} screen recording; silent demonstration with fictional data`}
-        />
+        {inspectClip && (
+          <video
+            key={inspectClip}
+            src={asset(`${inspectClip}.mp4`)}
+            poster={asset(`${inspectClip}.png`)}
+            controls
+            muted
+            playsInline
+            preload="auto"
+            aria-label={`${inspectClip} screen recording; silent demonstration with fictional data`}
+          />
+        )}
         <p className={styles.inspectorNote}>
           Silent recording. Use playback controls to inspect the workflow independently of
           the page scroll.

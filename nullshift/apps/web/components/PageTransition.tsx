@@ -25,6 +25,12 @@ const REVEAL_MS = 480;
 type Phase = "idle" | "cover" | "reveal";
 
 export function PageTransition() {
+  const pathname = usePathname();
+  // Homepage and enquiry links should navigate immediately, without a wipe delay.
+  return pathname === "/" || pathname === "/book" ? null : <PageTransitionAnimation />;
+}
+
+function PageTransitionAnimation() {
   const router = useRouter();
   const pathname = usePathname();
   const reduce = useReducedMotion();
@@ -47,6 +53,7 @@ export function PageTransition() {
   // Intercept internal link clicks: cover, then navigate.
   useEffect(() => {
     if (reduce) return;
+    let navigationTimer: ReturnType<typeof setTimeout> | undefined;
     const onClick = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0) return;
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -75,10 +82,14 @@ export function PageTransition() {
       const dest = url.pathname + url.search + url.hash;
       pending.current = dest;
       setPhase("cover");
-      window.setTimeout(() => router.push(dest), COVER_MS);
+      clearTimeout(navigationTimer);
+      navigationTimer = setTimeout(() => router.push(dest), COVER_MS);
     };
     document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
+    return () => {
+      clearTimeout(navigationTimer);
+      document.removeEventListener("click", onClick, true);
+    };
   }, [reduce, router]);
 
   const transform =

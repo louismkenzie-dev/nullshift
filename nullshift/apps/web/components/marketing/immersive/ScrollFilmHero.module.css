@@ -1,13 +1,16 @@
 .hero {
   height: calc(100svh + 2400px);
   position: relative;
-  background: #030605;
+  background: #000;
   color: #f2f4f0;
   --title-opacity: 1;
   --title-blur: 0px;
   --title-lift: 0px;
+  --actions-opacity: 1;
   --closing-opacity: 0;
+  --middle-opacity: 0;
   --film-scale: 1;
+  --film-reveal: 0;
   --progress: 0;
 }
 .scene {
@@ -25,12 +28,14 @@
   height: 100%;
   object-fit: cover;
   transform: scale(var(--film-scale));
-  opacity: 0.8;
+  /* Lower only the film/poster brightness against the dark backdrop, not the text. */
+  opacity: calc(0.7 * var(--film-reveal));
 }
 .shade {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, #03060566 0%, #03060533 40%, #03060599 100%);
+  opacity: var(--film-reveal);
 }
 .title {
   position: absolute;
@@ -62,6 +67,75 @@
   text-wrap: balance;
   text-shadow: 0 2px 36px #0008;
 }
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 34px;
+  opacity: var(--actions-opacity);
+  transform: translateY(calc(8px * (1 - var(--actions-opacity))));
+  pointer-events: auto;
+}
+.actions[inert] {
+  pointer-events: none;
+}
+.actions a {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 22px;
+  min-height: 48px;
+  padding: 13px 20px;
+  border: 1px solid #f2f4f047;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+.demoAction {
+  color: #0a0a0a;
+  background: #f2f4f0;
+}
+.portalAction {
+  color: #f2f4f0;
+  background: transparent;
+}
+.demoAction:hover {
+  background: #fff;
+}
+.portalAction:hover {
+  background: #f2f4f014;
+  border-color: #f2f4f099;
+}
+.middle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 100px 24px;
+  opacity: var(--middle-opacity);
+  pointer-events: none;
+}
+.middle p {
+  max-width: 1080px;
+  font-size: clamp(36px, 5.2vw, 72px);
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+  text-shadow: 0 2px 36px #0008;
+}
+.middle em {
+  color: var(--k-accent);
+  font-style: normal;
+}
 .closing {
   position: absolute;
   inset: 0;
@@ -81,7 +155,7 @@
   letter-spacing: -0.045em;
 }
 .closing em {
-  color: #62dbaf;
+  color: var(--k-accent);
   font-style: normal;
 }
 .closing a {
@@ -131,7 +205,7 @@
   transform-origin: left;
 }
 .hero a:focus-visible {
-  outline: 2px solid #62dbaf;
+  outline: 2px solid var(--k-accent);
   outline-offset: 8px;
 }
 .hero[data-motion="reduced"],
@@ -151,6 +225,8 @@
 }
 .hero[data-motion="reduced"] .title,
 .hero[data-failed="true"] .title,
+.hero[data-motion="reduced"] .middle,
+.hero[data-failed="true"] .middle,
 .hero[data-motion="reduced"] .closing,
 .hero[data-failed="true"] .closing {
   position: relative;
@@ -161,8 +237,15 @@
   padding: 0;
 }
 .hero[data-motion="reduced"] .closing p,
-.hero[data-failed="true"] .closing p {
+.hero[data-failed="true"] .closing p,
+.hero[data-motion="reduced"] .middle p,
+.hero[data-failed="true"] .middle p {
   font-size: 26px;
+}
+.hero[data-motion="reduced"] .actions,
+.hero[data-failed="true"] .actions {
+  opacity: 1;
+  transform: none;
 }
 .hero[data-motion="reduced"] .scrollHint,
 .hero[data-failed="true"] .scrollHint {
@@ -180,6 +263,19 @@
     font-size: 8px;
     letter-spacing: 0.14em;
   }
+  .actions {
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 28px;
+    width: min(100%, 290px);
+  }
+  .actions a {
+    width: 100%;
+    justify-content: space-between;
+    gap: 14px;
+    padding-inline: 16px;
+    font-size: 11px;
+  }
   .bottom {
     bottom: 25px;
     font-size: 8px;
@@ -189,6 +285,9 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .actions a {
+    transition: none;
+  }
   .hero {
     height: 100svh;
   }

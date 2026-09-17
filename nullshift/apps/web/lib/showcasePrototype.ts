@@ -28,9 +28,56 @@ export const clamp = (value: number, low = 0, high = 1) =>
 
 /** Finished fictional exports only; original captures and PSDs stay private. */
 export function showcaseAsset(name: string, embedded = false) {
+  const refreshedAdmin = /^(programme|ledger)\.(png|mp4)$/.test(name);
   return embedded
-    ? `/media/client-stories/suffolk-tennis/${name.replace(/\.png$/, ".webp")}`
-    : `/showcase-prototype/assets/${name}?v=2`;
+    ? `/media/client-stories/suffolk-tennis/${name.replace(/\.png$/, ".webp")}${refreshedAdmin ? "?v=3" : ""}`
+    : `/showcase-prototype/assets/${name}?v=${refreshedAdmin ? 3 : 2}`;
+}
+
+/** Lightweight inline exports; the screen inspector always uses showcaseAsset. */
+export function showcaseInlineVideo(
+  clip: string,
+  embedded: boolean,
+  mobile: boolean,
+  retina: boolean
+) {
+  if (!embedded) return showcaseAsset(`${clip}.mp4`);
+  const variant = clip.startsWith("parent-")
+    ? retina
+      ? "inline-retina"
+      : "inline"
+    : mobile
+      ? "inline-mobile"
+      : "inline-desktop";
+  return `/media/client-stories/suffolk-tennis/${clip}-${variant}.mp4`;
+}
+
+/** Only the visible clip and the next near its transition need media acquisition. */
+export function preparedShowcaseClips(progress: number, parent = false) {
+  const p = clamp(Number.isFinite(progress) ? progress : 0);
+  if (parent) return p < 0.56 ? [0] : p < 0.665 ? [0, 1] : [1];
+  if (p < 0.38) return [0];
+  if (p < 0.485) return [0, 1];
+  if (p < 0.65) return [1];
+  if (p < 0.755) return [1, 2];
+  return [2];
+}
+
+/** Pre-generated public image sizes avoid a cold image-transform request mid-scroll. */
+export function showcaseImageLoader({ src, width }: { src: string; width: number }) {
+  const [path, query] = src.split("?");
+  const name = path.split("/").at(-1) ?? "";
+  const widths = /^(studio-display|portrait-iphone)\.jpg$/.test(name)
+    ? [960, 1600, 2400, 3000]
+    : /^(programme|ledger|progress)\.webp$/.test(name)
+      ? [640, 1280, 1600, 2560]
+      : /^parent-(home|bookings|report)\.webp$/.test(name)
+        ? [390, 780, 936, 1170]
+        : null;
+  if (!widths) return src;
+  const chosen = widths.find((candidate) => candidate >= width) ?? widths.at(-1)!;
+  if (chosen === widths.at(-1)) return src;
+  return `${path.replace(/\.(jpg|webp)$/, `-w${chosen}.webp`)}${query ? `?${query}` : ""}`;
 }
 export const smooth = (value: number) => {
   const x = clamp(value);
@@ -110,7 +157,7 @@ export const PARENT_CHAPTERS = [
 /** Small frame-rate-independent catch-up, with no scroll hijacking or perpetual loop. */
 export function dampProgress(current: number, target: number, elapsedMs: number) {
   const next =
-    current + (target - current) * (1 - Math.exp(-clamp(elapsedMs, 0, 64) / 95));
+    current + (target - current) * (1 - Math.exp(-clamp(elapsedMs, 0, 64) / 30));
   return Math.abs(next - target) < 0.0001 ? target : next;
 }
 

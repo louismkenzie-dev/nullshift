@@ -1,0 +1,216 @@
+.root {
+  position: relative;
+  height: calc(100svh + 4200px);
+  background: #000;
+  color: #f4f4e8;
+  --blackout: 0;
+  --scene-blur: 0px;
+  --anything: 0;
+  --anything-blur: 12px;
+  --anything-lift: 40px;
+  --film-position: 50%;
+  --word-shadow: 0;
+}
+.scene {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  min-height: 420px;
+  overflow: clip;
+  isolation: isolate;
+}
+.film {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--film-position) 50%;
+  transform: scale(1.035);
+  filter: blur(var(--scene-blur));
+}
+.shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #0009, transparent 32%, transparent 85%, #0008);
+  pointer-events: none;
+}
+.words {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  pointer-events: none;
+}
+.words::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(1450px, 130vw);
+  height: clamp(260px, 46svh, 540px);
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse,
+    #000e 0%,
+    #000c 20%,
+    #0008 42%,
+    #0003 65%,
+    transparent 80%
+  );
+  filter: blur(32px);
+  opacity: var(--word-shadow);
+}
+.words span {
+  grid-area: 1 / 1;
+  display: block;
+  position: relative;
+  width: min(92vw, 1400px);
+  opacity: 0;
+  font:
+    800 clamp(36px, 6.6vw, 96px)/1.04 var(--font-sans),
+    sans-serif;
+  letter-spacing: -0.055em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  text-shadow:
+    0 2px 24px #000c,
+    0 8px 64px #000b;
+}
+.blackout {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: var(--blackout);
+  pointer-events: none;
+}
+.anything {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: var(--anything);
+  filter: blur(var(--anything-blur));
+  transform: translateY(var(--anything-lift));
+  font:
+    800 clamp(46px, 10vw, 144px)/1 var(--font-sans),
+    sans-serif;
+  letter-spacing: -0.055em;
+  text-transform: uppercase;
+  color: var(--k-accent, #10b981);
+  pointer-events: none;
+}
+.skip {
+  position: absolute;
+  right: 5vw;
+  bottom: max(32px, env(safe-area-inset-bottom));
+  font:
+    500 10px/1.5 var(--font-mono),
+    monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #f4f4e8b3;
+  padding: 10px 0;
+}
+.skip:focus-visible {
+  outline: 2px solid var(--k-accent);
+  outline-offset: 8px;
+}
+.accessible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  .root {
+    height: calc(100svh + 2400px);
+  }
+  .scene {
+    min-height: 0;
+    background: #000;
+  }
+  .film,
+  .shade,
+  .words::before {
+    display: none;
+  }
+  .words span {
+    font-size: clamp(32px, 9vw, 72px);
+    text-shadow: none;
+  }
+  .skip {
+    font-size: 10px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+@media (max-aspect-ratio: 6/5) {
+  /* Full-height mobile composition: feature the working phone, not a letterboxed desktop. */
+  .film {
+    transform: scale(1.08);
+  }
+  .words::before {
+    width: 150vw;
+    height: 38svh;
+    filter: blur(28px);
+  }
+}
+.root:is([data-motion="reduced"], [data-failed="true"]) {
+  height: auto;
+}
+.root:is([data-motion="reduced"], [data-failed="true"]) .scene {
+  position: relative;
+  height: auto;
+  min-height: 100svh;
+  padding: 120px 24px 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 36px;
+}
+.root:is([data-motion="reduced"], [data-failed="true"]) :is(.film, .shade, .blackout) {
+  display: none;
+}
+.root:is([data-motion="reduced"], [data-failed="true"]) .words {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  transform: none;
+  gap: 18px;
+}
+.root:is([data-motion="reduced"], [data-failed="true"]) .words::before {
+  display: none;
+}
+.root:is([data-motion="reduced"], [data-failed="true"]) .words span {
+  grid-area: auto;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  font-size: clamp(26px, 5vw, 64px);
+  width: 100%;
+}
+.root:is([data-motion="reduced"], [data-failed="true"]) .anything {
+  position: relative;
+  inset: auto;
+  padding: 0;
+  opacity: 1;
+  filter: none;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    height: auto;
+  }
+  .scene {
+    height: auto;
+    min-height: 100svh;
+  }
+}

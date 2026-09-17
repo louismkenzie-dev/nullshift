@@ -1,0 +1,120 @@
+.section {
+  position: relative;
+  padding: clamp(72px, 10vw, 144px) 24px 56px;
+  background: var(--k-bg);
+  color: var(--k-fg);
+  border-bottom: 1px solid var(--k-border);
+}
+.anchor {
+  position: absolute;
+  top: 0;
+}
+.content {
+  max-width: 1200px;
+  margin: auto;
+}
+.eyebrow {
+  margin: 0 0 28px;
+  color: var(--k-muted);
+  font: 500 0.72rem/1.5 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+.content h2 {
+  max-width: 18ch;
+  margin: 0;
+  font: 600 clamp(2.5rem, 6.7vw, 6.5rem)/1.03 var(--font-sans);
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+}
+.content h2 span {
+  color: var(--k-accent);
+}
+.lead {
+  max-width: 650px;
+  margin: 32px 0;
+  color: var(--k-muted);
+  font: 400 clamp(1.05rem, 1.6vw, 1.3rem)/1.7 var(--font-sans);
+}
+.action {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  min-height: 58px;
+  padding: 16px 26px;
+  color: #08100d;
+  background: var(--k-accent);
+  border-radius: 999px;
+  font: 600 1rem/1.4 var(--font-sans);
+  text-decoration: none;
+}
+.button span {
+  transition: transform 180ms ease;
+}
+.button:hover span {
+  transform: translate(3px, -3px);
+}
+.button:focus-visible {
+  outline: 2px solid var(--k-fg);
+  outline-offset: 5px;
+}
+.action p {
+  margin: 0;
+  color: var(--k-muted);
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+.steps {
+  list-style: none;
+  padding: 40px 0 0;
+  margin: 64px 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+  border-top: 1px solid var(--k-border);
+}
+.number {
+  color: var(--k-accent);
+  font: 400 0.72rem/1 var(--font-mono);
+}
+.steps h3 {
+  margin: 16px 0 8px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.steps p {
+  margin: 0;
+  max-width: 30ch;
+  color: var(--k-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+@media (max-width: 640px) {
+  .section {
+    padding-inline: 20px;
+  }
+  .action {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .button {
+    width: 100%;
+  }
+  .steps {
+    margin-top: 44px;
+    gap: 28px;
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .button span {
+    transition: none;
+  }
+}

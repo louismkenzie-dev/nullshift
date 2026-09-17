@@ -5,10 +5,13 @@ import {
   clipTime,
   dampProgress,
   parentFrame,
+  preparedShowcaseClips,
   parseByteRange,
   screenMatrix,
   showcaseEnabled,
   showcaseFrame,
+  showcaseImageLoader,
+  showcaseInlineVideo,
   SHOWCASE_ASSETS,
 } from "@/lib/showcasePrototype";
 
@@ -29,6 +32,59 @@ describe("local showcase isolation", () => {
       "toString",
     ])
       expect(Object.hasOwn(SHOWCASE_ASSETS, file)).toBe(false);
+  });
+});
+
+describe("responsive showcase acquisition", () => {
+  it("keeps private prototypes on the existing allowlisted originals", () => {
+    expect(showcaseInlineVideo("ledger", false, true, true)).toBe(
+      "/showcase-prototype/assets/ledger.mp4?v=3"
+    );
+    expect(showcaseInlineVideo("parent-home", false, false, false)).toBe(
+      "/showcase-prototype/assets/parent-home.mp4?v=2"
+    );
+  });
+  it("selects retina-conscious public inline assets without replacing inspector originals", () => {
+    expect(showcaseInlineVideo("ledger", true, true, true)).toContain(
+      "ledger-inline-mobile.mp4"
+    );
+    expect(showcaseInlineVideo("ledger", true, false, false)).toContain(
+      "ledger-inline-desktop.mp4"
+    );
+    expect(showcaseInlineVideo("parent-home", true, true, true)).toContain(
+      "parent-home-inline-retina.mp4"
+    );
+    expect(showcaseInlineVideo("parent-home", true, false, false)).toContain(
+      "parent-home-inline.mp4"
+    );
+  });
+  it("prepares a next clip near its transition and retires the covered one", () => {
+    expect(preparedShowcaseClips(0)).toEqual([0]);
+    expect(preparedShowcaseClips(0.4)).toEqual([0, 1]);
+    expect(preparedShowcaseClips(0.5)).toEqual([1]);
+    expect(preparedShowcaseClips(0.7)).toEqual([1, 2]);
+    expect(preparedShowcaseClips(1)).toEqual([2]);
+    expect(preparedShowcaseClips(0.5, true)).toEqual([0]);
+    expect(preparedShowcaseClips(0.6, true)).toEqual([0, 1]);
+    expect(preparedShowcaseClips(0.7, true)).toEqual([1]);
+  });
+  it("selects prebuilt image candidates and preserves original aspect and version paths", () => {
+    const root = "/media/client-stories/suffolk-tennis/";
+    expect(showcaseImageLoader({ src: `${root}ledger.webp?v=3`, width: 900 })).toBe(
+      `${root}ledger-w1280.webp?v=3`
+    );
+    expect(showcaseImageLoader({ src: `${root}studio-display.jpg`, width: 1600 })).toBe(
+      `${root}studio-display-w1600.webp`
+    );
+    expect(showcaseImageLoader({ src: `${root}parent-report.webp`, width: 700 })).toBe(
+      `${root}parent-report-w780.webp`
+    );
+    expect(showcaseImageLoader({ src: `${root}ledger.webp?v=3`, width: 3000 })).toBe(
+      `${root}ledger.webp?v=3`
+    );
+    expect(showcaseImageLoader({ src: `${root}suffolk-logo.webp`, width: 900 })).toBe(
+      `${root}suffolk-logo.webp`
+    );
   });
 });
 
