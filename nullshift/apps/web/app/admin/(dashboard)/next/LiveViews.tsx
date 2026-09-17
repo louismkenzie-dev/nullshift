@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { LiveQuotes } from "./quotes/LiveQuotes";
+import { quoteBuilderEnabled } from "@/lib/next/quote-data";
 import { notFound } from "next/navigation";
 import {
   ArrowDownLeft,
@@ -391,8 +393,8 @@ export async function LiveClient({ id }: { id: string }) {
       label: "Scope & pricing",
       description: "Define deliverables, exclusions and a costed quote",
       done: false,
-      href: `${current}/pricing`,
-      action: "Review pricing",
+      href: `/admin/next/quotes/new?client=${id}`,
+      action: "Build a quote",
     },
     {
       label: "Agreement",
@@ -473,8 +475,8 @@ export async function LiveClient({ id }: { id: string }) {
               ))}
             </ol>
             <div className={s.panelFoot}>
-              Detailed edits open the existing admin tools. Sending and payment actions
-              remain separate.
+              Manage each stage in this workspace. Sending and payment actions remain
+              separate from saving a quote.
             </div>
           </section>
           <section className={s.workPanel}>
@@ -501,7 +503,7 @@ export async function LiveClient({ id }: { id: string }) {
             {!projects.length && (
               <Empty
                 title="Project setup needs completing"
-                text="The client record exists. Open the existing admin tools to add their project."
+                text="The client record exists. Open project details to complete setup."
               />
             )}
           </section>
@@ -567,7 +569,7 @@ export async function LiveClient({ id }: { id: string }) {
             </div>
           </section>
           <Link href={current} prefetch={false} className={s.btn}>
-            Open existing client tools <ArrowRight size={15} />
+            Client & project details <ArrowRight size={15} />
           </Link>
         </aside>
       </div>
@@ -595,6 +597,11 @@ export async function LiveSales() {
         description="New enquiries and projects taking shape."
       />
       <SourceStatus data={data} />
+      {quoteBuilderEnabled() && (
+        <div style={{ marginBottom: 24 }}>
+          <LiveQuotes compact />
+        </div>
+      )}
       <div className={s.dashboardColumns}>
         <section className={s.workPanel}>
           <div className={s.panelHead}>
@@ -652,19 +659,9 @@ export async function LiveSales() {
           )}
         </section>
       </div>
-      <div className={s.quietNotice}>
-        <FileText size={18} />
-        <div>
-          <strong>The new Quote Studio is still a design preview.</strong>
-          <p>
-            Your real proposals remain in the existing client tools. New-model quote
-            storage and commercial approvals have not been activated.
-          </p>
-          <Link href="/admin/next/quotes/q-atlas-v1" className={s.subtleLink}>
-            Explore Quote Studio with fictional data →
-          </Link>
-        </div>
-      </div>
+      {!quoteBuilderEnabled() && (
+        <p className={s.sourceFoot}>Quote saving is not enabled in this environment.</p>
+      )}
     </>
   );
 }
@@ -823,8 +820,8 @@ export async function LiveAgreements() {
         )}
       </section>
       <p className={s.sourceFoot}>
-        This list shows Order Forms, not every historical proposal or legal document.
-        Existing client tools retain the full document history.
+        This list shows Order Forms, not every historical proposal or legal document. Open
+        an agreement to review its full document history in this workspace.
       </p>
     </>
   );
@@ -846,7 +843,15 @@ export function LiveSettings({
       "Your sign-in and two-factor authentication",
       "/admin/security",
     ],
-    ["Existing admin tools", "The original operational workspace", "/admin"],
+    [
+      "Billing & integrations",
+      "Invoices, collection methods and provider connections",
+      "/admin/billing",
+    ],
+    ["Delivery tasks", "Plan and track the work", "/admin/tasks"],
+    ["Issues & support", "Incoming client work", "/admin/issues"],
+    ["Business vault", "Internal company records", "/admin/vault"],
+    ["Compliance", "Client compliance records", "/admin/compliance"],
   ];
   return (
     <>
@@ -878,7 +883,7 @@ export function LiveSettings({
         </section>
         <section className={s.workPanel}>
           <div className={s.panelHead}>
-            <h2 className={s.h2}>This preview</h2>
+            <h2 className={s.h2}>Workspace status</h2>
           </div>
           <dl className={s.detailList}>
             <div>
@@ -924,7 +929,7 @@ export function LiveAutomations({ flags }: { flags: string[] }) {
       <div className={s.quietNotice}>
         <Check size={18} />
         <div>
-          <strong>No new automations are activated by this preview.</strong>
+          <strong>New financial automations remain off.</strong>
           <p>
             Existing operational behaviour remains unchanged. Provider connectivity and
             migration readiness must be checked before the new financial workflows are

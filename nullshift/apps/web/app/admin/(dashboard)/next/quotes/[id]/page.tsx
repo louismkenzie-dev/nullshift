@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { loadBuilderQuote, quoteBuilderEnabled } from "@/lib/next/quote-data";
+import { loadOperations } from "@/lib/next/live-data";
+import { QuoteBuilder } from "../QuoteBuilder";
 import { notFound } from "next/navigation";
 import { flagOn } from "@/lib/flags";
 import { loadQuoteForStudio } from "@/lib/commercial/quotes";
@@ -54,6 +57,24 @@ export default async function QuoteStudio({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (quoteBuilderEnabled()) {
+    const [quote, data] = await Promise.all([loadBuilderQuote(id), loadOperations()]);
+    if (!quote) notFound();
+    return (
+      <QuoteBuilder
+        id={id}
+        initial={quote.draft}
+        updatedAt={quote.updatedAt}
+        status={quote.status}
+        version={quote.version}
+        clients={data.clients.map((c) => ({
+          id: c.id,
+          name: c.name,
+          contact_email: c.contact_email,
+        }))}
+      />
+    );
+  }
   const loaded = await loadQuote(id);
   if (!loaded) notFound();
   const { q, source } = loaded;

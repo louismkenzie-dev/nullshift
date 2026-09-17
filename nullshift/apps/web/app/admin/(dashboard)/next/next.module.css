@@ -41,6 +41,36 @@
   color: inherit;
   text-decoration: none;
 }
+.integrated {
+  --k-bg: var(--ns-bg);
+  --k-fg: var(--ns-fg);
+  --k-muted: var(--ns-muted);
+  --k-accent: var(--ns-primary);
+  --k-border: var(--ns-border);
+  --k-surface: var(--ns-surface);
+}
+@media print {
+  .shell {
+    position: static !important;
+    display: block !important;
+    color: #18221e;
+    background: #fff;
+  }
+  .shell > .rail,
+  .shell > .header,
+  .shell > .bottomNav {
+    display: none !important;
+  }
+  .content {
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .dataContext,
+  .demoContext {
+    display: none !important;
+  }
+}
 
 /* ── Rail ─────────────────────────────────────────────── */
 .rail {
@@ -647,6 +677,10 @@
 }
 .shell .btnPrimary {
   color: var(--ns-on-primary);
+}
+.shell .btnPrimary:disabled {
+  color: var(--ns-muted);
+  border-color: var(--ns-border);
 }
 .shell .railLink {
   color: var(--ns-muted);

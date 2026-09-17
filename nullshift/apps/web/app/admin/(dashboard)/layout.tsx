@@ -143,5 +143,14 @@ export default async function DashboardLayout({
     );
   }
 
-  return <AdminFrame email={user.email ?? ""}>{children}</AdminFrame>;
+  return (
+    <AdminFrame
+      email={user.email ?? ""}
+      operations={
+        process.env.OPS_ADMIN_MAIN === "true" && process.env.OPS_REAL_DATA === "true"
+      }
+    >
+      {children}
+    </AdminFrame>
+  );
 }

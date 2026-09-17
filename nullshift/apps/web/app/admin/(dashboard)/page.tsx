@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireStaff } from "@nullshift/auth/guards";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader } from "@/components/app/AppKit";
@@ -77,6 +77,8 @@ function toGridBlock(block: Block): GridBlock {
 
 export default async function DashboardGridPage() {
   if (!(await requireStaff()).ok) notFound();
+  if (process.env.OPS_ADMIN_MAIN === "true" && process.env.OPS_REAL_DATA === "true")
+    redirect("/admin/next");
   const { clients, enquiries, platform } = await loadClientBlocks();
 
   const clientBlocks = clients.map(toGridBlock);

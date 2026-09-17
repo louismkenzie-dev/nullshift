@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   BriefcaseBusiness,
   ChevronRight,
-  CircleHelp,
   FileText,
   House,
   LayoutGrid,
@@ -67,10 +66,6 @@ export function Rail() {
           <Settings2 size={17} />
           Settings
         </Link>
-        <Link href="/admin" className={s.railLink}>
-          <CircleHelp size={17} />
-          Existing admin tools
-        </Link>
         <div className={s.railNote}>
           A little less admin.
           <br />A lot more clarity.
@@ -112,9 +107,11 @@ export function OperationsHeader() {
 export function DataContext({
   real,
   billingEnabled,
+  integrated = false,
 }: {
   real: boolean;
   billingEnabled: boolean;
+  integrated?: boolean;
 }) {
   const path = usePathname();
   const actualRoutes = [
@@ -130,7 +127,10 @@ export function DataContext({
   ];
   const actual =
     real &&
-    (actualRoutes.includes(path) || /^\/admin\/next\/clients\/[0-9a-f-]{36}$/.test(path));
+    (integrated ||
+      actualRoutes.includes(path) ||
+      path.startsWith("/admin/next/quotes") ||
+      /^\/admin\/next\/clients\/[0-9a-f-]{36}$/.test(path));
   return (
     <div className={actual ? s.dataContext : s.demoContext}>
       <span className={s.contextDot} />

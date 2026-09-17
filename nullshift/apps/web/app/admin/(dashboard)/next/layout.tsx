@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { BottomNav, DataContext, OperationsHeader, Rail } from "./Rail";
+import { OperationsShell } from "./OperationsShell";
 import { realDataEnabled } from "@/lib/next/live-data";
 import { flagOn } from "@/lib/flags";
-import s from "./next.module.css";
 
 export const metadata: Metadata = {
   title: "Operations — Nullshift",
@@ -17,17 +16,11 @@ export const metadata: Metadata = {
  */
 export default function NextLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={s.shell}>
-      <Rail />
-      <OperationsHeader />
-      <main className={s.content} id="operations-content">
-        <DataContext
-          real={realDataEnabled()}
-          billingEnabled={flagOn("billingActivation")}
-        />
-        {children}
-      </main>
-      <BottomNav />
-    </div>
+    <OperationsShell
+      real={realDataEnabled()}
+      billingEnabled={flagOn("billingActivation")}
+    >
+      {children}
+    </OperationsShell>
   );
 }

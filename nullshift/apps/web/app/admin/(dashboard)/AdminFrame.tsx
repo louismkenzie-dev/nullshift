@@ -4,17 +4,26 @@ import { usePathname } from "next/navigation";
 import { AdminNav } from "../AdminNav";
 import { Atmosphere } from "@/components/funnel/Atmosphere";
 import { OperationOverlay } from "@/components/app/OperationOverlay";
+import { OperationsShell } from "./next/OperationsShell";
 
 /** Keep the original tools intact without mounting their chrome behind Operations. */
 export function AdminFrame({
   children,
   email,
+  operations = false,
 }: {
   children: React.ReactNode;
   email: string;
+  operations?: boolean;
 }) {
   const path = usePathname();
   if (path === "/admin/next" || path.startsWith("/admin/next/")) return children;
+  if (operations)
+    return (
+      <OperationsShell real billingEnabled={false} integrated>
+        {children}
+      </OperationsShell>
+    );
   return (
     <div className="min-h-screen relative" style={{ background: "var(--k-bg)" }}>
       <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>

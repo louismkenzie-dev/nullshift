@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { quoteBuilderEnabled } from "@/lib/next/quote-data";
+import { LiveQuotes } from "./LiveQuotes";
 import { flagOn } from "@/lib/flags";
 import { FIXTURE_STUDIO_IDS } from "@/lib/commercial/fixtures";
 import { loadQuoteVersionListing } from "@/lib/commercial/quotes";
@@ -168,6 +170,7 @@ export default async function QuotesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
+  if (quoteBuilderEnabled()) return <LiveQuotes />;
   const sp = await searchParams;
   const notice = noticeFor(first(sp.notice));
   const live = flagOn("commercialV2");
