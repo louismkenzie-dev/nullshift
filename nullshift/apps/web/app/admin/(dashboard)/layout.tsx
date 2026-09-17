@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@nullshift/db";
-import { isAdminEmail } from "@nullshift/auth/admin";
+import { adminAccessDecision, isAdminEmail } from "@nullshift/auth/admin";
 import { AdminNav } from "../AdminNav";
 import { T } from "@nullshift/ui/tokens";
 import { Atmosphere } from "@/components/funnel/Atmosphere";
@@ -67,19 +67,12 @@ export default async function DashboardLayout({
   // Proxy already blocks anonymous users; this enforces the admin allowlist.
   if (!user) redirect("/admin/login");
 
-  // 2FA step-up: if the staff user has a verified TOTP factor but the session is
-  // still aal1, require the challenge (handled at /admin/security, outside this
-  // layout so there's no loop). Users without a factor are NOT blocked — they're
-  // prompted to enrol there. (brief §9)
-  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2") {
-    redirect("/admin/security");
-  }
   // Team access: a real staff membership (is_internal_staff via memberships)
   // OR the transitional ADMIN_EMAILS allowlist. New team members get a
   // 'staff' membership on the internal tenant instead of an env change.
   let { data: isStaff } = await supabase.rpc("is_internal_staff");
-  if (!isStaff && isAdminEmail(user.email)) {
+  const allowlisted = isAdminEmail(user.email);
+  if (!isStaff && allowlisted) {
     // Allowlisted but no membership yet: provision one, otherwise every
     // staff-gated RLS policy would silently return nothing for this user.
     try {
@@ -103,7 +96,14 @@ export default async function DashboardLayout({
       console.error("staff membership provisioning failed:", e);
     }
   }
-  if (!isStaff && !isAdminEmail(user.email)) {
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const access = adminAccessDecision({
+    authorised: isStaff === true || allowlisted,
+    currentLevel: aal?.currentLevel,
+    nextLevel: aal?.nextLevel,
+  });
+
+  if (access === "forbidden") {
     return (
       <main
         className="min-h-screen flex items-center justify-center px-6"
@@ -144,6 +144,11 @@ export default async function DashboardLayout({
       </main>
     );
   }
+
+  // 2FA step-up: only authorised staff can reach the challenge. The challenge
+  // lives outside this layout so an aal1 staff session can complete it without
+  // being redirected by the dashboard guard again.
+  if (access === "mfa") redirect("/admin/security");
 
   return (
     <div className="min-h-screen relative" style={{ background: "var(--k-bg)" }}>

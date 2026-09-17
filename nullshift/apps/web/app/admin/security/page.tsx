@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@nullshift/db";
-import { isAdminEmail } from "@nullshift/auth/admin";
+import { requireStaff } from "@nullshift/auth/guards";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
@@ -10,17 +9,14 @@ import { MfaPanel } from "./MfaPanel";
 /**
  * Staff security — TOTP 2FA enrolment + step-up. Sits OUTSIDE the (dashboard)
  * route group so the aal2 enforcement in that layout can redirect here without a
- * loop. Login is guaranteed by the proxy; we re-check the staff allowlist.
+ * loop. Login is guaranteed by the proxy; we re-check the canonical staff rule.
  */
 export const dynamic = "force-dynamic";
 
 export default async function SecurityPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/admin/login");
-  if (!isAdminEmail(user.email)) redirect("/admin/login");
+  const access = await requireStaff();
+  if (!access.ok && access.reason === "unauthenticated") redirect("/admin/login");
+  if (!access.ok) redirect("/admin");
 
   return (
     <main style={{ minHeight: "100vh", background: "var(--k-bg)" }}>
