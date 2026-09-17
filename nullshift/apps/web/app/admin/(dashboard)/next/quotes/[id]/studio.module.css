@@ -1,0 +1,140 @@
+/* Quote Studio — estimator views. Halo tokens inherited from next.module.css .shell;
+   square corners, no motion. */
+
+.policyLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--ns-muted);
+}
+.policyLine strong {
+  color: var(--ns-fg);
+  font-weight: 600;
+}
+
+.subhead {
+  margin: 18px 0 8px;
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-muted);
+}
+
+.scenarios {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.scenarios th,
+.scenarios td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--ns-border);
+  text-align: right;
+  vertical-align: top;
+}
+.scenarios th:first-child,
+.scenarios td:first-child {
+  text-align: left;
+  color: var(--ns-muted);
+}
+.scenarios thead th {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-muted);
+}
+.scenarios .baseCol {
+  background: var(--ns-elevated);
+  color: var(--ns-fg);
+  font-weight: 600;
+}
+.scenarios .total td {
+  border-top: 1px solid var(--ns-border-strong);
+  font-weight: 700;
+  color: var(--ns-fg);
+}
+
+.drivers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.driver {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  font-size: 13px;
+}
+.driverBar {
+  grid-column: 1 / -1;
+  height: 4px;
+  background: var(--ns-border);
+}
+.driverBar > span {
+  display: block;
+  height: 100%;
+  background: var(--ns-primary);
+}
+.driverNote {
+  grid-column: 1 / -1;
+  color: var(--ns-faint);
+  font-size: 12px;
+}
+
+.issues {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.issue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ns-border);
+  font-size: 13px;
+}
+.issue:last-child {
+  border-bottom: 0;
+}
+.issueEffect {
+  grid-column: 1 / -1;
+  color: var(--ns-muted);
+  font-size: 12px;
+}
+
+.unknowns {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ns-warning);
+  color: var(--ns-fg);
+  font-size: 13px;
+}
+.unknowns ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.empty {
+  padding: 12px;
+  border: 1px dashed var(--ns-border-strong);
+  color: var(--ns-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .scenarios {
+    display: block;
+    overflow-x: auto;
+  }
+}
