@@ -370,6 +370,24 @@ export default async function ClientCarePlanPage({
             >
               {built ? "Send plan options" : "Options open at go-live"}
             </SubmitButton>
+            {/* See it before you send it. This opens the client's real plan
+                chooser through the read-only "view as client" preview — the
+                actual page at their actual prices, not a mock that can drift
+                away from what they are emailed. A plain link, deliberately:
+                it sits inside this form, and a <button> here would submit it
+                and send the email instead. */}
+            <a
+              href={`/admin/clients/${tenantId}/preview?to=/portal/plan`}
+              title="Open the client's plan chooser exactly as they will see it — read-only"
+              style={{
+                ...btn("var(--k-surface)", "var(--k-fg)"),
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              Preview what they see →
+            </a>
             <span style={{ fontFamily: T.mono, fontSize: 11, color: "var(--k-faint)" }}>
               {block?.carePlan.optionsSentAt
                 ? `Options last sent ${dateGB(block.carePlan.optionsSentAt)}`
