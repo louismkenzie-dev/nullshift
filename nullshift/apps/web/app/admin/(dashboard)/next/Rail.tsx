@@ -4,19 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import s from "./next.module.css";
 
-const PRIMARY: { label: string; href: string | null }[] = [
+const PRIMARY: { label: string; href: string }[] = [
   { label: "Today", href: "/admin/next" },
-  { label: "Sales & Quotes", href: "/admin/next/quotes/q-northline-v2" },
+  { label: "Sales & Quotes", href: "/admin/next/sales" },
   { label: "Clients", href: "/admin/next/clients" },
-  { label: "Delivery", href: null },
-  { label: "Finance", href: null },
-  { label: "Agreements", href: null },
-  { label: "Automations", href: null },
+  { label: "Delivery", href: "/admin/next/delivery" },
+  { label: "Finance", href: "/admin/next/finance" },
+  { label: "Agreements", href: "/admin/next/agreements" },
+  { label: "Automations", href: "/admin/next/automations" },
 ];
 
 function active(pathname: string, href: string): boolean {
   if (href === "/admin/next") return pathname === href;
-  return pathname.startsWith(href.replace(/\/q-[^/]+$/, ""));
+  if (href === "/admin/next/sales")
+    return pathname.startsWith(href) || pathname.startsWith("/admin/next/quotes");
+  return pathname.startsWith(href);
 }
 
 export function Rail() {
@@ -28,32 +30,30 @@ export function Rail() {
         Nullshift
       </div>
       <div className={s.railList}>
-        {PRIMARY.map((item) =>
-          item.href ? (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`${s.railLink} ${active(pathname, item.href) ? s.railLinkActive : ""}`}
-              aria-current={active(pathname, item.href) ? "page" : undefined}
-            >
-              {item.label}
-            </Link>
-          ) : (
-            <span
-              key={item.label}
-              className={`${s.railLink} ${s.railLinkDisabled}`}
-              title="Not in this slice"
-            >
-              {item.label}
-              <span className={s.mono}>later</span>
-            </span>
-          )
-        )}
+        {PRIMARY.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`${s.railLink} ${active(pathname, item.href) ? s.railLinkActive : ""}`}
+            aria-current={active(pathname, item.href) ? "page" : undefined}
+          >
+            {item.label}
+          </Link>
+        ))}
       </div>
       <div className={s.railFoot}>
-        <span className={`${s.railLink} ${s.railLinkDisabled}`} title="Not in this slice">
+        <Link
+          href="/admin/next/portal"
+          className={`${s.railLink} ${active(pathname, "/admin/next/portal") ? s.railLinkActive : ""}`}
+        >
+          Client portal preview
+        </Link>
+        <Link
+          href="/admin/next/settings"
+          className={`${s.railLink} ${active(pathname, "/admin/next/settings") ? s.railLinkActive : ""}`}
+        >
           Settings
-        </span>
+        </Link>
         <Link href="/admin" className={s.railLink}>
           Current admin →
         </Link>
@@ -65,8 +65,8 @@ export function Rail() {
 const BOTTOM = [
   { label: "Today", href: "/admin/next" },
   { label: "Clients", href: "/admin/next/clients" },
-  { label: "Work", href: "/admin/next/quotes/q-northline-v2" },
-  { label: "More", href: "/admin" },
+  { label: "Work", href: "/admin/next/delivery" },
+  { label: "More", href: "/admin/next/settings" },
 ];
 
 export function BottomNav() {
