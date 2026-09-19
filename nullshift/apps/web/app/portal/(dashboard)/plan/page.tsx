@@ -4,7 +4,7 @@ import { carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlan
 import { contractedPrices, type ContractedPrices } from "@/lib/pricing/contracted";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/Reveal";
-import { choosePlan } from "./actions";
+import { choosePlan, resumeDirectDebit } from "./actions";
 import { PendingBeacon } from "@/components/app/PendingBeacon";
 import Link from "next/link";
 import { planChoiceClosedReason, planChoiceOpen } from "@/lib/planGate";
@@ -75,6 +75,7 @@ export default async function PortalPlanPage({
   searchParams: Promise<{ dd?: string; price?: string; gate?: string }>;
 }) {
   const { dd, price, gate } = await searchParams;
+  const ddRetryFailed = dd === "retry_failed";
   const { supabase } = await getPortalClient();
   const [
     { data: subs },
@@ -516,7 +517,7 @@ export default async function PortalPlanPage({
           )}
           <Reveal>
             {pendingDd ? (
-              <Panel label="// DIRECT DEBIT" title="Direct Debit setup in progress">
+              <Panel label="// DIRECT DEBIT" title="One step left">
                 <p
                   style={{
                     fontFamily: T.sans,
@@ -525,9 +526,48 @@ export default async function PortalPlanPage({
                     lineHeight: 1.6,
                   }}
                 >
-                  Check your email for the authorisation link — your plan goes live once
-                  the Direct Debit mandate is authorised.
+                  You&rsquo;ve chosen your plan and agreed the terms — thank you. All
+                  that&rsquo;s left is the Direct Debit, which takes about a minute and
+                  needs your sort code and account number. Nothing is charged until it
+                  is set up.
                 </p>
+                {/* The old copy here said "check your email for the authorisation
+                    link", which is wrong whenever the link was opened rather than
+                    emailed — there is no email to check, and the client's only way
+                    back was to ask us. This mints a fresh link on the spot. */}
+                <form action={resumeDirectDebit} style={{ marginTop: 16 }}>
+                  <button
+                    type="submit"
+                    style={{
+                      fontFamily: T.mono,
+                      fontSize: "0.72rem",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      background: "var(--k-accent)",
+                      color: "var(--k-on-accent)",
+                      border: "none",
+                      padding: "13px 22px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Set up your Direct Debit →
+                  </button>
+                </form>
+                {ddRetryFailed && (
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "0.82rem",
+                      color: "var(--k-warning, #f5d547)",
+                      lineHeight: 1.6,
+                      marginTop: 12,
+                    }}
+                  >
+                    That didn&rsquo;t open — sorry. Please try once more, and if it
+                    still doesn&rsquo;t work just reply to any of our emails and
+                    we&rsquo;ll set it up with you.
+                  </p>
+                )}
                 <details style={{ marginTop: 14 }}>
                   <summary
                     style={{
