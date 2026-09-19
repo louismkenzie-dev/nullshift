@@ -30,11 +30,12 @@ import { issuePortalLink, portalReplyTo } from "@/lib/portalAccess";
  * production and carries our wording.
  */
 
-export type ForgotResult = { ok: boolean; error?: string };
+/* The neutral "if that email has an account" wording lives in page.tsx.
+   It must NOT be exported from here: a "use server" module may only export
+   async functions, and a single exported string throws at module evaluation
+   — taking the whole route down with it. See tests/use-server-exports.test.ts. */
 
-/** Said back no matter what happened. Never confirms an account exists. */
-const NEUTRAL =
-  "If that email has a Nullshift portal account, a reset link is on its way. It's valid for one hour — check your spam folder if it doesn't arrive in a few minutes.";
+export type ForgotResult = { ok: boolean; error?: string };
 
 export async function requestPasswordReset(
   _prev: ForgotResult | null,
@@ -96,5 +97,3 @@ export async function requestPasswordReset(
 
   return { ok: true };
 }
-
-export const NEUTRAL_RESET_MESSAGE = NEUTRAL;
