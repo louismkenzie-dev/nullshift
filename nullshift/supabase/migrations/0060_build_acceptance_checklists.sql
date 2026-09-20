@@ -2,7 +2,7 @@
 -- Admin redesign Phase 3, task p3-acceptance (brief §5.5 acceptance, §5.10
 -- later checklist, §8.2, §8.5–8.6, §3.3 #3, §17.1 rows 2, 3, 5, 11, 12).
 --
--- STATUS: NOT APPLIED to any database. Written additively against the live
+-- STATUS: APPLIED to Nullshift Ops (cweftpoaojwzllzficgt) on 2026-09-20 (0057 on 2026-09-17). Written additively against the live
 -- schema as read in docs/ADMIN-REDESIGN-PHASE0-2026-09-17.md §11. Number the
 -- ledger entry against `schema_migrations`, not this directory, before
 -- applying (Phase 0 decision N-h), and apply only with OPS_V2_FLAGS still

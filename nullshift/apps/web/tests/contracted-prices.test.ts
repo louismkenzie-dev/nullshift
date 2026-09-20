@@ -43,9 +43,9 @@ describe("plan vocabulary bridge", () => {
 });
 
 describe("priceFromAssessment", () => {
-  it("is base + unpriced when the client has not been scored", () => {
+  it("is base + unpriced when the client has not been scored (current from-price)", () => {
     const p = priceFromAssessment(null, carePlan("hosting_api")!);
-    expect(p).toMatchObject({ mrr: 80, source: "base", priced: false });
+    expect(p).toMatchObject({ mrr: 249, source: "base", priced: false });
   });
   it("uses the formula figure for the scored plan (Growth Pro = £120)", () => {
     const p = priceFromAssessment(row({}), carePlan("hosting_api")!);
@@ -190,6 +190,110 @@ describe("hand-set plan prices", () => {
     expect(priceFromAssessment(agreed, carePlan("hosting")!)).toMatchObject({
       mrr: 70,
       source: "agreed",
+    });
+  });
+});
+
+describe("pricing versions — legacy protection", () => {
+  /** A real v1 Growth Pro row exactly as it sits in scale_assessments today. */
+  const v1Row = (over: Partial<AssessmentRow> = {}): AssessmentRow => ({
+    id: "legacy-1",
+    plan: "pro",
+    scale_band: "growth",
+    multiplier: 1.5,
+    direct_cost_floor: 32,
+    recommended_mrr: 120,
+    override_mrr: null,
+    agreed_mrr: null,
+    enterprise_review_required: false,
+    pricing_version: "NSI_v1_2026_08",
+    ...over,
+  });
+
+  it("a v1 assessment prices identically before and after v2 was published", () => {
+    // Frozen expectations from the NSI_v1 ladder (£40/£80/£120, £5 rounding).
+    const before = {
+      hosting: { mrr: 60, source: "derived" },
+      hosting_api: { mrr: 120, source: "formula" },
+      build_3: { mrr: 180, source: "derived" },
+      build_10: { mrr: null, source: "unpriced" },
+    };
+    const after = pricesFromAssessment(v1Row()).prices;
+    for (const [id, exp] of Object.entries(before))
+      expect(after[id], id).toMatchObject({ ...exp, pricingVersion: "NSI_v1_2026_08" });
+    expect(after.hosting!.mrr).not.toBe(225); // NOT the v2 derived figure
+  });
+
+  it("a v1 row keeps £5 rounding and its own vendor-cost floor when deriving siblings", () => {
+    const r = v1Row({
+      plan: "max",
+      scale_band: "established",
+      multiplier: 2.5,
+      direct_cost_floor: 140,
+      recommended_mrr: 300,
+    });
+    expect(priceFromAssessment(r, carePlan("hosting")!).mrr).toBe(140);
+    expect(priceFromAssessment(r, carePlan("hosting_api")!).mrr).toBe(200);
+    expect(priceFromAssessment(r, carePlan("build_3")!).mrr).toBe(300);
+  });
+
+  it("legacy agreed, override and hand-set figures are untouched by the version", () => {
+    const agreed = v1Row({ agreed_mrr: 95 });
+    expect(priceFromAssessment(agreed, carePlan("hosting_api")!)).toMatchObject({
+      mrr: 95,
+      source: "agreed",
+    });
+    const override = v1Row({ override_mrr: 88 });
+    expect(priceFromAssessment(override, carePlan("hosting_api")!)).toMatchObject({
+      mrr: 88,
+      source: "override",
+    });
+    const hand = v1Row({ plan_prices: { core: { mrr: 45, reason: "Legacy rate" } } });
+    expect(priceFromAssessment(hand, carePlan("hosting")!)).toMatchObject({
+      mrr: 45,
+      source: "override",
+      note: "Legacy rate",
+    });
+  });
+
+  it("a v2 assessment uses the new bases and rounds to the pound", () => {
+    const v2 = v1Row({
+      id: "new-1",
+      pricing_version: "NSI_v2_2026_09",
+      recommended_mrr: 374, // 249 × 1.5 = 373.5 → 374
+      direct_cost_floor: 32,
+    });
+    const all = pricesFromAssessment(v2);
+    expect(all.prices.hosting_api).toMatchObject({ mrr: 374, source: "formula" });
+    expect(all.prices.hosting).toMatchObject({ mrr: 224, source: "derived" }); // 149 × 1.5 = 223.5
+    expect(all.prices.build_3).toMatchObject({ mrr: 599, source: "derived" }); // 399 × 1.5 = 598.5
+    expect(all.sellable.every((s) => s.pricingVersion === "NSI_v2_2026_09")).toBe(true);
+  });
+
+  it("Standard band under v2 reproduces the new public from-prices exactly", () => {
+    const r = v1Row({
+      plan: "core",
+      pricing_version: "NSI_v2_2026_09",
+      scale_band: "standard",
+      multiplier: 1,
+      direct_cost_floor: 20,
+      recommended_mrr: 149,
+    });
+    expect(pricesFromAssessment(r).sellable.map((s) => s.mrr)).toEqual([149, 249, 399]);
+  });
+
+  it("refuses to derive a sibling price for a version this build does not know", () => {
+    const r = v1Row({ pricing_version: "NSI_v9_2099_01" });
+    // The formula's own figure for the scored plan is still honoured…
+    expect(priceFromAssessment(r, carePlan("hosting_api")!)).toMatchObject({
+      mrr: 120,
+      source: "formula",
+    });
+    // …but nothing is guessed for the siblings.
+    expect(priceFromAssessment(r, carePlan("hosting")!)).toMatchObject({
+      mrr: null,
+      source: "unpriced",
+      priced: false,
     });
   });
 });

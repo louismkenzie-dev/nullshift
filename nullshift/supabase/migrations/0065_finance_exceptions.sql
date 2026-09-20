@@ -5,7 +5,7 @@
 -- behind Paid", §12.3, §17.2 "Mark-paid plus payment-link-close failure
 -- becomes a visible exception until resolved").
 --
--- STATUS: NOT APPLIED to any database. Authored 2026-09-17 against the live
+-- STATUS: APPLIED to Nullshift Ops (cweftpoaojwzllzficgt) on 2026-09-20 (0057 on 2026-09-17). Authored 2026-09-17 against the live
 -- schema described in docs/ADMIN-REDESIGN-PHASE0-2026-09-17.md §11. Number the
 -- ledger entry against `schema_migrations`, not this directory, before
 -- applying (Phase 0 decision N-h). Nothing reads or writes this table unless

@@ -43,7 +43,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("planChoiceOpenV2 — flag off", () => {
   it("is exactly the legacy stage rule, whatever evidence is passed", () => {
-    vi.stubEnv("OPS_V2_FLAGS", "");
+    vi.stubEnv("OPS_V2_FLAGS", "-acceptanceGate");
     for (const stage of ["live", "care", "complete"]) {
       expect(
         planChoiceOpenV2({ stage, governingScopeVersionRef: SCOPE, acceptances: [] })

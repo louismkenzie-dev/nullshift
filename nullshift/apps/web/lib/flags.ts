@@ -17,12 +17,30 @@ export const OPS_V2_FLAG_KEYS = [
 
 export type OpsV2Flag = (typeof OPS_V2_FLAG_KEYS)[number];
 
+/**
+ * Live defaults (owner decision 2026-09-20): commercial model, calculator,
+ * work intake and the acceptance gate are ON; the integration worker and
+ * automatic collection scheduling stay OFF until sandbox rehearsal.
+ * OPS_V2_FLAGS adds flags; a "-name" entry removes one (e.g. "-calculator").
+ */
+export const DEFAULT_FLAGS: readonly OpsV2Flag[] = [
+  "newShell",
+  "commercialV2",
+  "calculator",
+  "workIntake",
+  "acceptanceGate",
+];
+
 function parse(): Set<OpsV2Flag> {
   const raw = process.env.OPS_V2_FLAGS ?? "";
-  const set = new Set<OpsV2Flag>();
+  const set = new Set<OpsV2Flag>(DEFAULT_FLAGS);
   for (const part of raw.split(",")) {
-    const key = part.trim() as OpsV2Flag;
-    if ((OPS_V2_FLAG_KEYS as readonly string[]).includes(key)) set.add(key);
+    const token = part.trim();
+    const off = token.startsWith("-");
+    const key = (off ? token.slice(1) : token) as OpsV2Flag;
+    if (!(OPS_V2_FLAG_KEYS as readonly string[]).includes(key)) continue;
+    if (off) set.delete(key);
+    else set.add(key);
   }
   return set;
 }

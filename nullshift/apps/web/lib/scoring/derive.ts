@@ -327,8 +327,19 @@ export function deriveScaleInputs(ev: Evidence, prev?: ScaleInput | null): Deriv
   return { inputs, fieldStates: states, notes, vendorCost };
 }
 
-export function provisionalScore(d: Derivation): ScaleResult {
-  return calculateScalePricing(d.inputs);
+/**
+ * Score the derived inputs. Pass the pricing_version of the client's latest
+ * assessment so a re-scan of an existing client is previewed against the
+ * ladder their price actually sits on; a first scan uses the current version.
+ */
+export function provisionalScore(
+  d: Derivation,
+  pricingVersion?: string | null
+): ScaleResult {
+  return calculateScalePricing(
+    d.inputs,
+    pricingVersion ? { pricingVersion } : {}
+  );
 }
 
 /** The fields a person still has to look at, in form order. */

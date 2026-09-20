@@ -23,6 +23,7 @@ export const DOCUMENT_TYPES = [
   "Independent handover schedule",
   "Data/Payment/AI schedule",
   "Change Order",
+  "Legacy proposal",
 ] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
@@ -34,6 +35,7 @@ export const DOCUMENT_TYPE_KEY: Record<DocumentType, string> = {
   "Independent handover schedule": "handover-schedule",
   "Data/Payment/AI schedule": "data-schedule",
   "Change Order": "change-order",
+  "Legacy proposal": "proposal",
 };
 
 export const AGREEMENT_STATUSES = [
@@ -85,7 +87,12 @@ export type PricingLine = {
   cadence: "one-off" | "monthly" | "per milestone" | "n/a";
   basis: string;
   /** Tax basis is a business decision (18.3); shown verbatim, never assumed. */
-  taxBasis: "ex VAT" | "pending decision" | "as signed (historical)";
+  taxBasis:
+    | "ex VAT"
+    | "pending decision"
+    | "as signed (historical)"
+    | "not VAT registered"
+    | "VAT included";
   /** The amount on the governing quote, when the line came from a quote. */
   quoteAmount?: Money;
 };

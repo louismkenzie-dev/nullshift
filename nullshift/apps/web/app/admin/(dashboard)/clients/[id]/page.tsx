@@ -1,476 +1,361 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  IdCard,
-  CreditCard,
-  Bug,
-  Shield,
-  Gauge,
-  Users,
-  FileText,
-  type LucideIcon,
-} from "lucide-react";
-import { requireStaff } from "@nullshift/auth/guards";
-import { T } from "@nullshift/ui/tokens";
-import { clientRef } from "@nullshift/ui/format";
-import { PageHeader, StatusChip } from "@/components/app/AppKit";
-import { Reveal } from "@/components/kyma";
-import { StageStepper } from "@/components/portal/StageStepper";
-import { loadClientBlock } from "@/lib/hub/load";
-import {
-  TILE_ORDER,
-  TILE_TITLE,
-  tileStates,
-  type TileKey,
-  type Tone,
-} from "@/lib/hub/rules";
+import { gbp, loadClientWorkspace, type Task } from "@/lib/ops/clientsData";
+import s from "../../shell.module.css";
 
-/**
- * Client block — one page per client (tenant), mirroring the portal home: the
- * client's name and signature-state chip, the primary system's StageStepper,
- * quick facts, then the seven tiles (Passport, Billing and Payment, Issues and
- * Bugs, Care Plan, Scale and Risk, Account management, Docs and Legal) as a
- * three-column grid of coloured, iconed cards. Every tile's colour and sub-line
- * comes from tileStates() — the same rule the Dashboard grid dots use.
- */
 export const dynamic = "force-dynamic";
 
-const TILE_ICON: Record<TileKey, LucideIcon> = {
-  passport: IdCard,
-  billing: CreditCard,
-  issues: Bug,
-  carePlan: Shield,
-  scale: Gauge,
-  account: Users,
-  docs: FileText,
+/** Workspace tabs — each one is a real route under /admin/clients/[id]. */
+const TABS: { label: string; path: string }[] = [
+  { label: "Overview", path: "" },
+  { label: "Hub", path: "hub" },
+  { label: "Agreements", path: "agreement" },
+  { label: "Billing", path: "billing" },
+  { label: "Care plan", path: "care-plan" },
+  { label: "Pricing", path: "pricing" },
+  { label: "Documents", path: "docs" },
+  { label: "Issues", path: "issues" },
+  { label: "Account", path: "account" },
+];
+
+const tone = (state: string): string => {
+  if (["accepted", "current", "live", "healthy", "active", "complete"].includes(state))
+    return s.chipSuccess;
+  if (["exception", "overdue", "incident", "blocked"].includes(state))
+    return s.chipDanger;
+  if (
+    [
+      "awaiting acceptance",
+      "setup pending",
+      "attention",
+      "review",
+      "awaiting client",
+      "in progress",
+    ].includes(state)
+  )
+    return s.chipWarning;
+  if (["unresolved", "unknown", "prospect"].includes(state)) return s.chipInfo;
+  return "";
 };
 
-const TONE_COLOR: Record<Tone, string> = {
-  danger: T.danger,
-  warning: T.warning,
-  success: T.success,
-  muted: "var(--k-muted)",
-};
-
-const mono: React.CSSProperties = {
-  fontFamily: T.mono,
-  fontSize: 11,
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
-  textDecoration: "none",
-};
-
-const factLabel: React.CSSProperties = {
-  fontFamily: T.mono,
-  fontSize: "0.58rem",
-  fontWeight: 500,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: "var(--k-faint)",
-};
-
-const factValue: React.CSSProperties = {
-  fontFamily: T.sans,
-  fontSize: "0.86rem",
-  color: "var(--k-fg)",
-  overflowWrap: "anywhere",
-};
-
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1 min-w-0">
-      <span style={factLabel}>{label}</span>
-      <span style={factValue}>{children}</span>
-    </div>
-  );
-}
-
-export default async function ClientBlockPage({
+export default async function ClientWorkspace({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: tenantId } = await params;
-  if (!(await requireStaff()).ok) notFound();
-  const block = await loadClientBlock(tenantId);
-  if (!block) notFound();
-  const tiles = tileStates(block);
-  const project = block.project;
-  const owners = project
-    ? (
-        [
-          ["Account", project.owners.account],
-          ["Delivery", project.owners.delivery],
-          ["Technical", project.owners.technical],
-          ["Finance", project.owners.finance],
-        ] as const
-      ).filter(([, v]) => !!v)
-    : [];
-  const needsYou = TILE_ORDER.map((key) => ({ key, ...tiles[key] })).filter(
-    (t) => t.tone === "danger" || t.tone === "warning"
-  );
+  const { id } = await params;
+  const c = await loadClientWorkspace(id);
+  if (!c) notFound();
+
+  const paid = c.build.milestones.reduce((n, m) => n + m.paidGbp, 0);
+  const tasks: Task[] = c.handover ? c.handover.tasks : c.checklist;
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto" }}>
-      <Link href="/admin" style={{ ...mono, color: "var(--k-muted)" }}>
-        ← Grid
-      </Link>
-
-      <div style={{ marginTop: 12 }}>
-        <PageHeader
-          index="01"
-          label="Client"
-          title={
-            <span className="inline-flex items-center flex-wrap gap-2.5">
-              {block.tenant.name}
-              <span
-                title="Client reference"
-                style={{
-                  fontFamily: T.mono,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  letterSpacing: "0.06em",
-                  textTransform: "none",
-                  color: "var(--k-muted)",
-                  background: "var(--k-surface)",
-                  border: "1px solid var(--k-border)",
-                  padding: "3px 9px",
-                  verticalAlign: "middle",
-                }}
-              >
-                {clientRef(tenantId)}
-              </span>
+    <>
+      <p className={s.mono}>
+        <Link href="/admin/clients">Clients</Link> / {c.ref}
+      </p>
+      <div className={s.pageHead}>
+        <div>
+          <h1 className={s.h1}>{c.legalName}</h1>
+          <p className={s.lead}>
+            {c.tradingName ? `Trading as ${c.tradingName} · ` : ""}
+            {c.ref} · Account owner {c.owner} ·{" "}
+            <span className={c.model === "legacy" ? s.chipWarning : ""}>
+              {c.model === "legacy" ? "Legacy agreement — read-only" : "New model"}
             </span>
-          }
-          lead={
-            [block.tenant.vertical, block.tenant.contactName, block.tenant.contactEmail]
-              .filter(Boolean)
-              .join(" · ") || "No contact details yet"
-          }
-          actions={
-            <>
-              <StatusChip tone={block.colour.tone}>{block.colour.label}</StatusChip>
-              {block.awaitingSignature > 0 && (
-                <StatusChip tone="warning">
-                  {block.awaitingSignature} awaiting signature
-                </StatusChip>
-              )}
-              {/* Plain <a>: the preview route sets a cookie and redirects into
-                  the portal, so it needs a full page load, not a client nav. */}
-              <a
-                href={`/admin/clients/${tenantId}/preview`}
-                title="Open this client's portal exactly as they see it — read-only"
-                style={{ ...mono, color: "var(--k-accent)" }}
-              >
-                View portal as client →
-              </a>
-            </>
-          }
+          </p>
+        </div>
+        <div className={s.chips}>
+          <Link href={`/admin/clients/${id}/issues`} className={s.btn}>
+            Add work
+          </Link>
+          <Link href={`/admin/clients/${id}/account`} className={s.btn}>
+            Contact
+          </Link>
+          <Link href={`/admin/clients/${id}/preview`} className={s.btn}>
+            Preview client view
+          </Link>
+        </div>
+      </div>
+
+      <div className={s.strip}>
+        <span className={s.mono}>Next action</span>
+        <strong>{c.nextAction.text}</strong>
+        <span className={s.muted}>
+          {c.nextAction.owner} · due {c.nextAction.due}
+        </span>
+        <span className={`${s.muted}`} style={{ marginLeft: "auto" }}>
+          {c.nextAction.consequence}
+        </span>
+      </div>
+
+      <div className={s.facets}>
+        <Facet
+          label="Relationship"
+          value={c.facets.relationship}
+          note="tenants.status, else prospect until an accepted agreement or a live project"
+        />
+        <Facet
+          label="Agreement"
+          value={c.facets.agreement.state}
+          note={c.facets.agreement.evidence}
+        />
+        <Facet
+          label="Billing"
+          value={c.facets.billing.state}
+          note={c.facets.billing.evidence}
+        />
+        <Facet
+          label="Delivery"
+          value={c.facets.delivery.state}
+          note={c.facets.delivery.evidence}
+        />
+        <Facet
+          label="Service route"
+          value={c.facets.route.state}
+          note={c.facets.route.evidence}
+        />
+        <Facet
+          label="Service health"
+          value={c.facets.health.state}
+          note={`${c.facets.health.evidence} · ${c.facets.health.freshness}`}
         />
       </div>
 
-      {/* Primary system — where the build is (the portal's system card). */}
-      <Reveal>
-        <div
-          className="k-kard min-w-0"
-          style={{ background: "var(--k-surface)", padding: "18px 20px", marginTop: 24 }}
-        >
-          {project ? (
-            <>
-              <div
-                className="flex items-center justify-between gap-3 flex-wrap"
-                style={{ marginBottom: 12 }}
-              >
-                <span className="flex flex-col gap-0.5 min-w-0">
-                  <span
-                    className="min-w-0 break-words"
-                    style={{
-                      fontFamily: T.sans,
-                      fontWeight: 700,
-                      fontSize: "1.1rem",
-                      letterSpacing: "-0.01em",
-                      textTransform: "uppercase",
-                      color: "var(--k-fg)",
-                    }}
-                  >
-                    {project.name}
-                  </span>
-                  {block.projects.length > 1 && (
-                    <span style={{ ...mono, color: "var(--k-muted)" }}>
-                      {block.projects.length} systems —{" "}
-                      {block.projects
-                        .slice(1)
-                        .map((p) => p.name)
-                        .join(", ")}{" "}
-                      also on the Passport tile
-                    </span>
-                  )}
-                </span>
-                <span className="flex items-center gap-3 flex-wrap">
-                  <Link
-                    href={`/admin/systems/${project.id}`}
-                    style={{ ...mono, color: "var(--k-accent)" }}
-                  >
-                    System passport →
-                  </Link>
-                  {project.liveUrl && (
-                    <a
-                      href={project.liveUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="kb kb-primary kb-sm"
-                    >
-                      Open site
-                      <span className="k-arrow" aria-hidden>
-                        ↗
-                      </span>
-                    </a>
-                  )}
-                </span>
-              </div>
-              <StageStepper stage={project.stage ?? "discovery"} />
-            </>
-          ) : (
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <span
-                style={{
-                  fontFamily: T.sans,
-                  fontSize: "0.9rem",
-                  color: "var(--k-muted)",
-                }}
-              >
-                No build project yet — nothing to stage until one exists.
-              </span>
-              <Link href={tiles.passport.href} className="kb kb-primary kb-sm">
-                Start build project
-                <span className="k-arrow" aria-hidden>
-                  →
-                </span>
-              </Link>
-            </div>
-          )}
-
-          {/* Quick facts */}
-          <div
-            className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-4"
-            style={{
-              marginTop: 16,
-              paddingTop: 14,
-              borderTop: "1px solid var(--k-border)",
-            }}
-          >
-            <Fact label="Contact">
-              {block.tenant.contactName ?? "—"}
-              {block.tenant.contactEmail && (
-                <>
-                  <br />
-                  <a
-                    href={`mailto:${block.tenant.contactEmail}`}
-                    style={{ color: "var(--k-muted)", textDecoration: "none" }}
-                  >
-                    {block.tenant.contactEmail}
-                  </a>
-                </>
-              )}
-            </Fact>
-            <Fact label="Owners">
-              {owners.length ? (
-                owners.map(([k, v]) => (
-                  <span key={k} style={{ display: "block" }}>
-                    <span style={{ color: "var(--k-muted)" }}>{k}:</span> {v}
-                  </span>
-                ))
-              ) : (
-                <span style={{ color: T.warning }}>No owners set</span>
-              )}
-            </Fact>
-            <Fact label="Live URL">
-              {project?.liveUrl ? (
-                <a
-                  href={project.liveUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: "var(--k-accent)", textDecoration: "none" }}
-                >
-                  {project.liveUrl.replace(/^https?:\/\//, "")}
-                </a>
-              ) : (
-                <span style={{ color: "var(--k-muted)" }}>Not live yet</span>
-              )}
-            </Fact>
-            <Fact label="Next action">
-              {project?.nextAction ? (
-                <>
-                  {project.nextAction}
-                  {project.nextActionOwner && (
-                    <span style={{ color: "var(--k-muted)" }}>
-                      {" "}
-                      — {project.nextActionOwner}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span style={{ color: T.warning }}>None set</span>
-              )}
-            </Fact>
-          </div>
-        </div>
-      </Reveal>
-
-      {/* The seven tiles — portal quick-nav anatomy, traffic-light toned. */}
-      <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
-        style={{ marginTop: 16 }}
-      >
-        {TILE_ORDER.map((key, i) => {
-          const tile = tiles[key];
-          const Icon = TILE_ICON[key];
-          const color = TONE_COLOR[tile.tone];
+      <nav className={s.tabs} aria-label="Client workspace">
+        {TABS.map((t) => {
+          const href = t.path ? `/admin/clients/${id}/${t.path}` : `/admin/clients/${id}`;
+          const current = t.path === "";
           return (
-            <Reveal key={key} delay={Math.min(i, 6) * 0.04}>
-              <Link
-                href={tile.href}
-                className="k-kard k-kard-h flex flex-col gap-3 h-full"
-                style={{
-                  background: "var(--k-surface)",
-                  padding: "14px 15px",
-                  textDecoration: "none",
-                  minHeight: 128,
-                }}
-              >
-                <span className="flex items-start justify-between gap-2">
-                  <span
-                    className="inline-flex items-center justify-center"
-                    style={{
-                      width: 34,
-                      height: 34,
-                      background: `color-mix(in oklab, ${color} 14%, transparent)`,
-                      border: `1px solid color-mix(in oklab, ${color} 38%, transparent)`,
-                    }}
-                  >
-                    <Icon size={17} color={color} strokeWidth={1.8} />
-                  </span>
-                  <StatusChip tone={tile.tone}>{tile.label}</StatusChip>
-                </span>
-                <span className="flex flex-col gap-0.5" style={{ marginTop: "auto" }}>
-                  <span
-                    className="inline-flex items-center justify-between gap-2"
-                    style={{
-                      fontFamily: T.sans,
-                      fontWeight: 700,
-                      fontSize: "0.92rem",
-                      letterSpacing: "-0.01em",
-                      textTransform: "uppercase",
-                      color: "var(--k-fg)",
-                    }}
-                  >
-                    {TILE_TITLE[key]}
-                    <span className="k-arrow" aria-hidden style={{ color }}>
-                      →
-                    </span>
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: T.mono,
-                      fontSize: "0.6rem",
-                      fontWeight: 500,
-                      letterSpacing: "0.07em",
-                      textTransform: "uppercase",
-                      color,
-                    }}
-                  >
-                    {tile.sub}
-                  </span>
-                </span>
-              </Link>
-            </Reveal>
+            <Link
+              key={t.label}
+              href={href}
+              className={`${s.tab} ${current ? s.tabActive : ""}`}
+              aria-current={current ? "page" : undefined}
+            >
+              {t.label}
+            </Link>
           );
         })}
-      </div>
+      </nav>
 
-      {/* Needs you — every tile in warning / danger, with its reason. */}
-      <Reveal>
-        <div
-          className="k-kard"
-          style={{ background: "var(--k-surface)", marginTop: 16, marginBottom: 40 }}
-        >
-          <div
-            className="flex items-center justify-between gap-3"
-            style={{ padding: "12px 16px", borderBottom: "1px solid var(--k-border)" }}
-          >
-            <span
-              style={{
-                fontFamily: T.mono,
-                fontSize: "0.66rem",
-                fontWeight: 500,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "var(--k-muted)",
-              }}
-            >
-              {"// NEEDS YOU"}
+      {c.flags?.length ? (
+        <div className={s.chips} style={{ marginBottom: 24 }}>
+          {c.flags.map((f) => (
+            <span key={f} className={`${s.chip} ${s.chipWarning}`}>
+              {f}
             </span>
-            <span style={{ ...mono, color: needsYou.length ? T.warning : T.success }}>
-              {needsYou.length
-                ? `${needsYou.length} tile${needsYou.length === 1 ? "" : "s"}`
-                : "All clear"}
-            </span>
-          </div>
-          {needsYou.length === 0 ? (
-            <p
-              style={{
-                padding: "16px",
-                fontFamily: T.sans,
-                fontSize: "0.85rem",
-                color: "var(--k-muted)",
-              }}
-            >
-              Nothing waiting on you — every tile is green or not applicable yet.
-            </p>
-          ) : (
-            <div className="flex flex-col">
-              {needsYou.map((t, i) => (
-                <Link
-                  key={t.key}
-                  href={t.href}
-                  className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3 hover:bg-[var(--k-bg)]"
-                  style={{
-                    borderTop: i ? "1px solid var(--k-border)" : "none",
-                    textDecoration: "none",
-                  }}
-                >
-                  <span className="flex items-center gap-3 min-w-0">
-                    <StatusChip tone={t.tone}>{t.label}</StatusChip>
-                    <span
-                      style={{
-                        fontFamily: T.sans,
-                        fontWeight: 700,
-                        fontSize: "0.85rem",
-                        textTransform: "uppercase",
-                        color: "var(--k-fg)",
-                      }}
-                    >
-                      {TILE_TITLE[t.key]}
-                    </span>
-                  </span>
-                  <span
-                    style={{ ...mono, textTransform: "none", color: "var(--k-muted)" }}
-                  >
-                    {t.sub}{" "}
-                    <span
-                      className="k-arrow"
-                      aria-hidden
-                      style={{ color: "var(--k-accent)" }}
-                    >
-                      →
-                    </span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
+          ))}
         </div>
-      </Reveal>
+      ) : null}
+
+      <div className={s.grid12}>
+        <section className={`${s.card} ${s.span8}`} aria-labelledby="checklist">
+          <div className={s.cardTitle}>
+            <h2 className={s.h2} id="checklist" style={{ margin: 0 }}>
+              {c.handover
+                ? `Independent handover checklist · ${gbp(c.handover.feeGbp)} once`
+                : "Stage checklist"}
+            </h2>
+            <span className={s.mono}>owner · state · evidence (source)</span>
+          </div>
+          {tasks.length === 0 ? (
+            <p className={s.muted}>Nothing outstanding for this stage.</p>
+          ) : (
+            <table className={s.table}>
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Owner</th>
+                  <th>State</th>
+                  <th>Evidence / due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.map((t) => (
+                  <tr key={t.label}>
+                    <td>
+                      {t.label}
+                      <div className={s.mono}>{t.source}</div>
+                    </td>
+                    <td>{t.owner}</td>
+                    <td>
+                      <span className={`${s.chip} ${tone(t.state)}`}>{t.state}</span>
+                    </td>
+                    <td className={s.muted}>{t.evidence ?? t.due ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+
+        <div className={`${s.span4} ${s.stack}`}>
+          <section className={s.card} aria-labelledby="commercial">
+            <h2 className={s.h2} id="commercial">
+              Commercial summary
+            </h2>
+            <dl className={s.kv}>
+              <dt>Build price (accepted)</dt>
+              <dd>{c.build.priceGbp ? gbp(c.build.priceGbp) : "Not quoted"}</dd>
+              <dt>Paid to date</dt>
+              <dd>{gbp(paid)}</dd>
+              <dt>Run</dt>
+              <dd style={{ textTransform: "capitalize" }}>{c.run.state}</dd>
+              {c.run.packageName ? (
+                <>
+                  <dt>Package</dt>
+                  <dd>{c.run.packageName}</dd>
+                </>
+              ) : null}
+              {typeof c.run.monthlyGbp === "number" ? (
+                <>
+                  <dt>Accepted monthly</dt>
+                  <dd>{gbp(c.run.monthlyGbp)}</dd>
+                </>
+              ) : null}
+              {c.run.contractualStart ? (
+                <>
+                  <dt>Contractual start</dt>
+                  <dd>{c.run.contractualStart}</dd>
+                </>
+              ) : null}
+              {c.run.provider ? (
+                <>
+                  <dt>Provider</dt>
+                  <dd>{c.run.provider}</dd>
+                </>
+              ) : null}
+              {c.run.mandate ? (
+                <>
+                  <dt>Mandate</dt>
+                  <dd>{c.run.mandate}</dd>
+                </>
+              ) : null}
+              {c.run.termsVersion ? (
+                <>
+                  <dt>Terms version</dt>
+                  <dd>{c.run.termsVersion}</dd>
+                </>
+              ) : null}
+              {c.run.providerCollectionDate ? (
+                <>
+                  <dt>Provider collection</dt>
+                  <dd>{c.run.providerCollectionDate}</dd>
+                </>
+              ) : null}
+            </dl>
+            {c.run.note ? (
+              <p className={s.muted} style={{ marginTop: 12, fontSize: 13 }}>
+                {c.run.note}
+              </p>
+            ) : null}
+          </section>
+
+          <section className={s.card} aria-labelledby="milestones">
+            <h2 className={s.h2} id="milestones">
+              Build milestones
+            </h2>
+            {c.build.milestones.length === 0 ? (
+              <p className={s.muted}>No build or one-off invoice yet.</p>
+            ) : (
+              <table className={s.table}>
+                <tbody>
+                  {c.build.milestones.map((m) => (
+                    <tr key={m.label}>
+                      <td>
+                        {m.label}
+                        <div className={s.mono}>{m.due}</div>
+                      </td>
+                      <td className={s.num}>
+                        {gbp(m.amountGbp)}
+                        {m.state === "part paid" ? (
+                          <div className={s.mono}>paid {gbp(m.paidGbp)}</div>
+                        ) : null}
+                      </td>
+                      <td>
+                        <span
+                          className={`${s.chip} ${m.state === "paid" ? s.chipSuccess : m.state === "overdue" ? s.chipDanger : m.state === "part paid" ? s.chipWarning : ""}`}
+                        >
+                          {m.state}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section className={s.card} aria-labelledby="people">
+            <h2 className={s.h2} id="people">
+              Contacts and owners
+            </h2>
+            <dl className={s.kv}>
+              <dt>Account owner</dt>
+              <dd>{c.owner}</dd>
+              {c.contacts.map((p, i) => (
+                <span key={`${p.email}-${i}`} style={{ display: "contents" }}>
+                  <dt>{p.role}</dt>
+                  <dd>{p.name}</dd>
+                </span>
+              ))}
+            </dl>
+          </section>
+        </div>
+
+        <section className={`${s.card} ${s.span6}`} aria-labelledby="systems">
+          <h2 className={s.h2} id="systems">
+            Systems and service arrangements
+          </h2>
+          {c.systems.length === 0 ? (
+            <p className={s.muted}>No system yet.</p>
+          ) : (
+            <ul className={s.list}>
+              {c.systems.map((sys) => (
+                <li key={sys.name} className={s.listItem}>
+                  <span>{sys.name}</span>
+                  <span className={s.muted}>{sys.arrangement}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className={`${s.card} ${s.span6}`} aria-labelledby="history">
+          <h2 className={s.h2} id="history">
+            History
+          </h2>
+          {c.history.length === 0 ? (
+            <p className={s.muted}>No audit rows for this client.</p>
+          ) : (
+            <ul className={s.list}>
+              {c.history.map((h, i) => (
+                <li key={`${h.at}-${h.text}-${i}`} className={s.listItem}>
+                  <span>{h.text}</span>
+                  <span className={s.mono}>{h.at}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className={`${s.faint} ${s.mono}`} style={{ marginTop: 8 }}>
+            audit_log · last 12
+          </p>
+        </section>
+      </div>
+    </>
+  );
+}
+
+function Facet({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <div className={s.facet}>
+      <span className={s.mono}>{label}</span>
+      <div className={s.facetValue}>
+        <span className={`${s.chip} ${tone(value)}`}>{value}</span>
+      </div>
+      <div className={s.facetNote}>{note}</div>
     </div>
   );
 }

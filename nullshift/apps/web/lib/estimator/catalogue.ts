@@ -1,15 +1,19 @@
 /**
- * Candidate catalogue (brief §6.5) — DRAFT, NON-CHARGEABLE, SANDBOX ONLY.
+ * Candidate catalogue (brief §6.5).
  *
- * The user has not approved this as a live price list. Every item is
- * `state: "draft"` and `chargeable: false`; a UI that lists these must label
- * them as draft suggestions. A "from" amount is a small-catalogue minimum, not a
- * guarantee that every request of that type costs that amount.
+ * PUBLISHED (owner decision, 20 Sep 2026): the three managed tiers — Core,
+ * Pro and Max — at the NSI_v2 from-prices (£149 / £249 / £399 per month,
+ * scaled by the client's band). Everything else remains `state: "draft"` and
+ * `chargeable: false`; a UI that lists those must label them as draft
+ * suggestions. A "from" amount is a small-catalogue minimum, not a guarantee
+ * that every request of that type costs that amount.
  *
  * The £600 independent handover is a confirmed commercial decision and is kept
- * separate (HANDOVER_FEE) rather than buried among the unapproved add-ons; its
- * tax basis, payment timing and scope are pending, so it cannot be issued.
+ * separate (HANDOVER_FEE). Its tax basis is decided — invoiced inclusive, no
+ * VAT line — while payment timing and scope are pending, so it still cannot be
+ * issued.
  */
+import { RUN_PACKAGE_BASE_MINOR } from "./policy";
 
 export type CatalogueBasis =
   | "one_off"
@@ -19,6 +23,7 @@ export type CatalogueBasis =
   | "percentage"
   | "custom";
 export type CatalogueFamily = "build" | "run" | "grow" | "transact";
+export type CatalogueState = "draft" | "published";
 
 export type CatalogueItem = {
   readonly id: string;
@@ -30,8 +35,9 @@ export type CatalogueItem = {
   /** Upper bound of a stated range; null when "from" only or custom. */
   readonly toMinor: number | null;
   readonly currency: "GBP";
-  readonly state: "draft";
-  readonly chargeable: false;
+  readonly state: CatalogueState;
+  /** True only for a published item — a draft can never back an offer. */
+  readonly chargeable: boolean;
   readonly version: string;
   readonly effectiveDate: string;
   readonly scope: string;
@@ -40,6 +46,9 @@ export type CatalogueItem = {
 
 const CATALOGUE_VERSION = "CATALOGUE_2026_09_DRAFT";
 const EFFECTIVE = "2026-09-17";
+/** The published managed tiers carry their own version and date. */
+export const CATALOGUE_PUBLISHED_VERSION = "CATALOGUE_2026_09_v1";
+export const CATALOGUE_PUBLISHED_EFFECTIVE = "2026-09-20";
 
 const item = (
   id: string,
@@ -67,7 +76,33 @@ const item = (
     ...(note ? { note } : {}),
   });
 
-/** §6.5 rows as draft suggestions. No near-duplicate products (one launch family, one video pack). */
+/** A published, chargeable item: the three managed tiers only. */
+const published = (
+  id: string,
+  name: string,
+  family: CatalogueFamily,
+  basis: CatalogueBasis,
+  fromMinor: number,
+  scope: string,
+  note?: string
+): CatalogueItem =>
+  Object.freeze({
+    id,
+    name,
+    family,
+    basis,
+    fromMinor,
+    toMinor: null,
+    currency: "GBP",
+    state: "published",
+    chargeable: true,
+    version: CATALOGUE_PUBLISHED_VERSION,
+    effectiveDate: CATALOGUE_PUBLISHED_EFFECTIVE,
+    scope,
+    ...(note ? { note } : {}),
+  });
+
+/** §6.5 rows. Three published tiers; the rest are draft suggestions. No near-duplicate products (one launch family, one video pack). */
 export const CATALOGUE: readonly CatalogueItem[] = Object.freeze([
   item(
     "paid-discovery",
@@ -78,35 +113,32 @@ export const CATALOGUE: readonly CatalogueItem[] = Object.freeze([
     75_000,
     "Scoping, workflow mapping and a reviewed estimate before a fixed Build price"
   ),
-  item(
+  published(
     "managed-core",
     "Managed Core",
     "run",
     "recurring",
-    14_900,
-    null,
+    RUN_PACKAGE_BASE_MINOR.core,
     "Hosting stewardship, backups, monitoring, routine maintenance, covered defects and support",
-    "Evaluate against the calculator before any offer; feature/design work is Quoted"
+    "From-price for the Standard band; the client's NSI band scales it. Feature/design work is Quoted"
   ),
-  item(
+  published(
     "managed-pro",
     "Managed Pro",
     "run",
     "recurring",
-    24_900,
-    null,
+    RUN_PACKAGE_BASE_MINOR.pro,
     "Core plus transactional email infrastructure, payment-integration maintenance, proactive health checks and priority support",
-    "Evaluate against the calculator before any offer; feature/design work is Quoted"
+    "From-price for the Standard band; the client's NSI band scales it. Feature/design work is Quoted"
   ),
-  item(
+  published(
     "managed-max",
     "Managed Max",
     "run",
     "recurring",
-    39_900,
-    null,
+    RUN_PACKAGE_BASE_MINOR.max,
     "Highest incident priority, direct priority support, platform reviews, priority development queue",
-    "Evaluate against the calculator before any offer; initial response is not a resolution guarantee"
+    "From-price for the Standard band; the client's NSI band scales it. Initial response is not a resolution guarantee"
   ),
   item(
     "small-platform-change",
@@ -351,9 +383,16 @@ export const catalogueById = (id: string): CatalogueItem | undefined =>
   CATALOGUE.find((c) => c.id === id);
 
 /**
- * Independent handover: £600 confirmed by the user as a commercial decision,
- * but blocked from issuance until tax basis, payment timing and scope are
- * confirmed (brief §6.5; decision 18.3).
+ * How a one-off fee is invoiced for tax. "inclusive_no_vat": the figure is
+ * the whole amount — one line, no VAT added on top and no VAT line shown.
+ */
+export type HandoverTaxBasis = "pending" | "inclusive_no_vat";
+
+/**
+ * Independent handover: £600 confirmed by the owner as a commercial decision.
+ * Tax basis decided 20 Sep 2026 — invoiced inclusive with no VAT line
+ * (decision 18.3). Payment timing and scope are still pending, so it remains
+ * blocked from issuance (brief §6.5).
  */
 export const HANDOVER_FEE = Object.freeze({
   id: "independent-handover",
@@ -361,11 +400,11 @@ export const HANDOVER_FEE = Object.freeze({
   minor: 60_000,
   currency: "GBP" as const,
   decision: "confirmed" as const,
-  taxBasis: "pending" as const,
+  taxBasis: "inclusive_no_vat" as HandoverTaxBasis,
   paymentTiming: "pending" as const,
   scope: "pending" as const,
   issuable: false as const,
-  note: "Kept separate from the draft add-on catalogue; tax basis is a pending decision",
+  note: "Kept separate from the add-on catalogue; invoiced as one inclusive figure with no VAT line — payment timing and scope still to confirm",
 });
 
 export const basisLabel = (basis: CatalogueBasis): string =>

@@ -79,10 +79,13 @@ function monthsSince(iso: string | null): number {
 export async function RebandPanel({
   tenantId,
   contractedBand,
+  contractedVersion = null,
   currentMrr,
 }: {
   tenantId: string;
   contractedBand: ScaleBand | null;
+  /** pricing_version of the assessment the client's price rests on. */
+  contractedVersion?: string | null;
   currentMrr: number | null;
 }) {
   const db = createServiceClient();
@@ -107,6 +110,7 @@ export async function RebandPanel({
     scaleBand: s.scale_band as ScaleBand | null,
     recommendedMrr: s.recommended_mrr === null ? null : Number(s.recommended_mrr),
     enterpriseReviewRequired: s.enterprise_review_required,
+    pricingVersion: (s as { pricing_version?: string | null }).pricing_version ?? null,
   }));
 
   const notices = noticeRows ?? [];
@@ -115,6 +119,7 @@ export async function RebandPanel({
     contractedBand,
     currentMrr: currentMrr ?? 0,
     monthsSinceLastChange: monthsSince(lastEffective?.effective_date ?? null),
+    contractedVersion,
   });
 
   const openNotice = notices.find(

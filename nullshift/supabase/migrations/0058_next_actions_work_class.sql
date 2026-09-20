@@ -2,7 +2,7 @@
 -- Admin redesign Phase 2, task p2-intake (brief §5.4 owners/next actions, §7,
 -- §11 "Request submitted", §17.1 rows 9–11).
 --
--- STATUS: NOT APPLIED to any database. Written additively against the live
+-- STATUS: APPLIED to Nullshift Ops (cweftpoaojwzllzficgt) on 2026-09-20 (0057 on 2026-09-17). Written additively against the live
 -- schema as read in docs/ADMIN-REDESIGN-PHASE0-2026-09-17.md §11. Apply only
 -- after ledger reconciliation (Phase 0 decision N-h) and with OPS_V2_FLAGS
 -- still excluding `workIntake`, so nothing reads or writes the new columns

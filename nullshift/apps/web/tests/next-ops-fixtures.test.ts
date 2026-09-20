@@ -76,7 +76,7 @@ describe("ops fixtures — sales (brief §5.2, §6.5)", () => {
     }
     expect(CATALOGUE.some((c) => /handover/i.test(c.item))).toBe(false);
     expect(HANDOVER_FEE_DECISION.amount).toEqual({ amountMinor: 60000, currency: "GBP" });
-    expect(HANDOVER_FEE_DECISION.taxBasis).toBe("pending decision");
+    expect(HANDOVER_FEE_DECISION.taxBasis).toBe("inclusive, no VAT line");
     expect(HANDOVER_FEE_DECISION.issuanceAllowed).toBe(false);
   });
 });

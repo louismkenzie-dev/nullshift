@@ -753,12 +753,12 @@ describe("start date arrives with something missing (§8.4, §17.1 row 5)", () =
 /* ── §17.1 row 6: independent handover ─────────────────────────────────── */
 
 describe("independent handover (§17.1 row 6, §6.5, decisions 18.3/18.4)", () => {
-  it("drafts at £600 GBP with tax basis pending and no run subscription", () => {
+  it("drafts at £600 GBP inclusive (no VAT line) and no run subscription", () => {
     const h = defaultHandoverContent();
     expect(h.feeMinor).toBe(HANDOVER_FEE_MINOR);
     expect(h.feeMinor).toBe(60000);
     expect(h.currency).toBe("GBP");
-    expect(h.taxBasis).toBe("pending");
+    expect(h.taxBasis).toBe("inclusive_no_vat");
     const line = handoverFeeLine(h);
     expect(line.occurrences).toBe(1);
     expect(line.cadence).toBe("one_off");
@@ -766,7 +766,6 @@ describe("independent handover (§17.1 row 6, §6.5, decisions 18.3/18.4)", () =
     expect(line.issuable).toBe(false);
     expect(line.blockers.map((b) => b.code)).toEqual(
       expect.arrayContaining([
-        "tax_basis_pending",
         "fee_disposition_pending",
         "included_work_required",
       ])

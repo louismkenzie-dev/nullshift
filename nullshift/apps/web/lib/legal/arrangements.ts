@@ -47,7 +47,7 @@ export type ScheduleStatus = (typeof SCHEDULE_STATUSES)[number];
 export const CADENCES = ["monthly", "quarterly", "annual"] as const;
 export type Cadence = (typeof CADENCES)[number];
 
-export const TAX_BASES = ["pending", "standard_vat", "exempt", "zero_rated"] as const;
+export const TAX_BASES = ["pending", "standard_vat", "exempt", "zero_rated", "inclusive_no_vat"] as const;
 export type TaxBasis = (typeof TAX_BASES)[number];
 
 export const FEE_DISPOSITIONS = ["pending", "continue", "stop"] as const;
@@ -66,7 +66,7 @@ export type SignatoryRole = (typeof SIGNATORY_ROLES)[number];
  */
 export const HANDOVER_FEE_MINOR = 60000;
 export const HANDOVER_FEE_CURRENCY = "GBP";
-export const HANDOVER_FEE_TAX_BASIS: TaxBasis = "pending";
+export const HANDOVER_FEE_TAX_BASIS: TaxBasis = "inclusive_no_vat";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const CURRENCY_RE = /^[A-Z]{3}$/;

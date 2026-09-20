@@ -108,12 +108,16 @@ export async function runAutoScore(opts: {
   // The previous assessment's inputs — human answers carry over.
   const { data: prevRow } = await service
     .from("scale_assessments")
-    .select("inputs")
+    .select("inputs, pricing_version")
     .eq("tenant_id", opts.tenantId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   const prev = (prevRow?.inputs as ScaleInput | undefined) ?? null;
+  // An existing client is re-scanned against the ladder their price sits on;
+  // a client with no assessment yet is scored under the current version.
+  const pricingVersion =
+    (prevRow?.pricing_version as string | undefined) || PRICING_VERSION;
 
   const repoOutcome: SourceOutcome = { ok: false, ref: repoName, error: null };
   const dbOutcome: SourceOutcome = { ok: false, ref: dbRef, error: null };
@@ -147,7 +151,7 @@ export async function runAutoScore(opts: {
     sources: { repo: repoOutcome, database: dbOutcome },
   };
   const derivation = deriveScaleInputs(evidence, prev);
-  const result = provisionalScore(derivation);
+  const result = provisionalScore(derivation, pricingVersion);
 
   const { data: row, error } = await service
     .from("scale_evidence")
@@ -155,7 +159,7 @@ export async function runAutoScore(opts: {
       tenant_id: opts.tenantId,
       project_id: projectId,
       trigger: opts.trigger,
-      pricing_version: PRICING_VERSION,
+      pricing_version: result.pricingVersion,
       sources: evidence.sources,
       evidence: { repo, database },
       derived: derivation.inputs,

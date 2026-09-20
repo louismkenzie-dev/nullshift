@@ -2,7 +2,7 @@
 -- acceptance snapshots (admin redesign Phase 3, task p3-arrangements;
 -- brief §2.1, §3.3 #1, §8.1, §8.3, §8.4, §9, §17.1 rows 1, 4, 6, 7, 8).
 --
--- STATUS: NOT APPLIED to any database. Authored 2026-09-17 against the live
+-- STATUS: APPLIED to Nullshift Ops (cweftpoaojwzllzficgt) on 2026-09-20 (0057 on 2026-09-17). Authored 2026-09-17 against the live
 -- schema described in docs/ADMIN-REDESIGN-PHASE0-2026-09-17.md §11. Number
 -- the ledger entry against `schema_migrations`, not this directory, before
 -- applying (Phase 0 decision N-h). Nothing reads or writes these objects

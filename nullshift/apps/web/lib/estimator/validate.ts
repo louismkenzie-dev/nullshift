@@ -295,23 +295,26 @@ export function validateResult(
         out.push({
           code: "run_package_below_floor",
           severity: "block",
-          message: `${c.name} draft price ${fmt(c.fromMinor)}/month is below the run floor ${fmt(r.floorMinor)}/month`,
+          message: `${c.name} ${c.state === "published" ? "from-price" : "draft price"} ${fmt(c.fromMinor)}/month is below the run floor ${fmt(r.floorMinor)}/month`,
           effect:
-            "Draft catalogue price fails this client's cost-to-serve; re-evaluate before any offer",
+            "The Standard-band from-price fails this client's cost-to-serve; the NSI band or the vendor-cost floor must lift it before any offer",
         });
     }
   }
-  if (r.route === "independent")
+  if (r.route === "independent" && !HANDOVER_FEE.issuable)
     out.push({
-      code: "handover_tax_pending",
+      code: "handover_terms_pending",
       severity: "block",
-      message: `Independent handover fee ${fmt(HANDOVER_FEE.minor)} is confirmed but its tax basis, payment timing and scope are pending; issuance is blocked`,
+      message: `Independent handover fee ${fmt(HANDOVER_FEE.minor)} is confirmed (invoiced inclusive, no VAT line) but its payment timing and scope are pending; issuance is blocked`,
     });
-  if (result.grow.length > 0)
+  const draftGrow = result.grow.filter(
+    (g) => catalogueById(g.catalogueItemId)?.state !== "published"
+  );
+  if (draftGrow.length > 0)
     out.push({
       code: "catalogue_draft",
       severity: "info",
-      message: `${result.grow.length} Grow item(s) come from the draft, non-chargeable catalogue; "from" amounts are minimums, not guarantees`,
+      message: `${draftGrow.length} Grow item(s) come from the draft, non-chargeable catalogue; "from" amounts are minimums, not guarantees`,
     });
   if (result.transact.scenarios.length > 0)
     out.push({

@@ -111,6 +111,7 @@ export function snapshotPolicy(policy: CommercialPolicy): PolicySnapshot {
     approvalThresholdMinor: policy.approvalThresholdMinor,
     contingencyMethod: policy.contingencyMethod,
     warrantyReserveRule: policy.warrantyReserveRule,
+    runPackageBaseMinor: { ...policy.runPackageBaseMinor },
     roleRates,
   };
 }
@@ -429,12 +430,12 @@ function run(input: EstimateInput, policy: CommercialPolicy): RunOutput {
         );
   const statement =
     input.run.route === "independent"
-      ? "Independent handover: no recurring service; the handover fee is a separate confirmed decision with tax basis pending"
+      ? "Independent handover: no recurring service; the £600 handover fee is invoiced as one inclusive figure with no VAT line, and its payment timing and scope are still to be confirmed"
       : input.run.route === "unresolved"
         ? "Service route not yet elected; no recurring amount is proposed"
         : deferred
           ? "Managed route elected; the package and its monthly price are deferred to a service schedule — no chargeable amount is manufactured"
-          : `Managed route with the ${catalogueById(input.run.packageChoice.value)?.name ?? input.run.packageChoice.value} candidate package (draft catalogue); recommendation only until issued, accepted and activated separately`;
+          : `Managed route with the ${catalogueById(input.run.packageChoice.value)?.name ?? input.run.packageChoice.value} package (${catalogueById(input.run.packageChoice.value)?.state === "published" ? "published" : "draft"} catalogue); recommendation only until issued, accepted and activated separately`;
   return {
     route: input.run.route,
     stage: input.run.stage,

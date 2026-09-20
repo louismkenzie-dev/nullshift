@@ -353,7 +353,7 @@ export function ClientGrid({
             ) : (
               <>
                 No clients yet — open an enquiry above or{" "}
-                <Link href="/admin/clients" style={{ color: "var(--k-accent)" }}>
+                <Link href="/admin/clients/legacy" style={{ color: "var(--k-accent)" }}>
                   add a client
                 </Link>
                 .

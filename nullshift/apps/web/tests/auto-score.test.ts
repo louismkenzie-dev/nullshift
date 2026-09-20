@@ -304,8 +304,18 @@ describe("derivation", () => {
     });
     expect(r.nsi).toBe(53);
     expect(r.scaleBand).toBe("established");
-    expect(r.recommendedMrr).toBe(120); // ceil5(max(40 × 2.5, 30 / 0.25)) for core
+    // A first scan is priced under the current version (NSI_v2): ceil£1(max(149 × 2.5, 30 / 0.25)) for core.
+    expect(r.pricingVersion).toBe("NSI_v2_2026_09");
+    expect(r.recommendedMrr).toBe(373);
     expect(r.reviewFlags.some((f) => /turnover/.test(f))).toBe(true);
+  });
+
+  it("re-scans an existing client against the version their assessment was scored under", () => {
+    const d = deriveScaleInputs(evidence, null);
+    const r = provisionalScore(d, "NSI_v1_2026_08");
+    expect(r.pricingVersion).toBe("NSI_v1_2026_08");
+    expect(r.nsi).toBe(53);
+    expect(r.recommendedMrr).toBe(120); // ceil5(max(40 × 2.5, 30 / 0.25)) — the v1 figure, unchanged
   });
 
   it("keeps what a person typed for estimated and human fields, but lets evidence win auto fields", () => {

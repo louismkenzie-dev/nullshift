@@ -1531,6 +1531,7 @@ export default async function ClientPricingPage({
       <RebandPanel
         tenantId={tenantId}
         contractedBand={(latest?.scale_band as ScaleBand | null) ?? null}
+        contractedVersion={latest?.pricing_version ?? null}
         currentMrr={effective === null ? null : Number(effective)}
       />
 

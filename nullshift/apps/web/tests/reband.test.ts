@@ -189,3 +189,47 @@ describe("notice arithmetic (§7)", () => {
     expect(bandRank(null)).toBe(-1);
   });
 });
+
+describe("re-band decisions across pricing versions", () => {
+  const withVersion = (s: Snapshot, pricingVersion: string): Snapshot => ({
+    ...s,
+    pricingVersion,
+  });
+
+  it("never proposes from a snapshot scored under a different formula version", () => {
+    const d = rebandDecision(
+      [
+        withVersion(snap("growth", 224), "NSI_v2_2026_09"),
+        withVersion(snap("growth", 224), "NSI_v2_2026_09"),
+        withVersion(snap("standard", 40), "NSI_v1_2026_08"),
+      ],
+      { ...opts("standard", 40), contractedVersion: "NSI_v1_2026_08" }
+    );
+    expect(d.action).toBe("manual_review");
+    if (d.action === "manual_review") expect(d.reason).toMatch(/NSI_v2_2026_09/);
+  });
+
+  it("proposes as normal when every snapshot shares the contracted version", () => {
+    const d = rebandDecision(
+      [
+        withVersion(snap("growth", 60), "NSI_v1_2026_08"),
+        withVersion(snap("growth", 60), "NSI_v1_2026_08"),
+        withVersion(snap("standard", 40), "NSI_v1_2026_08"),
+      ],
+      { ...opts("standard", 40), contractedVersion: "NSI_v1_2026_08" }
+    );
+    expect(d.action).toBe("propose");
+    if (d.action === "propose") expect(d.newMrr).toBe(60);
+  });
+
+  it("ignores the guard when no contracted version is supplied (historic callers)", () => {
+    const d = rebandDecision(
+      [
+        withVersion(snap("growth", 60), "NSI_v1_2026_08"),
+        withVersion(snap("growth", 60), "NSI_v1_2026_08"),
+      ],
+      opts("standard", 40)
+    );
+    expect(d.action).toBe("propose");
+  });
+});

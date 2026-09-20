@@ -1,0 +1,240 @@
+/* Agreements area — layout additions on top of shell.module.css.
+   Halo tokens only (inherited from .shell); square corners; no animation. */
+
+/* ── Library filters ──────────────────────────────────── */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 14px 20px;
+  background: var(--ns-surface);
+  border: 1px solid var(--ns-border);
+}
+.filterRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.filterLabel {
+  min-width: 128px;
+}
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border: 1px solid var(--ns-border-strong);
+  color: var(--ns-muted);
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.filterChip:hover {
+  color: var(--ns-fg);
+  background: var(--ns-elevated);
+}
+.filterChipOn {
+  color: var(--ns-on-primary);
+  background: var(--ns-primary);
+  border-color: var(--ns-primary);
+}
+.filterChipOn:hover {
+  color: var(--ns-on-primary);
+  background: var(--ns-primary-hover);
+}
+.filterFoot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid var(--ns-border);
+}
+
+/* ── Empty state ──────────────────────────────────────── */
+.empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--ns-muted);
+}
+.empty strong {
+  display: block;
+  color: var(--ns-fg);
+  margin-bottom: 6px;
+}
+
+/* ── Workspace ────────────────────────────────────────── */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+.aside {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.legacyNote {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  border: 1px solid var(--ns-warning);
+  color: var(--ns-warning);
+}
+.legacyNote span {
+  color: var(--ns-fg);
+}
+
+/* ── Lists inside cards ───────────────────────────────── */
+.bullets {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.riskRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ns-border);
+}
+.riskRow:last-child {
+  border-bottom: 0;
+}
+.blocker {
+  display: grid;
+  grid-template-columns: 8px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ns-border);
+}
+.blocker:last-child {
+  border-bottom: 0;
+}
+.blockerDot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  background: var(--ns-danger);
+}
+.blockerDotOpen {
+  background: var(--ns-warning);
+}
+.blockerClear {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--ns-success);
+}
+
+/* ── Client preview frame ─────────────────────────────── */
+.preview {
+  border: 1px solid var(--ns-info);
+}
+.previewBar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--ns-info);
+  color: var(--ns-info);
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.previewBody {
+  padding: 20px 24px;
+  background: var(--ns-bg);
+}
+.previewTitle {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+.previewSection {
+  margin-top: 16px;
+}
+.previewSection h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.wording {
+  padding: 12px 14px;
+  border-left: 2px solid var(--ns-primary);
+  background: var(--ns-surface);
+  font-size: 13px;
+}
+
+/* ── Audit trail ──────────────────────────────────────── */
+.audit {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.auditRow {
+  display: grid;
+  grid-template-columns: 150px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ns-border);
+}
+.auditRow:last-child {
+  border-bottom: 0;
+}
+.auditNote {
+  color: var(--ns-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* ── Skeleton (loading.tsx) ───────────────────────────── */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.bone {
+  background: var(--ns-elevated);
+  height: 14px;
+}
+.boneWide {
+  width: 60%;
+}
+.boneBlock {
+  height: 180px;
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+  .aside {
+    position: static;
+  }
+  .filterLabel {
+    min-width: 100%;
+  }
+  .auditRow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .riskRow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

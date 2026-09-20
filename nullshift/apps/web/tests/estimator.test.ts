@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   CATALOGUE,
+  CATALOGUE_PUBLISHED_VERSION,
   HANDOVER_FEE,
   POLICY_2026_09_DRAFT,
+  POLICY_2026_09_v1,
+  RUN_PACKAGE_BASE_MINOR,
+  policyById,
   allocateMilestones,
   calculateEstimate,
   ceilToIncrement,
@@ -22,9 +26,10 @@ import {
   type EstimateInput,
   type WorkPackage,
 } from "@/lib/estimator";
+import { BASE_PLAN_PRICE } from "@/lib/pricing/nsi";
 import { QUOTES, quoteById } from "@/lib/next/fixtures";
 
-const policy = POLICY_2026_09_DRAFT;
+const policy = POLICY_2026_09_v1;
 
 const pkg = (over: Partial<WorkPackage> = {}): WorkPackage => ({
   id: "impl",
@@ -132,9 +137,10 @@ describe("§17.3 deterministic versioned outputs", () => {
     expect(a).toEqual(b);
     expect(Object.isFrozen(a)).toBe(true);
     expect(Object.isFrozen(a.build)).toBe(true);
-    expect(a.policy.id).toBe("POLICY_2026_09_DRAFT");
-    expect(a.policy.state).toBe("draft");
-    expect(a.policy.effectiveDate).toBe("2026-09-17");
+    expect(a.policy.id).toBe("POLICY_2026_09_v1");
+    expect(a.policy.state).toBe("published");
+    expect(a.policy.effectiveDate).toBe("2026-09-20");
+    expect(a.policy.runPackageBaseMinor).toEqual({ core: 14_900, pro: 24_900, max: 39_900 });
   });
 
   it("a new policy changes new assessments only; an existing result keeps its numbers", () => {
@@ -593,7 +599,7 @@ describe("four outputs and the fixture quotes", () => {
     const issues = validateEstimate(input, policy, r);
     expect(issues.find((i) => i.code === "below_floor")).toBeUndefined();
     expect(issues.find((i) => i.code === "below_target")?.severity).toBe("info");
-    expect(issues.find((i) => i.code === "policy_draft")?.severity).toBe("review");
+    expect(issues.find((i) => i.code === "policy_draft")).toBeUndefined();
     expect(issues.filter((i) => i.severity === "block")).toEqual([]);
   });
 
@@ -614,7 +620,7 @@ describe("four outputs and the fixture quotes", () => {
     expect(input.build.optionalDiscoveryItemId).toBe("paid-discovery");
   });
 
-  it("independent route blocks issuance until the handover tax basis is decided; the fee stays £600", () => {
+  it("independent route blocks issuance until handover timing and scope are decided; the fee stays £600, inclusive with no VAT line", () => {
     const input = baseInput({
       run: {
         route: "independent",
@@ -625,9 +631,11 @@ describe("four outputs and the fixture quotes", () => {
       },
     });
     const issues = validateEstimate(input, policy, calculateEstimate(input, policy));
-    expect(issues.find((i) => i.code === "handover_tax_pending")?.severity).toBe("block");
+    expect(issues.find((i) => i.code === "handover_terms_pending")?.severity).toBe("block");
+    expect(issues.find((i) => i.code === "handover_tax_pending")).toBeUndefined();
     expect(HANDOVER_FEE.minor).toBe(60_000);
-    expect(HANDOVER_FEE.taxBasis).toBe("pending");
+    expect(HANDOVER_FEE.taxBasis).toBe("inclusive_no_vat");
+    expect(HANDOVER_FEE.paymentTiming).toBe("pending");
     expect(HANDOVER_FEE.issuable).toBe(false);
     expect(CATALOGUE.find((c) => c.id === HANDOVER_FEE.id)).toBeUndefined();
   });
@@ -662,12 +670,15 @@ describe("four outputs and the fixture quotes", () => {
   });
 });
 
-describe("§6.5 draft catalogue", () => {
-  it("every item is draft, non-chargeable, versioned and dated; ids and names are unique", () => {
+describe("§6.5 catalogue", () => {
+  const TIERS = ["managed-core", "managed-pro", "managed-max"];
+
+  it("every item outside the three managed tiers is draft, non-chargeable, versioned and dated; ids and names are unique", () => {
     expect(CATALOGUE.length).toBeGreaterThanOrEqual(28);
     for (const c of CATALOGUE) {
-      expect(c.state).toBe("draft");
-      expect(c.chargeable).toBe(false);
+      if (TIERS.includes(c.id)) continue;
+      expect(c.state, c.id).toBe("draft");
+      expect(c.chargeable, c.id).toBe(false);
       expect(c.version).toBe("CATALOGUE_2026_09_DRAFT");
       expect(c.effectiveDate).toBe("2026-09-17");
       if (c.fromMinor !== null)
@@ -683,8 +694,31 @@ describe("§6.5 draft catalogue", () => {
     expect(CATALOGUE.filter((c) => /video/i.test(c.name))).toHaveLength(2);
   });
 
-  it("policy role rates are labelled hypothetical and the policy is draft", () => {
-    expect(policy.state).toBe("draft");
-    for (const r of policy.roleRates) expect(r.note).toMatch(/hypothetical/i);
+  it("the three managed tiers are published at the NSI_v2 from-prices, in step with the pricing engine", () => {
+    const tiers = TIERS.map((id) => CATALOGUE.find((c) => c.id === id)!);
+    expect(tiers.map((t) => t.fromMinor)).toEqual([14_900, 24_900, 39_900]);
+    for (const t of tiers) {
+      expect(t.state).toBe("published");
+      expect(t.chargeable).toBe(true);
+      expect(t.version).toBe(CATALOGUE_PUBLISHED_VERSION);
+      expect(t.effectiveDate).toBe("2026-09-20");
+    }
+    // One ladder, two modules: the estimator's run bases ARE the NSI bases.
+    expect(RUN_PACKAGE_BASE_MINOR).toEqual({
+      core: BASE_PLAN_PRICE.core * 100,
+      pro: BASE_PLAN_PRICE.pro * 100,
+      max: BASE_PLAN_PRICE.max * 100,
+    });
+    expect(policy.runPackageBaseMinor).toEqual(RUN_PACKAGE_BASE_MINOR);
+  });
+
+  it("the policy is published from 20 Sep 2026 and the draft id still resolves to it", () => {
+    expect(policy.state).toBe("published");
+    expect(policy.effectiveDate).toBe("2026-09-20");
+    expect(POLICY_2026_09_DRAFT).toBe(POLICY_2026_09_v1);
+    expect(policyById("POLICY_2026_09_DRAFT")).toBe(POLICY_2026_09_v1);
+    expect(policyById("POLICY_2026_09_v1")).toBe(POLICY_2026_09_v1);
+    expect(validatePolicy(policy).find((i) => i.code === "policy_draft")).toBeUndefined();
+    for (const r of policy.roleRates) expect(r.note).toMatch(/working figure/i);
   });
 });

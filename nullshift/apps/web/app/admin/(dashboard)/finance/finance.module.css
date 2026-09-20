@@ -1,0 +1,290 @@
+/* Finance area — extends shell.module.css. Halo tokens only (inherited from .shell);
+   square corners, no animation. */
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.metric {
+  background: var(--ns-surface);
+  border: 1px solid var(--ns-border);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.metricDanger {
+  border-left: 3px solid var(--ns-danger);
+}
+.metricWarning {
+  border-left: 3px solid var(--ns-warning);
+}
+.metricHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+.metricRange {
+  color: var(--ns-muted);
+  font-size: 12px;
+}
+.metricDef {
+  color: var(--ns-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 6px 0 0;
+}
+.metricDef summary {
+  cursor: pointer;
+  color: var(--ns-fg);
+  list-style: none;
+}
+.metricDef summary::-webkit-details-marker {
+  display: none;
+}
+.metricDef summary::before {
+  content: "Definition";
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-muted);
+}
+.metricDef summary:hover::before {
+  color: var(--ns-fg);
+}
+.metricFoot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ns-faint);
+  align-items: baseline;
+}
+.metricAside {
+  color: var(--ns-muted);
+  font-size: 12px;
+  border-top: 1px dashed var(--ns-border);
+  padding-top: 6px;
+  margin-top: 6px;
+}
+.drill {
+  color: var(--ns-primary);
+  white-space: nowrap;
+}
+.drill:hover {
+  color: var(--ns-primary-hover);
+}
+
+/* boundary note: client payment volume is never a Nullshift figure */
+.boundary {
+  border: 1px dashed var(--ns-info);
+  color: var(--ns-muted);
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+.boundary strong {
+  color: var(--ns-info);
+}
+
+/* filters */
+.filters {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.filter {
+  padding: 6px 10px;
+  border: 1px solid var(--ns-border-strong);
+  color: var(--ns-muted);
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.filter:hover {
+  color: var(--ns-fg);
+}
+.filterActive {
+  color: var(--ns-fg);
+  border-color: var(--ns-primary);
+}
+
+/* empty states */
+.empty {
+  border: 1px dashed var(--ns-border-strong);
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--ns-muted);
+}
+.empty strong {
+  display: block;
+  color: var(--ns-fg);
+  margin-bottom: 4px;
+}
+
+/* detail layout */
+.detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* equation */
+.equation {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.equationTotal {
+  border-top: 1px solid var(--ns-border-strong);
+  font-weight: 700;
+  padding-top: 6px;
+  margin-top: 4px;
+}
+.equationLabel {
+  color: var(--ns-muted);
+}
+
+/* retry block */
+.retry {
+  border: 1px solid var(--ns-border-strong);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.retryDoes {
+  font-weight: 600;
+}
+.retryNever {
+  color: var(--ns-muted);
+  font-size: 13px;
+}
+.retryNever::before {
+  content: "Never: ";
+  color: var(--ns-danger);
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* timeline */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.timeline li {
+  display: grid;
+  grid-template-columns: 150px 90px 1fr;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ns-border);
+  font-size: 13px;
+}
+.timeline li:last-child {
+  border-bottom: 0;
+}
+.timelineAt {
+  color: var(--ns-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.timelineActor {
+  color: var(--ns-muted);
+}
+
+/* evidence list */
+.evidence {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--ns-muted);
+}
+.evidence li {
+  margin: 4px 0;
+}
+
+/* status badge inline */
+.review {
+  border: 1px solid var(--ns-warning);
+  background: color-mix(in srgb, var(--ns-warning) 8%, transparent);
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+.review strong {
+  color: var(--ns-warning);
+}
+
+.legacy {
+  opacity: 0.85;
+}
+.legacy td:first-child {
+  border-left: 3px solid var(--ns-warning);
+}
+
+.sourceNote {
+  color: var(--ns-faint);
+  font-size: 12px;
+  margin: 0 0 16px;
+}
+
+.sub {
+  color: var(--ns-muted);
+  font-size: 12px;
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+  .detail {
+    grid-template-columns: 1fr;
+  }
+  .timeline li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
+/* loading skeletons — static blocks, no animation */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.bone {
+  background: var(--ns-elevated);
+  border: 1px solid var(--ns-border);
+  min-height: 52px;
+}
+.boneTall {
+  min-height: 120px;
+}
+.boneRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .boneRow {
+    grid-template-columns: 1fr;
+  }
+}

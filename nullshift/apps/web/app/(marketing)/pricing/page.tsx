@@ -38,7 +38,7 @@ import {
 export const metadata: Metadata = {
   title: "Pricing — Nullshift",
   description: PRICING_PUBLIC
-    ? "One build to own your website and systems outright, then a monthly plan from \u00a330 that covers your running costs and keeps everything online. Four tiers \u2014 Core, Pro, Max and Enterprise \u2014 no per-seat fees, cancel any month."
+    ? `One build to own your website and systems outright, then a monthly plan from ${PRICING_FROM} that covers your running costs and keeps everything online. Four tiers \u2014 Core, Pro, Max and Enterprise \u2014 no per-seat fees, cancel any month.`
     : "One build to own your website and systems outright, then a monthly plan that covers your running costs and keeps everything online. Priced to your scope and quoted in writing \u2014 no per-seat fees, cancel any month.",
   alternates: { canonical: "/pricing" },
   robots: pricingRobots(),
@@ -417,7 +417,7 @@ export default function PricingPage() {
               <div className="p-8 md:p-10">
                 <Tag>
                   {PRICING_PUBLIC
-                    ? `${HANDOVER.title} — ${HANDOVER.fee}`
+                    ? `${HANDOVER.title} — ${HANDOVER.fee}, ${HANDOVER.tax}`
                     : HANDOVER.title}
                 </Tag>
                 <p
@@ -521,14 +521,14 @@ export default function PricingPage() {
                 ) : (
                   <>
                     Four tiers.{" "}
-                    <span style={{ color: "var(--k-muted)" }}>Rates being reworked.</span>
+                    <span style={{ color: "var(--k-muted)" }}>Quoted to scope.</span>
                   </>
                 )
               }
               lead={
                 PRICING_PUBLIC
                   ? "Your plan is based on the service your platform needs. Your monthly rate then scales with the size, usage, complexity and commercial importance of the system — so the figures below are where each level starts, and we tell you your rate before you commit. Every level is month-to-month. Open “what this adds” on any card to see what it gets you over the level below."
-                  : "Your plan is based on the service your platform needs; your monthly rate then scales with the size, usage, complexity and commercial importance of the system. Every level is month-to-month. We are reworking the published rates, so the figures are coming out of this page until the new ones are settled — ask and we will quote you properly."
+                  : "Your plan is based on the service your platform needs; your monthly rate then scales with the size, usage, complexity and commercial importance of the system. Every level is month-to-month. Tell us what you need and we will quote your rate in writing before you commit."
               }
               maxLead="68ch"
             />

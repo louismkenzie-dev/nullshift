@@ -919,17 +919,17 @@ export const CATALOGUE: CatalogueItem[] = [
 
 /**
  * The £600 independent handover fee is a confirmed commercial decision, shown
- * separately from the unapproved catalogue (brief §6.5 last paragraph). Real
- * issuance stays blocked until tax basis, payment timing and scope are confirmed.
+ * separately from the unapproved catalogue (brief §6.5 last paragraph). Tax
+ * basis decided 20 Sep 2026: invoiced inclusive, no VAT line. Real issuance
+ * stays blocked until payment timing and scope are confirmed.
  */
 export const HANDOVER_FEE_DECISION = {
   id: "decision-handover-fee",
   label: "Independent handover fee",
   amount: money(60_000),
   status: "confirmed commercial decision" as const,
-  taxBasis: "pending decision" as const,
+  taxBasis: "inclusive, no VAT line" as const,
   blockedOn: [
-    "Tax basis (decision register 18.3)",
     "Payment timing (due date)",
     "Scope and exceptions (complex migrations, later offboarding, route changes)",
   ],

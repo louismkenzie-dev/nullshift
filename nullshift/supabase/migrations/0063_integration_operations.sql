@@ -9,7 +9,7 @@
 -- outage, retry-allocation-only, provider timeout / worker crash and sandbox
 -- isolation).
 --
--- STATUS: NOT APPLIED to any database. Authored 2026-09-17 against the live
+-- STATUS: APPLIED to Nullshift Ops (cweftpoaojwzllzficgt) on 2026-09-20 (0057 on 2026-09-17). Authored 2026-09-17 against the live
 -- schema described in docs/ADMIN-REDESIGN-PHASE0-2026-09-17.md §11 (there is
 -- no event table for GoCardless; `stripe_events` is (id, type, received_at)
 -- inserted AFTER processing; no outbox, lease or retry table exists). Number

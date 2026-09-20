@@ -1,0 +1,272 @@
+/* Work intake (brief §7) — Halo tokens inherited from .shell in shell.module.css.
+   Square corners; no animation libraries; no --k-* marketing variables. */
+
+.form {
+  display: grid;
+  gap: 16px;
+}
+.row2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: 12px;
+}
+.label {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-muted);
+}
+.input,
+.select,
+.textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  background: var(--ns-bg);
+  border: 1px solid var(--ns-border-strong);
+  color: var(--ns-fg);
+  font: inherit;
+  font-size: 13px;
+}
+.textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+.input:focus,
+.select:focus,
+.textarea:focus,
+.check input:focus-visible {
+  outline: 2px solid var(--ns-primary);
+  outline-offset: 1px;
+}
+.fieldset {
+  border: 1px solid var(--ns-border);
+  padding: 12px 14px;
+  margin: 0;
+  min-width: 0;
+}
+.legend {
+  padding: 0 6px;
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-muted);
+}
+.checks {
+  display: grid;
+  gap: 6px;
+}
+.check {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+  align-items: start;
+  font-size: 13px;
+  cursor: pointer;
+}
+.check input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--ns-primary);
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Result panels ─────────────────────────────────────── */
+.result {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.panel {
+  background: var(--ns-bg);
+  border: 1px solid var(--ns-border-strong);
+  padding: 14px 16px;
+}
+.panelTitle {
+  margin: 0 0 8px;
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-muted);
+}
+.classBig {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+.wording {
+  display: inline-block;
+  padding: 8px 12px;
+  border: 1px solid var(--ns-border-strong);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+.wordingManaged,
+.wordingWarranty {
+  border-color: var(--ns-success);
+  color: var(--ns-success);
+}
+.wordingGrow {
+  border-color: var(--ns-info);
+  color: var(--ns-info);
+}
+.wordingReview {
+  border-color: var(--ns-warning);
+  color: var(--ns-warning);
+}
+.reasons {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--ns-muted);
+}
+.reasons li + li {
+  margin-top: 4px;
+}
+.mismatch {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px dashed var(--ns-warning);
+  color: var(--ns-warning);
+  font-size: 12px;
+}
+.laneIncident {
+  color: var(--ns-danger);
+  border-color: color-mix(in srgb, var(--ns-danger) 40%, transparent);
+}
+
+/* ── Worked examples ───────────────────────────────────── */
+.examples {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.example {
+  display: block;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ns-border);
+  color: var(--ns-fg);
+}
+.example:last-child {
+  border-bottom: 0;
+}
+.example:hover {
+  background: var(--ns-elevated);
+}
+.exampleActive {
+  border-left: 2px solid var(--ns-primary);
+  padding-left: 10px;
+}
+.exampleTitle {
+  font-weight: 600;
+  font-size: 13px;
+}
+.exampleFlow {
+  font-size: 12px;
+  color: var(--ns-muted);
+  margin-top: 2px;
+}
+.arrow {
+  color: var(--ns-faint);
+  padding: 0 4px;
+}
+
+/* ── Split ─────────────────────────────────────────────── */
+.split {
+  border-left: 2px solid var(--ns-info);
+  padding-left: 10px;
+}
+.gateProceed {
+  color: var(--ns-success);
+}
+.gateQuote {
+  color: var(--ns-info);
+}
+
+/* ── Next-action strip ─────────────────────────────────── */
+.stripText {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.stripMeta {
+  color: var(--ns-muted);
+  font-size: 13px;
+}
+.stripEmpty {
+  border-style: dashed;
+  border-color: var(--ns-border-strong);
+  background: transparent;
+}
+.history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+}
+.history li {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ns-border);
+  align-items: start;
+}
+.history li:last-child {
+  border-bottom: 0;
+}
+.plan {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--ns-border-strong);
+  background: var(--ns-bg);
+  font-size: 13px;
+}
+.planKind {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-primary);
+}
+
+/* ── Action result (flag on) ───────────────────────────── */
+.status {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--ns-border-strong);
+  font-size: 13px;
+}
+.statusOk {
+  border-color: var(--ns-success);
+  color: var(--ns-success);
+}
+.statusFail {
+  border-color: var(--ns-danger);
+  color: var(--ns-danger);
+}
+
+@media (max-width: 900px) {
+  .row2,
+  .result {
+    grid-template-columns: 1fr;
+  }
+  .history li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

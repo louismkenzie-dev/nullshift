@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
   BASE_PLAN_PRICE,
+  BASE_PLAN_PRICE_BY_VERSION,
+  basePlanPriceFor,
+  basesFor,
   calculateScalePricing,
   ceilToFive,
   EMPTY_SCALE_INPUT,
+  isKnownPricingVersion,
   organisationReachPoints,
   organisationScalePoints,
+  PRICING_VERSION,
+  PRICING_VERSION_V1,
+  PRICING_VERSION_V2,
+  roundQuoteFor,
   scaleBandFor,
   type ScaleInput,
 } from "@/lib/pricing/nsi";
@@ -14,7 +22,13 @@ import {
  * The Scale Scoring Formula decides what every recurring client is charged, so
  * it is pinned against the four worked examples in the spec plus the boundary
  * rules that keep a quote defensible (cost floor, never-infer, reach-is-max).
+ *
+ * The spec's worked examples were written against the NSI_v1 bases
+ * (£40/£80/£120); they are run under that version explicitly so the figures
+ * stay pinned after v2 (£149/£249/£399) became the default for new work.
  */
+
+const V1 = { pricingVersion: PRICING_VERSION_V1 };
 
 type PartialInput = Partial<Omit<ScaleInput, "riskFlags" | "enterpriseFlags">> & {
   riskFlags?: Partial<ScaleInput["riskFlags"]>;
@@ -31,7 +45,7 @@ const input = (over: PartialInput): ScaleInput => ({
   },
 });
 
-describe("worked examples from the pricing spec", () => {
+describe("worked examples from the pricing spec (NSI_v1 bases)", () => {
   it("A — small local booking business: NSI 21, Standard, Pro stays at £80", () => {
     const r = calculateScalePricing(
       input({
@@ -43,8 +57,10 @@ describe("worked examples from the pricing spec", () => {
         internalActiveUsers: 2,
         locationsOrUnits: 1,
         riskFlags: { payments: true, authenticatedPii: true },
-      })
+      }),
+      V1
     );
+    expect(r.pricingVersion).toBe(PRICING_VERSION_V1);
     expect(r.nsi).toBe(21);
     expect(r.scaleBand).toBe("standard");
     expect(r.multiplier).toBe(1.0);
@@ -68,7 +84,8 @@ describe("worked examples from the pricing spec", () => {
           threePlusIntegrations: true,
           operationalAi: true,
         },
-      })
+      }),
+      V1
     );
     expect(r.nsi).toBe(61);
     expect(r.scaleBand).toBe("scale");
@@ -92,7 +109,8 @@ describe("worked examples from the pricing spec", () => {
           threePlusIntegrations: true,
           complexAdminWorkflows: true,
         },
-      })
+      }),
+      V1
     );
     expect(r.nsi).toBe(55);
     expect(r.scaleBand).toBe("established");
@@ -109,7 +127,8 @@ describe("worked examples from the pricing spec", () => {
         directMonthlyVendorCostGbp: 35,
         internalActiveUsers: 4,
         riskFlags: { authenticatedPii: true, operationalAi: true },
-      })
+      }),
+      V1
     );
     expect(r.scaleBand).toBe("standard");
     expect(r.scaledPlanPrice).toBe(80);
@@ -234,12 +253,123 @@ describe("guardrails", () => {
   });
 
   it("keeps the published from-prices as the Standard-band floor", () => {
-    expect(BASE_PLAN_PRICE).toEqual({ core: 40, pro: 80, max: 120 });
+    expect(PRICING_VERSION).toBe(PRICING_VERSION_V2);
+    expect(BASE_PLAN_PRICE).toEqual({ core: 149, pro: 249, max: 399 });
   });
 
   it("rounds every quote up to the next £5", () => {
     expect(ceilToFive(80)).toBe(80);
     expect(ceilToFive(81)).toBe(85);
     expect(ceilToFive(138)).toBe(140);
+  });
+});
+
+describe("pricing versions", () => {
+  const exampleA = input({
+    plan: "pro",
+    monthlyActiveUsers: 350,
+    platformRole: "transaction_critical",
+    annualTurnoverGbp: 180_000,
+    directMonthlyVendorCostGbp: 8,
+    internalActiveUsers: 2,
+    locationsOrUnits: 1,
+    riskFlags: { payments: true, authenticatedPii: true },
+  });
+  const exampleB = input({
+    plan: "max",
+    monthlyActiveUsers: 7_500,
+    platformRole: "transaction_critical",
+    annualTurnoverGbp: 3_500_000,
+    directMonthlyVendorCostGbp: 42,
+    internalActiveUsers: 22,
+    locationsOrUnits: 7,
+    riskFlags: {
+      payments: true,
+      authenticatedPii: true,
+      threePlusIntegrations: true,
+      operationalAi: true,
+    },
+  });
+
+  it("keeps every version's bases available, keyed by version", () => {
+    expect(BASE_PLAN_PRICE_BY_VERSION[PRICING_VERSION_V1]).toEqual({
+      core: 40,
+      pro: 80,
+      max: 120,
+    });
+    expect(BASE_PLAN_PRICE_BY_VERSION[PRICING_VERSION_V2]).toEqual({
+      core: 149,
+      pro: 249,
+      max: 399,
+    });
+    expect(basesFor(PRICING_VERSION_V1)).toEqual({ core: 40, pro: 80, max: 120 });
+    expect(basesFor(null)).toBe(BASE_PLAN_PRICE);
+    expect(basePlanPriceFor("core", PRICING_VERSION_V1)).toBe(40);
+    expect(basePlanPriceFor("core")).toBe(149);
+    expect(basePlanPriceFor("enterprise")).toBeNull();
+    expect(isKnownPricingVersion(PRICING_VERSION_V1)).toBe(true);
+    expect(isKnownPricingVersion("NSI_v9_2099_01")).toBe(false);
+  });
+
+  it("refuses to guess the bases of a version it does not know", () => {
+    expect(() => basesFor("NSI_v9_2099_01")).toThrow(/Unknown pricing version/);
+    expect(() => roundQuoteFor(1, "NSI_v9_2099_01")).toThrow(/Unknown pricing version/);
+  });
+
+  it("stamps NEW assessments with NSI_v2 and prices them from the new bases", () => {
+    const a = calculateScalePricing(exampleA);
+    expect(a.pricingVersion).toBe("NSI_v2_2026_09");
+    expect(a.basePlanPrice).toBe(249);
+    expect(a.scaledPlanPrice).toBe(249);
+    expect(a.recommendedMrr).toBe(249);
+
+    const b = calculateScalePricing(exampleB);
+    expect(b.scaleBand).toBe("scale");
+    expect(b.basePlanPrice).toBe(399);
+    expect(b.scaledPlanPrice).toBe(1596);
+    expect(b.recommendedMrr).toBe(1596);
+  });
+
+  it("a v1 assessment prices identically before and after v2 was published", () => {
+    // These are the spec's own v1 figures, frozen: the same inputs re-scored
+    // under the row's version must reproduce them exactly.
+    const a = calculateScalePricing(exampleA, V1);
+    expect(a).toMatchObject({
+      pricingVersion: "NSI_v1_2026_08",
+      basePlanPrice: 80,
+      scaledPlanPrice: 80,
+      recommendedMrr: 80,
+    });
+    const b = calculateScalePricing(exampleB, V1);
+    expect(b).toMatchObject({
+      pricingVersion: "NSI_v1_2026_08",
+      basePlanPrice: 120,
+      scaledPlanPrice: 480,
+      recommendedMrr: 480,
+    });
+    // And the scoring itself is version-independent: only the money moved.
+    const v2 = calculateScalePricing(exampleB);
+    expect(v2.nsi).toBe(b.nsi);
+    expect(v2.componentScores).toEqual(b.componentScores);
+    expect(v2.scaleBand).toBe(b.scaleBand);
+    expect(v2.multiplier).toBe(b.multiplier);
+    expect(v2.directCostFloor).toBe(b.directCostFloor);
+  });
+
+  it("rounds v1 quotes to £5 and v2 quotes to the pound, so £149 is what is paid", () => {
+    expect(roundQuoteFor(149, PRICING_VERSION_V1)).toBe(150);
+    expect(roundQuoteFor(149, PRICING_VERSION_V2)).toBe(149);
+    expect(roundQuoteFor(373.5, PRICING_VERSION_V2)).toBe(374);
+    expect(roundQuoteFor(81, PRICING_VERSION_V1)).toBe(85);
+    const standardCore = calculateScalePricing(
+      input({
+        plan: "core",
+        monthlyActiveUsers: 100,
+        annualTurnoverGbp: 100_000,
+        directMonthlyVendorCostGbp: 5,
+      })
+    );
+    expect(standardCore.scaleBand).toBe("standard");
+    expect(standardCore.recommendedMrr).toBe(149);
   });
 });

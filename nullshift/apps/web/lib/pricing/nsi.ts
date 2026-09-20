@@ -2,11 +2,11 @@
  * Nullshift Scale Index (NSI) — the recurring-pricing engine.
  *
  * Implements the Scale Scoring Formula spec. The public site advertises one
- * "from" price per plan (Core £40 / Pro £80 / Max £120); this engine turns a
- * client's scale, commercial importance and technical load into the rate they
- * are actually quoted, so a small local business stays at the from-price while
- * a larger or more business-critical organisation pays materially more for the
- * same service level.
+ * "from" price per plan (Core £149 / Pro £249 / Max £399 under NSI_v2); this
+ * engine turns a client's scale, commercial importance and technical load into
+ * the rate they are actually quoted, so a small local business stays at the
+ * from-price while a larger or more business-critical organisation pays
+ * materially more for the same service level.
  *
  *   final_mrr = ceil_to_5( max( base_plan × scale_multiplier,
  *                               direct_vendor_cost / 0.25 ) )
@@ -19,10 +19,87 @@
  * pricing version so a future formula change can never rewrite historic quotes.
  */
 
-export const PRICING_VERSION = "NSI_v1_2026_08";
+/** The formula version every NEW assessment is stamped with. */
+export const PRICING_VERSION = "NSI_v2_2026_09";
 
-/** The public "from" prices. Enterprise is always quoted individually. */
-export const BASE_PLAN_PRICE = { core: 40, pro: 80, max: 120 } as const;
+/** The original launch bases (Core £40 / Pro £80 / Max £120). Frozen. */
+export const PRICING_VERSION_V1 = "NSI_v1_2026_08";
+/** Bases from 20 Sep 2026 (Core £149 / Pro £249 / Max £399). */
+export const PRICING_VERSION_V2 = "NSI_v2_2026_09";
+
+export type BasePlanPrices = Readonly<{ core: number; pro: number; max: number }>;
+
+/**
+ * The public "from" prices, keyed by the version that published them.
+ *
+ * A version's bases are HISTORY, not configuration: once an assessment has
+ * been stored under a version, everything that later re-derives a figure from
+ * it (sibling-plan prices, re-band previews, the portal chooser, the Direct
+ * Debit charge) must use that version's bases — never the current ones. That
+ * is what keeps an existing client's price identical after a new version is
+ * published. Add a new version; never edit an old one.
+ */
+export const BASE_PLAN_PRICE_BY_VERSION: Readonly<Record<string, BasePlanPrices>> =
+  Object.freeze({
+    [PRICING_VERSION_V1]: Object.freeze({ core: 40, pro: 80, max: 120 }),
+    [PRICING_VERSION_V2]: Object.freeze({ core: 149, pro: 249, max: 399 }),
+  });
+
+/** The current from-prices — what a NEW assessment is priced from. */
+export const BASE_PLAN_PRICE: BasePlanPrices = BASE_PLAN_PRICE_BY_VERSION[PRICING_VERSION]!;
+
+/**
+ * The increment a final quote is rounded UP to, per version. v1 rounded to the
+ * next £5 (£40/£80/£120 all sit on the grid). v2's bases end in 9, so a £5
+ * grid would bill a Standard-band client £150 against a published "from £149";
+ * v2 therefore rounds to the whole pound and the from-price is what is paid.
+ */
+export const ROUNDING_INCREMENT_BY_VERSION: Readonly<Record<string, number>> =
+  Object.freeze({
+    [PRICING_VERSION_V1]: 5,
+    [PRICING_VERSION_V2]: 1,
+  });
+
+/** Rounding increment for a version (see ROUNDING_INCREMENT_BY_VERSION). */
+export function roundingIncrementFor(version: string | null | undefined): number {
+  const v = version === null || version === undefined || version === "" ? PRICING_VERSION : version;
+  const inc = ROUNDING_INCREMENT_BY_VERSION[v];
+  if (inc === undefined) throw new Error(`Unknown pricing version "${v}"`);
+  return inc;
+}
+
+/** Round a quote UP to the version's increment — the final step of the formula. */
+export function roundQuoteFor(value: number, version: string | null | undefined): number {
+  const inc = roundingIncrementFor(version);
+  return Math.ceil(value / inc) * inc;
+}
+
+export const isKnownPricingVersion = (version: string | null | undefined): boolean =>
+  !!version && Object.prototype.hasOwnProperty.call(BASE_PLAN_PRICE_BY_VERSION, version);
+
+/**
+ * The bases an assessment must be priced from. Pass the row's own
+ * `pricing_version`; with no assessment (null) the current bases apply.
+ *
+ * An unrecognised version string is refused rather than silently priced off
+ * the current ladder — a row stamped with a version this build does not know
+ * is a deployment problem, and guessing at its bases could reprice a client.
+ */
+export function basesFor(version: string | null | undefined): BasePlanPrices {
+  if (version === null || version === undefined || version === "") return BASE_PLAN_PRICE;
+  const bases = BASE_PLAN_PRICE_BY_VERSION[version];
+  if (!bases) throw new Error(`Unknown pricing version "${version}"`);
+  return bases;
+}
+
+/** Base "from" price for a plan under a version; null for Enterprise / unknown plan. */
+export function basePlanPriceFor(
+  plan: string,
+  version: string | null | undefined = PRICING_VERSION
+): number | null {
+  const bases = basesFor(version);
+  return plan === "core" || plan === "pro" || plan === "max" ? bases[plan] : null;
+}
 
 /** Minimum gross margin retained on attributable third-party vendor cost. */
 const COST_FLOOR_DIVISOR = 0.25;
@@ -271,7 +348,23 @@ export const ceilToFive = (n: number) => Math.ceil(n / 5) * 5;
  * scores, band, multiplier, cost floor and recommended MRR — not just a number,
  * so a quote can always be explained back to the client.
  */
-export function calculateScalePricing(input: ScaleInput): ScaleResult {
+export type ScalePricingOptions = {
+  /**
+   * Price from this version's bases and stamp the result with it. Defaults to
+   * the current PRICING_VERSION — right for a NEW assessment. A re-score of an
+   * existing client (re-band shadow score, evidence re-scan) must pass the
+   * version of the assessment it is being compared against, so a client on
+   * NSI_v1 is never previewed against NSI_v2 bases.
+   */
+  pricingVersion?: string;
+};
+
+export function calculateScalePricing(
+  input: ScaleInput,
+  options: ScalePricingOptions = {}
+): ScaleResult {
+  const pricingVersion = options.pricingVersion ?? PRICING_VERSION;
+  const bases = basesFor(pricingVersion);
   const reviewFlags: string[] = [];
 
   const audience = audiencePoints(input.monthlyActiveUsers, input.monthlySessions);
@@ -318,7 +411,7 @@ export function calculateScalePricing(input: ScaleInput): ScaleResult {
     ScaleResult,
     "scaleBand" | "multiplier" | "basePlanPrice" | "scaledPlanPrice" | "recommendedMrr"
   > = {
-    pricingVersion: PRICING_VERSION,
+    pricingVersion,
     plan: input.plan,
     nsi,
     componentScores,
@@ -345,7 +438,7 @@ export function calculateScalePricing(input: ScaleInput): ScaleResult {
   }
 
   const banded = scaleBandFor(nsi)!;
-  const basePlanPrice = BASE_PLAN_PRICE[input.plan as keyof typeof BASE_PLAN_PRICE];
+  const basePlanPrice = bases[input.plan as keyof BasePlanPrices];
   const scaledPlanPrice = basePlanPrice * banded.multiplier;
 
   // Missing vendor cost blocks auto-pricing — the margin floor cannot be
@@ -364,7 +457,10 @@ export function calculateScalePricing(input: ScaleInput): ScaleResult {
     };
   }
 
-  const recommendedMrr = ceilToFive(Math.max(scaledPlanPrice, base.directCostFloor));
+  const recommendedMrr = roundQuoteFor(
+    Math.max(scaledPlanPrice, base.directCostFloor),
+    pricingVersion
+  );
   if (base.directCostFloor > scaledPlanPrice)
     reviewFlags.push(
       "Vendor cost sets the price, not the scale band — check whether this client belongs in a higher band."

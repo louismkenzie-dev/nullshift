@@ -29,14 +29,17 @@ export async function recordSnapshot(formData: FormData) {
   const db = createServiceClient();
   const { data: latest } = await db
     .from("scale_assessments")
-    .select("inputs, agreed_mrr, override_mrr, recommended_mrr")
+    .select("inputs, agreed_mrr, override_mrr, recommended_mrr, pricing_version")
     .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (!latest?.inputs) return;
 
-  const result = calculateScalePricing(latest.inputs as ScaleInput);
+  // Score under the version the client is contracted on, never the current one.
+  const result = calculateScalePricing(latest.inputs as ScaleInput, {
+    pricingVersion: latest.pricing_version ?? PRICING_VERSION,
+  });
   const currentMrr =
     latest.agreed_mrr ?? latest.override_mrr ?? latest.recommended_mrr ?? null;
 
@@ -46,7 +49,7 @@ export async function recordSnapshot(formData: FormData) {
     {
       tenant_id: tenantId,
       period: currentPeriod(),
-      pricing_version: PRICING_VERSION,
+      pricing_version: result.pricingVersion,
       inputs: latest.inputs,
       component_scores: result.componentScores,
       nsi: result.nsi,

@@ -6,8 +6,10 @@
  * client's SCALE BAND then multiplies the price (see apps/web/lib/pricing/nsi.ts,
  * which is internal): a small local business stays at the from-price, while a
  * larger or more business-critical organisation pays materially more for the
- * same service level. Hence "from £40 / £80 / £120" everywhere, never a flat
- * price, and the scaling note under the cards.
+ * same service level. Hence "from £149 / £249 / £399" everywhere, never a flat
+ * price, and the scaling note under the cards. The figures here must match the
+ * current bases in apps/web/lib/pricing/nsi.ts (BASE_PLAN_PRICE) — existing
+ * clients keep the ladder they were assessed under; these are for new ones.
  *
  * Recurring fees buy the platform, service level and technical partnership.
  * New capabilities are ALWAYS separately quoted fixed-price projects — no tier
@@ -21,10 +23,9 @@
 /**
  * PUBLIC PRICING SWITCH.
  *
- * Set false to take every published figure off the marketing site while the
- * commercial model is being reworked — agreed 13 Sep 2026, on the grounds that
- * the published rates are below what the work is worth and should not be
- * setting a new prospect's expectations before the new ones are settled.
+ * Set false to take every published figure off the marketing site. It was
+ * false from 13 Sep 2026 while the commercial model was reworked, and went
+ * back to true on 20 Sep 2026 with the NSI_v2 ladder (£149 / £249 / £399).
  *
  * While it is false:
  *   • /pricing keeps its URL but shows "pricing on application" — no figures,
@@ -36,13 +37,13 @@
  * Everything below is left intact so the rework happens on the real content.
  * Flip this back to true to republish — that is the whole switch, one line.
  */
-export const PRICING_PUBLIC = false;
+export const PRICING_PUBLIC = true;
 
 /** Shown wherever a figure is withheld while PRICING_PUBLIC is false. */
 export const PRICING_ON_APPLICATION = {
   eyebrow: "Pricing on application",
   title: "We price each system to its scope.",
-  body: "We are part-way through reworking how we charge, and we would rather quote you properly than point you at a number that is about to change. Tell us what you need and we will price it — scope, build and monthly, in writing, before you commit to anything.",
+  body: "A one-page booking form and a multi-site operations platform are not the same job, so we would rather quote you properly than point you at a list. Tell us what you need and we will price it — scope, build and monthly, in writing, before you commit to anything.",
   cta: { label: "Get a quote", href: "/book" },
 } as const;
 
@@ -98,6 +99,8 @@ export const BUILD_WARRANTY = {
  */
 export const HANDOVER = {
   fee: "\u00a3600",
+  /** How the fee is invoiced: one inclusive figure, no VAT added on top. */
+  tax: "no VAT added",
   title: "Or run it yourself",
   lead: "You are never on a monthly plan just to keep your system \u2014 it is already yours, in your accounts. Taking over the running of it is real work, though, so we do it as a paid handover rather than absorbing it.",
   items: [
@@ -106,7 +109,7 @@ export const HANDOVER = {
     "A live handover session with your own developer or IT provider",
     "Your build warranty runs its full term either way",
   ],
-  note: "Applies to new order forms. Clients who signed before this keep the terms they signed.",
+  note: "\u00a3600, invoiced as one figure with no VAT added. Applies to new order forms. Clients who signed before this keep the terms they signed.",
 } as const;
 
 /**
@@ -194,8 +197,8 @@ export const PRICING_TIERS: PricingTier[] = [
     index: "01",
     name: "Core",
     tagline: "Keep it live.",
-    price: "£40",
-    priceFrom: 40,
+    price: "£149",
+    priceFrom: 149,
     cadence: "from / month",
     audience: "Simple, low-change systems",
     who: "Businesses with an already-built system that needs to stay online, secure and working as agreed.",
@@ -238,8 +241,8 @@ export const PRICING_TIERS: PricingTier[] = [
     index: "02",
     name: "Pro",
     tagline: "Run it properly.",
-    price: "£80",
-    priceFrom: 80,
+    price: "£249",
+    priceFrom: 249,
     cadence: "from / month",
     audience: "Operational systems using AI & email",
     who: "Businesses whose system actively sends, automates and interacts — and can't afford it quietly failing.",
@@ -286,8 +289,8 @@ export const PRICING_TIERS: PricingTier[] = [
     index: "03",
     name: "Max",
     tagline: "Have a technical partner.",
-    price: "£120",
-    priceFrom: 120,
+    price: "£399",
+    priceFrom: 399,
     cadence: "from / month",
     audience: "Businesses wanting an ongoing partner",
     who: "Growth-minded businesses who want a developer who knows their platform and helps shape what comes next.",
@@ -470,7 +473,7 @@ export const SUPPORT_EXAMPLES: {
 /** Pricing-specific questions, merged ahead of the general FAQ on /pricing. */
 export const PRICING_FAQS = [
   {
-    q: "Why is it “from” £40 rather than just £40?",
+    q: "Why is it “from” £149 rather than just £149?",
     a: "Because the plan and your scale are two different things. The plan sets the service your platform needs; what you pay for that service then scales with how much load, complexity and commercial importance sits on the system. A small local business genuinely pays the from-price. A multi-site operator whose revenue runs through the platform pays more for the same service level, because the responsibility is bigger. We tell you your rate before you commit to anything.",
   },
   {

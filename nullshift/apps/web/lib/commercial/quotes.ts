@@ -1,14 +1,12 @@
 /**
- * Quote data layer for the redesign (Phase 2), behind `commercialV2`.
- *
- * With the flag off nothing here touches the database: the Studio keeps its
- * fixtures and the listing reads lib/commercial/fixtures.ts. With the flag on,
- * reads go through the caller's RLS client (staff-only policies in 0057).
+ * Quote data layer for the redesign (Phase 2). Migration 0057 is live in
+ * production, so reads always go to the database through the caller's RLS
+ * client (staff-only policies in 0057); the commercialV2 flag is treated as
+ * permanently on. lib/commercial/fixtures.ts is kept only as a fallback for
+ * the Studio when the id is not a uuid (tests and the sandbox walkthrough).
  */
 import { createClient } from "@nullshift/db";
-import { flagOn } from "@/lib/flags";
 import type { Quote } from "@/lib/next/fixtures";
-import { FIXTURE_QUOTE_VERSIONS } from "./fixtures";
 import {
   getQuote,
   getOpportunity,
@@ -22,19 +20,17 @@ import { toStudioQuote } from "./studio";
 import type { QuoteVersionListItem } from "./types";
 
 /**
- * Returns a persisted quote version in the Studio's shape, or null when the
- * flag is off / not found. `id` may be a quote_versions id (that exact
- * version) or a quotes id (its current version, else the latest one).
+ * The persisted version with its quote and opportunity, or null when not
+ * found. `id` may be a quote_versions id (that exact version) or a quotes id
+ * (its current version, else the latest one).
  */
-export async function loadQuoteForStudio(id: string): Promise<Quote | null> {
-  if (!flagOn("commercialV2")) return null;
+export async function loadQuoteVersionContext(id: string): Promise<QuoteVersionListItem | null> {
   if (!isUuid(id)) return null;
 
   const db = await createClient();
 
   const byVersion = await getVersionContext(db, id);
-  if (byVersion)
-    return toStudioQuote(byVersion.version, byVersion.quote, byVersion.opportunity);
+  if (byVersion) return byVersion;
 
   const quote = await getQuote(db, id);
   if (!quote) return null;
@@ -44,18 +40,22 @@ export async function loadQuoteForStudio(id: string): Promise<Quote | null> {
   if (!version) return null;
   const opportunity = await getOpportunity(db, quote.opportunity_id);
   if (!opportunity) return null;
-  return toStudioQuote(version, quote, opportunity);
+  return { version, quote, opportunity };
+}
+
+/** Returns a persisted quote version in the Studio's shape, or null when not found. */
+export async function loadQuoteForStudio(id: string): Promise<Quote | null> {
+  const ctx = await loadQuoteVersionContext(id);
+  return ctx ? toStudioQuote(ctx.version, ctx.quote, ctx.opportunity) : null;
 }
 
 export type QuoteVersionListing = {
-  source: "fixtures" | "database";
+  source: "database";
   items: QuoteVersionListItem[];
 };
 
-/** Listing for /admin/next/quotes: fixtures when the flag is off, 0057 rows when on. */
+/** Listing for /admin/quotes: newest 100 quote versions from 0057. */
 export async function loadQuoteVersionListing(): Promise<QuoteVersionListing> {
-  if (!flagOn("commercialV2"))
-    return { source: "fixtures", items: FIXTURE_QUOTE_VERSIONS };
   const db = await createClient();
-  return { source: "database", items: await listQuoteVersions(db) };
+  return { source: "database", items: await listQuoteVersions(db, 100) };
 }

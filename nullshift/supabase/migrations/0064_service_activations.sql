@@ -3,7 +3,7 @@
 -- §8.3–8.4, §10.2, §12.3, §17.2 rows 1–2 and 5, "bank transfer before Direct
 -- Debit", "orphan mandate").
 --
--- STATUS: NOT APPLIED to any database. Authored 2026-09-17 additively against
+-- STATUS: APPLIED to Nullshift Ops (cweftpoaojwzllzficgt) on 2026-09-20 (0057 on 2026-09-17). Authored 2026-09-17 additively against
 -- the live schema as read in docs/ADMIN-REDESIGN-PHASE0-2026-09-17.md §11.
 -- Number the ledger entry against `schema_migrations`, not this directory,
 -- before applying (Phase 0 decision N-h). Nothing reads or writes these

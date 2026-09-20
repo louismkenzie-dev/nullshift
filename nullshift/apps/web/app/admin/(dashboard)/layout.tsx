@@ -1,11 +1,17 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { isAdminEmail } from "@nullshift/auth/admin";
-import { AdminNav } from "../AdminNav";
 import { T } from "@nullshift/ui/tokens";
-import { Atmosphere } from "@/components/funnel/Atmosphere";
 import { hasSupabaseServerConfig, getMissingSupabaseEnv } from "@nullshift/db/env";
-import { OperationOverlay } from "@/components/app/OperationOverlay";
+import { OperationIndicator } from "@/components/app/OperationIndicator";
+import { AccountControl, BottomNav, HeaderCrumbs, Rail } from "./Rail";
+import s from "./shell.module.css";
+
+export const metadata: Metadata = {
+  title: "Nullshift — Admin",
+  robots: { index: false, follow: false },
+};
 
 // Auth-gated dashboard — always render per request, never statically prerender,
 // so `next build` can't try to reach Supabase with placeholder CI/build env.
@@ -145,25 +151,33 @@ export default async function DashboardLayout({
     );
   }
 
+  // Shell (brief §4.3–4.5): 248px rail + 64px header in normal document flow.
+  // The rail and header are sticky; the content column scrolls with the page.
+  // Pressed-operation feedback is the button's own spinner plus the small
+  // "Working…" indicator in the header — no full-bleed overlay.
   return (
-    <div className="min-h-screen relative" style={{ background: "var(--k-bg)" }}>
-      {/* Shared funnel atmosphere — the same ambient world as /start. */}
-      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-        <Atmosphere />
-      </div>
-      {/* Hairline vertical grid — the same gridded canvas that frames the
-          marketing sections (KYMA .k-vgrid). Above the atmosphere, below content. */}
-      <div
-        aria-hidden
-        className="k-vgrid fixed inset-0 pointer-events-none"
-        style={{ zIndex: 0, opacity: 0.35 }}
-      />
-      <div className="relative" style={{ zIndex: 1 }}>
-        <AdminNav email={user.email ?? ""} />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">{children}</main>
-      </div>
-      {/* Full-bleed Nullshift loader for pressed operations (global). */}
-      <OperationOverlay />
+    <div className={s.shell}>
+      <Rail />
+      <header className={s.header}>
+        <HeaderCrumbs />
+        <input
+          className={s.search}
+          type="search"
+          placeholder="Search clients, projects, quotes, invoice refs…"
+          aria-label="Search"
+          disabled
+          title="Global search is not wired up yet"
+        />
+        <div className={s.headerRight}>
+          <OperationIndicator
+            className={`${s.working} ${s.mono}`}
+            dotClassName={s.workingDot}
+          />
+          <AccountControl email={user.email ?? ""} />
+        </div>
+      </header>
+      <main className={s.content}>{children}</main>
+      <BottomNav />
     </div>
   );
 }

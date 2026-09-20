@@ -328,6 +328,7 @@ export type PolicySnapshot = {
   readonly approvalThresholdMinor: number;
   readonly contingencyMethod: string;
   readonly warrantyReserveRule: string;
+  readonly runPackageBaseMinor: Readonly<{ core: number; pro: number; max: number }>;
   readonly roleRates: Readonly<Record<string, number>>;
 };
 

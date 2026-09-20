@@ -43,6 +43,13 @@ export type Snapshot = {
   scaleBand: ScaleBand | null;
   recommendedMrr: number | null;
   enterpriseReviewRequired: boolean;
+  /**
+   * The formula version the snapshot was scored under. When supplied together
+   * with `contractedVersion`, a mismatch sends the decision to a person: a
+   * figure produced from a newer ladder is not evidence about a client whose
+   * price sits on the older one.
+   */
+  pricingVersion?: string | null;
 };
 
 export type RebandDecision =
@@ -71,12 +78,29 @@ export function rebandDecision(
     contractedBand: ScaleBand | null;
     currentMrr: number;
     monthsSinceLastChange: number;
+    /** The pricing_version of the assessment the client's price rests on. */
+    contractedVersion?: string | null;
   }
 ): RebandDecision {
-  const { contractedBand, currentMrr, monthsSinceLastChange } = opts;
+  const { contractedBand, currentMrr, monthsSinceLastChange, contractedVersion } = opts;
 
   if (snapshots.length === 0)
     return { action: "none", reason: "No shadow scores recorded yet." };
+
+  // A snapshot scored under a different formula version than the contract is
+  // not comparable: its recommended figure came off different bases. Never
+  // propose from it — a person decides whether the client moves version.
+  if (contractedVersion) {
+    const foreign = snapshots.find(
+      (s) => s.pricingVersion && s.pricingVersion !== contractedVersion
+    );
+    if (foreign)
+      return {
+        action: "manual_review",
+        reason: `Snapshot ${foreign.id} was scored under ${foreign.pricingVersion}, but the client's price is contracted under ${contractedVersion}. A formula-version change is a commercial decision, not a re-band.`,
+        evidence: [foreign.id],
+      };
+  }
 
   // Enterprise short-circuits everything. A client whose flags say Enterprise
   // is not a band problem, and the formula deliberately produces no price.

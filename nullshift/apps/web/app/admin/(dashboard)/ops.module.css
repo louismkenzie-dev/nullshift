@@ -1,0 +1,471 @@
+/* Operations areas of the admin redesign prototype (Sales, Delivery,
+   Automations, Settings). Halo tokens are inherited from .shell in
+   shell.module.css; nothing here reads a --k-* marketing variable. Square
+   corners everywhere; no animation libraries. */
+
+/* ── Sub-tab links (server-rendered via ?tab=) ─────────── */
+.tabLink {
+  padding: 10px 14px;
+  color: var(--ns-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+.tabLink:hover {
+  color: var(--ns-fg);
+}
+.tabLinkActive {
+  color: var(--ns-fg);
+  border-bottom-color: var(--ns-primary);
+}
+.toggle {
+  display: inline-flex;
+  border: 1px solid var(--ns-border-strong);
+}
+.toggleLink {
+  padding: 6px 12px;
+  color: var(--ns-muted);
+  font-size: 13px;
+}
+.toggleLinkActive {
+  color: var(--ns-on-primary);
+  background: var(--ns-primary);
+  font-weight: 600;
+}
+
+/* ── Pipeline board ─────────────────────────────────────── */
+.board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.column {
+  background: var(--ns-surface);
+  border: 1px solid var(--ns-border);
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+}
+.columnHead {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ns-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.columnBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+.oppCard {
+  display: block;
+  padding: 10px 12px;
+  background: var(--ns-bg);
+  border: 1px solid var(--ns-border-strong);
+  color: var(--ns-fg);
+}
+.oppCard:hover {
+  border-color: var(--ns-primary);
+}
+.oppCompany {
+  font-weight: 600;
+}
+.oppMeta {
+  color: var(--ns-muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.columnEmpty {
+  color: var(--ns-faint);
+  font-size: 12px;
+  padding: 12px;
+}
+
+/* ── Drawer-as-page (opportunity detail) ───────────────── */
+.drawer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
+.aside {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.section + .section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ns-border);
+}
+.sectionTitle {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-muted);
+  margin: 0 0 8px;
+}
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.timeline li {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--ns-border);
+}
+.timeline li:last-child {
+  border-bottom: 0;
+}
+
+/* ── Notices ───────────────────────────────────────────── */
+.notice {
+  padding: 12px 14px;
+  border: 1px solid var(--ns-border-strong);
+  background: var(--ns-surface);
+  color: var(--ns-muted);
+  font-size: 13px;
+}
+.noticeWarning {
+  border-color: var(--ns-warning);
+  color: var(--ns-warning);
+}
+.noticeDanger {
+  border-color: var(--ns-danger);
+  color: var(--ns-danger);
+}
+.noticeInfo {
+  border-color: var(--ns-info);
+  color: var(--ns-info);
+}
+.marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px dashed var(--ns-warning);
+  color: var(--ns-warning);
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.stamp {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ns-faint);
+  border: 1px solid var(--ns-border);
+  padding: 1px 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* ── Gates ─────────────────────────────────────────────── */
+.gates {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.gate {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ns-border);
+  align-items: start;
+}
+.gate:last-child {
+  border-bottom: 0;
+}
+.gateMark {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--ns-border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+.gatePass {
+  border-color: var(--ns-success);
+  color: var(--ns-success);
+}
+.gateFail {
+  border-color: var(--ns-danger);
+  color: var(--ns-danger);
+}
+.gateWaived {
+  border-color: var(--ns-warning);
+  color: var(--ns-warning);
+}
+.gateNa {
+  color: var(--ns-faint);
+}
+.waiver {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px dashed var(--ns-warning);
+  font-size: 12px;
+  color: var(--ns-muted);
+}
+
+/* ── Work queue ────────────────────────────────────────── */
+.split {
+  border-left: 2px solid var(--ns-info);
+  padding-left: 10px;
+}
+.linked {
+  color: var(--ns-info);
+  font-size: 12px;
+}
+.classTag {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ns-fg);
+}
+
+/* ── Capacity ──────────────────────────────────────────── */
+.capGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.capWeek {
+  background: var(--ns-bg);
+  border: 1px solid var(--ns-border-strong);
+  padding: 12px 14px;
+}
+.capOver {
+  border-color: var(--ns-warning);
+}
+.capBar {
+  height: 6px;
+  background: var(--ns-border);
+  margin: 8px 0;
+  position: relative;
+}
+.capFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ns-primary);
+}
+
+/* ── Automations ───────────────────────────────────────── */
+.autoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.autoCard {
+  background: var(--ns-surface);
+  border: 1px solid var(--ns-border);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.autoHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.autoTrigger {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.autoRow {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+  font-size: 13px;
+}
+.autoRow dt {
+  color: var(--ns-muted);
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.autoRow dd {
+  margin: 0;
+}
+.autoFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ns-border);
+  font-size: 12px;
+  color: var(--ns-muted);
+}
+.pause {
+  border: 1px solid var(--ns-danger);
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 24px;
+  background: var(--ns-surface);
+}
+.pauseTitle {
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.pauseCopy {
+  margin: 0;
+  color: var(--ns-muted);
+  font-size: 13px;
+  max-width: 80ch;
+}
+.dryRun {
+  border: 1px solid var(--ns-info);
+  background: color-mix(in srgb, var(--ns-info) 6%, transparent);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+.dryStep {
+  display: grid;
+  grid-template-columns: 140px 1fr 1fr 120px;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ns-border);
+  font-size: 13px;
+}
+.dryStep:last-child {
+  border-bottom: 0;
+}
+
+/* ── Settings ──────────────────────────────────────────── */
+.settingsLayout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.settingsNav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 0;
+}
+.settingsLink {
+  padding: 8px 12px;
+  color: var(--ns-muted);
+  border-left: 2px solid transparent;
+  font-size: 13px;
+}
+.settingsLink:hover {
+  color: var(--ns-fg);
+  background: var(--ns-elevated);
+}
+.settingsLinkActive {
+  color: var(--ns-fg);
+  border-left-color: var(--ns-primary);
+  background: var(--ns-elevated);
+}
+.permGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.perm {
+  padding: 10px 12px;
+  border: 1px solid var(--ns-border-strong);
+  background: var(--ns-bg);
+}
+.permChange {
+  border-color: color-mix(in srgb, var(--ns-warning) 50%, transparent);
+}
+.fieldRow {
+  display: grid;
+  grid-template-columns: 220px 1fr auto;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ns-border);
+  font-size: 13px;
+  align-items: start;
+}
+.fieldRow:last-child {
+  border-bottom: 0;
+}
+.secretRef {
+  color: var(--ns-info);
+}
+
+/* ── Empty state ───────────────────────────────────────── */
+.empty {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--ns-muted);
+  border: 1px dashed var(--ns-border-strong);
+}
+.emptyTitle {
+  color: var(--ns-fg);
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+/* ── Skeleton (loading.tsx) ────────────────────────────── */
+.skeleton {
+  background: var(--ns-elevated);
+  min-height: 14px;
+}
+.skeletonBlock {
+  background: var(--ns-surface);
+  border: 1px solid var(--ns-border);
+  min-height: 160px;
+}
+
+/* ── Mobile ────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .drawer,
+  .settingsLayout,
+  .autoGrid,
+  .permGrid {
+    grid-template-columns: 1fr;
+  }
+  .aside,
+  .settingsNav {
+    position: static;
+  }
+  .settingsNav {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+  .capGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pause {
+    grid-template-columns: 1fr;
+  }
+  .dryStep,
+  .fieldRow {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .board {
+    grid-auto-columns: minmax(240px, 80vw);
+  }
+}

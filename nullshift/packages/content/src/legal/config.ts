@@ -66,7 +66,11 @@ export const legalConfig = {
   legal: {
     publicPolicyVersion: "PUBLIC_2026_08_v1",
     clientAgreementVersion: "MSA_2026_08_v1",
-    pricingVersion: "NSI_v1_2026_08",
+    /**
+     * The formula version in force for NEW agreements. Existing clients keep
+     * the version stamped on their own assessment (see lib/pricing/nsi.ts).
+     */
+    pricingVersion: "NSI_v2_2026_09",
     /**
      * The date the pack takes effect. Set to 20 August 2026 on the owner's
      * express instruction — see LEGAL-RELEASE.md, which records that the

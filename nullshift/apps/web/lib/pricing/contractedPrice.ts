@@ -1,4 +1,4 @@
-import { BASE_PLAN_PRICE, ceilToFive, type ScaleBand } from "./nsi";
+import { basePlanPriceFor, roundQuoteFor, type ScaleBand } from "./nsi";
 import type { CarePlan } from "@/lib/carePlans";
 
 /**
@@ -74,9 +74,17 @@ export function priceFromAssessment(
     note: null as string | null,
   };
 
-  // Not scored yet: the catalogue figure is informational only. Nothing may be
-  // offered or charged off it — the owner sets the bracket first.
-  if (!row) return { ...base, mrr: plan.mrr, source: "base", priced: false };
+  // Not scored yet: the current catalogue from-price is informational only.
+  // Nothing may be offered or charged off it — the owner sets the bracket
+  // first. (CarePlan.mrr keeps the launch figure for the legacy plan rows; the
+  // figure shown here follows the current PRICING_VERSION.)
+  if (!row)
+    return {
+      ...base,
+      mrr: basePlanPriceFor(plan.nsiPlan) ?? plan.mrr,
+      source: "base",
+      priced: false,
+    };
 
   const exact = row.plan === plan.nsiPlan;
   const agreed = num(row.agreed_mrr);
@@ -115,11 +123,21 @@ export function priceFromAssessment(
     return { ...base, mrr: recommended, source: "formula", priced: true };
 
   // Sibling plan: the same band multiplier and margin floor applied to that
-  // plan's base price — exactly nsi.ts's final step, evaluated for this plan.
-  const basePrice = BASE_PLAN_PRICE[plan.nsiPlan as keyof typeof BASE_PLAN_PRICE];
-  if (basePrice === undefined)
-    return { ...base, mrr: null, source: "unpriced", priced: false };
-  const floor = num(row.direct_cost_floor) ?? 0;
-  const derived = ceilToFive(Math.max(basePrice * multiplier, floor));
+  // plan's base price — exactly nsi.ts's final step, evaluated for this plan,
+  // and from the bases of the version THIS assessment was scored under. A
+  // client assessed under NSI_v1 keeps NSI_v1 sibling prices after v2 ships.
+  let derived: number | null;
+  try {
+    const basePrice = basePlanPriceFor(plan.nsiPlan, row.pricing_version);
+    const floor = num(row.direct_cost_floor) ?? 0;
+    derived =
+      basePrice === null
+        ? null
+        : roundQuoteFor(Math.max(basePrice * multiplier, floor), row.pricing_version);
+  } catch {
+    // A version this build does not know: refuse to guess at its bases.
+    derived = null;
+  }
+  if (derived === null) return { ...base, mrr: null, source: "unpriced", priced: false };
   return { ...base, mrr: derived, source: "derived", priced: true };
 }

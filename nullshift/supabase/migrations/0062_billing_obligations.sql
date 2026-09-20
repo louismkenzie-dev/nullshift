@@ -4,7 +4,7 @@
 -- monetary invariants, §14.2 additive rollout, §17.2 milestone / rounding /
 -- partial-payment / reconciliation rows).
 --
--- STATUS: NOT APPLIED to any database. Authored 2026-09-17 against the live
+-- STATUS: APPLIED to Nullshift Ops (cweftpoaojwzllzficgt) on 2026-09-20 (0057 on 2026-09-17). Authored 2026-09-17 against the live
 -- schema described in docs/ADMIN-REDESIGN-PHASE0-2026-09-17.md §11 (invoices:
 -- 5 rows, `amount numeric(10,2)`, `type invoice_type`, `status invoice_status`,
 -- no currency / net / tax columns). Number the ledger entry against
