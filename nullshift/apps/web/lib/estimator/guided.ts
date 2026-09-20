@@ -69,11 +69,11 @@ export type TurnoverBand = (typeof TURNOVER_BANDS)[number];
 /** Build-scale contribution by turnover band (owner decision 2026-09-20). */
 const TURNOVER_SCALE: Record<TurnoverBand, number> = {
   under_250k: 0,
-  "250k_750k": 0.1,
-  "750k_2m": 0.2,
-  "2m_5m": 0.3,
-  "5m_20m": 0.4,
-  over_20m: 0.5,
+  "250k_750k": 0.05,
+  "750k_2m": 0.1,
+  "2m_5m": 0.15,
+  "5m_20m": 0.2,
+  over_20m: 0.25,
 };
 
 export const TURNOVER_BAND_LABEL: Record<TurnoverBand, string> = {
@@ -478,24 +478,24 @@ export function firmSizeScale(size: GuidedInput["size"]): { factor: number; reas
   let factor = 1;
   const sites = size.sites ?? 1;
   if (sites > 1) {
-    const add = Math.min(sites - 1, 5) * 0.1;
+    const add = Math.min(sites - 1, 5) * 0.05;
     factor += add;
     parts.push(`${sites} sites`);
   }
   const staff = size.staffCount;
   if (staff !== null) {
-    const add = staff > 50 ? 0.5 : staff > 15 ? 0.3 : staff > 5 ? 0.15 : 0;
+    const add = staff > 50 ? 0.35 : staff > 15 ? 0.2 : staff > 5 ? 0.1 : 0;
     if (add) { factor += add; parts.push(`${staff} staff`); }
   }
   const customers = size.customersPerMonth;
   if (customers !== null) {
-    const add = customers > 2000 ? 0.3 : customers > 300 ? 0.15 : 0;
+    const add = customers > 2000 ? 0.2 : customers > 300 ? 0.1 : 0;
     if (add) { factor += add; parts.push(`${customers.toLocaleString("en-GB")} customers a month`); }
   }
   const band = size.turnoverBand;
   const turnoverAdd = band === null ? 0 : TURNOVER_SCALE[band] ?? 0;
   if (turnoverAdd) { factor += turnoverAdd; parts.push(`turnover ${band}`); }
-  factor = Math.min(Math.round(factor * 100) / 100, 2.2);
+  factor = Math.min(Math.round(factor * 100) / 100, 1.8);
   return { factor, reason: parts.length ? `×${factor} for firm size (${parts.join(", ")})` : "×1 — one-site micro business" };
 }
 
