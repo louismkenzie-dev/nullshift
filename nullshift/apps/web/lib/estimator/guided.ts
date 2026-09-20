@@ -66,6 +66,15 @@ export const TURNOVER_BANDS = [
   "over_20m",
 ] as const;
 export type TurnoverBand = (typeof TURNOVER_BANDS)[number];
+/** Build-scale contribution by turnover band (owner decision 2026-09-20). */
+const TURNOVER_SCALE: Record<TurnoverBand, number> = {
+  under_250k: 0,
+  "250k_750k": 0.1,
+  "750k_2m": 0.2,
+  "2m_5m": 0.3,
+  "5m_20m": 0.4,
+  over_20m: 0.5,
+};
 
 export const TURNOVER_BAND_LABEL: Record<TurnoverBand, string> = {
   under_250k: "Under £250k",
@@ -189,8 +198,8 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Online booking or scheduling",
     hint: "Customers pick a slot; the system holds availability.",
     role: "Engineer",
-    hours: { low: 26, base: 32, high: 43 },
-    perUnit: { label: "booking types", included: 1, hours: { low: 2, base: 3, high: 5 }, max: 30 },
+    hours: { low: 14, base: 18, high: 24 },
+    perUnit: { label: "booking types", included: 1, hours: { low: 1, base: 2, high: 3 }, max: 30 },
     reason: "availability rules, booking flow, confirmations, reschedule and cancel",
     vendorGbp: 2,
     customerFacing: true,
@@ -200,7 +209,7 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Online payments or deposits",
     hint: "Card payments, deposits, refunds and receipts.",
     role: "Engineer",
-    hours: { low: 11, base: 14, high: 19 },
+    hours: { low: 6, base: 8, high: 10 },
     reason: "Stripe checkout, deposits, refunds, receipts and reconciliation",
     vendorGbp: 0,
     customerFacing: true,
@@ -210,7 +219,7 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Customer accounts or portal",
     hint: "Customers sign in to see their history and documents.",
     role: "Engineer",
-    hours: { low: 18, base: 22, high: 30 },
+    hours: { low: 10, base: 12, high: 16 },
     reason: "sign-in, password reset, account pages and data visibility rules",
     vendorGbp: 3,
     customerFacing: true,
@@ -220,8 +229,8 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Staff or admin dashboard",
     hint: "The team's view: queues, records, actions.",
     role: "Engineer",
-    hours: { low: 22, base: 28, high: 38 },
-    perUnit: { label: "staff roles", included: 1, hours: { low: 3, base: 4, high: 6 }, max: 12 },
+    hours: { low: 12, base: 15, high: 21 },
+    perUnit: { label: "staff roles", included: 1, hours: { low: 2, base: 2, high: 4 }, max: 12 },
     reason: "record views, filters, day-to-day actions and permissions per role",
     vendorGbp: 0,
     customerFacing: false,
@@ -231,7 +240,7 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Quoting or invoicing",
     hint: "Build quotes, send invoices, track what is paid.",
     role: "Engineer",
-    hours: { low: 16, base: 20, high: 27 },
+    hours: { low: 9, base: 11, high: 15 },
     reason: "line items, PDF output, numbering, status tracking and reminders",
     vendorGbp: 2,
     customerFacing: false,
@@ -241,7 +250,7 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "CRM or lead capture",
     hint: "Enquiries land in one place with a next action.",
     role: "Engineer",
-    hours: { low: 11, base: 14, high: 19 },
+    hours: { low: 6, base: 8, high: 10 },
     reason: "enquiry forms, pipeline stages, notes and follow-up tracking",
     vendorGbp: 0,
     customerFacing: true,
@@ -251,8 +260,8 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Automated emails or SMS",
     hint: "Confirmations, reminders and follow-ups sent for them.",
     role: "Engineer",
-    hours: { low: 10, base: 12, high: 16 },
-    perUnit: { label: "message types", included: 2, hours: { low: 1, base: 2, high: 3 }, max: 40 },
+    hours: { low: 6, base: 7, high: 9 },
+    perUnit: { label: "message types", included: 2, hours: { low: 1, base: 1, high: 2 }, max: 40 },
     reason: "templates, triggers, delivery provider set-up and opt-out handling",
     vendorGbp: 5,
     customerFacing: false,
@@ -262,8 +271,8 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Reporting",
     hint: "Numbers the owner checks weekly or monthly.",
     role: "Engineer",
-    hours: { low: 10, base: 12, high: 16 },
-    perUnit: { label: "reports", included: 2, hours: { low: 1, base: 2, high: 3 }, max: 30 },
+    hours: { low: 6, base: 7, high: 9 },
+    perUnit: { label: "reports", included: 2, hours: { low: 1, base: 1, high: 2 }, max: 30 },
     reason: "queries, charts, date ranges and export",
     vendorGbp: 0,
     customerFacing: false,
@@ -273,7 +282,7 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Documents or e-signature",
     hint: "Generated documents the customer signs online.",
     role: "Engineer",
-    hours: { low: 13, base: 16, high: 22 },
+    hours: { low: 7, base: 9, high: 12 },
     reason: "document templates, signing flow, storage and audit trail",
     vendorGbp: 10,
     customerFacing: true,
@@ -283,7 +292,7 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Memberships or subscriptions",
     hint: "Recurring plans, renewals and failed-payment handling.",
     role: "Engineer",
-    hours: { low: 16, base: 20, high: 27 },
+    hours: { low: 9, base: 11, high: 15 },
     reason: "plans, recurring billing, renewals, cancellations and dunning",
     vendorGbp: 0,
     customerFacing: true,
@@ -293,7 +302,7 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Inventory or stock",
     hint: "What is in stock, where, and when to reorder.",
     role: "Engineer",
-    hours: { low: 16, base: 20, high: 27 },
+    hours: { low: 9, base: 11, high: 15 },
     reason: "stock levels, movements, low-stock alerts and adjustments",
     vendorGbp: 0,
     customerFacing: false,
@@ -303,7 +312,7 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Multiple locations or branches",
     hint: "Each site sees its own data; head office sees all.",
     role: "Engineer",
-    hours: { low: 11, base: 14, high: 19 },
+    hours: { low: 6, base: 8, high: 10 },
     reason: "site scoping on every record, per-site settings and roll-up views",
     vendorGbp: 0,
     customerFacing: false,
@@ -313,8 +322,8 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Custom AI assistant or automation",
     hint: "An agent that answers, drafts or decides inside a workflow.",
     role: "Engineer",
-    hours: { low: 24, base: 30, high: 40 },
-    perUnit: { label: "workflows", included: 1, hours: { low: 4, base: 6, high: 10 }, max: 20 },
+    hours: { low: 13, base: 16, high: 22 },
+    perUnit: { label: "workflows", included: 1, hours: { low: 2, base: 4, high: 6 }, max: 20 },
     reason: "prompt and tool design, guardrails, evaluation and human review points",
     vendorGbp: 30,
     customerFacing: false,
@@ -324,8 +333,8 @@ export const FEATURES: readonly FeatureDef[] = Object.freeze([
     label: "Website or marketing pages",
     hint: "Public pages: home, services, contact and the like.",
     role: "Designer",
-    hours: { low: 13, base: 16, high: 22 },
-    perUnit: { label: "pages", included: 4, hours: { low: 1, base: 2, high: 3 }, max: 60 },
+    hours: { low: 7, base: 9, high: 12 },
+    perUnit: { label: "pages", included: 4, hours: { low: 1, base: 1, high: 2 }, max: 60 },
     reason: "design, copy layout, responsive build, SEO basics and forms",
     vendorGbp: 0,
     customerFacing: true,
@@ -339,17 +348,17 @@ export const featureByKey = (key: FeatureKey): FeatureDef =>
 const ALWAYS_ON = {
   /** Discovery and design: a fixed core plus a slice per feature. */
   discovery: {
-    fixed: { low: 4, base: 6, high: 8 },
-    perFeature: { low: 0.5, base: 1, high: 1.5 },
+    fixed: { low: 3, base: 4, high: 6 },
+    perFeature: { low: 0.25, base: 0.5, high: 0.75 },
     reason: "workshop, data model, screens and the acceptance criteria per feature",
   },
   /** Foundation: hosting, auth, data model, deployment, backups. Every build. */
   foundation: {
-    hours: { low: 13, base: 16, high: 22 },
+    hours: { low: 8, base: 10, high: 14 },
     reason: "hosting, sign-in, database, deployment pipeline and backups",
   },
   /** Testing, launch and handover: a share of feature hours with a floor. */
-  launch: { pct: 12, minHours: { low: 4, base: 6, high: 8 }, reason: "testing, go-live, training and handover notes" },
+  launch: { pct: 10, minHours: { low: 4, base: 6, high: 8 }, reason: "testing, go-live, training and handover notes" },
 } as const;
 
 /** Data migration hours by rough record count. Unknown count → the WIDE row. */
@@ -459,7 +468,49 @@ function integrationCount(input: GuidedInput): number {
  * Selections → drivers (work packages with low/base/high hours). Deterministic:
  * the same input always yields the same list in the same order.
  */
+/**
+ * Firm-size scale (owner decision 2026-09-20): the feature list sets the
+ * shape of the build, and the size of the firm scales it. Each dimension adds
+ * to a multiplier that starts at 1.0 for a one-site micro business.
+ */
+export function firmSizeScale(size: GuidedInput["size"]): { factor: number; reason: string } {
+  const parts: string[] = [];
+  let factor = 1;
+  const sites = size.sites ?? 1;
+  if (sites > 1) {
+    const add = Math.min(sites - 1, 5) * 0.1;
+    factor += add;
+    parts.push(`${sites} sites`);
+  }
+  const staff = size.staffCount;
+  if (staff !== null) {
+    const add = staff > 50 ? 0.5 : staff > 15 ? 0.3 : staff > 5 ? 0.15 : 0;
+    if (add) { factor += add; parts.push(`${staff} staff`); }
+  }
+  const customers = size.customersPerMonth;
+  if (customers !== null) {
+    const add = customers > 2000 ? 0.3 : customers > 300 ? 0.15 : 0;
+    if (add) { factor += add; parts.push(`${customers.toLocaleString("en-GB")} customers a month`); }
+  }
+  const band = size.turnoverBand;
+  const turnoverAdd = band === null ? 0 : TURNOVER_SCALE[band] ?? 0;
+  if (turnoverAdd) { factor += turnoverAdd; parts.push(`turnover ${band}`); }
+  factor = Math.min(Math.round(factor * 100) / 100, 2.2);
+  return { factor, reason: parts.length ? `×${factor} for firm size (${parts.join(", ")})` : "×1 — one-site micro business" };
+}
+
 export function mapToDrivers(input: GuidedInput): GuidedDriver[] {
+  const raw = mapToDriversUnscaled(input);
+  const { factor } = firmSizeScale(input.size);
+  if (factor === 1) return raw;
+  return raw.map((d) =>
+    d.id === "foundation" || d.id === "migration" || d.id.startsWith("integration") || FEATURES.some((f) => f.key === d.id)
+      ? { ...d, hours: round(scale(d.hours, factor)) }
+      : d
+  );
+}
+
+function mapToDriversUnscaled(input: GuidedInput): GuidedDriver[] {
   const drivers: GuidedDriver[] = [];
   const features = selected(input);
 
@@ -833,6 +884,8 @@ export type GuidedResult = {
   confidence: "low" | "medium" | "high";
   discoveryRecommended: boolean;
   notes: string[];
+  /** Firm-size multiplier applied to the build drivers, with its reason. */
+  sizeScale: { factor: number; reason: string };
   /** The exact inputs handed to the two engines, for audit and tests. */
   estimateInput: EstimateInput;
   estimateResult: EstimateResult;
@@ -879,7 +932,9 @@ export function guidedEstimate(
   };
 
   const confidence = confidenceOf(input);
+  const sizeScale = firmSizeScale(input.size);
   const notes: string[] = [];
+  if (sizeScale.factor !== 1) notes.push(`Build hours scaled ${sizeScale.reason}.`);
   if (input.migration.needed && input.migration.recordCount === null)
     notes.push("Migration size is not known, so its range is wide and contingency is higher. Ask for a rough record count.");
   if (input.integrations.otherCount === null)
@@ -915,6 +970,7 @@ export function guidedEstimate(
     confidence,
     discoveryRecommended,
     notes,
+    sizeScale,
     estimateInput,
     estimateResult,
     scaleInput,

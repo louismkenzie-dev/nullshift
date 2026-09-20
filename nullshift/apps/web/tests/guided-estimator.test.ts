@@ -33,6 +33,8 @@ const small = input({
   features: ["booking", "payments", "automated_messaging"],
 });
 
+const BOOKING_PER_TYPE_BASE = FEATURES.find((f) => f.key === "booking")!.perUnit!.hours.base;
+
 describe("mapping table", () => {
   it("covers every feature key with ordered hours and a reason", () => {
     expect(FEATURES.map((f) => f.key)).toEqual([...FEATURE_KEYS]);
@@ -69,7 +71,7 @@ describe("mapping table", () => {
     const five = mapToDrivers(input({ features: ["booking"], quantities: { booking: 5 } }));
     const b1 = one.find((d) => d.id === "booking")!;
     const b5 = five.find((d) => d.id === "booking")!;
-    expect(b5.hours.base).toBe(b1.hours.base + 4 * 3);
+    expect(b5.hours.base).toBe(b1.hours.base + 4 * BOOKING_PER_TYPE_BASE);
     expect(b5.reason).toContain("5 booking types");
   });
 });
