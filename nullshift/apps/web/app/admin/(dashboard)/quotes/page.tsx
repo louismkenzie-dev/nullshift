@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { createServiceClient } from "@nullshift/db";
 import { loadQuoteVersionListing } from "@/lib/commercial/quotes";
 import {
   STATUS_LABEL,
@@ -14,7 +13,6 @@ import o from "../ops.module.css";
 import { Empty, Notice, first } from "../sales/ops-ui";
 import {
   approveFromForm,
-  createDraftFromForm,
   issueFromForm,
   nextVersionFromForm,
   requestApprovalFromForm,
@@ -29,15 +27,6 @@ export const dynamic = "force-dynamic";
  * machine — the UI hides nothing that the server does not also refuse.
  */
 
-async function clientOptions(): Promise<{ id: string; name: string }[]> {
-  const { data } = await createServiceClient()
-    .from("tenants")
-    .select("id, name")
-    .eq("type", "client")
-    .order("name")
-    .limit(200);
-  return (data ?? []) as { id: string; name: string }[];
-}
 
 const money = (minor: number | undefined, currency: string) =>
   new Intl.NumberFormat("en-GB", {
@@ -179,7 +168,7 @@ export default async function QuotesPage({
 }) {
   const sp = await searchParams;
   const notice = noticeFor(first(sp.notice));
-  const [listing, clients] = await Promise.all([loadQuoteVersionListing(), clientOptions()]);
+  const listing = await loadQuoteVersionListing();
 
   return (
     <>
@@ -210,53 +199,21 @@ export default async function QuotesPage({
 
       <section className={o.section} style={{ marginBottom: 20 }}>
         <p className={o.sectionTitle}>New quote</p>
-        <form action={createDraftFromForm} className={s.chips}>
-          <input
-            className={s.search}
-            name="legal_name"
-            placeholder="Client or prospect name"
-            aria-label="Client or prospect name"
-            list="quote-clients"
-            required
-          />
-          <select className={s.search} name="tenant_id" aria-label="Existing client (optional)" defaultValue="">
-            <option value="">Prospect (no client record yet)</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <input
-            className={s.search}
-            name="project_label"
-            placeholder="Project label"
-            aria-label="Project label"
-            required
-          />
-          <input
-            className={s.search}
-            name="contact_email"
-            type="email"
-            placeholder="Contact email (optional)"
-            aria-label="Contact email"
-          />
-          <input className={s.search} name="owner" placeholder="Owner (optional)" aria-label="Owner" />
-          <button type="submit" className={s.btnPrimary}>
-            Create draft and open Studio
-          </button>
-        </form>
-        <p className={s.faint} style={{ marginTop: 8 }}>
-          Creates an opportunity at Scope ready and an empty v1 draft authored by you, then
-          opens the Studio. Choosing an existing client links the opportunity to that client;
-          approval needs a second staff member.
-        </p>
+        <div className={s.chips} style={{ alignItems: "center" }}>
+          <Link href="/admin/quotes/new" className={s.btnPrimary}>
+            New quote
+          </Link>
+          <span className={s.faint}>
+            Plug in who, how big and what they want; the build and monthly are estimated as you go and
+            the Studio opens with the packages and prices filled in.
+          </span>
+        </div>
       </section>
 
       {listing.items.length === 0 ? (
         <Empty
           title="No quote versions yet"
-          body="Create a draft above. Nothing is issued until a second person approves it."
+          body="Start with New quote above. Nothing is issued until a second person approves it."
         />
       ) : (
         <div className={s.card} style={{ padding: 0, overflowX: "auto" }}>

@@ -15,8 +15,15 @@ import {
   type Scenario,
   type Severity,
 } from "@/lib/estimator";
+import {
+  PLAN_LABEL,
+  formatGbpMinor,
+  guidedEstimate,
+  parseGuidedInput,
+} from "@/lib/estimator/guided";
 import s from "../../shell.module.css";
 import st from "./studio.module.css";
+import g from "../new/guided.module.css";
 import { Notice } from "../../sales/ops-ui";
 import { DraftEditor, StudioActions } from "./StudioActions";
 
@@ -147,6 +154,8 @@ export default async function QuoteStudio({
           <Notice tone={notice.tone}>{notice.text}</Notice>
         </div>
       ) : null}
+
+      {ctx ? <HowThisWasPriced ctx={ctx} /> : null}
 
       {ctx ? <DraftEditor ctx={ctx} /> : null}
 
@@ -615,6 +624,77 @@ export default async function QuoteStudio({
         </aside>
       </div>
     </>
+  );
+}
+
+/**
+ * The guided summary for a draft created at /admin/quotes/new: size band,
+ * ranges and the drivers, recomputed from the saved inputs so it always
+ * matches the current policy. "Adjust inputs" reopens the form preloaded.
+ */
+function HowThisWasPriced({ ctx }: { ctx: QuoteVersionListItem }) {
+  const parsed = parseGuidedInput(ctx.version.internal.guided_input ?? null);
+  if (!parsed.ok) return null;
+  const r = guidedEstimate(parsed.value, CURRENT_POLICY);
+  const m = r.monthly;
+  const drivers = [...r.build.drivers].sort((a, b) => b.hours.base - a.hours.base).slice(0, 5);
+  return (
+    <section className={g.howCard} aria-labelledby="how-priced">
+      <div className={s.cardTitle}>
+        <h2 className={s.h2} id="how-priced" style={{ margin: 0 }}>
+          How this was priced
+        </h2>
+        <Link href={`/admin/quotes/new?quote=${ctx.version.id}`} className={s.btn}>
+          Adjust inputs
+        </Link>
+      </div>
+      <p className={s.muted} style={{ margin: 0, fontSize: 13 }}>
+        From the guided estimator: {parsed.value.features.length} feature
+        {parsed.value.features.length === 1 ? "" : "s"} for {parsed.value.client.name}
+        {parsed.value.client.sector ? ` (${parsed.value.client.sector})` : ""}. Build is the one-off
+        project price; monthly is what it costs to run and support a system this size.
+      </p>
+      <div className={g.howGrid}>
+        <div className={g.howStat}>
+          <span className={g.eyebrow}>Build · recommended</span>
+          <strong>{formatGbpMinor(r.build.recommendedMinor)}</strong>
+          range {formatGbpMinor(r.build.lowMinor)} – {formatGbpMinor(r.build.highMinor)} ·{" "}
+          {r.build.hours.base} h base · contingency {r.build.contingencyPct}%
+        </div>
+        <div className={g.howStat}>
+          <span className={g.eyebrow}>Size band</span>
+          <strong>
+            {m.bandLabel}
+            {m.multiplier !== null ? ` ×${m.multiplier}` : ""}
+          </strong>
+          NSI {m.nsi} · {m.pricingVersion}
+        </div>
+        <div className={g.howStat}>
+          <span className={g.eyebrow}>Monthly · indicative</span>
+          <strong>
+            {m.enterpriseReview ? "Enterprise review" : `${PLAN_LABEL[m.recommendedPlan]} ${formatGbpMinor(m.recommendedMinor)}/mo`}
+          </strong>
+          Core {formatGbpMinor(m.coreMinor)} · Pro {formatGbpMinor(m.proMinor)} · Max{" "}
+          {formatGbpMinor(m.maxMinor)}
+        </div>
+      </div>
+      <ul className={g.drivers}>
+        {drivers.map((d) => (
+          <li key={d.id} className={g.driver}>
+            <span>{d.label}</span>
+            <span className={g.driverHours}>
+              {d.hours.low}–{d.hours.high} h{d.uncertain ? " (wide)" : ""}
+            </span>
+            <span className={g.driverReason}>{d.reason}</span>
+          </li>
+        ))}
+      </ul>
+      <p className={s.faint} style={{ margin: "10px 0 0", fontSize: 12 }}>
+        Confidence {r.confidence}
+        {r.discoveryRecommended ? " · discovery recommended before a fixed price" : ""}. The detailed
+        steps below re-price the same packages with {CURRENT_POLICY.id}.
+      </p>
+    </section>
   );
 }
 

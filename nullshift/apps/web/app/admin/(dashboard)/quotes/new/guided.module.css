@@ -1,0 +1,317 @@
+/* Guided estimator — Halo tokens inherited from shell.module.css .shell;
+   square corners, 16px inputs, no motion beyond the shell's own. */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section {
+  background: var(--ns-surface);
+  border: 1px solid var(--ns-border);
+  padding: 16px 20px;
+}
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.sectionNo {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--ns-primary);
+}
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.hint {
+  margin: 0 0 14px;
+  color: var(--ns-muted);
+  font-size: 13px;
+  max-width: 64ch;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+.grid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.full {
+  grid-column: 1 / -1;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ns-fg);
+}
+.labelText {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-muted);
+}
+.input,
+.select {
+  height: 40px;
+  padding: 0 12px;
+  background: var(--ns-bg);
+  border: 1px solid var(--ns-border-strong);
+  color: var(--ns-fg);
+  font: inherit;
+  font-size: 16px;
+  width: 100%;
+}
+.input::placeholder {
+  color: var(--ns-faint);
+}
+.input:focus,
+.select:focus {
+  outline: 2px solid var(--ns-primary);
+  outline-offset: -1px;
+}
+.help {
+  color: var(--ns-faint);
+  font-size: 12px;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.feature {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 4px 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--ns-border);
+  background: var(--ns-bg);
+  cursor: pointer;
+  font-size: 14px;
+}
+.featureOn {
+  border-color: var(--ns-primary);
+}
+.feature input[type="checkbox"] {
+  margin: 3px 0 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ns-primary);
+}
+.featureHint {
+  grid-column: 2;
+  color: var(--ns-muted);
+  font-size: 12px;
+}
+.featureQty {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ns-muted);
+}
+.featureQty input {
+  width: 72px;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 16px;
+  background: var(--ns-surface);
+  border: 1px solid var(--ns-border-strong);
+  color: var(--ns-fg);
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+.check input[type="checkbox"] {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ns-primary);
+}
+.checkHint {
+  display: block;
+  color: var(--ns-muted);
+  font-size: 12px;
+}
+
+/* Results rail */
+.results {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--ns-surface);
+  border: 1px solid var(--ns-border);
+  padding: 16px 20px;
+}
+.block {
+  padding: 14px 0;
+  border-top: 1px solid var(--ns-border);
+}
+.block:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.eyebrow {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-muted);
+}
+.big {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin: 8px 0 6px;
+}
+.range {
+  color: var(--ns-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.plans {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 6px;
+}
+.plan {
+  padding: 8px 10px;
+  border: 1px solid var(--ns-border);
+  background: var(--ns-bg);
+}
+.planOn {
+  border-color: var(--ns-primary);
+}
+.planName {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ns-muted);
+}
+.planPrice {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.planPrice small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ns-muted);
+}
+.drivers {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+.driver {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 10px;
+}
+.driverHours {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.driverReason {
+  grid-column: 1 / -1;
+  color: var(--ns-faint);
+  font-size: 12px;
+}
+.note {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--ns-warning);
+  font-size: 12px;
+  color: var(--ns-fg);
+}
+.error {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--ns-danger);
+  font-size: 13px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Studio card */
+.howCard {
+  border: 1px solid var(--ns-primary);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: var(--ns-surface);
+}
+.howGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin: 10px 0;
+}
+.howStat {
+  font-size: 13px;
+}
+.howStat strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .results {
+    position: static;
+  }
+}
+@media (max-width: 720px) {
+  .grid,
+  .grid3,
+  .features,
+  .plans,
+  .howGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

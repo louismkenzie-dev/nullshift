@@ -24,6 +24,8 @@ import {
   type QuoteVersionContent,
 } from "@/lib/commercial/types";
 import { CURRENT_POLICY } from "@/lib/estimator";
+import { guidedEstimate, parseGuidedInput, projectLabelFor } from "@/lib/estimator/guided";
+import { guidedQuoteContent } from "@/lib/estimator/guidedQuote";
 
 /**
  * Quote lifecycle server actions (brief §5.2, §5.3, §12.5), Phase 2 — live.
@@ -262,6 +264,54 @@ export async function saveDraft(
   } catch (e) {
     return dbFailure(e);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Guided estimator (/admin/quotes/new)
+// ---------------------------------------------------------------------------
+
+export type GuidedExistingRef = { versionId: string; expectedUpdatedAt: string };
+
+/**
+ * "Save as draft quote": prices the guided inputs with the current policy and
+ * the NSI engine, then either updates the editable draft it came from (Adjust
+ * inputs) or creates an opportunity at Scope ready plus a v1 draft with brief,
+ * scope, packages, build price, managed route and the inputs themselves.
+ */
+export async function saveGuidedDraft(
+  raw: unknown,
+  existing: GuidedExistingRef | null = null
+): Promise<ActionResult<{ versionId: string }>> {
+  const parsed = parseGuidedInput(raw);
+  if (!parsed.ok) return fail("invalid", parsed.errors.join(" "));
+  const input = parsed.value;
+  const result = guidedEstimate(input, CURRENT_POLICY);
+  const content = guidedQuoteContent(input, result, CURRENT_POLICY);
+
+  if (existing) {
+    const saved = await saveDraft({
+      version_id: existing.versionId,
+      expected_updated_at: existing.expectedUpdatedAt,
+      content,
+    });
+    if (!saved.ok) return saved;
+    return { ok: true, versionId: existing.versionId };
+  }
+
+  const opp = await createOpportunity({
+    legal_name: input.client.name,
+    tenant_id: input.client.tenantId,
+    stage: "scope_ready",
+    source: "admin/quotes/new",
+  });
+  if (!opp.ok) return opp;
+  const draft = await createQuoteDraft({
+    opportunity_id: opp.id,
+    project_label: projectLabelFor(input),
+    content,
+  });
+  if (!draft.ok) return draft;
+  return { ok: true, versionId: draft.versionId };
 }
 
 // ---------------------------------------------------------------------------

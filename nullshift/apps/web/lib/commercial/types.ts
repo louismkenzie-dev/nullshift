@@ -7,6 +7,7 @@
  * Money inside the jsonb payloads is integer minor units (pence) in the
  * version's `currency`. Nothing here is an approved price list (brief §6.5).
  */
+import type { GuidedInput } from "@/lib/estimator/guided";
 
 export const OPPORTUNITY_STAGES = [
   "new_enquiry",
@@ -71,6 +72,8 @@ export type QuoteCommercial = {
 
 /** Step 5 — Internal review. Never projected to a client. */
 export type QuoteInternal = {
+  /** The guided estimator inputs this draft was created from, so "Adjust inputs" can reload them. */
+  guided_input?: GuidedInput;
   risk_adjusted_cost_minor: number;
   min_margin_pct: number;
   target_margin_pct: number;
