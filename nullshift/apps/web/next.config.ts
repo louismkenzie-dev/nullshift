@@ -2,6 +2,8 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // The local review browser uses the loopback IP, not the localhost hostname.
+  allowedDevOrigins: ["127.0.0.1"],
   // Pin the workspace root (nullshift/) so Turbopack doesn't pick a stray
   // lockfile in a parent directory.
   turbopack: {

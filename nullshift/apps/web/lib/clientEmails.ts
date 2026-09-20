@@ -502,3 +502,85 @@ This is your Nullshift client portal — a separate login from any system we bui
 — Nullshift`;
   return { subject, html, text };
 }
+
+/**
+ * The daily chase for a Direct Debit that was started and never finished.
+ *
+ * Deliberately links to the PORTAL, not to GoCardless. A GoCardless
+ * authorisation link is superseded the moment a new one is minted, so a run of
+ * daily emails carrying links would be a run of dead links with only the newest
+ * one alive. The portal page is permanent and mints a live link on the spot.
+ *
+ * The copy hardens as the days pass — `reminderTone` in lib/billing/
+ * mandateReminders.ts decides which of the three it is. The last one says
+ * plainly that a person will pick it up, because by then something is actually
+ * wrong and pretending otherwise wastes everybody's time.
+ */
+export function mandateReminderEmail(opts: {
+  name: string;
+  planLabel: string;
+  mrr: number;
+  url: string;
+  tone: "nudge" | "check" | "final";
+}): { subject: string; html: string; text: string } {
+  const { name, planLabel, mrr, url, tone } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
+
+  const subject =
+    tone === "nudge"
+      ? `One step left on your ${planLabel} plan`
+      : tone === "final"
+        ? `Your ${planLabel} plan is still waiting on a Direct Debit`
+        : `Finish setting up your ${planLabel} plan`;
+
+  const heading =
+    tone === "final" ? "Shall we give you a call?" : "One step left";
+
+  const openingHtml =
+    tone === "nudge"
+      ? `Hi ${esc(first)}, you picked the <strong style="color:${C.fg}">${esc(planLabel)}</strong> plan and agreed the terms — thank you. The last step is the Direct Debit, and it looks like that didn't finish.`
+      : tone === "final"
+        ? `Hi ${esc(first)}, your <strong style="color:${C.fg}">${esc(planLabel)}</strong> plan is still waiting on its Direct Debit. This is the last automatic reminder — after this one of us will pick it up with you directly.`
+        : `Hi ${esc(first)}, your <strong style="color:${C.fg}">${esc(planLabel)}</strong> plan is ready to go, but the Direct Debit isn't set up yet.`;
+
+  const openingText =
+    tone === "nudge"
+      ? `you picked the ${planLabel} plan and agreed the terms — thank you. The last step is the Direct Debit, and it looks like that didn't finish.`
+      : tone === "final"
+        ? `your ${planLabel} plan is still waiting on its Direct Debit. This is the last automatic reminder — after this one of us will pick it up with you directly.`
+        : `your ${planLabel} plan is ready to go, but the Direct Debit isn't set up yet.`;
+
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Care plan setup</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">${esc(heading)}</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">${openingHtml}</p>
+      <p style="margin:12px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">It takes about a minute and you'll need your sort code and account number. <strong style="color:${C.fg}">Nothing is collected until the mandate is set up</strong>, and you can cancel any time.</p>
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(url, "Set up your Direct Debit →")}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">${esc(planLabel)} plan — ${gbp(mrr)}/month, protected by the Direct Debit Guarantee. If you've changed your mind, just reply and tell us — we'd far rather know than keep sending these.</p>
+    </td></tr>`;
+
+  const html = wrap(
+    inner,
+    `Your ${planLabel} plan still needs its Direct Debit — ${gbp(mrr)}/month.`
+  );
+  const text = `Hi ${first},
+
+${openingText}
+
+It takes about a minute and you'll need your sort code and account number.
+Nothing is collected until the mandate is set up, and you can cancel any time.
+
+Set it up here:
+${url}
+
+${planLabel} plan — ${gbp(mrr)}/month, protected by the Direct Debit Guarantee.
+If you've changed your mind, just reply and tell us — we'd far rather know than
+keep sending these.
+
+— Nullshift`;
+  return { subject, html, text };
+}

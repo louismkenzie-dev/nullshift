@@ -1,0 +1,104 @@
+/* /admin/bank — Halo tokens from shell.module.css; square corners; no colour
+   outside the token set. Only what the shell does not already provide. */
+
+.notice {
+  border: 1px solid var(--ns-border-strong);
+  background: var(--ns-surface);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+}
+.noticeWarning {
+  border-color: var(--ns-warning);
+  color: var(--ns-warning);
+}
+.noticeDanger {
+  border-color: var(--ns-danger);
+  color: var(--ns-danger);
+}
+.noticeSuccess {
+  border-color: var(--ns-success);
+  color: var(--ns-success);
+}
+
+.empty {
+  border: 1px dashed var(--ns-border-strong);
+  padding: 24px 20px;
+  color: var(--ns-muted);
+}
+.emptyTitle {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: var(--ns-fg);
+}
+
+.skeleton {
+  background: var(--ns-elevated);
+  min-height: 14px;
+  animation: bankPulse 1.2s ease-in-out infinite;
+}
+.skeletonBlock {
+  background: var(--ns-surface);
+  border: 1px solid var(--ns-border);
+  animation: bankPulse 1.2s ease-in-out infinite;
+}
+@keyframes bankPulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .skeletonBlock {
+    animation: none;
+  }
+}
+
+.actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.explanation {
+  color: var(--ns-muted);
+  font-size: 13px;
+  max-width: 64ch;
+}
+.confidence {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.filters {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.filterLink {
+  padding: 6px 10px;
+  color: var(--ns-muted);
+  border: 1px solid var(--ns-border);
+  font-size: 12px;
+}
+.filterLinkActive {
+  color: var(--ns-fg);
+  border-color: var(--ns-primary);
+}
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  color: var(--ns-muted);
+  font-size: 13px;
+}
+.in {
+  color: var(--ns-success);
+}
+.out {
+  color: var(--ns-fg);
+}

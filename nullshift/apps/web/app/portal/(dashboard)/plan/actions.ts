@@ -183,3 +183,88 @@ export async function choosePlan(formData: FormData): Promise<void> {
 
   redirect(started.url);
 }
+
+/**
+ * Resume an unfinished Direct Debit.
+ *
+ * A client can accept the terms, be handed to GoCardless, and then lose the
+ * page — a closed tab, a phone call, no bank details to hand. Until now the
+ * portal answered that with "check your email for the authorisation link",
+ * which is wrong whenever the link was opened rather than emailed: there is no
+ * email to check, and the only way back in was to ask us.
+ *
+ * So this mints a fresh authorisation link on demand and sends them straight
+ * to it. It is deliberately narrow:
+ *
+ *  · only for a client who has ALREADY accepted the terms — the acceptance is
+ *    read back off the tenant row, never re-taken here, so this can never be a
+ *    way to start billing someone who did not agree to it;
+ *  · only when a Direct Debit is genuinely unfinished. If one is already live,
+ *    startDirectDebitForTenant refuses ("already_live") and nobody is
+ *    double-billed;
+ *  · the old billing request is cancelled as part of minting the new one, so a
+ *    client never has two live links to choose between.
+ */
+export async function resumeDirectDebit(): Promise<void> {
+  if (await isClientPreview()) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const service = createServiceClient();
+  const { data: membership } = await service
+    .from("memberships")
+    .select("tenant_id")
+    .eq("user_id", user.id)
+    .eq("role", "client_admin")
+    .limit(1)
+    .maybeSingle();
+  const tenantId = membership?.tenant_id as string | undefined;
+  if (!tenantId) return;
+
+  // There must be an unfinished attempt to resume. Without this, the button
+  // would be a way to start a Direct Debit from a page that is not the chooser.
+  const { data: pending } = await service
+    .from("subscriptions")
+    .select("plan")
+    .eq("tenant_id", tenantId)
+    .eq("provider", "gocardless")
+    .eq("status", "incomplete")
+    .limit(1)
+    .maybeSingle();
+  const planId = pending?.plan as string | undefined;
+  if (!planId) redirect("/portal/plan");
+
+  const { data: tenant } = await service
+    .from("tenants")
+    .select("name, contact_name, care_plan_terms_accepted_at")
+    .eq("id", tenantId)
+    .maybeSingle();
+  // Terms are read from the tenant row by startDirectDebitForTenant; if they
+  // are not there, the client never accepted and must go through the chooser.
+  if (!tenant?.care_plan_terms_accepted_at) redirect("/portal/plan");
+
+  const started = await startDirectDebitForTenant(service, {
+    tenantId,
+    planId,
+    via: "portal",
+    email: user.email ?? "",
+    name: tenant?.name ?? tenant?.contact_name ?? null,
+  });
+  if (!started.ok) {
+    console.error("resumeDirectDebit:", started.reason, started.detail ?? "");
+    redirect("/portal/plan?dd=retry_failed");
+  }
+
+  await logAudit({
+    action: "care_plan.dd_resumed",
+    target: `tenant:${tenantId}`,
+    tenantId,
+    metadata: { plan: planId, via: "portal", billingRequest: started.billingRequestId },
+  });
+
+  redirect(started.url);
+}
