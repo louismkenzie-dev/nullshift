@@ -281,7 +281,7 @@ function Quotes({ rows: QUOTE_ROWS }: { rows: QuoteVersionListRow[] }) {
               <th>State</th>
               <th className={s.num}>Value</th>
               <th>Saved / issued</th>
-              <th>Editable</th>
+              <th>Open</th>
             </tr>
           </thead>
           <tbody>
@@ -326,8 +326,14 @@ function Quotes({ rows: QUOTE_ROWS }: { rows: QuoteVersionListRow[] }) {
                 </td>
                 <td className={s.num}>{q.value ? formatMoney(q.value) : "—"}</td>
                 <td className={s.muted}>{q.savedAt}</td>
-                <td className={s.muted}>
-                  {editableInPlace(q.state) ? "In place" : "New version only"}
+                <td>
+                  <Link
+                    href={q.studioHref}
+                    className={`${s.btn} ${s.btnSmall}`}
+                    title={editableInPlace(q.state) ? "Edit this draft in the Studio" : "Open; changes create a new version"}
+                  >
+                    {editableInPlace(q.state) ? "Edit draft" : "Open"}
+                  </Link>
                 </td>
               </tr>
             ))}
