@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { NoZoom } from "@/components/NoZoom";
 import "@nullshift/ui/styles/fonts.css";
 import "./globals.css";
@@ -68,6 +69,7 @@ export default function RootLayout({
         `}</style>
         <NoZoom />
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
