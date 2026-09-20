@@ -151,7 +151,12 @@ export async function confirmMatch(matchId: string): Promise<DecisionResult> {
       for (const a of spread.value.allocations) {
         const ceiling = allocationCeiling(
           { provider: "bank", providerPaymentId, kind: "payment", amountMinor: tx.amount_minor, currency: tx.currency },
-          alreadyAgainstPayment.map((x) => ({ ...x, providerPaymentId: x.provider_payment_id })),
+          alreadyAgainstPayment.map((x) => ({
+            provider: x.provider,
+            providerPaymentId: x.provider_payment_id,
+            kind: x.kind,
+            amountMinor: x.amount_minor,
+          })),
           running + a.amountMinor
         );
         if (!ceiling.allowed) return { ok: false, reason: "invalid", message: ceiling.reason ?? "Over-allocation." };
