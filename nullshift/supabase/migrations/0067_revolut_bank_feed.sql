@@ -1,3 +1,4 @@
+-- STATUS: APPLIED to Nullshift Ops (cweftpoaojwzllzficgt) on 2026-09-20 as revolut_bank_feed.
 -- 0067 — Revolut Business bank feed (read-only) and bank-match suggestions.
 --
 -- Admin redesign, Finance follow-on (brief §5.6 "linked to bank evidence";
