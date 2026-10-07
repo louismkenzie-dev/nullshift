@@ -119,6 +119,12 @@ export const tone: Record<string, string> = {
   notified: T.warning,
   notice_sent: T.warning,
   effective: T.success,
+  // E-signature envelopes (migration 0068)
+  issued: T.warning,
+  signed: "var(--k-accent)",
+  completed: T.success,
+  voided: "var(--k-muted)",
+  expired: T.danger,
 };
 export function Badge({ s }: { s: string }) {
   const c = tone[s] ?? "var(--k-muted)";

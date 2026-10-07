@@ -597,6 +597,49 @@ back to their Billing tile.
   an "Unmatched account" fallback so a collected fee can never silently
   disappear if its tenant link breaks.
 
+## E-signatures (`/admin/clients/[id]/sign`, 2026-10)
+
+Nullshift's own DocuSign: any bespoke document — a proposal follow-up, an
+additional build, a letter — composed by staff, sent to a named client
+signatory for formal signature, countersigned by Nullshift, with a tamper-
+evident record. Migration `0068_signature_requests.sql`; code under
+`apps/web/lib/signing/`.
+
+**Flow.** Client block → Docs and Legal → "Send a document for signature" →
+pick a template (the Rising Stars Talent ID follow-up is the first), name the
+signer → the draft opens in an editor with a live preview → **Issue**. Issuing
+freezes the document into a canonical snapshot, records its SHA-256, mints a
+single-use link (sha256 of the token is stored; the token is not) valid for
+30 days, and emails the signer. The signer reads the frozen document at
+`/sign/<token>` (no login) or `/portal/sign/<id>` (logged in), types their
+full name as their signature, ticks four confirmations (authority, read,
+e-sign consent, intent to be bound) and signs — or declines with a reason.
+Staff then **countersign** on the detail page; both parties are emailed the
+completed copy (`/api/sign/<id>/certificate`, an A4 PDF with both signatures,
+the hash and the time-stamped signing record).
+
+**What makes it evidence.** `signature_requests` is frozen by trigger once it
+leaves draft; `signature_events` is append-only for every role, service role
+included (a trigger refuses UPDATE/DELETE); each signature event records the
+typed name, the consents, IP, user agent and the document hash as presented,
+which must equal the request's hash. Receipts (Sent / Viewed / Signed ticks)
+appear on the Docs tile via `document_events` type `signature_request`.
+
+**Document dialect.** Plain text: `# heading`, `## sub-heading`, `- bullet`,
+`| table | cells |` (first row is the header, `| --- |` rows are skipped),
+`> callout`, blank line = new paragraph. No inline markup, deliberately.
+Costing is one line per item, `Label | £1,195.00`; negatives are discounts;
+the total is computed. Parser: `lib/signing/blocks.ts`; rules and state
+machine: `lib/signing/model.ts`; transitions (DB + evidence + email + audit in
+one place): `lib/signing/engine.ts`; templates: `lib/signing/templates.ts`.
+
+**Rules of thumb.** A correction after issue is a NEW document — void the old
+one (the signer is emailed; a client's signature on a voided document stays on
+record). Re-send rotates the link and kills the old one. A linked structured
+Change Order (`change_order_id`) is marked accepted when the request
+completes, so the §8 build gate on tickets sees it. There is no second-person
+review gate on these (unlike proposals / Order Forms); the issuer is recorded.
+
 ## Public pricing switch (2026-09)
 
 Agreed 13 Sep 2026: the published rates are below what the work is worth, so

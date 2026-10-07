@@ -27,6 +27,13 @@ import { AcceptOrderForm } from "@/components/portal/AcceptOrderForm";
 import { recordClientViews, recordDocumentEvent } from "@/lib/documentEvents";
 import { applicationFeeClause, formatPercent } from "@/lib/legal/applicationFee";
 import { contentHash } from "@nullshift/content/legal/versions";
+import {
+  KIND_LABEL,
+  STATUS_LABEL_CLIENT,
+  statusTone,
+  type SignatureKind,
+  type SignatureStatus,
+} from "@/lib/signing/model";
 
 /**
  * The client's legal centre (spec §17), and the place they actually accept
@@ -252,24 +259,49 @@ async function decideChangeOrder(formData: FormData) {
 export default async function PortalLegalPage() {
   const { supabase, user, preview } = await getPortalClient();
 
-  const [{ data: orders }, { data: changeOrders }, { data: subs }, { data: projects }] =
-    await Promise.all([
-      supabase.from("order_forms").select("*").order("created_at", { ascending: false }),
-      supabase
-        .from("change_orders")
-        .select("*")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("subscriptions")
-        .select("plan, mrr, status, started_at")
-        .order("created_at", { ascending: false })
-        .limit(1),
-      supabase
-        .from("projects")
-        .select("id, name, dpa_client_submitted_at")
-        .order("created_at", { ascending: false })
-        .limit(1),
-    ]);
+  const [
+    { data: orders },
+    { data: changeOrders },
+    { data: subs },
+    { data: projects },
+    { data: signatureRows },
+  ] = await Promise.all([
+    supabase.from("order_forms").select("*").order("created_at", { ascending: false }),
+    supabase
+      .from("change_orders")
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("subscriptions")
+      .select("plan, mrr, status, started_at")
+      .order("created_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("projects")
+      .select("id, name, dpa_client_submitted_at")
+      .order("created_at", { ascending: false })
+      .limit(1),
+    // E-signed documents (migration 0068). RLS shows a member their own
+    // tenant's requests once issued; drafts never appear here.
+    supabase
+      .from("signature_requests")
+      .select("id, reference, title, kind, status, issued_at, signed_at, completed_at")
+      .order("created_at", { ascending: false }),
+  ]);
+  type SignatureRow = {
+    id: string;
+    reference: string;
+    title: string;
+    kind: SignatureKind;
+    status: SignatureStatus;
+    issued_at: string | null;
+    signed_at: string | null;
+    completed_at: string | null;
+  };
+  const signatureList = ((signatureRows ?? []) as SignatureRow[]).filter(
+    (s) => s.status !== "draft" && s.status !== "voided"
+  );
+  const toSign = signatureList.filter((s) => s.status === "issued");
 
   const list = (orders ?? []) as OrderFormRow[];
   const active =
@@ -562,6 +594,63 @@ export default async function PortalLegalPage() {
                     </form>
                   </div>
                 )}
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
+
+      {/* ── e-signed documents (migration 0068) ────────────── */}
+      {signatureList.length > 0 && (
+        <Panel
+          label="Documents for signature"
+          title={toSign.length ? `${toSign.length} waiting for your signature` : "Signed documents"}
+        >
+          <div className="flex flex-col">
+            {signatureList.map((s, i) => (
+              <div
+                key={s.id}
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+                style={{ padding: "12px 0", borderTop: i ? "1px solid var(--k-border)" : "none" }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <span style={{ ...mono, color: "var(--k-accent)" }}>
+                    {s.reference} · {KIND_LABEL[s.kind]}
+                  </span>
+                  <p
+                    style={{
+                      fontFamily: T.sans,
+                      fontSize: "1rem",
+                      fontWeight: 600,
+                      color: "var(--k-fg)",
+                      marginTop: 4,
+                    }}
+                  >
+                    {s.title}
+                  </p>
+                  <p style={{ ...body, fontSize: "0.82rem" }}>
+                    {s.completed_at
+                      ? `Signed by both parties ${dateGB(s.completed_at)}`
+                      : s.signed_at
+                        ? `Signed ${dateGB(s.signed_at)} — awaiting Nullshift's countersignature`
+                        : s.issued_at
+                          ? `Sent ${dateGB(s.issued_at)}`
+                          : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StatusChip
+                    tone={statusTone(s.status) === "accent" ? "accent" : statusTone(s.status)}
+                  >
+                    {STATUS_LABEL_CLIENT[s.status]}
+                  </StatusChip>
+                  <Link
+                    href={`/portal/sign/${s.id}`}
+                    className={`kb kb-sm ${s.status === "issued" ? "kb-primary" : "kb-outline"}`}
+                  >
+                    {s.status === "issued" ? "Read & sign" : "Open"}
+                  </Link>
+                </div>
               </div>
             ))}
           </div>

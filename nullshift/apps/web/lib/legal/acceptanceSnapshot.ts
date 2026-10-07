@@ -70,7 +70,11 @@ export function snapshotHash(value: SnapshotInput): string {
 
 export type AcceptanceSnapshot = {
   /** Which kind of document this is the frozen content of. */
-  documentType: "order_form_v2" | "service_schedule" | "handover_schedule";
+  documentType:
+    | "order_form_v2"
+    | "service_schedule"
+    | "handover_schedule"
+    | "signature_request";
   documentId: string;
   versionNo: number;
   /** Template / policy identifiers so the wording can be traced. */

@@ -871,6 +871,31 @@ export default async function ClientDocsPage({
         </section>
       </Reveal>
 
+      {/* E-signatures — bespoke documents sent for formal signature */}
+      <Reveal>
+        <section style={card}>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 style={{ ...h2, marginBottom: 0 }}>E-signatures</h2>
+            <Link href={`/admin/clients/${tenantId}/sign`} style={monoLink}>
+              Send a document for signature →
+            </Link>
+          </div>
+          <p
+            style={{
+              fontFamily: T.sans,
+              fontSize: "0.82rem",
+              color: "var(--k-faint)",
+              margin: "6px 0 0",
+            }}
+          >
+            Any bespoke document — a proposal follow-up, an additional build, a letter — composed
+            here, frozen and hashed when issued, signed by the client through a single-use link,
+            countersigned by Nullshift, with the full signing record kept. These appear in the read
+            receipts above as they go out.
+          </p>
+        </section>
+      </Reveal>
+
       {/* DPA / compliance */}
       <Reveal>
         <section style={card}>

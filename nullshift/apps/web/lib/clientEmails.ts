@@ -584,3 +584,184 @@ keep sending these.
 — Nullshift`;
   return { subject, html, text };
 }
+
+/* ── E-signature (signature_requests, migration 0068) ─────────────────────── */
+
+const SIGN_FOOT = `This link is personal to you and expires. If it has run out, reply to this email and we will send a fresh one. Nothing is agreed until you sign, and you can decline from the same page.`;
+
+/**
+ * "Please sign": the one email a signer needs. Links to the signing page,
+ * never attaches the document — the page is the document, frozen and hashed,
+ * and an attachment would be a second copy that could drift from it.
+ */
+export function signatureRequestEmail(opts: {
+  name: string;
+  title: string;
+  reference: string;
+  clientName: string;
+  url: string;
+  expiresOn: string;
+  /** One or two sentences from staff, shown above the button. Optional. */
+  message?: string | null;
+  totalLabel?: string | null;
+}): { subject: string; html: string; text: string } {
+  const { name, title, reference, clientName, url, expiresOn, message, totalLabel } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const subject = `Please sign: ${title} (${reference})`;
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">For signature · ${esc(reference)}</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">${esc(title)}</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, Nullshift has sent ${esc(clientName)} a document to sign. Please read it through on the signing page and, if you are happy, sign it there — it takes a minute, and you will get a signed copy by email once we have countersigned.</p>
+      ${message ? `<p style="margin:12px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.fg};padding-left:14px;border-left:2px solid ${C.primary}">${esc(message)}</p>` : ""}
+      ${totalLabel ? `<p style="margin:12px 0 0;font-family:${FONT};font-size:14px;color:${C.muted}">${esc(totalLabel)}</p>` : ""}
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(url, "Review &amp; sign →")}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">The link expires on ${esc(expiresOn)}. ${SIGN_FOOT}</p>
+    </td></tr>`;
+  const html = wrap(inner, `${title} — ready for your signature.`);
+  const text = `Hi ${first},
+
+Nullshift has sent ${clientName} a document to sign: ${title} (${reference}).
+${message ? `\n${message}\n` : ""}${totalLabel ? `\n${totalLabel}\n` : ""}
+Read and sign it here:
+${url}
+
+The link expires on ${expiresOn}. ${SIGN_FOOT}
+
+— Nullshift`;
+  return { subject, html, text };
+}
+
+/** To the signer, the moment they sign: what happens next, and where their copy is. */
+export function signatureSignedClientEmail(opts: {
+  name: string;
+  title: string;
+  reference: string;
+  signedAt: string;
+  certificateUrl: string;
+}): { subject: string; html: string; text: string } {
+  const { name, title, reference, signedAt, certificateUrl } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const subject = `Signed: ${title} (${reference})`;
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Signature recorded · ${esc(reference)}</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Thank you — that's signed</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, we recorded your signature on <strong style="color:${C.fg}">${esc(title)}</strong> at ${esc(signedAt)}. Nullshift will countersign shortly, and you will receive the completed copy with both signatures and the full signing record.</p>
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(certificateUrl, "Download your signed copy (PDF) ↓", false)}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">The PDF carries the document exactly as you signed it, its SHA-256 fingerprint, and the time-stamped record of each step. Keep it with your records.</p>
+    </td></tr>`;
+  const html = wrap(inner, `Your signature on ${title} has been recorded.`);
+  const text = `Hi ${first},
+
+We recorded your signature on ${title} (${reference}) at ${signedAt}. Nullshift will countersign shortly and you will receive the completed copy with both signatures and the signing record.
+
+Your signed copy (PDF):
+${certificateUrl}
+
+— Nullshift`;
+  return { subject, html, text };
+}
+
+/** To both parties when Nullshift countersigns: the completed document. */
+export function signatureCompletedEmail(opts: {
+  name: string;
+  title: string;
+  reference: string;
+  signedBy: string;
+  signedAt: string;
+  countersignedBy: string;
+  countersignedAt: string;
+  certificateUrl: string;
+}): { subject: string; html: string; text: string } {
+  const { name, title, reference, signedBy, signedAt, countersignedBy, countersignedAt, certificateUrl } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const subject = `Completed: ${title} (${reference})`;
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Completed · ${esc(reference)}</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">${esc(title)}</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, this document is now signed by both parties and is in force.</p>
+    </td></tr>
+    <tr><td style="padding:16px 32px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border}">
+        <tr><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.muted}">Signed by</td><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.fg}">${esc(signedBy)} · ${esc(signedAt)}</td></tr>
+        <tr><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.muted};border-top:1px solid ${C.border}">Countersigned by</td><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.fg};border-top:1px solid ${C.border}">${esc(countersignedBy)} · ${esc(countersignedAt)}</td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(certificateUrl, "Download the completed copy (PDF) ↓")}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">The PDF carries the document exactly as signed, its SHA-256 fingerprint, both signatures and the time-stamped signing record. Keep it with your records.</p>
+    </td></tr>`;
+  const html = wrap(inner, `${title} is signed by both parties.`);
+  const text = `Hi ${first},
+
+${title} (${reference}) is now signed by both parties and is in force.
+
+Signed by: ${signedBy} · ${signedAt}
+Countersigned by: ${countersignedBy} · ${countersignedAt}
+
+Completed copy (PDF):
+${certificateUrl}
+
+— Nullshift`;
+  return { subject, html, text };
+}
+
+/** To the signer when Nullshift withdraws a document before it is completed. */
+export function signatureVoidedEmail(opts: {
+  name: string;
+  title: string;
+  reference: string;
+  reason: string | null;
+}): { subject: string; html: string; text: string } {
+  const { name, title, reference, reason } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const subject = `Withdrawn: ${title} (${reference})`;
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.muted}">Withdrawn · ${esc(reference)}</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">${esc(title)}</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, Nullshift has withdrawn this document, so the signing link no longer works and nothing is agreed under it.${reason ? ` ${esc(reason)}` : ""} If a revised version is needed we will send a new one.</p>
+    </td></tr>`;
+  const html = wrap(inner, `${title} has been withdrawn.`);
+  const text = `Hi ${first},
+
+Nullshift has withdrawn ${title} (${reference}). The signing link no longer works and nothing is agreed under it.${reason ? ` ${reason}` : ""} If a revised version is needed we will send a new one.
+
+— Nullshift`;
+  return { subject, html, text };
+}
+
+/** Internal notice: a client signed or declined. Plain, to the legal inbox. */
+export function signatureStaffNoticeEmail(opts: {
+  title: string;
+  reference: string;
+  clientName: string;
+  signerName: string;
+  what: "signed" | "declined";
+  detail: string | null;
+  adminUrl: string;
+}): { subject: string; html: string; text: string } {
+  const { title, reference, clientName, signerName, what, detail, adminUrl } = opts;
+  const subject = `${what === "signed" ? "Signed" : "Declined"}: ${clientName} — ${title} (${reference})`;
+  const lead =
+    what === "signed"
+      ? `${signerName} has signed on behalf of ${clientName}. Countersign it to complete.`
+      : `${signerName} has declined on behalf of ${clientName}.`;
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${what === "signed" ? C.primary : C.muted}">${esc(reference)} · ${what}</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:22px;line-height:1.2;color:${C.fg}">${esc(title)}</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">${esc(lead)}</p>
+      ${detail ? `<p style="margin:10px 0 0;font-family:${FONT};font-size:14px;line-height:1.6;color:${C.fg};padding-left:14px;border-left:2px solid ${C.border}">${esc(detail)}</p>` : ""}
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(adminUrl, what === "signed" ? "Open &amp; countersign →" : "Open in admin →", false)}</td></tr>`;
+  const html = wrap(inner, lead);
+  const text = `${lead}\n${detail ? `\n${detail}\n` : ""}\n${adminUrl}\n`;
+  return { subject, html, text };
+}

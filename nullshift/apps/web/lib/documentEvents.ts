@@ -27,6 +27,7 @@ export const DOCUMENT_TYPES = [
   "change_order",
   "care_plan_terms",
   "deliverable",
+  "signature_request",
 ] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 export type DocumentEventKind = "sent" | "viewed" | "signed" | "approved";
@@ -39,6 +40,7 @@ export const DOCUMENT_TYPE_LABEL: Record<DocumentType, string> = {
   change_order: "Change Order",
   care_plan_terms: "Care plan terms",
   deliverable: "Document",
+  signature_request: "E-signed document",
 };
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -358,6 +360,14 @@ type DocumentRow = {
   created_at: string;
 };
 type AuditRow = { action: string; target: string | null; created_at: string };
+type SignatureRequestRow = {
+  id: string;
+  reference: string;
+  title: string;
+  status: string;
+  issued_at: string | null;
+  signed_at: string | null;
+};
 
 const DELIVERABLE_KIND_LABEL: Record<string, string> = {
   contract: "Contract",
@@ -388,6 +398,8 @@ export function documentFacts(input: {
   documents: DocumentRow[];
   audit: AuditRow[];
   events: DocumentEventRow[];
+  /** E-signature envelopes (migration 0068). Optional: older callers predate them. */
+  signatureRequests?: SignatureRequestRow[];
 }): DocumentFact[] {
   const facts: DocumentFact[] = [];
 
@@ -499,6 +511,21 @@ export function documentFacts(input: {
     });
   }
 
+  // E-signed documents: sent when issued, signed when the client signed. A
+  // voided one was never an offer the client could act on, so it is skipped;
+  // a declined one stays, as "sent and not signed" is exactly what happened.
+  for (const r of input.signatureRequests ?? []) {
+    if (r.status === "voided") continue;
+    facts.push({
+      documentType: "signature_request",
+      documentId: r.id,
+      title: `${r.reference} — ${r.title}`,
+      sentAt: r.issued_at,
+      signedAt: r.signed_at,
+      draft: r.status === "draft",
+    });
+  }
+
   return facts;
 }
 
@@ -532,6 +559,7 @@ export async function documentReceipts(
     { data: documents },
     { data: audit },
     { data: events },
+    { data: signatureRequests },
   ] = await Promise.all([
     service
       .from("projects")
@@ -583,6 +611,11 @@ export async function documentReceipts(
       .select("document_type, document_id, event, actor_kind, at")
       .eq("tenant_id", tenantId)
       .order("at", { ascending: true }),
+    service
+      .from("signature_requests")
+      .select("id, reference, title, status, issued_at, signed_at")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false }),
   ]);
 
   const eventRows = (events ?? []) as DocumentEventRow[];
@@ -603,6 +636,7 @@ export async function documentReceipts(
     documents: (documents ?? []) as DocumentRow[],
     audit: (audit ?? []) as AuditRow[],
     events: eventRows,
+    signatureRequests: (signatureRequests ?? []) as SignatureRequestRow[],
   });
 
   return mergeReceipts(eventRows, facts);
