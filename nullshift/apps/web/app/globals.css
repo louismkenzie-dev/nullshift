@@ -842,6 +842,153 @@ button[data-pending="true"] {
   border-color: var(--k-border-strong);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   ADMIN "DARK GLOW" — what the kyma/AppKit primitives become inside
+   the admin shell (app/admin/(dashboard)/shell.module.css sets the
+   --k-* palette; this file reshapes the pieces that carry their own
+   geometry). Scoped to the shell's data attribute so the client
+   portal and the marketing site keep their square Kyma look.
+   ══════════════════════════════════════════════════════════════ */
+[data-ns-shell] .k-kard {
+  position: relative;
+  border-radius: 12px;
+  border-color: transparent;
+  background: linear-gradient(180deg, #141720 0%, #0f1117 100%) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 12px 40px rgba(0, 0, 0, 0.35);
+}
+[data-ns-shell] .k-kard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.04) 40%,
+    rgba(255, 255, 255, 0.02) 70%,
+    rgba(16, 185, 129, 0.16) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+[data-ns-shell] .k-kard > * {
+  position: relative;
+}
+[data-ns-shell] .kb {
+  border-radius: 8px;
+  height: 36px;
+  padding-inline: 14px;
+  font-size: 0.68rem;
+}
+[data-ns-shell] .kb-sm {
+  height: 32px;
+  padding-inline: 12px;
+}
+[data-ns-shell] .kb-primary {
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.35),
+    0 6px 20px rgba(16, 185, 129, 0.25);
+}
+[data-ns-shell] .ak-chip {
+  border-radius: 999px;
+  padding: 3px 9px !important;
+}
+[data-ns-shell] .ak-title {
+  text-transform: none !important;
+  letter-spacing: -0.03em !important;
+  background: linear-gradient(180deg, #ffffff 0%, #aeb4c0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
+[data-ns-shell] .ak-panel-title {
+  text-transform: none !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+}
+[data-ns-shell] input,
+[data-ns-shell] select,
+[data-ns-shell] textarea {
+  border-radius: 8px;
+}
+[data-ns-shell] input:focus-visible,
+[data-ns-shell] select:focus-visible,
+[data-ns-shell] textarea:focus-visible {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+}
+[data-ns-shell] input[type="checkbox"] {
+  border-radius: 4px;
+  accent-color: #10b981;
+}
+
+/* The login page and other pre-shell admin screens: the same ground. */
+.ns-glow-page {
+  position: relative;
+  isolation: isolate;
+  background: #07080c;
+  --k-bg: #07080c;
+  --k-surface: #0f1117;
+  --k-fg: #f3f4f8;
+  --k-muted: #9ba1ad;
+  --k-faint: #5f6472;
+  --k-border: rgba(255, 255, 255, 0.07);
+  --k-border-strong: rgba(255, 255, 255, 0.15);
+}
+.ns-glow-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% -10%,
+      rgba(16, 185, 129, 0.24) 0%,
+      rgba(16, 185, 129, 0.08) 35%,
+      transparent 70%
+    ),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    48px 48px,
+    48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse at 50% 0%, #000 0%, transparent 75%);
+}
+.ns-glow-page .k-kard {
+  border-radius: 12px;
+  background: linear-gradient(180deg, #141720 0%, #0f1117 100%) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+    0 12px 40px rgba(0, 0, 0, 0.45);
+}
+.ns-glow-page .kb {
+  border-radius: 8px;
+}
+.ns-glow-page input {
+  border-radius: 8px !important;
+}
+.ns-glow-title {
+  background: linear-gradient(180deg, #ffffff 0%, #aeb4c0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  text-transform: none !important;
+}
+
 /* selection on cream */
 .k-cream ::selection {
   background: rgba(16, 185, 129, 0.22);

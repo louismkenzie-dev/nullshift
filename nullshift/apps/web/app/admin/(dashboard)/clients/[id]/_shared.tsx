@@ -137,59 +137,65 @@ export function Badge({ s }: { s: string }) {
         letterSpacing: "0.08em",
         textTransform: "uppercase",
         color: c,
-        background: `color-mix(in oklab, ${c} 12%, transparent)`,
-        border: `1px solid color-mix(in oklab, ${c} 32%, transparent)`,
-        borderRadius: 0,
-        padding: "3px 8px",
+        background: `color-mix(in oklab, ${c} 10%, transparent)`,
+        border: `1px solid color-mix(in oklab, ${c} 36%, transparent)`,
+        borderRadius: 999,
+        padding: "3px 9px",
+        whiteSpace: "nowrap",
       }}
     >
       {s.replace(/_/g, " ")}
     </span>
   );
 }
-// Workhorse panel — mirrors AppKit Panel / .k-kard: hairline square card.
+// Workhorse panel — the Dark Glow card: layered dark surface, hairline, soft
+// shadow, 12px radius. Mirrors shell.module.css .card.
 export const card = {
-  background: "var(--k-surface)",
+  background: "linear-gradient(180deg, #141720 0%, #0f1117 100%)",
   border: "1px solid var(--k-border)",
-  borderRadius: 0,
+  borderRadius: 12,
   padding: "18px 20px",
   marginBottom: 16,
+  boxShadow: "0 1px 0 rgba(255,255,255,0.03) inset, 0 12px 40px rgba(0,0,0,0.35)",
 } as const;
-// Section title — TASA Orbiter, uppercase (matches Panel header type).
+// Section title — sentence case, medium weight.
 export const h2 = {
   fontFamily: T.sans,
-  fontWeight: 700,
-  fontSize: "1.05rem",
-  letterSpacing: "-0.01em",
-  textTransform: "uppercase" as const,
+  fontWeight: 600,
+  fontSize: "1rem",
+  letterSpacing: "-0.015em",
   color: "var(--k-fg)",
   marginBottom: 12,
 } as const;
-// Square input — var(--k-surface) bg, hairline border, emerald focus ring.
+// Input — near-black well, hairline border, 8px radius.
 export const inp = {
   fontFamily: T.sans,
   fontSize: "0.85rem",
-  height: 32,
+  height: 34,
   padding: "0 10px",
-  background: "var(--k-surface)",
+  background: "var(--k-bg)",
   color: "var(--k-fg)",
-  border: "1px solid var(--k-border)",
-  borderRadius: 0,
+  border: "1px solid var(--k-border-strong)",
+  borderRadius: 8,
 } as const;
-// Square mono uppercase button. Accent (emerald) primary, outline ghost.
+// Button. Accent (emerald) primary with a soft glow, hairline ghost.
 export const btn = (bg: string, fg: string) => ({
   fontFamily: T.mono,
   fontSize: "11px",
   fontWeight: 500,
   letterSpacing: "0.08em",
   textTransform: "uppercase" as const,
-  height: 32,
+  height: 34,
   paddingInline: 12,
   background: bg,
   color: fg,
   border: bg === "transparent" ? "1px solid var(--k-border-strong)" : "none",
-  borderRadius: 0,
+  borderRadius: 8,
   cursor: "pointer",
+  boxShadow:
+    bg === "var(--k-accent)"
+      ? "0 0 0 1px rgba(16,185,129,0.35), 0 6px 20px rgba(16,185,129,0.25)"
+      : "none",
 });
 /** Small mono chip used for header signals (DPA state, blocked notices…). */
 export function SignalChip({

@@ -75,17 +75,9 @@ function AdminLogin() {
   });
 
   return (
-    <main
-      className="min-h-screen flex items-center justify-center px-6 relative"
-      style={{ background: "var(--k-bg)" }}
-    >
-      <div
-        aria-hidden
-        className="k-vgrid pointer-events-none absolute inset-0"
-        style={{ opacity: 0.5 }}
-      />
+    <main className="ns-glow-page min-h-screen flex items-center justify-center px-6 relative">
       <Reveal className="w-full max-w-sm relative">
-        <div className="flex items-center gap-2.5 mb-8 justify-center">
+        <div className="flex items-center gap-2.5 mb-6 justify-center">
           <LogoMark size={26} />
           <span
             style={{
@@ -100,7 +92,21 @@ function AdminLogin() {
             Nullshift
           </span>
         </div>
-        <div className="mb-6 flex justify-center">
+        <h1
+          className="ns-glow-title"
+          style={{
+            fontFamily: T.sans,
+            fontWeight: 700,
+            fontSize: "1.9rem",
+            letterSpacing: "-0.03em",
+            lineHeight: 1.05,
+            textAlign: "center",
+            margin: "0 0 8px",
+          }}
+        >
+          Sign in to Ops
+        </h1>
+        <div className="mb-7 flex justify-center">
           <Eyebrow index="ADMIN" label="SECURE_LOGIN" align="center" />
         </div>
         {setupMode ? (

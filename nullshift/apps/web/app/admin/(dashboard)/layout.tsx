@@ -4,9 +4,8 @@ import { createClient, createServiceClient } from "@nullshift/db";
 import { isAdminEmail } from "@nullshift/auth/admin";
 import { T } from "@nullshift/ui/tokens";
 import { hasSupabaseServerConfig, getMissingSupabaseEnv } from "@nullshift/db/env";
-import { OperationIndicator } from "@/components/app/OperationIndicator";
-import { AccountControl, BottomNav, HeaderCrumbs, Rail } from "./Rail";
-import s from "./shell.module.css";
+import { AdminShell } from "./AdminShell";
+import type { QuickClient } from "./Rail";
 
 export const metadata: Metadata = {
   title: "Nullshift — Admin",
@@ -27,7 +26,7 @@ export default async function DashboardLayout({
     return (
       <main
         className="min-h-screen flex items-center justify-center px-6"
-        style={{ background: "var(--k-bg)" }}
+        style={{ background: "#07080c" }}
       >
         <div className="text-center max-w-lg">
           <div
@@ -151,33 +150,31 @@ export default async function DashboardLayout({
     );
   }
 
-  // Shell (brief §4.3–4.5): 248px rail + 64px header in normal document flow.
-  // The rail and header are sticky; the content column scrolls with the page.
-  // Pressed-operation feedback is the button's own spinner plus the small
-  // "Working…" indicator in the header — no full-bleed overlay.
+  // The ⌘K quick-jump's index: every client's id and name, one cheap query.
+  // Ids and names only — nothing here is sensitive, and it is what makes
+  // "type three letters, press Enter" work on every page.
+  let clients: QuickClient[] = [];
+  try {
+    const { data } = await createServiceClient()
+      .from("tenants")
+      .select("id, name, status, type")
+      .neq("type", "internal")
+      .order("name")
+      .limit(300);
+    clients = ((data ?? []) as { id: string; name: string; status: string | null }[]).map(
+      (t) => ({ id: t.id, name: t.name, status: t.status })
+    );
+  } catch (e) {
+    console.error("quick-jump index failed:", e);
+  }
+
+  // Shell: 256px rail + 60px header in normal document flow. The rail and
+  // header are sticky; the content column scrolls with the page. Pressed-
+  // operation feedback is the button's own spinner plus the small "Working…"
+  // indicator in the header — no full-bleed overlay.
   return (
-    <div className={s.shell}>
-      <Rail />
-      <header className={s.header}>
-        <HeaderCrumbs />
-        <input
-          className={s.search}
-          type="search"
-          placeholder="Search clients, projects, quotes, invoice refs…"
-          aria-label="Search"
-          disabled
-          title="Global search is not wired up yet"
-        />
-        <div className={s.headerRight}>
-          <OperationIndicator
-            className={`${s.working} ${s.mono}`}
-            dotClassName={s.workingDot}
-          />
-          <AccountControl email={user.email ?? ""} />
-        </div>
-      </header>
-      <main className={s.content}>{children}</main>
-      <BottomNav />
-    </div>
+    <AdminShell email={user.email ?? ""} clients={clients}>
+      {children}
+    </AdminShell>
   );
 }

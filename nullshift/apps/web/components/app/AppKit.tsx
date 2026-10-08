@@ -45,7 +45,7 @@ export function PageHeader({
               <Eyebrow index={index} label={label} />
             </div>
           )}
-          <Display as="h1" size="md">
+          <Display as="h1" size="md" className="ak-title">
             {title}
           </Display>
           {lead && <Lead style={{ marginTop: 14 }}>{lead}</Lead>}
@@ -89,6 +89,7 @@ export function Panel({
             {label && <span style={monoLabel}>{label}</span>}
             {title && (
               <span
+                className="ak-panel-title"
                 style={{
                   fontFamily: T.sans,
                   fontWeight: 700,
@@ -174,7 +175,7 @@ export function StatusChip({
   const c = map[tone] ?? map.muted;
   return (
     <span
-      className="inline-flex items-center gap-1.5"
+      className="ak-chip inline-flex items-center gap-1.5"
       style={{
         fontFamily: T.mono,
         fontSize: "0.6rem",
