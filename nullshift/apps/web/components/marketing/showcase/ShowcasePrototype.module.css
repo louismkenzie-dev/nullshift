@@ -7,9 +7,14 @@
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 .embedded .stage {
-  top: 72px;
-  height: calc(100svh - 72px);
+  /* Full bleed: the scene owns the whole viewport, no paper strip above it. */
+  top: 0;
+  height: 100svh;
   min-height: 0;
+}
+.embedded .topline {
+  /* The floating navigation sits in the top 60px; keep the labels clear of it. */
+  top: 76px;
 }
 .embedded .parentStage {
   /* The floating navigation no longer needs an opaque strip above the story. */

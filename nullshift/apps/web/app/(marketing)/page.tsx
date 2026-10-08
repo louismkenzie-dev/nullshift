@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ScrollFilmHero } from "@/components/marketing/immersive/ScrollFilmHero";
-import { CapabilitiesFilm } from "@/components/marketing/immersive/CapabilitiesFilm";
 import { ShowcasePrototype } from "@/components/marketing/showcase/ShowcasePrototype";
 import { FinancialServices } from "@/components/marketing/FinancialServices";
 import { DesignTalent } from "@/components/marketing/DesignTalent";
@@ -27,7 +26,6 @@ export default function Home() {
         </div>
         <FinancialServices />
         <DesignTalent />
-        <CapabilitiesFilm />
         <PlatformFeatures />
         <article
           id="suffolk-tennis-case-study"

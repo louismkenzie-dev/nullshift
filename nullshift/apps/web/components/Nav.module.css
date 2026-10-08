@@ -21,9 +21,11 @@
   pointer-events: auto;
 }
 
-.header[data-home="true"] {
-  /* Keep blending stable throughout the handover. The opening scene is black,
-     so its original palette is unchanged; compact controls invert later scenes. */
+.header[data-home="true"]:not([data-compact="true"]) {
+  /* The full bar only ever sits on the opening scene, which is black, so
+     difference blending leaves its palette unchanged. The compact controls do
+     not blend: inversion has no answer over a 50% grey photograph, so they
+     carry their own glass backplate instead. */
   mix-blend-mode: difference;
 }
 
@@ -84,13 +86,29 @@
   transition: none;
 }
 
+/* Glass chips: legible over the black film, the cream paper and the grey
+   photograph alike, with one treatment rather than a per-scene palette. */
+.compactBrand,
+.compactMenu {
+  height: 44px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(8, 9, 12, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 30px -14px rgba(0, 0, 0, 0.7);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+}
+
 .compactBrand {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  padding-inline: 14px 16px;
   text-decoration: none;
-  color: #fff;
 }
 
 .registration {
@@ -99,28 +117,11 @@
     monospace;
 }
 
-.compactBrand rect {
-  fill: #fff;
-  stroke: #808080;
-  stroke-width: 0.6px;
-}
-
-/* Pure inversion disappears over 50% grey. A fine midtone keyline becomes
-   dark there while staying unobtrusive over black/white, without a backplate. */
-:is(.compactBrand, .compactMenu) {
-  -webkit-text-stroke: 0.45px #808080;
-  paint-order: stroke fill;
-}
-
 .compactMenu {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  height: 44px;
-  padding-inline: 16px;
-  border: 0;
-  background: transparent;
-  color: #fff;
+  padding-inline: 18px;
   cursor: pointer;
   font:
     500 0.68rem var(--font-mono),
@@ -139,7 +140,6 @@
   width: 14px;
   height: 1.5px;
   background: currentColor;
-  box-shadow: 0 0 0 0.6px #808080;
 }
 
 .compactBar:not([inert]) :is(.compactBrand, .compactMenu) {
