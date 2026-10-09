@@ -166,10 +166,22 @@ export function DraftNotice() {
   );
 }
 
-export function LegalDocView({ doc }: { doc: LegalDoc }) {
+export function LegalDocView({
+  doc,
+  versionLine,
+  notice,
+}: {
+  doc: LegalDoc;
+  /** Overrides the default "Version … · Effective …" line for documents
+   *  versioned separately from the public policy pack. */
+  versionLine?: string;
+  /** Rendered above the summary — e.g. a solicitor-review banner. */
+  notice?: React.ReactNode;
+}) {
   return (
     <article>
       <DraftNotice />
+      {notice}
 
       <p
         style={{
@@ -194,7 +206,8 @@ export function LegalDocView({ doc }: { doc: LegalDoc }) {
           marginTop: 16,
         }}
       >
-        Version {legalConfig.legal.publicPolicyVersion} · Effective {effectiveDateLabel()}
+        {versionLine ??
+          `Version ${legalConfig.legal.publicPolicyVersion} · Effective ${effectiveDateLabel()}`}
       </p>
 
       {doc.sections.map((s) => (

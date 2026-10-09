@@ -40,8 +40,14 @@ and admin feature about the partner programme must agree with this file.
 - **Do NOT use the "no monthly ransom" line** or attack monthly retainers — Nullshift sells a
   monthly plan. The ownership point can still be made: clients own their code and accounts.
 - No revenue claims beyond the client stories. Do not call Nullshift an "AI agency".
-- Prices: plans from £40 / £80 / £120 per month (Core / Pro / Max, scale-banded); builds are
-  quoted via the guided estimator (apps/web/lib/commercial). Partner pricing = 25% off these.
+- Prices (CORRECTED 2026-10-09): the published plan prices are **from £149 / £249 / £399 per
+  month** (Core / Pro / Max, NSI_v2_2026_09 in apps/web/lib/pricing/nsi.ts, scale-banded; the
+  £40/£80/£120 figures in apps/web/lib/carePlans.ts are the frozen v1 launch bases and are NOT
+  public). Builds are quoted via the guided estimator (apps/web/lib/estimator). Partner
+  (white-label) price = list × 0.75 rounded up to the pound: **£112 / £187 / £300** base.
+- Referral fee is paid pro-rata as each build milestone (50/25/25) clears, within 14 days of
+  each. White-label monthly plans are invoiced to the partner monthly in advance; builds on the
+  same 50/25/25 milestones.
 
 ## Contact and booking
 

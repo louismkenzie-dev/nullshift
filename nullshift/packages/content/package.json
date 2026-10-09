@@ -21,6 +21,7 @@
     "./legal/text": "./src/legal/text.ts",
     "./legal/work": "./src/legal/work.ts",
     "./legal/email": "./src/legal/email.ts",
+    "./legal/partnerAgreement": "./src/legal/partnerAgreement.ts",
     "./clientStories": "./src/clientStories.ts",
     "./products": "./src/products.ts"
   },

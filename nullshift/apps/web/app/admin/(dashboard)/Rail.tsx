@@ -16,6 +16,8 @@ const PRIMARY: Item[] = [
   { label: "Finance", href: "/admin/finance" },
   { label: "Agreements", href: "/admin/agreements" },
   { label: "Automations", href: "/admin/automations" },
+  { label: "Outreach", href: "/admin/outreach" },
+  { label: "Social", href: "/admin/social" },
 ];
 
 // Every legacy destination that used to live in the AdminNav drawer, plus the

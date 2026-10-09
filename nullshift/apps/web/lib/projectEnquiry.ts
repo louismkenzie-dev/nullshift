@@ -88,15 +88,22 @@ export function validateProjectEnquiry(
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, data };
 }
 
-/** Only a configured Cal.com event path, never an arbitrary redirect URL. */
-export function projectCalendarUrl(value: string | undefined): string | null {
+/** Nullshift's own booking page (migration 0070) — the default calendar. */
+export const INTERNAL_BOOKING_PATH = "/book/call";
+
+/**
+ * Where the enquiry form sends people to pick a time. A configured Cal.com
+ * event path (NEXT_PUBLIC_CAL_LINK) still wins — never an arbitrary redirect
+ * URL — otherwise the in-house picker at /book/call is used.
+ */
+export function projectCalendarUrl(value: string | undefined): string {
   const path = (value || "")
     .trim()
     .replace(/^https:\/\/cal\.com\//, "")
     .replace(/\/$/, "");
   return /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)?$/.test(path)
     ? `https://cal.com/${path}`
-    : null;
+    : INTERNAL_BOOKING_PATH;
 }
 
 export function projectEnquiryLead(data: ProjectEnquiry) {

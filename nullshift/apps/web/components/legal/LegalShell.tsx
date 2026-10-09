@@ -21,6 +21,7 @@ export const LEGAL_NAV = [
   { href: legalConfig.routes.ai, label: "AI Services" },
   { href: legalConfig.routes.clientServices, label: "Client Services" },
   { href: legalConfig.routes.dataComplaint, label: "Data Complaint" },
+  { href: legalConfig.routes.partnerAgreement, label: "Partner Agreement" },
 ];
 
 export function LegalShell({

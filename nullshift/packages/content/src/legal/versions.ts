@@ -27,7 +27,8 @@ export type LegalDocumentType =
   | "ENTERPRISE_SLA"
   | "MANAGED_SERVICES"
   | "PRICING_SCHEDULE"
-  | "SECURITY";
+  | "SECURITY"
+  | "PARTNER";
 
 export type LegalDocumentVersion = {
   id: string;
@@ -79,6 +80,9 @@ export function buildRegistry(
     ["DPA", clientAgreementVersion, legalConfig.routes.clientServices],
     ["SECURITY", clientAgreementVersion, legalConfig.routes.clientServices],
     ["PAYMENTS", clientAgreementVersion, legalConfig.routes.clientServices],
+    // Partner programme agreement carries its own version line; it is a
+    // separate draft from the client pack and is dated independently.
+    ["PARTNER", "PARTNER_2026_10_v1", legalConfig.routes.partnerAgreement],
   ];
 
   return spec

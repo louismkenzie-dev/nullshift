@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Local Supabase CLI version/cache metadata
 supabase/.temp/
+
+# Partner outreach lead lists contain third-party contact details — keep out of git (they live in partner_prospects)
+docs/outreach/leads-*.csv

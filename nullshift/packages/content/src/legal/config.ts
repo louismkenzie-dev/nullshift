@@ -95,6 +95,7 @@ export const legalConfig = {
     ai: "/legal/ai",
     clientServices: "/legal/client-services",
     dataComplaint: "/legal/data-complaint",
+    partnerAgreement: "/legal/partner-agreement",
     cookieSettings: "/cookie-settings",
   },
 } as const;
