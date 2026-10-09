@@ -1004,3 +1004,72 @@ button[data-pending="true"] {
     animation: none;
   }
 }
+
+/* ── Product console form controls (KYMA — square, hairline, emerald focus) ── */
+.k-input,
+.k-select,
+.k-textarea {
+  width: 100%;
+  min-height: 44px;
+  background: var(--k-surface);
+  border: 1px solid var(--k-border);
+  border-radius: 0;
+  padding: 0 14px;
+  color: var(--k-fg);
+  font-family: var(--font-sans), Inter, sans-serif;
+  font-size: 0.9375rem;
+  letter-spacing: -0.005em;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.k-textarea {
+  padding: 12px 14px;
+  line-height: 1.55;
+  resize: vertical;
+}
+.k-input:focus,
+.k-select:focus,
+.k-textarea:focus {
+  border-color: var(--k-accent);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+}
+.k-input::placeholder,
+.k-textarea::placeholder {
+  color: var(--k-faint);
+}
+.k-label {
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--k-muted);
+}
+.k-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans), Inter, sans-serif;
+  font-size: 0.875rem;
+}
+.k-table th {
+  text-align: left;
+  font-family: var(--font-mono), "Roboto Mono", ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--k-muted);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--k-border);
+}
+.k-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--k-border);
+  color: var(--k-fg);
+  vertical-align: top;
+}
+.k-table tr:last-child td {
+  border-bottom: none;
+}

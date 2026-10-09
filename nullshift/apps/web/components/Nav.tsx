@@ -20,15 +20,17 @@ import styles from "./Nav.module.css";
 const LINKS = visibleLinks([
   { label: "What we build", href: "/#platform-features" },
   { label: "Client stories", href: "/client-stories" },
+  { label: "Products", href: "/products" },
   { label: "Pricing", href: "/pricing" },
   { label: "About", href: "/about" },
   { label: "FAQ", href: "/faq" },
+  { label: "Partners", href: "/partners" },
 ]).map((l, i) => ({ ...l, n: String(i + 1).padStart(2, "0") }));
 
-const SOCIALS = [
+const SOCIALS: { n: string; label: string; href?: string }[] = [
   { n: "1.0", label: "LinkedIn" },
   { n: "1.1", label: "X / Twitter" },
-  { n: "1.2", label: "Instagram" },
+  { n: "1.2", label: "Instagram", href: "https://www.instagram.com/nullshift.dev/" },
   { n: "1.3", label: "GitHub" },
 ];
 
@@ -609,7 +611,18 @@ export function Nav({ tone = "dark" }: { tone?: "dark" | "cream" } = {}) {
                   <span style={{ color: "rgba(10,10,10,0.3)", marginRight: 12 }}>
                     {s.n}
                   </span>
-                  {s.label}
+                  {"href" in s && s.href ? (
+                    <a
+                      href={s.href}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      style={{ color: "inherit", textDecoration: "none" }}
+                    >
+                      {s.label}
+                    </a>
+                  ) : (
+                    s.label
+                  )}
                 </span>
               ))}
             </div>

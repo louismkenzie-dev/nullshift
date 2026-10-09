@@ -5,6 +5,7 @@ import { mapStripeSubStatus } from "@/lib/careSubscription";
 import { carePlan } from "@/lib/carePlans";
 import { syncInvoicePaymentToXero } from "@/lib/xeroSync";
 import { upsertApplicationFee } from "@/lib/billing/connectFeeSync";
+import { syncProductSubscription } from "@/lib/products/billing";
 
 /**
  * Stripe webhook — the single authoritative consumer (point the Stripe dashboard
@@ -103,6 +104,12 @@ export async function POST(req: Request) {
           typeof session.subscription === "string"
             ? session.subscription
             : (session.subscription?.id ?? null);
+        // Self-serve product checkout (metadata.product) → product_subscriptions.
+        // Handled first so a product sign-up can never be mistaken for a care plan.
+        if (session.mode === "subscription" && subId && session.metadata?.product) {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          if (await syncProductSubscription(sub)) break;
+        }
         if (session.mode === "subscription" && subId && tenantId) {
           const { data: pending } = await supabase
             .from("subscriptions")
@@ -142,6 +149,7 @@ export async function POST(req: Request) {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
+        if (await syncProductSubscription(sub)) break;
         await supabase
           .from("subscriptions")
           .update({ status: mapStripeSubStatus(sub.status) })
@@ -150,6 +158,7 @@ export async function POST(req: Request) {
       }
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
+        if (await syncProductSubscription(sub)) break;
         await supabase
           .from("subscriptions")
           .update({ status: "canceled" })

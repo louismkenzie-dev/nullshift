@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
     "@nullshift/billing",
     "@nullshift/config",
     "@nullshift/content",
+    "@nullshift/agents",
   ],
   images: {
     remotePatterns: [

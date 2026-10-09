@@ -2,14 +2,14 @@
 
 import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { PORTAL_AREA } from "@/components/auth/areas";
+import { APP_AREA } from "@/components/auth/areas";
 
-export default function PortalLoginPage() {
+export default function AppLoginPage() {
   return (
     <Suspense
       fallback={<div style={{ minHeight: "100vh", background: "var(--k-bg)" }} />}
     >
-      <LoginForm area={PORTAL_AREA} />
+      <LoginForm area={APP_AREA} />
     </Suspense>
   );
 }

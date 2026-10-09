@@ -47,6 +47,18 @@ export async function proxy(request: NextRequest) {
   const isAdminArea = pathname.startsWith("/admin");
   const isLogin = pathname === "/admin/login";
 
+  // Self-serve product console: everything under /app except its own auth
+  // pages needs a session. Authorisation inside is enforced server-side by
+  // requireAppSession + RLS; this is just the front door.
+  const isAppArea = pathname.startsWith("/app");
+  const isAppAuth = /^\/app\/(login|signup|forgot|reset|signout)(\/|$)/.test(pathname);
+  if (isAppArea && !isAppAuth && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/app/login";
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
   // Not logged in → bounce to login (except the login page itself)
   if (isAdminArea && !isLogin && !user) {
     const url = request.nextUrl.clone();
@@ -70,5 +82,5 @@ export async function proxy(request: NextRequest) {
 // refresh the Supabase session on both /admin and /portal so Server Components
 // see a fresh user (portal authorisation itself is enforced by RLS + its layout).
 export const config = {
-  matcher: ["/admin/:path*", "/portal/:path*"],
+  matcher: ["/admin/:path*", "/portal/:path*", "/app/:path*"],
 };

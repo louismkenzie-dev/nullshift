@@ -21,5 +21,19 @@ export async function resolveDestination(
   } catch {
     /* fall through — treat as non-staff */
   }
-  return next || "/portal";
+  if (next) return next;
+  // A self-serve product customer's home is the console, not the bespoke
+  // portal. Members can read their own tenant row (tenants_select), so this
+  // is a cheap, RLS-safe check.
+  try {
+    const { data: tenants } = await supabase
+      .from("tenants")
+      .select("self_serve")
+      .eq("self_serve", true)
+      .limit(1);
+    if (tenants && tenants.length > 0) return "/app";
+  } catch {
+    /* fall through */
+  }
+  return "/portal";
 }

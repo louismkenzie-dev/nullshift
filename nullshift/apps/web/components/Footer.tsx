@@ -16,6 +16,7 @@ const RAW_COLUMNS: { title: string; links: { label: string; href: string }[] }[]
     links: [
       { label: "What we build", href: "/#platform-features" },
       { label: "Client stories", href: "/client-stories" },
+      { label: "Products", href: "/products" },
       { label: "Pricing", href: "/pricing" },
     ],
   },
@@ -25,7 +26,8 @@ const RAW_COLUMNS: { title: string; links: { label: string; href: string }[] }[]
       { label: "About", href: "/about" },
       { label: "FAQ", href: "/faq" },
       { label: "Brand", href: "/brand" },
-      { label: "Book a call", href: "/book" },
+      { label: "Book a call", href: "/book/call" },
+      { label: "Partner programme", href: "/partners" },
     ],
   },
   {

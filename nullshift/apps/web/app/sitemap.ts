@@ -13,10 +13,18 @@ const ALL_ROUTES = [
   "/pricing",
   "/start",
   "/client-stories",
+  "/products",
+  "/products/quote",
+  "/products/legal",
+  "/products/watch",
+  "/products/plans",
+  "/products/studio",
   "/faq",
   "/brand",
   "/book",
+  "/partners",
   "/legal",
+  "/legal/partner-agreement",
 ];
 
 const ROUTES = visibleRoutes(ALL_ROUTES);
