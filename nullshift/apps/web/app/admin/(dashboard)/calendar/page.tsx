@@ -15,7 +15,49 @@ type Call = {
   duration_min: number;
   status: string;
   tenants: { name: string } | null;
+  /** Website bookings (0070) are folded into the same shape, tagged by kind. */
+  kind?: "client" | "partner";
+  href?: string;
+  subtitle?: string | null;
 };
+
+type BookingRow = {
+  id: string;
+  kind: "client" | "partner";
+  name: string;
+  company: string | null;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+};
+
+const londonPartsFmt = new Intl.DateTimeFormat("en-GB", {
+  timeZone: LONDON_TZ,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+/** A bookings row rendered like a legacy call (London wall-clock). */
+function bookingToCall(b: BookingRow): Call {
+  const p: Record<string, string> = {};
+  for (const part of londonPartsFmt.formatToParts(new Date(b.starts_at)))
+    p[part.type] = part.value;
+  return {
+    id: b.id,
+    tenant_id: "",
+    call_date: `${p.year}-${p.month}-${p.day}`,
+    call_time: `${p.hour}:${p.minute}`,
+    duration_min: Math.round((Date.parse(b.ends_at) - Date.parse(b.starts_at)) / 60000),
+    status: b.status,
+    tenants: { name: b.company ? `${b.name} · ${b.company}` : b.name },
+    kind: b.kind,
+    href: "/admin/calendar/availability",
+    subtitle: b.kind === "partner" ? "Partner" : "Client",
+  };
+}
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const dateKey = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
@@ -52,13 +94,28 @@ export default function CalendarPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("calls")
-      .select("*, tenants(name)")
-      .eq("status", "confirmed")
-      .order("call_date")
-      .order("call_time");
-    setCalls((data as unknown as Call[]) ?? []);
+    const [legacy, booked] = await Promise.all([
+      supabase
+        .from("calls")
+        .select("*, tenants(name)")
+        .eq("status", "confirmed")
+        .order("call_date")
+        .order("call_time"),
+      supabase
+        .from("bookings")
+        .select("id,kind,name,company,starts_at,ends_at,status")
+        .eq("status", "confirmed")
+        .order("starts_at"),
+    ]);
+    const merged = [
+      ...((legacy.data as unknown as Call[]) ?? []),
+      ...((booked.data as unknown as BookingRow[]) ?? []).map(bookingToCall),
+    ].sort((a, b) =>
+      a.call_date === b.call_date
+        ? a.call_time.localeCompare(b.call_time)
+        : a.call_date.localeCompare(b.call_date)
+    );
+    setCalls(merged);
     setLoading(false);
   }, [supabase]);
 
@@ -120,6 +177,25 @@ export default function CalendarPage() {
   }
 
   const cellName = (c: Call) => c.tenants?.name || "Client";
+  const callHref = (c: Call) => c.href ?? `/admin/clients/${c.tenant_id}/account`;
+  const tag = (c: Call) =>
+    c.kind ? (
+      <span
+        style={{
+          fontFamily: T.mono,
+          fontSize: 8,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          padding: "1px 5px",
+          marginLeft: 6,
+          border: "1px solid var(--k-border)",
+          color: c.kind === "partner" ? "var(--k-fg)" : "var(--k-muted)",
+          verticalAlign: "middle",
+        }}
+      >
+        {c.kind === "partner" ? "Partner" : "Client"}
+      </span>
+    ) : null;
   const navBtn: React.CSSProperties = {
     width: 32,
     height: 32,
@@ -140,17 +216,33 @@ export default function CalendarPage() {
         label="Schedule"
         title="Call calendar"
         actions={
-          <span
-            style={{
-              fontFamily: T.mono,
-              fontSize: "0.7rem",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "var(--k-muted)",
-            }}
-          >
-            <span className="k-livedot" style={{ marginRight: 8 }} />
-            {upcoming.length} upcoming · London time
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 14 }}>
+            <span
+              style={{
+                fontFamily: T.mono,
+                fontSize: "0.7rem",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--k-muted)",
+              }}
+            >
+              <span className="k-livedot" style={{ marginRight: 8 }} />
+              {upcoming.length} upcoming · London time
+            </span>
+            <Link
+              href="/admin/calendar/availability"
+              style={{
+                ...navBtn,
+                width: "auto",
+                padding: "0 12px",
+                fontSize: 10,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                textDecoration: "none",
+              }}
+            >
+              Availability
+            </Link>
           </span>
         }
       />
@@ -302,7 +394,7 @@ export default function CalendarPage() {
                       {dayCalls.map((call) => (
                         <Link
                           key={call.id}
-                          href={`/admin/clients/${call.tenant_id}/account`}
+                          href={callHref(call)}
                           className="block transition-opacity hover:opacity-80 px-1.5 py-1"
                           style={{
                             background: "var(--k-accent-soft, rgba(16,185,129,0.14))",
@@ -319,6 +411,7 @@ export default function CalendarPage() {
                             }}
                           >
                             {cellName(call)}
+                            {tag(call)}
                           </div>
                           <div
                             style={{
@@ -380,7 +473,7 @@ export default function CalendarPage() {
                 {upcoming.map((c, i) => (
                   <Link
                     key={c.id}
-                    href={`/admin/clients/${c.tenant_id}/account`}
+                    href={callHref(c)}
                     className="block transition-opacity hover:opacity-80 py-3"
                     style={{ borderTop: i ? "1px solid var(--k-border)" : "none" }}
                   >
@@ -406,6 +499,7 @@ export default function CalendarPage() {
                       >
                         {cellName(c)}
                       </span>
+                      {tag(c)}
                     </div>
                     <div
                       style={{

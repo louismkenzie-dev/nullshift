@@ -26,6 +26,8 @@ import {
   Sparkles,
   Sun,
   Tag,
+  Megaphone,
+  Share2,
   Users,
   Wallet,
   Workflow,
@@ -55,6 +57,8 @@ const GROUPS: Group[] = [
       { label: "Clients", href: "/admin/clients", icon: Users },
       { label: "Sales & Quotes", href: "/admin/sales", icon: Tag },
       { label: "Pipeline", href: "/admin/pipeline", icon: Sparkles },
+      { label: "Outreach", href: "/admin/outreach", icon: Megaphone },
+      { label: "Social", href: "/admin/social", icon: Share2 },
     ],
   },
   {

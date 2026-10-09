@@ -64,6 +64,12 @@ const DOCS = [
     title: "Data-protection complaint",
     blurb: "Raise a complaint about how we have handled personal information.",
   },
+  {
+    href: legalConfig.routes.partnerAgreement,
+    title: "Partner Programme Agreement",
+    blurb:
+      "Referral and white-label terms for agencies that introduce or resell Nullshift builds. Draft for solicitor review.",
+  },
 ];
 
 export default function LegalCentre() {

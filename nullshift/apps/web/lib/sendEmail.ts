@@ -1,5 +1,7 @@
 import { emailPurpose, type EmailPurpose } from "@nullshift/content/legal/email";
 
+export type EmailAttachment = { filename: string; content: string; contentType?: string };
+
 /**
  * Thin Resend wrapper. Best-effort: if RESEND_API_KEY is unset (e.g. local dev)
  * it logs and no-ops rather than throwing, so the calling server action never
@@ -19,6 +21,8 @@ export async function sendEmail(opts: {
   replyTo?: string;
   /** Required for marketing. Ignored for everything else. */
   unsubscribeUrl?: string;
+  /** Small text attachments only (e.g. an .ics invite). */
+  attachments?: EmailAttachment[];
 }): Promise<boolean> {
   const rules = emailPurpose(opts.purpose);
   const recipients = Array.isArray(opts.to) ? opts.to : [opts.to];
@@ -78,6 +82,7 @@ async function deliver(opts: {
   text?: string;
   replyTo?: string;
   unsubscribeUrl?: string;
+  attachments?: EmailAttachment[];
 }): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -98,6 +103,11 @@ async function deliver(opts: {
       html: opts.html,
       text: opts.text,
       replyTo: opts.replyTo,
+      attachments: opts.attachments?.map((a) => ({
+        filename: a.filename,
+        content: Buffer.from(a.content, "utf8"),
+        contentType: a.contentType,
+      })),
       headers: opts.unsubscribeUrl
         ? {
             "List-Unsubscribe": `<${opts.unsubscribeUrl}>`,

@@ -90,7 +90,9 @@ describe("project enquiries", () => {
     "//evil.example/a",
     "team/event?redirect=bad",
   ])("rejects unsafe calendar links %s", (value) =>
-    expect(projectCalendarUrl(value)).toBeNull()
+    // Anything that is not a Cal.com event path falls back to the in-house
+    // picker — never to an external or attacker-controlled URL.
+    expect(projectCalendarUrl(value)).toBe("/book/call")
   );
   it("accepts configured Cal.com event paths", () => {
     expect(projectCalendarUrl("team/event")).toBe("https://cal.com/team/event");

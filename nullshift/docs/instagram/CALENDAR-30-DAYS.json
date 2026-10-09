@@ -1,0 +1,502 @@
+[
+  {
+    "day": 1,
+    "date": "2026-10-12",
+    "kind": "feed",
+    "pillar": "Behind the build / studio life",
+    "caption": "Nullshift is a software studio. This is what we do.\n\nWe design and build bespoke business systems for UK companies — websites, booking and payments, parent and client portals, staff apps, CRMs and automation.\n\nBuilt around how you actually work. Live in weeks. Owned outright by you — the code, the data, every account. Then we run it on a monthly plan so you can get on with the business.\n\nRecent work: a multi-venue booking system for The Dance Exclusive, a county player pathway for Suffolk Tennis LTA, and a practice site with an AI companion for NewFuture Therapy.\n\nWe will be showing the work here. Start with a free plan for your own business at nullshift.co.uk/start — link in bio.\n\n.\n.\n#softwarestudio #ukbusiness #bespokesoftware #customsoftware #webdevelopment #bookingsystem #businessautomation #smallbusinessuk #ukstartups #digitaltransformation #britishbusiness #ukagency",
+    "first_comment": "If you are an agency or consultant whose clients keep asking for software you do not build, we run a partner programme — details coming this month, or email louis@nullshift.co.uk.",
+    "media_brief": "Single image, 4:5. Background: apps/web/public/media/brand/nullshift-billboard-2400.webp cropped to 1080x1350. Overlay the wordmark (apps/web/public/logos/nullshift-wordmark.svg, white) centred, and under it in mono caps: 'SOFTWARE STUDIO · UK'. Nothing else on the image.",
+    "scheduled_at": "2026-10-12T08:00:00+01:00"
+  },
+  {
+    "day": 1,
+    "date": "2026-10-12",
+    "kind": "story",
+    "pillar": "Behind the build / studio life",
+    "caption": "Frame 1 text: 'We are now on Instagram.' Frame 2 text: 'Bespoke software. Built in weeks. Yours to own. Run by us.' Link sticker: nullshift.co.uk/start?utm_source=instagram&utm_medium=story — label 'Get a free plan'.",
+    "first_comment": "",
+    "media_brief": "Frame 1: apps/web/public/nullshift-logo-opener.mp4 trimmed to 5s, 9:16. Frame 2: still from apps/web/public/media/hero/nullshift-system-opens-portrait-poster.jpg with the text and link sticker.",
+    "scheduled_at": "2026-10-12T08:30:00+01:00"
+  },
+  {
+    "day": 1,
+    "date": "2026-10-12",
+    "kind": "story",
+    "pillar": "Client stories (demos)",
+    "caption": "Text: 'Three clients. Three systems they own. Swipe up on each this week.' Then a 3-frame set: Suffolk Tennis LTA / The Dance Exclusive / NewFuture Therapy, each with its logo and one line. Link sticker on each: nullshift.co.uk/client-stories?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "Three 9:16 cards on #0B0F0E. Logos: apps/web/public/clients/suffolk-tennis-logo.png (dark plate), apps/web/public/clients/the-dance-exclusive-logo-dark.png, apps/web/public/clients/newfuture-therapy-logo-dark.png. Save this set to the 'Clients' highlight.",
+    "scheduled_at": "2026-10-12T20:30:00+01:00"
+  },
+  {
+    "day": 2,
+    "date": "2026-10-13",
+    "kind": "reel",
+    "pillar": "Build reveals",
+    "caption": "We build it. We run it. We grow it.\n\nThat is the whole studio in one line.\n\nBespoke systems for businesses that have outgrown spreadsheets and off-the-shelf tools. Designed around your operation, live in weeks, and owned outright by you.\n\nThen we keep it running — hosting, monitoring, maintenance and support on a monthly plan from £149.\n\nFree plan for your business: nullshift.co.uk/start (link in bio).\n\n.\n.\n#softwaredevelopment #webdesign #productdesign #buildinpublic #techstartup #customsoftwaredevelopment #webapp #devstudio #nextjs #supabase #stripe #softwarestudio #ukbusiness",
+    "first_comment": "Pinned post 1 of 3. Scroll the grid for the work.",
+    "media_brief": "REEL 01 in REELS-SCRIPTS.md. apps/web/public/nullshift-logo-opener.mp4 (0–3s) then apps/web/public/media/hero/nullshift-system-opens-portrait.mp4 (hero film, portrait, scrubbed at natural speed, ~15s). On-screen text in three beats: 'We build it.' / 'We run it.' / 'We grow it.' End card: wordmark + nullshift.co.uk/start. Pin to profile.",
+    "scheduled_at": "2026-10-13T12:30:00+01:00"
+  },
+  {
+    "day": 2,
+    "date": "2026-10-13",
+    "kind": "story",
+    "pillar": "Build reveals",
+    "caption": "Share the day's reel to story. Text: 'The studio in 20 seconds.' No link — tap-through to the reel.",
+    "first_comment": "",
+    "media_brief": "Native 'Add reel to your story' share of the day-2 reel.",
+    "scheduled_at": "2026-10-13T13:00:00+01:00"
+  },
+  {
+    "day": 3,
+    "date": "2026-10-14",
+    "kind": "carousel",
+    "pillar": "Client stories (demos)",
+    "caption": "A county tennis pathway, off a prototype and onto its own stack.\n\nSuffolk Tennis LTA had a working prototype hosted on a platform the county had no control over. No ownership of the code, the data or the roadmap.\n\nWe built the whole pathway on their own stack: venues and coaches, news and events, a parent hub with schedules, goals and player reports, a coach app, QR ticketing at the gate and Stripe payments straight to the LTA — all migrated onto their own Supabase.\n\n1,340 sessions scheduled. 9 venues. 6 staff. Tickets scanned at the gate, payments to the LTA.\n\nSwipe for the screens. Full story and a live demo at nullshift.co.uk/client-stories.\n\n.\n.\n#tennisclub #clientportal #onlinebooking #bespokesoftware #ukbusiness #softwarestudio #customsoftware #webapp #supabase #stripe #sportsclub #businessowner #studiolife",
+    "first_comment": "Pinned post 2 of 3. The usage numbers come from the client's own database — we only quote what we can stand behind.",
+    "media_brief": "6 slides, 4:5. 1) apps/web/public/media/client-stories/suffolk-tennis/portrait-iphone.jpg with title 'Suffolk Tennis LTA · the whole pathway, on their own stack'. 2) parent-home.webp — 'Parent hub'. 3) parent-report.webp — 'Player reports'. 4) programme.webp — 'Programme & schedules'. 5) ledger.webp — 'Payments, straight to the LTA'. 6) stats card on #0B0F0E: 1,340 sessions · 9 venues · 6 staff · 24 registered parents, with apps/web/public/media/client-stories/suffolk-tennis/suffolk-logo.webp. Pin to profile.",
+    "scheduled_at": "2026-10-14T08:00:00+01:00"
+  },
+  {
+    "day": 3,
+    "date": "2026-10-14",
+    "kind": "story",
+    "pillar": "Plain-English explainers",
+    "caption": "Poll sticker over a dark card. Text: 'Quick one — how do you take bookings today?' Options: 'Phone / DMs' vs 'A system'. Follow-up frame tomorrow with the result.",
+    "first_comment": "",
+    "media_brief": "Card on #0B0F0E with the poll sticker. Reply to every voter who picks 'Phone / DMs' with a DM pointing to nullshift.co.uk/start.",
+    "scheduled_at": "2026-10-14T13:00:00+01:00"
+  },
+  {
+    "day": 4,
+    "date": "2026-10-15",
+    "kind": "reel",
+    "pillar": "Build reveals",
+    "caption": "What a parent sees at Suffolk Tennis now.\n\nSchedules, goals and the player report from their coach — on their phone, without anyone at the county typing it up twice.\n\nThis is the parent hub we built for Suffolk Tennis LTA. Coach app on the other side, QR ticketing at the gate, Stripe payments to the LTA. Their database, their repo.\n\nMore at nullshift.co.uk/client-stories.\n\n.\n.\n#webapp #appdevelopment #productdesign #uxdesign #customsoftwaredevelopment #softwaredevelopment #clientportal #tennisclub #devstudio #buildinpublic #supabase #softwarestudio",
+    "first_comment": "Want a hub like this for your club, school or practice? Free plan at nullshift.co.uk/start.",
+    "media_brief": "REEL 02 in REELS-SCRIPTS.md. Stitch apps/web/public/media/client-stories/suffolk-tennis/parent-home.mp4 → parent-report.mp4 → progress.mp4 inside a phone frame on #0B0F0E, 9:16, 20–25s. Captions as on-screen text; end card with suffolk-logo.webp and nullshift.co.uk/client-stories.",
+    "scheduled_at": "2026-10-15T17:30:00+01:00"
+  },
+  {
+    "day": 4,
+    "date": "2026-10-15",
+    "kind": "story",
+    "pillar": "Plain-English explainers",
+    "caption": "Poll result frame. Text: 'X% of you still take bookings by phone and DMs. Fair — that is where most of our clients started.' Link sticker: nullshift.co.uk/client-stories?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "Screenshot the poll result from the day-3 story and overlay the text. Then share the day-4 reel to story.",
+    "scheduled_at": "2026-10-15T08:00:00+01:00"
+  },
+  {
+    "day": 5,
+    "date": "2026-10-16",
+    "kind": "feed",
+    "pillar": "Plain-English explainers",
+    "caption": "'You own it.' Here is what that actually means.\n\nEvery account in your name — hosting, domain, database, email, AI.\nThe full source code, in your repository.\nYour data, exportable any time, in a standard format.\nPayments through your own Stripe — you keep the merchant relationship.\nA signed DPA before anything goes live.\n\nAnd the monthly plan? That is us running it — hosting, monitoring, backups, fixes, support. Cancel any month and the system is still yours.\n\nSave this for the next time you are comparing quotes.\n\n.\n.\n#ukbusiness #smallbusinessuk #bespokesoftware #customsoftware #softwarestudio #businessowner #smallbusinesstips #websitedesignuk #digitaltransformation #entrepreneuruk #ukagency #businessgrowthuk",
+    "first_comment": "This is the same list on our pricing page — nullshift.co.uk/pricing — so there is nothing here we would not put in writing.",
+    "media_brief": "Single text card, 4:5, on apps/web/public/media/brand/nullshift-billboard-1600.webp darkened to ~30%. Headline 'You own it. Meaning:' then the five lines as a mono list with emerald bullet marks. Wordmark bottom-left.",
+    "scheduled_at": "2026-10-16T08:00:00+01:00"
+  },
+  {
+    "day": 5,
+    "date": "2026-10-16",
+    "kind": "story",
+    "pillar": "Estimator teasers (/start)",
+    "caption": "Friday link frame. Text: 'Free plan for your business — answer a few questions, get a tailored plan and a live mockup. No call needed.' Link sticker: nullshift.co.uk/start?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "10s phone screen-record of nullshift.co.uk/start: the first two questions being answered. 9:16. Link sticker bottom third.",
+    "scheduled_at": "2026-10-16T13:00:00+01:00"
+  },
+  {
+    "day": 6,
+    "date": "2026-10-17",
+    "kind": "carousel",
+    "pillar": "Plain-English explainers",
+    "caption": "A booking system is not a calendar. Here is what it does at 11pm.\n\n1. Shows real availability, by venue, class or staff member.\n2. Takes the booking and the payment in one go — into your Stripe account.\n3. Sends the confirmation and the reminder without anyone typing it.\n4. Updates the register, the schedule and the records at the same time.\n5. Lets the customer change or cancel under rules you set.\n6. Gives your team one screen in the morning instead of a pile of messages.\n\nThat is what The Dance Exclusive runs on across its Essex venues: 235 bookings, 139 active parents in a month, and no member of staff in the loop for a single one of them.\n\nFree plan for yours: nullshift.co.uk/start (link in bio).\n\n.\n.\n#bookingsystem #onlinebooking #smallbusinessuk #ukbusiness #businessautomation #smallbusinesstips #danceschool #customsoftware #bespokesoftware #softwarestudio #businessowner #entrepreneuruk #clientportal",
+    "first_comment": "The '235 bookings' and '139 active parents' figures are 30-day counts read from the client's own database on 11 September 2026.",
+    "media_brief": "7 slides, 4:5, dark cards. Slide 1: headline. Slides 2–7: one numbered point each, large type, emerald number. Slide 7 adds a small crop of apps/web/public/clients/the-dance-exclusive-site.png as the visual.",
+    "scheduled_at": "2026-10-17T10:00:00+01:00"
+  },
+  {
+    "day": 7,
+    "date": "2026-10-18",
+    "kind": "reel",
+    "pillar": "Behind the build / studio life",
+    "caption": "Meet the founder.\n\nLouis McKenzie started Nullshift to build the kind of software small and mid-sized businesses are usually told they cannot afford — bespoke, properly engineered, and theirs to keep.\n\nThe studio now runs systems for a dance school across Essex, a county tennis pathway and a counselling practice, and we are building more.\n\nQuestions for Louis? Drop them below — we will answer the best ones in a reel.\n\n— Louis, founder\n\n.\n.\n#founder #studiolife #softwarestudio #ukstartups #buildinpublic #ukbusiness #entrepreneuruk #techstartup #softwaredevelopment #businessowner #startuplife #devstudio",
+    "first_comment": "If you would rather talk than type: nullshift.co.uk/book.",
+    "media_brief": "REEL 07 (founder cameo 1) in REELS-SCRIPTS.md. Talking head, phone on a tripod, natural light, 25–30s, auto-captions on. Cover image: apps/web/public/louis-mckenzie.jpg cropped 9:16 with 'Meet the founder' text.",
+    "scheduled_at": "2026-10-18T19:00:00+01:00"
+  },
+  {
+    "day": 7,
+    "date": "2026-10-18",
+    "kind": "story",
+    "pillar": "Behind the build / studio life",
+    "caption": "Question box sticker. Text: 'Ask the studio anything — building, pricing, ownership, how long it takes.' Answers go in a reel next week.",
+    "first_comment": "",
+    "media_brief": "apps/web/public/louis-mckenzie.jpg cropped 9:16, darkened bottom third, question sticker centred.",
+    "scheduled_at": "2026-10-18T20:30:00+01:00"
+  },
+  {
+    "day": 8,
+    "date": "2026-10-19",
+    "kind": "feed",
+    "pillar": "Client stories (demos)",
+    "caption": "Across Essex. One booking system. Zero spreadsheets.\n\nThe Dance Exclusive runs classes, holiday camps, workshops and parties across multiple venues. Until this summer it was booked and tracked by hand, with staff chasing parents for payment and paperwork.\n\nWe built three portals on one database: a parent portal for booking and paying, a staff portal for registers, schedules and documents, and an admin for everything else — on their own Supabase, taking payment through the studio's own Stripe account.\n\nParents book. Staff teach. Two scheduled jobs tidy the data overnight.\n\nLive since August, on a care plan with us since September. Full story: nullshift.co.uk/client-stories.\n\n.\n.\n#danceschool #bookingsystem #clientportal #onlinebooking #ukbusiness #smallbusinessuk #bespokesoftware #customsoftware #softwarestudio #businessautomation #stripe #supabase #essex",
+    "first_comment": "582 class sessions on the system in 30 days. Numbers from the client's own database, not a slide deck.",
+    "media_brief": "Single image 4:5: apps/web/public/clients/the-dance-exclusive-site.png inside a laptop/browser frame on #0B0F0E, apps/web/public/clients/the-dance-exclusive-logo-dark.png bottom-left, small 'Client story' tag top-right.",
+    "scheduled_at": "2026-10-19T08:00:00+01:00"
+  },
+  {
+    "day": 8,
+    "date": "2026-10-19",
+    "kind": "story",
+    "pillar": "Client stories (demos)",
+    "caption": "Share the day-8 post to story. Text: 'Three portals. One database. Live demo on the site.' Link sticker: nullshift.co.uk/client-stories?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "Native share of the post with link sticker.",
+    "scheduled_at": "2026-10-19T13:00:00+01:00"
+  },
+  {
+    "day": 9,
+    "date": "2026-10-20",
+    "kind": "reel",
+    "pillar": "Estimator teasers (/start)",
+    "caption": "We built a tool that plans your system before you ever talk to us.\n\nGo to nullshift.co.uk/start. Answer a few questions about your business and what is slowing it down. The Nullshift Agent drafts a tailored plan — and a live mockup of your system — in minutes. Free, no call required.\n\nIf you like it, the team takes it from there. If you don't, you have a plan anyway.\n\nLink in bio.\n\n.\n.\n#customsoftware #bespokesoftware #ukbusiness #smallbusinessuk #businessautomation #softwarestudio #webapp #productdesign #techstartup #startuplife #digitaltransformation #smallbusinesstips",
+    "first_comment": "Everything you enter stays with us and is covered by our privacy policy at nullshift.co.uk/legal.",
+    "media_brief": "REEL 10 (how it works 1) in REELS-SCRIPTS.md. Phone screen-record of nullshift.co.uk/start from the first question through to the plan and mockup appearing on /plan, sped 1.5x, 30–35s, use a fictional test business ('a two-site physio clinic') — never a real client's details.",
+    "scheduled_at": "2026-10-20T12:30:00+01:00"
+  },
+  {
+    "day": 10,
+    "date": "2026-10-21",
+    "kind": "carousel",
+    "pillar": "Plain-English explainers",
+    "caption": "What the monthly plan actually buys. Core, Pro, Max.\n\nOne build fee to own your system outright. Then a monthly plan that keeps it running:\n\nCore — from £149/mo. Managed hosting, deployment, domain and SSL. Dedicated production database. Daily backups, monitoring, fixes against the signed-off scope. Support within 2 business days.\n\nPro — from £249/mo. Everything in Core, plus managed AI and email infrastructure, enhanced monitoring of integrations, and priority support within 1 business day.\n\nMax — from £399/mo. Everything in Pro, plus a named technical owner, 4-hour response, a monthly platform health review, a quarterly roadmap review, and feature scoping with no consultancy fee.\n\nNo per-seat fees. Cancel any month and keep the whole system. New features are always quoted as fixed-price projects, so the plan never surprises you.\n\nFull detail: nullshift.co.uk/pricing.\n\n.\n.\n#ukbusiness #smallbusinessuk #bespokesoftware #softwarestudio #customsoftware #smallbusinesstips #businessowner #websitedesignuk #ukagency #digitaltransformation #entrepreneuruk #businessgrowthuk",
+    "first_comment": "Pinned post 3 of 3. Prices are the base 'from' figures; larger operations are scale-banded, and every quote is in writing before you commit.",
+    "media_brief": "5 slides, 4:5, dark cards. 1) 'What the monthly plan actually buys'. 2) Core £149 with 4 bullets. 3) Pro £249 with 3 bullets. 4) Max £399 with 4 bullets. 5) 'No per-seat fees · cancel any month · you keep the system' + nullshift.co.uk/pricing. Pin to profile.",
+    "scheduled_at": "2026-10-21T08:00:00+01:00"
+  },
+  {
+    "day": 10,
+    "date": "2026-10-21",
+    "kind": "story",
+    "pillar": "Plain-English explainers",
+    "caption": "Quiz sticker. Text: 'What does Core cover?' Options: 'Hosting, backups, monitoring, fixes' (correct) / 'Unlimited new features' / 'A developer on demand'. Follow-up frame: 'New features are always quoted separately — that is what keeps the plan predictable.'",
+    "first_comment": "",
+    "media_brief": "Dark card with quiz sticker; second frame shares slide 2 of the day-10 carousel with link sticker to nullshift.co.uk/pricing?utm_source=instagram&utm_medium=story.",
+    "scheduled_at": "2026-10-21T13:00:00+01:00"
+  },
+  {
+    "day": 11,
+    "date": "2026-10-22",
+    "kind": "reel",
+    "pillar": "Client stories (demos)",
+    "caption": "Laura, co-founder of NewFuture Therapy, on working with the studio.\n\nNewFuture Therapy is a two-therapist counselling practice in Wakefield. They needed a premium site, a safe way to publish and teach, and an AI companion that would follow their rules rather than a vendor's.\n\nNine weeks from brief to production. Their repo, their database, their domain.\n\nFull story and the live Reflections demo: nullshift.co.uk/client-stories.\n\n.\n.\n#therapypractice #clientportal #ukbusiness #smallbusinessuk #softwarestudio #bespokesoftware #webdesign #customsoftware #wakefield #businessowner #studiolife #founder",
+    "first_comment": "Thank you, Laura and Esther. The companion's crisis screen is fixed in the architecture, not in a prompt — no conversation can rewrite it.",
+    "media_brief": "REEL 05 in REELS-SCRIPTS.md. Download the testimonial MP4 from Mux (playback id hevvtK01oksR8HWcs5fJAjbICgIoPCHlW3zY89ZywMRA) and its captions track; cut the strongest 25–30s, reframe to 9:16 with the NewFuture logo (apps/web/public/clients/newfuture-therapy-logo-dark.png) lower-third. Get Laura's OK on the cut before posting.",
+    "scheduled_at": "2026-10-22T17:30:00+01:00"
+  },
+  {
+    "day": 11,
+    "date": "2026-10-22",
+    "kind": "story",
+    "pillar": "Client stories (demos)",
+    "caption": "Share the testimonial reel to story. Text: 'In their words.' Link sticker: nullshift.co.uk/client-stories?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "Native share of the day-11 reel.",
+    "scheduled_at": "2026-10-22T20:30:00+01:00"
+  },
+  {
+    "day": 12,
+    "date": "2026-10-23",
+    "kind": "feed",
+    "pillar": "Behind the build / studio life",
+    "caption": "What a build looks like from the inside.\n\nWeek 1: we map how the business actually runs and write it down — who books, who pays, who needs to see what. You sign that off before a line is built.\n\nWeeks 2–3: the team builds on a modern, owned stack — Next.js on Vercel, a Supabase database in your name, payments through your Stripe. Your existing data migrated across, no downtime.\n\nWeek 4: DPA signed, accounts handed over, go-live. Then the monthly plan picks it up.\n\nTwo to four weeks is the normal range. The big ones — like NewFuture Therapy's nine weeks — are quoted as such up front.\n\n.\n.\n#studiolife #buildinpublic #softwaredevelopment #softwarestudio #nextjs #supabase #stripe #devstudio #ukstartups #webdevelopment #customsoftwaredevelopment #techstartup",
+    "first_comment": "Curious what yours would take? nullshift.co.uk/start gives you a plan in minutes.",
+    "media_brief": "Single image 4:5: still from apps/web/public/media/hero/nullshift-brand-study.jpg (or a phone photo of Louis's desk/screens with no client data visible). Overlay 'Week 1 · Weeks 2–3 · Week 4' as three mono lines at the bottom.",
+    "scheduled_at": "2026-10-23T08:00:00+01:00"
+  },
+  {
+    "day": 12,
+    "date": "2026-10-23",
+    "kind": "story",
+    "pillar": "Estimator teasers (/start)",
+    "caption": "Friday link frame. Text: 'Weekend job: get a plan for your system. Takes a few minutes, costs nothing.' Link sticker: nullshift.co.uk/start?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "Still from apps/web/public/media/capabilities/nullshift-capabilities-portrait-poster.jpg with text and link sticker.",
+    "scheduled_at": "2026-10-23T13:00:00+01:00"
+  },
+  {
+    "day": 13,
+    "date": "2026-10-24",
+    "kind": "carousel",
+    "pillar": "Partner programme (agencies)",
+    "caption": "Agencies: your clients keep asking for the thing you do not build.\n\nA booking system. A client portal. A CRM that talks to the website. If you are a marketing, SEO or design agency, or a growth consultant, you have probably passed that work on — or watched it go elsewhere.\n\nTwo ways to work with Nullshift:\n\nReferral partner. You introduce the client, we sell, build and run it under our brand. You earn 10% of the build fee, paid within 14 days of the client's build payment clearing. Non-exclusive.\n\nWhite-label partner. You sell under your own brand at your own price. You buy builds and monthly plans from us at 25% off list, and we run everything — hosting, support, delivery, maintenance — invisibly. No minimum volume. 30 days' notice to end it, and live client systems are never switched off.\n\nAll work is subject to our acceptance review. Interested? Email louis@nullshift.co.uk or book at nullshift.co.uk/book.\n\n.\n.\n#agencylife #marketingagency #whitelabel #agencypartner #growthconsultant #ukagency #seoagency #designstudio #softwarestudio #bespokesoftware #customsoftware #agencyowner #founder",
+    "first_comment": "List prices for the white-label discount: Core £149 / Pro £249 / Max £399 per month, and the build fee from our guided estimator. You keep the difference.",
+    "media_brief": "6 slides, 4:5, dark cards. 1) headline. 2) 'The problem' line. 3) 'Referral partner — 10% of build fee'. 4) 'White-label partner — 25% off list, your brand'. 5) 'We run everything' with a Nullshift pill (apps/web/public/logos/nullshift-pill-dark.svg). 6) 'louis@nullshift.co.uk · nullshift.co.uk/book'. Swap bio to Option C today.",
+    "scheduled_at": "2026-10-24T10:00:00+01:00"
+  },
+  {
+    "day": 14,
+    "date": "2026-10-25",
+    "kind": "reel",
+    "pillar": "Build reveals",
+    "caption": "What we build. Thirty seconds.\n\nBooking and payments. Parent and client portals. Staff apps. CRMs. Dashboards. Automation that moves the admin off your desk. Sites that look the part on top of all of it.\n\nAny industry, scoped properly, owned by you, run by us.\n\nnullshift.co.uk/start for a free plan.\n\n.\n.\n#softwaredevelopment #productdesign #uxdesign #webdesign #customsoftwaredevelopment #webapp #appdevelopment #devstudio #buildinpublic #techstartup #automation #softwarestudio #ukbusiness",
+    "first_comment": "Partners: this film is yours to reuse under your own brand on the white-label route. Ask us.",
+    "media_brief": "REEL 04 in REELS-SCRIPTS.md. apps/web/public/media/capabilities/nullshift-capabilities-portrait.mp4 cut to 30s with on-screen labels for each capability as it appears; opener from apps/web/public/nullshift-logo-opener.mp4; end card with wordmark.",
+    "scheduled_at": "2026-10-25T19:00:00+00:00"
+  },
+  {
+    "day": 14,
+    "date": "2026-10-25",
+    "kind": "story",
+    "pillar": "Partner programme (agencies)",
+    "caption": "Share slide 4 of the day-13 carousel. Text: 'Agencies — white-label is open. 25% off list, your brand, we run it.' Link sticker: nullshift.co.uk/book?utm_source=instagram&utm_medium=story labelled 'Talk to Louis'.",
+    "first_comment": "",
+    "media_brief": "Native share of the carousel slide with link sticker. Add to the 'Partners' highlight.",
+    "scheduled_at": "2026-10-25T08:00:00+00:00"
+  },
+  {
+    "day": 15,
+    "date": "2026-10-26",
+    "kind": "feed",
+    "pillar": "Client stories (demos)",
+    "caption": "A practice system its owners actually love.\n\nNewFuture Therapy — Laura and Esther, counsellors in Wakefield and online — needed more than a page. We built the brand and site, an articles engine, a resources library of printable PDFs, members' courses, an admin, enquiries encrypted before they leave the app, and NewFuture Reflections: an AI companion built to the therapists' own 17-section behavioural spec.\n\nArticles and resources are managed by the therapists from their own back office. Nine weeks from brief to production. Live since June.\n\nStory, video and the live Reflections demo at nullshift.co.uk/client-stories.\n\n.\n.\n#therapypractice #webdesign #ukbusiness #smallbusinessuk #softwarestudio #bespokesoftware #customsoftware #clientportal #wakefield #businessowner #uxdesign #britishbusiness",
+    "first_comment": "Encrypted enquiries means exactly that: the message is encrypted in the browser before it is sent, and only the practice can read it.",
+    "media_brief": "Single image 4:5: apps/web/public/clients/newfuture-therapy-site.png in a browser frame on a cream background (#F3F1EA) to match the practice's palette; apps/web/public/clients/newfuture-therapy-logo.png bottom-left; 'Client story' tag.",
+    "scheduled_at": "2026-10-26T08:00:00+00:00"
+  },
+  {
+    "day": 16,
+    "date": "2026-10-27",
+    "kind": "reel",
+    "pillar": "Client stories (demos)",
+    "caption": "Try the systems we built — live, on our site.\n\nEvery client story on nullshift.co.uk/client-stories has a working demo reproduced from the client's own codebase: The Dance Exclusive's pricing and booking flow, NewFuture's Reflections companion, Suffolk Tennis's player reports.\n\nClick around. It is the quickest way to understand what 'bespoke' means in practice.\n\nLink in bio.\n\n.\n.\n#webapp #productdesign #uxdesign #softwaredevelopment #customsoftwaredevelopment #bookingsystem #clientportal #devstudio #buildinpublic #softwarestudio #ukbusiness #smallbusinessuk",
+    "first_comment": "Demos run on sample data only — no customer records anywhere near them.",
+    "media_brief": "REEL 11 (how it works 2) in REELS-SCRIPTS.md. Desktop screen-record of nullshift.co.uk/client-stories, cursor clicking through each of the three demos (~8s each), framed in a browser window centred on a 9:16 dark canvas; on-screen labels per demo. 30–35s.",
+    "scheduled_at": "2026-10-27T12:30:00+00:00"
+  },
+  {
+    "day": 16,
+    "date": "2026-10-27",
+    "kind": "story",
+    "pillar": "Behind the build / studio life",
+    "caption": "Deploy-day frame. Text: 'Shipping day at the studio. A fix going out to a client system before 9am.' No link.",
+    "first_comment": "",
+    "media_brief": "Phone video, 8s, of a terminal/Vercel deploy succeeding — blur or crop any project names and URLs. If no real deploy that morning, skip and post a brand-study clip (apps/web/public/media/hero/nullshift-brand-study.mp4, 8s) instead.",
+    "scheduled_at": "2026-10-27T08:30:00+00:00"
+  },
+  {
+    "day": 17,
+    "date": "2026-10-28",
+    "kind": "carousel",
+    "pillar": "Plain-English explainers",
+    "caption": "Bespoke vs template. The honest difference.\n\nA template is someone else's guess at your business, with your logo on it. It works until your operation does something the template did not expect — a second venue, a deposit rule, a staff member who should see some things and not others.\n\nBespoke means we start from how you actually run: who books, who pays, who needs what screen. The software fits the business, not the other way round.\n\nIt used to mean 'expensive and slow'. With modern tooling and a senior team it means two to four weeks and a fixed quote — and you own the result.\n\nFind out what yours would look like: nullshift.co.uk/start.\n\n.\n.\n#ukbusiness #smallbusinessuk #bespokesoftware #customsoftware #softwarestudio #smallbusinesstips #websitedesignuk #webdevelopment #businessowner #entrepreneuruk #digitaltransformation #ukagency",
+    "first_comment": "We are not against templates — for a brochure page they are fine. The moment you have bookings, payments or staff roles, it is a different conversation.",
+    "media_brief": "5 slides, 4:5. 1) 'Bespoke vs template'. 2) 'Template: someone else's guess'. 3) 'Bespoke: starts from how you run'. 4) 'Used to mean slow. Now: 2–4 weeks, fixed quote, yours.' 5) CTA + wordmark.",
+    "scheduled_at": "2026-10-28T08:00:00+00:00"
+  },
+  {
+    "day": 17,
+    "date": "2026-10-28",
+    "kind": "story",
+    "pillar": "Plain-English explainers",
+    "caption": "Poll: 'Is your current site/system a template?' Yes / No / Not sure. Follow with slide 3 of today's carousel.",
+    "first_comment": "",
+    "media_brief": "Dark card with poll sticker; second frame native share of the carousel.",
+    "scheduled_at": "2026-10-28T13:00:00+00:00"
+  },
+  {
+    "day": 18,
+    "date": "2026-10-29",
+    "kind": "reel",
+    "pillar": "Behind the build / studio life",
+    "caption": "Why we hand over the code.\n\nA question we get in almost every first call: 'and who owns it afterwards?' You do. Repo, database, domain, Stripe, every account — in your name from day one.\n\nIt makes us a better studio. If the only reason a client stays is that they cannot leave, that is not a relationship, it is a lock. We would rather the plan earn its place every month.\n\n— Louis, founder\n\n.\n.\n#founder #studiolife #softwarestudio #ukstartups #buildinpublic #ukbusiness #entrepreneuruk #softwaredevelopment #businessowner #techstartup #customsoftware #devstudio",
+    "first_comment": "The full ownership list is on nullshift.co.uk/pricing.",
+    "media_brief": "REEL 08 (founder cameo 2) in REELS-SCRIPTS.md. Talking head, 30s, captions on. B-roll insert at 12–18s: screen-record of a GitHub repo transfer screen or Supabase project settings with names blurred.",
+    "scheduled_at": "2026-10-29T17:30:00+00:00"
+  },
+  {
+    "day": 18,
+    "date": "2026-10-29",
+    "kind": "story",
+    "pillar": "Behind the build / studio life",
+    "caption": "Answer two questions from the day-7 question box as text frames ('You asked: … / We say: …'). Then share the day-18 reel.",
+    "first_comment": "",
+    "media_brief": "Two dark text cards + native share of the reel. Add to the 'How it works' highlight.",
+    "scheduled_at": "2026-10-29T20:30:00+00:00"
+  },
+  {
+    "day": 19,
+    "date": "2026-10-30",
+    "kind": "feed",
+    "pillar": "Estimator teasers (/start)",
+    "caption": "What would yours cost? Find out without a sales call.\n\nOur guided estimator takes your company size and what you want built, and gives you a build fee and a monthly figure. It is the same engine the team uses to quote.\n\nIt lives inside the free plan at nullshift.co.uk/start — answer a few questions, get a plan, a mockup and a number.\n\nIf the number works, book a call. If it does not, you have lost five minutes.\n\nLink in bio.\n\n.\n.\n#ukbusiness #smallbusinessuk #bespokesoftware #customsoftware #softwarestudio #smallbusinesstips #businessowner #websitedesignuk #entrepreneuruk #businessgrowthuk #digitaltransformation #ukagency",
+    "first_comment": "Every figure the estimator gives is confirmed in writing by the team before anything starts.",
+    "media_brief": "Single image 4:5: phone frame screenshot of the estimator step on nullshift.co.uk/start (use the fictional test business), on a dark background with 'Build fee + monthly, in minutes' headline.",
+    "scheduled_at": "2026-10-30T08:00:00+00:00"
+  },
+  {
+    "day": 20,
+    "date": "2026-10-31",
+    "kind": "carousel",
+    "pillar": "Client stories (demos)",
+    "caption": "Suffolk Tennis LTA — had, built, runs.\n\nHad: a working prototype hosted on a platform the county had no control over. No ownership of the code, the data or the roadmap.\n\nBuilt: venues and coaches, news and events, a parent hub for children, schedules, goals and player reports, a coach app, QR ticketing and Stripe payments — migrated onto the LTA's own Supabase.\n\nRuns: 1,340 sessions scheduled across 9 venues. Tickets scanned at the gate. Payments straight to the LTA.\n\nnullshift.co.uk/client-stories for the live demo.\n\n.\n.\n#tennisclub #clientportal #onlinebooking #ukbusiness #softwarestudio #bespokesoftware #customsoftware #webapp #supabase #stripe #businessowner #suffolk #britishbusiness",
+    "first_comment": "Their repo. Their database. Their Stripe account. DPA signed before go-live.",
+    "media_brief": "4 slides, 4:5. 1) apps/web/public/media/client-stories/suffolk-tennis/studio-display.jpg with 'Had · Built · Runs'. 2) 'Had' card. 3) 'Built' card over programme.webp. 4) 'Runs' stats card over ledger.webp.",
+    "scheduled_at": "2026-10-31T10:00:00+00:00"
+  },
+  {
+    "day": 21,
+    "date": "2026-11-01",
+    "kind": "reel",
+    "pillar": "Build reveals",
+    "caption": "Payments that land in the client's account, not ours.\n\nThis is the ledger inside Suffolk Tennis's system: every session, every ticket, every payment — through the LTA's own Stripe account.\n\nWe design the checkout and the rules. Stripe handles the money. The client keeps the merchant relationship, the data and the history.\n\nnullshift.co.uk/client-stories\n\n.\n.\n#stripe #payments #webapp #softwaredevelopment #customsoftwaredevelopment #productdesign #devstudio #buildinpublic #tennisclub #softwarestudio #ukbusiness #fintech",
+    "first_comment": "Nullshift partners with Stripe for payment processing; sign-in and permissions are designed separately by us for each project.",
+    "media_brief": "REEL 03 in REELS-SCRIPTS.md. apps/web/public/media/client-stories/suffolk-tennis/ledger-inline-mobile.mp4 (or ledger.mp4 reframed) in a phone frame, 20s, with a 3s opener from apps/web/public/media/vault/nullshift-vault-scroll-720.mp4. On-screen: 'Their Stripe. Their money. Their records.'",
+    "scheduled_at": "2026-11-01T19:00:00+00:00"
+  },
+  {
+    "day": 22,
+    "date": "2026-11-02",
+    "kind": "feed",
+    "pillar": "Plain-English explainers",
+    "caption": "Secure foundations. Custom by design.\n\nEvery system we ship runs on established infrastructure rather than something we invented: Stripe for payments, a dedicated Supabase database in your name, Vercel hosting, UK/EU data residency, encryption and an audit trail.\n\nOn top of that we design what is yours alone — sign-in, roles, permissions, booking rules, payment schedules and the workflows your team actually follows.\n\nA signed DPA before anything goes live, and we carry the responsibility for keeping it that way on the monthly plan.\n\nnullshift.co.uk/pricing has the full list.\n\n.\n.\n#ukbusiness #smallbusinessuk #bespokesoftware #customsoftware #softwarestudio #datasecurity #stripe #supabase #gdpr #businessowner #digitaltransformation #ukagency",
+    "first_comment": "If you are comparing suppliers, ask each one two questions: whose name is the database in, and who signs the DPA?",
+    "media_brief": "Single image 4:5: apps/web/public/media/vault/nullshift-vault-poster-1080.webp with 'Secure foundations. Custom by design.' headline and a small Stripe glyph (apps/web/public/logos/stripe-glyph-purple.svg) bottom-right per Stripe partner guidelines.",
+    "scheduled_at": "2026-11-02T08:00:00+00:00"
+  },
+  {
+    "day": 22,
+    "date": "2026-11-02",
+    "kind": "story",
+    "pillar": "Build reveals",
+    "caption": "Share the day-21 ledger reel with text 'Payments to the client, not to us.' Link sticker: nullshift.co.uk/client-stories?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "Native share of the reel. Add to the 'Work' highlight.",
+    "scheduled_at": "2026-11-02T13:00:00+00:00"
+  },
+  {
+    "day": 23,
+    "date": "2026-11-03",
+    "kind": "reel",
+    "pillar": "Plain-English explainers",
+    "caption": "Our pricing page, in 30 seconds.\n\nOne build fee to own the system. A monthly plan — Core, Pro or Max, from £149 — to keep it running. No per-seat fees. Cancel any month and keep everything.\n\nWhat the build includes, what you own, what the plan covers and what gets quoted separately — it is all written down at nullshift.co.uk/pricing so there is nothing to find out later.\n\n.\n.\n#ukbusiness #smallbusinessuk #bespokesoftware #softwarestudio #customsoftware #smallbusinesstips #websitedesignuk #businessowner #entrepreneuruk #ukagency #webdevelopment #digitaltransformation",
+    "first_comment": "Larger operations are scale-banded on top of the base price — the estimator at nullshift.co.uk/start shows your figure.",
+    "media_brief": "REEL 12 (how it works 3) in REELS-SCRIPTS.md. Phone screen-record of nullshift.co.uk/pricing scrolling: build list → ownership list → three plan cards → FAQ, 30s, with on-screen labels. Recorded at 1x then sped to fit.",
+    "scheduled_at": "2026-11-03T12:30:00+00:00"
+  },
+  {
+    "day": 24,
+    "date": "2026-11-04",
+    "kind": "carousel",
+    "pillar": "Plain-English explainers",
+    "caption": "Why is there a monthly plan at all?\n\nBecause software does not stop needing things when it goes live.\n\nIt needs a server, a database, a domain, SSL and email that delivers. It needs backups every day and someone watching when an integration fails at 2am. It needs the fix when a payment provider changes its API. And it needs a person who knows your system when you have a question.\n\nThat is what Core, Pro and Max are. Not rent on the software — you already own that — but the running of it, by the team that built it.\n\nThe things that are not in the plan — new features, new integrations — are quoted as fixed-price projects, so you always choose.\n\nnullshift.co.uk/pricing\n\n.\n.\n#ukbusiness #smallbusinessuk #bespokesoftware #softwarestudio #customsoftware #smallbusinesstips #businessowner #entrepreneuruk #ukagency #digitaltransformation #websitedesignuk #businessgrowthuk",
+    "first_comment": "Save this one — it is the clearest answer we have to the second most common question we get.",
+    "media_brief": "6 slides, 4:5. 1) 'Why a monthly plan?' 2) 'Software keeps needing things' with the five needs as a list. 3) 'Core £149 · Pro £249 · Max £399'. 4) 'You own it. We run it.' 5) 'New features: always quoted, always your call.' 6) CTA.",
+    "scheduled_at": "2026-11-04T08:00:00+00:00"
+  },
+  {
+    "day": 24,
+    "date": "2026-11-04",
+    "kind": "story",
+    "pillar": "Plain-English explainers",
+    "caption": "Share slide 4 of today's carousel with text 'You own it. We run it.' Link sticker: nullshift.co.uk/pricing?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "Native share. Add to the 'Plans' highlight.",
+    "scheduled_at": "2026-11-04T13:00:00+00:00"
+  },
+  {
+    "day": 25,
+    "date": "2026-11-05",
+    "kind": "reel",
+    "pillar": "Behind the build / studio life",
+    "caption": "'Why monthly?' — the question we get every week.\n\nShort answer: because someone has to run it, and it should be the team that built it.\n\nHosting, backups, monitoring, fixes, support. From £149 a month, in writing, no per-seat fees. You own the system either way.\n\n— Louis, founder\n\n.\n.\n#founder #studiolife #softwarestudio #ukstartups #buildinpublic #ukbusiness #entrepreneuruk #businessowner #smallbusinessuk #customsoftware #devstudio #techstartup",
+    "first_comment": "Full breakdown in Wednesday's carousel and at nullshift.co.uk/pricing.",
+    "media_brief": "REEL 09 (founder cameo 3) in REELS-SCRIPTS.md. Talking head, 20–25s, captions on; cutaway at 10s to the plan cards on nullshift.co.uk/pricing.",
+    "scheduled_at": "2026-11-05T17:30:00+00:00"
+  },
+  {
+    "day": 25,
+    "date": "2026-11-05",
+    "kind": "story",
+    "pillar": "Estimator teasers (/start)",
+    "caption": "Friday link frame. Text: 'Plan + mockup + a number for your business. Free, takes minutes.' Link sticker: nullshift.co.uk/start?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "10s phone screen-record of the /plan page mockup appearing (fictional test business).",
+    "scheduled_at": "2026-11-05T13:00:00+00:00"
+  },
+  {
+    "day": 26,
+    "date": "2026-11-06",
+    "kind": "feed",
+    "pillar": "Partner programme (agencies)",
+    "caption": "Sell software under your brand. We build and run it.\n\nFor agencies and consultants with no in-house dev team, the white-label route is simple: you quote the client at your price, we supply the build and the monthly plan at 25% off list, and we handle hosting, support, delivery and maintenance — invisibly, through your brand where needed.\n\nNo minimum volume. Non-exclusive. 30 days' notice to end the relationship, and live client systems are never switched off.\n\nIf you would rather just introduce a client and step back, the referral route pays 10% of the build fee.\n\nEvery project goes through our acceptance review first. Email louis@nullshift.co.uk or book at nullshift.co.uk/book.\n\n.\n.\n#whitelabel #agencypartner #marketingagency #agencylife #growthconsultant #ukagency #seoagency #agencyowner #softwarestudio #bespokesoftware #customsoftware #founder #businessgrowthuk",
+    "first_comment": "Partner pricing is 25% off the same Core £149 / Pro £249 / Max £399 plans and estimator build fees our direct clients pay. Same system, same team.",
+    "media_brief": "Single image 4:5: dark card, headline 'Your brand. Our build. We run it.' with the Nullshift pill (apps/web/public/logos/nullshift-pill-dark.svg) faded to 20% behind it. Bio stays on Option C until day 28.",
+    "scheduled_at": "2026-11-06T10:00:00+00:00"
+  },
+  {
+    "day": 26,
+    "date": "2026-11-06",
+    "kind": "story",
+    "pillar": "Partner programme (agencies)",
+    "caption": "Text: 'Agency owner or consultant? Two routes: refer for 10% of the build fee, or white-label at 25% off list.' Link sticker: nullshift.co.uk/book?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "Native share of the day-26 post with link sticker. Add to the 'Partners' highlight.",
+    "scheduled_at": "2026-11-06T13:00:00+00:00"
+  },
+  {
+    "day": 27,
+    "date": "2026-11-07",
+    "kind": "carousel",
+    "pillar": "Client stories (demos)",
+    "caption": "The Dance Exclusive — had, built, runs.\n\nHad: classes, holiday camps, workshops and parties across Essex venues, booked and tracked by hand, with staff chasing parents for payment and paperwork.\n\nBuilt: a parent portal, a staff portal for registers, schedules and documents, and an admin for classes, camps, workshops, parties, merchandise, venues, staff, customers, bookings and coupons — on their own Supabase, taking payment through the studio's own Stripe account.\n\nRuns: parents book and pay without a member of staff in the loop. Registers and schedules are live for every venue. Two scheduled jobs keep the data tidy overnight.\n\n139 active parents and 235 bookings in 30 days. On a care plan with us since September.\n\nnullshift.co.uk/client-stories\n\n.\n.\n#danceschool #bookingsystem #clientportal #onlinebooking #ukbusiness #smallbusinessuk #bespokesoftware #customsoftware #softwarestudio #businessautomation #essex #businessowner #britishbusiness",
+    "first_comment": "Three portals, one database. The pricing/booking flow is reproduced as a live demo on the site.",
+    "media_brief": "4 slides, 4:5. 1) apps/web/public/clients/the-dance-exclusive-site.png in a browser frame with 'Had · Built · Runs'. 2) 'Had' card. 3) 'Built' card with the three portal names. 4) 'Runs' stats card with apps/web/public/clients/the-dance-exclusive-logo-dark.png.",
+    "scheduled_at": "2026-11-07T10:00:00+00:00"
+  },
+  {
+    "day": 28,
+    "date": "2026-11-08",
+    "kind": "reel",
+    "pillar": "Behind the build / studio life",
+    "caption": "A studio that builds things you can feel.\n\nMost of what we make is screens and systems. But the reason people stay with a system is that it feels right in the hand — fast, calm, obvious. That is a design job as much as an engineering one, and we treat it as both.\n\nnullshift.co.uk\n\n.\n.\n#productdesign #uxdesign #webdesign #studiolife #softwarestudio #buildinpublic #devstudio #softwaredevelopment #ukstartups #techstartup #designstudio #brand",
+    "first_comment": "Film: our own brand study. No clients were harmed.",
+    "media_brief": "REEL 06 in REELS-SCRIPTS.md. apps/web/public/media/hero/nullshift-brand-study.mp4 cut to 15–20s, reframed 9:16, with the wordmark end card. Music: low, ambient, licensed from Instagram's library.",
+    "scheduled_at": "2026-11-08T19:00:00+00:00"
+  },
+  {
+    "day": 29,
+    "date": "2026-11-09",
+    "kind": "feed",
+    "pillar": "Behind the build / studio life",
+    "caption": "We run Nullshift on the systems we sell.\n\nOnboarding, agreements, invoicing, Direct Debits and AI-dispatched fixes — the studio's own operations run on the same kind of system we build for clients, end to end.\n\nIt keeps us honest. If something is annoying for us, it is fixed before it reaches a client. And when we say 'live in weeks, owned by you, run by us', it is because that is how we work too.\n\nFirst month on Instagram done. Thank you for following. Free plan for your business: nullshift.co.uk/start.\n\n.\n.\n#studiolife #buildinpublic #softwarestudio #ukstartups #ukbusiness #smallbusinessuk #businessautomation #founder #devstudio #customsoftware #britishbusiness #techstartup",
+    "first_comment": "Swap bio back to Option A today.",
+    "media_brief": "Single image 4:5: apps/web/public/media/brand/nullshift-billboard-1600.webp with the line 'We run Nullshift on the systems we sell.' No admin screenshots — internal tooling stays private.",
+    "scheduled_at": "2026-11-09T08:00:00+00:00"
+  },
+  {
+    "day": 29,
+    "date": "2026-11-09",
+    "kind": "story",
+    "pillar": "Behind the build / studio life",
+    "caption": "Month-one recap: 3 frames. 'Most-watched reel', 'Most-saved post', 'What is coming next month' (the next build reveal). Link sticker on frame 3: nullshift.co.uk/start?utm_source=instagram&utm_medium=story.",
+    "first_comment": "",
+    "media_brief": "Pull the top reel and top post from Insights and share them natively; frame 3 is a dark text card.",
+    "scheduled_at": "2026-11-09T20:30:00+00:00"
+  },
+  {
+    "day": 30,
+    "date": "2026-11-10",
+    "kind": "reel",
+    "pillar": "Estimator teasers (/start)",
+    "caption": "Everything we posted this month, in one place: nullshift.co.uk/start.\n\nAnswer a few questions. Get a tailored plan, a live mockup of your system and a build-and-monthly figure. Free, no call needed — and if it is right for you, the team picks it up from there.\n\nLink in bio.\n\n.\n.\n#ukbusiness #smallbusinessuk #bespokesoftware #customsoftware #softwarestudio #businessautomation #smallbusinesstips #businessowner #entrepreneuruk #webapp #digitaltransformation #startuplife",
+    "first_comment": "Agencies: the same page works for your clients — or email louis@nullshift.co.uk about the partner programme.",
+    "media_brief": "Remix of REEL 10: 20s, the /start flow sped 2x with the opener from apps/web/public/nullshift-logo-opener.mp4 and an end card 'nullshift.co.uk/start — free plan'. Fictional test business only.",
+    "scheduled_at": "2026-11-10T12:30:00+00:00"
+  }
+]
