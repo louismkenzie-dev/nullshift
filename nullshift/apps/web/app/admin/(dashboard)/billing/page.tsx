@@ -9,6 +9,7 @@ import { getStripe } from "@nullshift/billing/stripe";
 import { cancelGoCardlessSubscription } from "@nullshift/billing/gocardless";
 import { getXeroSetupStatus, type XeroSetupStatus } from "@nullshift/billing/xero";
 import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
+import { issueManualInvoice } from "@/lib/manualInvoice";
 import { T } from "@nullshift/ui/tokens";
 import { PageHeader, Panel, StatCard, StatusChip } from "@/components/app/AppKit";
 import { Reveal } from "@/components/kyma";
@@ -144,27 +145,29 @@ async function grantTopUp(formData: FormData) {
   revalidatePath("/admin/billing");
 }
 
+/**
+ * Raise a manual invoice: open, mirrored into Xero, emailed to the client
+ * with the bank details and its payment reference. Bank transfer only — the
+ * bank feed confirms a transfer quoting the reference automatically.
+ */
 async function issueInvoice(formData: FormData) {
   "use server";
-  if (!(await requireStaff()).ok) return;
+  const staff = await requireStaff();
+  if (!staff.ok) return;
   const tenantId = String(formData.get("tenant_id") || "");
-  const type = String(formData.get("type") || "build_milestone");
+  const typeRaw = String(formData.get("type") || "build_milestone");
+  const type = typeRaw === "one_off" ? "one_off" : "build_milestone";
   const amount = Number(formData.get("amount") || 0);
+  const description = String(formData.get("description") || "").trim() || null;
   if (!tenantId || amount <= 0) return;
-  const supabase = await createClient();
-  await supabase.from("invoices").insert({
-    tenant_id: tenantId,
+  const result = await issueManualInvoice(createServiceClient(), {
+    tenantId,
     type,
     amount,
-    status: "open",
-    due_at: new Date(Date.now() + 14 * 864e5).toISOString(),
+    description,
+    actorEmail: staff.email,
   });
-  await logAudit({
-    action: "invoice.issued",
-    target: `tenant:${tenantId}`,
-    tenantId,
-    metadata: { type, amount },
-  });
+  if (!result.ok) console.error("issueInvoice:", result.error);
   revalidatePath("/admin/billing");
 }
 
@@ -826,13 +829,25 @@ export default async function BillingPage() {
             <input
               name="amount"
               type="number"
-              step="1"
+              step="0.01"
+              min="0.01"
               placeholder="£ amount"
               className="w-full md:w-[110px]"
               style={inp}
               required
             />
-            <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)", true)}>
+            <input
+              name="description"
+              placeholder="What it is for (one line on the invoice)"
+              className="w-full md:flex-1 md:min-w-[220px]"
+              style={inp}
+              maxLength={120}
+            />
+            <SubmitButton
+              style={btn("var(--k-surface)", "var(--k-fg)", true)}
+              pendingLabel="Raising…"
+              title="Raises the invoice, mirrors it into Xero and emails the client the bank details with the invoice's payment reference. Bank transfer only — no card link."
+            >
               Issue invoice
             </SubmitButton>
           </form>

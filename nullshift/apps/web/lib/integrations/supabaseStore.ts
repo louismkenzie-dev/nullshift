@@ -14,7 +14,7 @@
 
 import { createServiceClient } from "@nullshift/db";
 import { logAuditAsService } from "@nullshift/db/audit";
-import { clientRef } from "@nullshift/ui/format";
+import { invoiceRef } from "@nullshift/ui/format";
 import type {
   ActivationRecord,
   GateInput,
@@ -346,9 +346,9 @@ function ledgerStore(db: Service): LedgerStore {
       return {
         id: inv.id,
         tenantId: inv.tenant_id,
-        // Same format as lib/xeroSync.ts so the recovery lookup also finds
-        // invoices the legacy sync created.
-        reference: `${clientRef(inv.tenant_id)} · ${String(inv.id).slice(0, 8)}`,
+        // Same format as lib/xeroSync.ts (the client's payment reference) so
+        // the recovery lookup also finds invoices the legacy sync created.
+        reference: invoiceRef(inv.tenant_id, String(inv.id)),
         status: inv.status,
         dateISO: inv.created_at,
         dueDateISO: inv.due_at ?? inv.created_at,

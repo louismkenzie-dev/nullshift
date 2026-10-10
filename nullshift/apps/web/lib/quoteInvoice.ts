@@ -1,12 +1,7 @@
-import {
-  createItemisedStripeInvoice,
-  findOrCreateCustomer,
-} from "@nullshift/billing/stripe";
 import { createServiceClient } from "@nullshift/db";
 import { invoiceRef } from "@nullshift/ui/format";
 import { sendEmail } from "./sendEmail";
 import { buildInvoiceReadyEmail } from "./clientEmails";
-import { isXeroPrimary } from "@nullshift/billing/xero";
 import { syncInvoiceToXero } from "./xeroSync";
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -15,9 +10,9 @@ type Service = ReturnType<typeof createServiceClient>;
  * Generate + send the invoice for an ACCEPTED out-of-scope quote — the missing
  * link between "client clicked Accept on £X" and money actually being
  * requested. Mirrors generateProjectInvoice's guarantees: dedupe via the
- * invoices_one_per_issue partial unique index (0025), Stripe hosted invoice
- * best-effort with bank-transfer fallback, branded email, Xero mirror.
- * Service-role only.
+ * invoices_one_per_issue partial unique index (0025), Xero mirror, branded
+ * email with the bank details and the invoice's payment reference. Bank
+ * transfer only — no card link, no fees. Service-role only.
  */
 export async function generateQuoteInvoice(
   service: Service,
@@ -81,7 +76,7 @@ export async function generateQuoteInvoice(
 
   const { data: tenantRow } = await service
     .from("tenants")
-    .select("name, contact_name, contact_email, stripe_customer_id")
+    .select("name, contact_name, contact_email")
     .eq("id", tenantId)
     .maybeSingle();
   const { data: membership } = await service
@@ -98,63 +93,22 @@ export async function generateQuoteInvoice(
   }
   email = email ?? tenantRow?.contact_email ?? null;
 
-  let payUrl: string | null = null;
-  let payVia: "xero" | "stripe" | null = null;
-  if (email) {
-    // Xero is the invoice rail when configured: raise it there first and send
-    // the client Xero's online invoice (with its Pay-now button once a payment
-    // service is connected in Xero). Stripe stays the fallback.
-    if (isXeroPrimary()) {
-      await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-      const xero = await syncInvoiceToXero(service, invoice.id);
-      if (xero.ok && xero.onlineUrl) {
-        payUrl = xero.onlineUrl;
-        payVia = "xero";
-      }
-    }
-    if (payVia) {
-      /* invoiced through Xero — no Stripe invoice */
-    } else
-      try {
-        const customerId = await findOrCreateCustomer({
-          email,
-          name: tenantRow?.name ?? undefined,
-          existingCustomerId: tenantRow?.stripe_customer_id ?? null,
-          idempotencyKey: `customer:${tenantId}`,
-        });
-        const stripeInv = customerId
-          ? await createItemisedStripeInvoice({
-              customerId,
-              items: [{ name: title, amountPence: Math.round(amount * 100) }],
-            })
-          : null;
-        if (stripeInv) {
-          payUrl = stripeInv.url ?? null;
-          payVia = payUrl ? "stripe" : null;
-          await service
-            .from("invoices")
-            .update({
-              status: "open",
-              stripe_invoice_id: stripeInv.id,
-              hosted_invoice_url: stripeInv.url,
-            })
-            .eq("id", invoice.id);
-        } else {
-          await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-        }
-      } catch (e) {
-        console.error("Stripe quote-invoice send failed:", e);
-        await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-      }
+  // Open, then into Xero (best-effort). The Xero online invoice is the
+  // document link in the email; there is no card leg.
+  await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
+  const xero = await syncInvoiceToXero(service, invoice.id);
+  const viewUrl = xero.ok && xero.onlineUrl ? xero.onlineUrl : null;
 
+  if (email) {
     try {
       const mail = buildInvoiceReadyEmail({
         name: tenantRow?.contact_name ?? tenantRow?.name ?? "",
         total: amount,
-        payUrl,
-        payVia,
+        payUrl: viewUrl,
+        payVia: viewUrl ? "xero" : null,
         items: [{ name: title, amount }],
         reference: invoiceRef(tenantId, invoice.id),
+        dueOn: new Date(dueAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
       });
       await sendEmail({
         purpose: "transactional",
@@ -166,10 +120,7 @@ export async function generateQuoteInvoice(
     } catch (e) {
       console.error("Quote invoice email failed:", e);
     }
-  } else {
-    await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
   }
 
-  await syncInvoiceToXero(service, invoice.id);
   return { ok: true, invoiceId: invoice.id };
 }

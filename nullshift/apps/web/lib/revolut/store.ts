@@ -7,15 +7,20 @@
  * Writes:
  *   - revolut_connections / revolut_secrets (consent, refresh, revoke)
  *   - bank_transactions (idempotent upsert on the provider key)
- *   - bank_matches with state 'suggested' only (the matcher)
- *
- * Nothing here edits invoices, subscriptions or obligations.
+ *   - bank_matches with state 'suggested' (the matcher), and — for the one
+ *     case the matcher marks `autoConfirm` (the transfer quotes the
+ *     invoice's own payment reference, exact amount, open transfer-rail
+ *     invoice) — the confirmation itself, through the same path staff use
+ *     (./confirm.ts): the invoice is marked paid and the payment mirrored to
+ *     Xero without anyone pressing anything.
  */
 
 import { createServiceClient } from "@nullshift/db";
+import { invoiceRef } from "@nullshift/ui/format";
 import { RevolutClient, readRevolutEnv, type RevolutAccount, type RevolutEnvironment } from "./client";
+import { applyMatchConfirmation, loadMatchWith } from "./confirm";
 import { decryptToken, encryptToken, parseEncryptionKey, sanitiseError } from "./crypto";
-import { suggestMatches, type InvoiceCandidate, type MatchableTransaction } from "./match";
+import { suggestMatches, type InvoiceCandidate, type InvoiceRail, type MatchableTransaction } from "./match";
 import { mergeUpsert, needsRefresh, syncWindow, toTransactionRows, type BankTransactionRow } from "./sync";
 
 export type ConnectionRow = {
@@ -146,7 +151,7 @@ async function accessTokenFor(
 }
 
 export type SyncOutcome =
-  | { ok: true; connectionId: string; accounts: number; transactions: number; legs: number; suggestions: number }
+  | { ok: true; connectionId: string; accounts: number; transactions: number; legs: number; suggestions: number; autoConfirmed: number }
   | { ok: false; connectionId: string | null; error: string; reconsent?: boolean }
   | { ok: false; connectionId: null; skipped: "not_configured" | "not_connected"; missing?: string[] };
 
@@ -184,13 +189,21 @@ export async function runSync(now: Date = new Date()): Promise<SyncOutcome> {
       if (error) throw new Error(`bank_transactions upsert: ${error.message}`);
     }
 
-    const suggestions = await runMatching(service, conn.environment);
+    const matched = await runMatching(service, conn.environment);
 
     await service
       .from("revolut_connections")
       .update({ last_sync_at: now.toISOString(), last_sync_status: "ok", last_error: null })
       .eq("id", conn.id);
-    return { ok: true, connectionId: conn.id, accounts: accounts.length, transactions: txs.length, legs: deduped.length, suggestions };
+    return {
+      ok: true,
+      connectionId: conn.id,
+      accounts: accounts.length,
+      transactions: txs.length,
+      legs: deduped.length,
+      suggestions: matched.suggestions,
+      autoConfirmed: matched.autoConfirmed,
+    };
   } catch (e) {
     const message = sanitiseError(e instanceof Error ? e.message : "sync failed");
     const reconsent = !!(e && typeof e === "object" && "reconsent" in e && (e as { reconsent?: boolean }).reconsent);
@@ -221,28 +234,38 @@ type InvoiceRow = {
   status: InvoiceCandidate["status"];
   due_at: string | null;
   obligation_id: string | null;
+  stripe_invoice_id: string | null;
+  gc_payment_id: string | null;
   tenants: { name: string } | { name: string }[] | null;
   billing_obligations: { label: string | null; currency: string } | { label: string | null; currency: string }[] | null;
 };
 
 const one = <T>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v);
 
+/** How an invoice is collected, from the provider ids it carries. */
+export function invoiceRail(r: { stripe_invoice_id: string | null; gc_payment_id: string | null }): InvoiceRail {
+  return r.gc_payment_id ? "direct_debit" : r.stripe_invoice_id ? "card" : "transfer";
+}
+
 export async function loadInvoiceCandidates(service: Service): Promise<InvoiceCandidate[]> {
   const since = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
   const { data } = await service
     .from("invoices")
-    .select("id, tenant_id, amount, status, due_at, obligation_id, tenants(name), billing_obligations(label, currency)")
+    .select("id, tenant_id, amount, status, due_at, obligation_id, stripe_invoice_id, gc_payment_id, tenants(name), billing_obligations(label, currency)")
     .in("status", ["open", "paid"])
     .gte("created_at", since)
     .limit(500);
   return ((data ?? []) as InvoiceRow[]).map((r) => {
     const t = one(r.tenants);
     const o = one(r.billing_obligations);
+    const reference = invoiceRef(r.tenant_id, r.id);
     return {
       id: r.id,
       tenantId: r.tenant_id,
       tenantName: t?.name ?? "",
-      references: [r.id.slice(0, 8), ...(o?.label ? [o.label] : [])],
+      references: [reference, r.id.slice(0, 8), ...(o?.label ? [o.label] : [])],
+      paymentReference: reference,
+      rail: invoiceRail(r),
       amountMinor: Math.round(Number(r.amount) * 100),
       currency: o?.currency ?? "GBP",
       status: r.status,
@@ -252,8 +275,15 @@ export async function loadInvoiceCandidates(service: Service): Promise<InvoiceCa
   });
 }
 
-/** Suggest for completed transactions with no decided match; upsert suggestions. */
-export async function runMatching(service: Service, environment: RevolutEnvironment): Promise<number> {
+/**
+ * Suggest for completed transactions with no decided match; upsert the
+ * suggestions; then confirm the ones the matcher marked `autoConfirm`
+ * through the shared confirmation path. Returns both counts.
+ */
+export async function runMatching(
+  service: Service,
+  environment: RevolutEnvironment
+): Promise<{ suggestions: number; autoConfirmed: number }> {
   const { data: txs } = await service
     .from("bank_transactions")
     .select("id, amount_minor, fee_minor, currency, state, type, reference, counterparty_name, completed_at_provider, created_at_provider")
@@ -265,7 +295,7 @@ export async function runMatching(service: Service, environment: RevolutEnvironm
     id: string; amount_minor: number; fee_minor: number; currency: string; state: string; type: string;
     reference: string | null; counterparty_name: string | null; completed_at_provider: string | null; created_at_provider: string;
   }[];
-  if (list.length === 0) return 0;
+  if (list.length === 0) return { suggestions: 0, autoConfirmed: 0 };
 
   const { data: decided } = await service
     .from("bank_matches")
@@ -288,7 +318,7 @@ export async function runMatching(service: Service, environment: RevolutEnvironm
   }));
   const invoices = await loadInvoiceCandidates(service);
   const suggestions = suggestMatches(matchable, invoices, decidedSet);
-  if (suggestions.length === 0) return 0;
+  if (suggestions.length === 0) return { suggestions: 0, autoConfirmed: 0 };
 
   const rows = suggestions.map((s) => ({
     transaction_id: s.transactionId,
@@ -308,5 +338,30 @@ export async function runMatching(service: Service, environment: RevolutEnvironm
     .from("bank_matches")
     .upsert(rows, { onConflict: "transaction_id,rule_key", ignoreDuplicates: true });
   if (error) throw new Error(`bank_matches upsert: ${error.message}`);
-  return rows.length;
+
+  // Automatic confirmation: only the payment-reference rule sets autoConfirm,
+  // and only for an open transfer-rail invoice with no competing candidate.
+  // Each goes through applyMatchConfirmation, exactly as a staff click would;
+  // a failure leaves the suggestion waiting for a person.
+  let autoConfirmed = 0;
+  for (const s of suggestions.filter((x) => x.autoConfirm)) {
+    const { data: row } = await service
+      .from("bank_matches")
+      .select("id")
+      .eq("transaction_id", s.transactionId)
+      .eq("rule_key", s.ruleKey)
+      .eq("state", "suggested")
+      .maybeSingle();
+    if (!row) continue;
+    const loaded = await loadMatchWith(service, (row as { id: string }).id);
+    if (!loaded) continue;
+    try {
+      const r = await applyMatchConfirmation({ reader: service, service, match: loaded.match, tx: loaded.tx, decidedBy: null, via: "auto" });
+      if (r.ok) autoConfirmed += 1;
+      else console.warn(`auto-confirm skipped for match ${loaded.match.id}: ${r.message}`);
+    } catch (e) {
+      console.error(`auto-confirm failed for match ${loaded.match.id}:`, e);
+    }
+  }
+  return { suggestions: rows.length, autoConfirmed };
 }

@@ -1,5 +1,5 @@
 import { createServiceClient } from "@nullshift/db";
-import { clientRef } from "@nullshift/ui/format";
+import { invoiceRef } from "@nullshift/ui/format";
 import {
   isXeroConfigured,
   findOrCreateXeroContact,
@@ -94,9 +94,12 @@ export async function syncInvoiceToXero(
             },
           ];
 
+    // The Xero invoice carries the same payment reference the client is
+    // asked to quote on their transfer (NS-<client>-<invoice>), so the
+    // document, the email and the bank line all say one thing.
     const created = await createXeroInvoice({
       contactId,
-      reference: `${clientRef(inv.tenant_id)} · ${String(inv.id).slice(0, 8)}`,
+      reference: invoiceRef(inv.tenant_id, String(inv.id)),
       dateISO: inv.created_at,
       // Mirror the real due date (falling back to the issue date only for
       // legacy rows that predate due_at being set at generation).

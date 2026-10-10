@@ -260,9 +260,12 @@ describe("matching rules", () => {
   });
 
   it("exact amount + reference names the invoice → high confidence", () => {
+    // The invoice id prefix is the invoice's own reference: highest
+    // confidence, and auto-confirmable since the invoice is open and paid by
+    // transfer.
     const [s] = suggestForTransaction(tx({ reference: "Payment 11111111" }), [inv({})]);
-    expect(s).toMatchObject({ kind: "invoice", invoiceId: inv({}).id, obligationId: "ob1", confidence: 0.95 });
-    expect(s.explanation).toContain("names");
+    expect(s).toMatchObject({ kind: "invoice", invoiceId: inv({}).id, obligationId: "ob1", confidence: 0.99, autoConfirm: true });
+    expect(s.explanation).toContain("payment reference");
   });
 
   it("client name in the counterparty counts as a reference hit", () => {

@@ -285,27 +285,74 @@ Nothing is charged until you confirm.
 }
 
 /**
- * Branded invoice email — sent to the client when their itemised build invoice
- * is generated. Offers both payment routes: the Stripe "Pay by card" link
- * (`payUrl`, when Stripe is configured — complements Stripe's own invoice
- * email) and a bank transfer to the business account (no card fees), with the
- * client's payment reference so transfers can be matched.
+ * The bank-transfer block every invoice email carries: account details, the
+ * amount and the invoice's own payment reference (NS-<client>-<invoice>).
+ * The reference is what the bank feed matches on, so it is the one line a
+ * client must copy; everything else is there so the transfer screen can be
+ * filled in 1:1.
+ */
+export function bankTransferBlock(opts: { reference: string; amount: string; lead?: string }): string {
+  const lead = opts.lead ?? "Pay by bank transfer";
+  return `<p style="margin:0 0 8px;font-family:${FONT};font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:${C.primary}">${esc(lead)}</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface2}" style="background-color:${C.surface2};border:1px solid ${C.border}">
+        ${(
+          [
+            ["Account name", BANK_DETAILS.accountName],
+            ["Sort code", BANK_DETAILS.sortCode],
+            ["Account number", BANK_DETAILS.accountNumber],
+            ["Amount", opts.amount],
+            ["Payment reference", opts.reference],
+          ] as [string, string][]
+        )
+          .map(
+            ([k, v], i) => `<tr>
+          <td style="padding:9px 14px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:${C.faint};vertical-align:middle">${esc(k)}</td>
+          <td style="padding:9px 14px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:${k === "Payment reference" ? "15px;font-weight:700" : "13px"};color:${C.fg};text-align:right;white-space:nowrap;vertical-align:middle">${esc(v)}</td>
+        </tr>`
+          )
+          .join("")}
+      </table>
+      <p style="margin:10px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Faster Payments, BACS and CHAPS all work. Please put <strong style="color:${C.fg}">${esc(opts.reference)}</strong> as the payment reference — our bank feed matches it to this invoice and marks it paid the moment it lands, usually the same day. No card fees either way.</p>`;
+}
+
+export function bankTransferText(opts: { reference: string; amount: string }): string {
+  return `  Account name:      ${BANK_DETAILS.accountName}
+  Sort code:         ${BANK_DETAILS.sortCode}
+  Account number:    ${BANK_DETAILS.accountNumber}
+  Amount:            ${opts.amount}
+  Payment reference: ${opts.reference}
+
+Faster Payments, BACS and CHAPS all work. Please put ${opts.reference} as the
+payment reference — our bank feed matches it to this invoice and marks it
+paid the moment it lands.`;
+}
+
+/**
+ * Branded invoice email — sent to the client when an itemised build, one-off
+ * or manual invoice is raised. Bank transfer is the way to pay: the account
+ * details and the invoice's own payment reference lead, and the bank feed
+ * matches that reference automatically. The optional link opens the invoice
+ * document (Xero's online view) — it is for viewing and downloading, not a
+ * card route.
  */
 export function buildInvoiceReadyEmail(opts: {
   name: string;
   total: number;
+  /** The invoice document, when there is one to show (Xero online invoice). */
   payUrl: string | null;
-  /** Which rail the link points at — changes the wording, not the flow. */
+  /** Kept for callers; only "xero" (a view link) is produced now. */
   payVia?: "xero" | "stripe" | null;
   items: { name: string; amount: number; quantity?: number }[];
-  /** Payment reference for bank transfers (e.g. NS-2E458EB1). */
+  /** The invoice's own payment reference (e.g. NS-2E458EB1-89FAB7). */
   reference: string;
+  /** "24 October 2026" — shown when the caller knows the due date. */
+  dueOn?: string | null;
 }): { subject: string; html: string; text: string } {
-  const { name, total, payUrl, items, reference } = opts;
-  const viaXero = opts.payVia === "xero";
+  const { name, total, payUrl, items, reference, dueOn } = opts;
   const first = name.split(" ")[0] || name || "there";
-  const gbp = (n: number) => "£" + Math.round(n).toLocaleString("en-GB");
-  const subject = `Your Nullshift invoice — ${gbp(total)}`;
+  const gbp = (n: number) =>
+    "£" + n.toLocaleString("en-GB", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
+  const subject = `Your Nullshift invoice — ${gbp(total)} · ref ${reference}`;
 
   const rows = items
     .map(
@@ -318,9 +365,9 @@ export function buildInvoiceReadyEmail(opts: {
 
   const inner = `
     <tr><td style="padding:22px 32px 0">
-      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Invoice ready</p>
-      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Your invoice is ready to pay</h1>
-      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, here's your itemised invoice for the build. ${payUrl ? (viaXero ? "View the invoice below — you can pay online from it, or by bank transfer, and you'll get a receipt automatically." : "Pay securely below — your card is handled by Stripe and you'll get a receipt automatically.") : "Pay by bank transfer using the details below — we'll confirm as soon as it arrives."}</p>
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Invoice · ${esc(reference)}</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Your invoice is ready</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, here is your invoice${dueOn ? ` — due <strong style="color:${C.fg}">${esc(dueOn)}</strong>` : ""}. Please pay by bank transfer using the details below, quoting the payment reference.</p>
     </td></tr>
     <tr><td style="padding:18px 32px 0">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -331,34 +378,15 @@ export function buildInvoiceReadyEmail(opts: {
         </tr>
       </table>
     </td></tr>
-    ${payUrl ? `<tr><td style="padding:22px 32px 6px">${button(payUrl, viaXero ? "View & pay invoice →" : "Pay by card →")}</td></tr>` : ""}
-    <tr><td style="padding:${payUrl ? "10px" : "22px"} 32px 8px">
-      <p style="margin:0 0 8px;font-family:${FONT};font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:${C.faint}">${payUrl ? "Or pay" : "Pay"} by bank transfer</p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${C.border}">
-        ${(
-          [
-            ["Account name", BANK_DETAILS.accountName],
-            ["Sort code", BANK_DETAILS.sortCode],
-            ["Account number", BANK_DETAILS.accountNumber],
-            ["Amount", gbp(total)],
-            ["Payment reference", reference],
-          ] as [string, string][]
-        )
-          .map(
-            ([k, v], i) => `<tr>
-          <td style="padding:9px 14px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:${C.faint};vertical-align:middle">${esc(k)}</td>
-          <td style="padding:9px 14px;border-top:${i ? `1px solid ${C.border}` : "none"};font-family:${FONT};font-size:13px;color:${C.fg};text-align:right;white-space:nowrap;vertical-align:middle">${esc(v)}</td>
-        </tr>`
-          )
-          .join("")}
-      </table>
-      <p style="margin:10px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Faster Payments, BACS and CHAPS all work — please include the payment reference so we can match your transfer. We mark the invoice paid as soon as it arrives.${payUrl ? " You can also pay any time from your Nullshift client portal — the card link is personal to you." : ""}</p>
-    </td></tr>`;
+    <tr><td style="padding:22px 32px 8px">
+      ${bankTransferBlock({ reference, amount: gbp(total) })}
+    </td></tr>
+    ${payUrl ? `<tr><td style="padding:14px 32px 6px">${button(payUrl, "View the invoice →", false)}</td></tr><tr><td style="padding:0 32px 8px"><p style="margin:6px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">The link opens the invoice document to view or download; your copy is also in your Nullshift client portal.</p></td></tr>` : `<tr><td style="padding:0 32px 8px"><p style="margin:6px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Your copy of the invoice is in your Nullshift client portal.</p></td></tr>`}`;
 
-  const html = wrap(inner, `Your Nullshift invoice for ${gbp(total)} is ready to pay.`);
+  const html = wrap(inner, `Your Nullshift invoice for ${gbp(total)} — pay by bank transfer quoting ${reference}.`);
   const text = `Hi ${first},
 
-Your itemised invoice for the build is ready — total due ${gbp(total)}.
+Your invoice is ready${dueOn ? ` — due ${dueOn}` : ""}. Total due ${gbp(total)}.
 
 ${items
   .map(
@@ -368,25 +396,11 @@ ${items
   .join("\n")}
 
 Total due: ${gbp(total)}
-${
-  payUrl
-    ? `
-${viaXero ? "View and pay your invoice here:" : "Pay by card here:"}
-${payUrl}
-`
-    : ""
-}
-${payUrl ? "Or pay" : "Pay"} by bank transfer:
-  Account name:      ${BANK_DETAILS.accountName}
-  Sort code:         ${BANK_DETAILS.sortCode}
-  Account number:    ${BANK_DETAILS.accountNumber}
-  Amount:            ${gbp(total)}
-  Payment reference: ${reference}
 
-Faster Payments, BACS and CHAPS all work — please include the payment
-reference so we can match your transfer.
-
-You can also pay any time from your client portal.
+Pay by bank transfer:
+${bankTransferText({ reference, amount: gbp(total) })}
+${payUrl ? `\nView the invoice document:\n${payUrl}\n` : ""}
+Your copy is also in your Nullshift client portal.
 
 — Nullshift`;
   return { subject, html, text };
@@ -623,15 +637,16 @@ export function carePlanInvoiceEmail(opts: {
       </table>
     </td></tr>
     ${note ? `<tr><td style="padding:14px 32px 0"><p style="margin:0;font-family:${FONT};font-size:14px;line-height:1.6;color:${C.fg};padding-left:14px;border-left:2px solid ${C.primary}">${esc(note)}</p></td></tr>` : ""}
-    <tr><td style="padding:22px 32px 6px">${url ? button(url, "View and pay the invoice →") : ""}</td></tr>
+    <tr><td style="padding:20px 32px 8px">
+      ${bankTransferBlock({ reference, amount: gbpFull(amount) })}
+    </td></tr>
+    ${url ? `<tr><td style="padding:14px 32px 6px">${button(url, "View the invoice →", false)}</td></tr>` : ""}
     <tr><td style="padding:0 32px 8px">
       <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">${
-        url
-          ? "The link opens the invoice with the bank details for a transfer, and a card option where one is offered. Please quote the reference with your payment."
-          : "Please pay by bank transfer quoting the reference above; the invoice document follows from our accounts system."
-      } Invoiced monthly by agreement, instead of a Direct Debit. Reply if anything looks wrong — a real person reads these.</p>
+        url ? "The link opens the invoice document to view or download. " : "The invoice document follows from our accounts system. "
+      }Invoiced monthly by agreement, instead of a Direct Debit. Reply if anything looks wrong — a real person reads these.</p>
     </td></tr>`;
-  const html = wrap(inner, `${planLabel} care plan — ${periodLabel}: ${gbpFull(amount)} due ${dueOn}.`);
+  const html = wrap(inner, `${planLabel} care plan — ${periodLabel}: ${gbpFull(amount)} due ${dueOn}. Pay by bank transfer quoting ${reference}.`);
   const text = `Hi ${first},
 
 Here is this month's invoice for your ${planLabel} care plan.
@@ -640,7 +655,10 @@ Amount: ${gbpFull(amount)}
 Period: ${periodLabel}
 Due: ${dueOn}
 Reference: ${reference}
-${note ? `\n${note}\n` : ""}${url ? `\nView and pay the invoice:\n${url}\n` : "\nPlease pay by bank transfer quoting the reference above; the invoice document follows from our accounts system.\n"}
+${note ? `\n${note}\n` : ""}
+Pay by bank transfer:
+${bankTransferText({ reference, amount: gbpFull(amount) })}
+${url ? `\nView the invoice document:\n${url}\n` : ""}
 Invoiced monthly by agreement, instead of a Direct Debit. Reply if anything looks wrong.
 
 — Nullshift`;
@@ -681,16 +699,22 @@ export function carePlanInvoiceReminderEmail(opts: {
       <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">${esc(heading)}</h1>
       <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, ${esc(opening)}</p>
     </td></tr>
-    <tr><td style="padding:22px 32px 6px">${url ? button(url, "View and pay the invoice →") : ""}</td></tr>
+    <tr><td style="padding:20px 32px 8px">
+      ${bankTransferBlock({ reference, amount: gbpFull(amount) })}
+    </td></tr>
+    ${url ? `<tr><td style="padding:14px 32px 6px">${button(url, "View the invoice →", false)}</td></tr>` : ""}
     <tr><td style="padding:0 32px 8px">
-      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Please quote ${esc(reference)} with your payment. If you have paid already, or something is wrong with the invoice, just reply and we will sort it.</p>
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">If you have paid already, or something is wrong with the invoice, just reply and we will sort it.</p>
     </td></tr>`;
   const html = wrap(inner, `${planLabel} care plan — ${periodLabel}: ${gbpFull(amount)} was due ${dueOn}.`);
   const text = `Hi ${first},
 
 ${opening}
-${url ? `\nView and pay the invoice:\n${url}\n` : ""}
-Please quote ${reference} with your payment. If you have paid already, or something is wrong with the invoice, just reply and we will sort it.
+
+Pay by bank transfer:
+${bankTransferText({ reference, amount: gbpFull(amount) })}
+${url ? `\nView the invoice document:\n${url}\n` : ""}
+If you have paid already, or something is wrong with the invoice, just reply and we will sort it.
 
 — Nullshift`;
   return { subject, html, text };

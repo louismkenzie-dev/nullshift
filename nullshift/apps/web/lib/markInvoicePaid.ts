@@ -1,14 +1,14 @@
 import { getStripe } from "@nullshift/billing/stripe";
 import { createServiceClient } from "@nullshift/db";
-import { logAudit } from "@nullshift/db/audit";
+import { logAudit, logAuditAsService } from "@nullshift/db/audit";
 import { syncInvoicePaymentToXero } from "./xeroSync";
 
 /**
  * THE way to mark an invoice paid out-of-band (bank transfer / standing
  * order). One implementation with all three guarantees, shared by the client
- * hub and the billing cockpit — the billing page used to have a weaker copy
- * that left the Stripe hosted invoice collectible (a client could pay twice)
- * and never mirrored the payment into Xero.
+ * hub, the billing cockpit and the bank-feed reconciler — the billing page
+ * used to have a weaker copy that left the Stripe hosted invoice collectible
+ * (a client could pay twice) and never mirrored the payment into Xero.
  *
  * 1. Stripe hosted invoice is settled out-of-band so the card link stops
  *    collecting (best-effort — the local row is the source of truth).
@@ -19,6 +19,12 @@ import { syncInvoicePaymentToXero } from "./xeroSync";
 export async function markInvoicePaidOutOfBand(opts: {
   tenantId: string;
   invoiceId: string;
+  /** Audit detail: how the money arrived (default "bank_transfer"). */
+  via?: string;
+  /** No signed-in person (the bank-feed sync): audit via the service client. */
+  asService?: boolean;
+  /** Anything that proves it: a bank transaction id, a match id. */
+  evidence?: Record<string, unknown>;
 }): Promise<{ ok: boolean }> {
   const { tenantId, invoiceId } = opts;
   const service = createServiceClient();
@@ -39,18 +45,22 @@ export async function markInvoicePaidOutOfBand(opts: {
     }
   }
 
-  await service
+  const { data: flipped } = await service
     .from("invoices")
     .update({ status: "paid", paid_at: new Date().toISOString() })
     .eq("id", invoiceId)
-    .eq("status", inv.status);
+    .eq("status", inv.status)
+    .select("id");
+  if (!flipped?.length) return { ok: false };
 
-  await logAudit({
+  const entry = {
     action: "invoice.marked_paid",
     target: `invoice:${invoiceId}`,
     tenantId,
-    metadata: { via: "bank_transfer" },
-  });
+    metadata: { via: opts.via ?? "bank_transfer", ...(opts.evidence ?? {}) },
+  };
+  if (opts.asService) await logAuditAsService(entry);
+  else await logAudit(entry);
 
   await syncInvoicePaymentToXero(service, invoiceId);
   return { ok: true };

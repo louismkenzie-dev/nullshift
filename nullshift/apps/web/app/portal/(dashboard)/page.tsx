@@ -101,7 +101,7 @@ export default async function PortalHome({
       .limit(20),
     supabase
       .from("invoices")
-      .select("id, tenant_id, amount, status, hosted_invoice_url")
+      .select("id, tenant_id, amount, status, hosted_invoice_url, stripe_invoice_id")
       .order("created_at", { ascending: false }),
     supabase.from("subscriptions").select("plan, mrr, status").eq("status", "active"),
     supabase
@@ -120,6 +120,7 @@ export default async function PortalHome({
     amount: number;
     status: string;
     hosted_invoice_url: string | null;
+    stripe_invoice_id?: string | null;
   }[];
   // Invoices to surface for payment: sent/open/paid (skip drafts + voided).
   const billed = invList.filter((i) => i.status !== "void" && i.status !== "draft");
@@ -747,9 +748,9 @@ export default async function PortalHome({
                         href={inv.hosted_invoice_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="kb kb-primary kb-sm"
+                        className={`kb ${inv.stripe_invoice_id ? "kb-primary" : ""} kb-sm`}
                       >
-                        Pay by card
+                        {inv.stripe_invoice_id ? "Pay by card" : "View invoice"}
                         <span className="k-arrow" aria-hidden>
                           →
                         </span>
@@ -760,7 +761,7 @@ export default async function PortalHome({
                     <BankTransferDetails
                       reference={invoiceRef(inv.tenant_id, inv.id)}
                       amount={Number(inv.amount)}
-                      only={!inv.hosted_invoice_url}
+                      only={!inv.stripe_invoice_id}
                     />
                   )}
                 </div>

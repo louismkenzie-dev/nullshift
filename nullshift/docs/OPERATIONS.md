@@ -404,6 +404,44 @@ What this does not do: refund. A collected off-plan payment is refunded from
 the GoCardless dashboard (or the client is invoiced for what it was), then
 marked handled.
 
+## Bank-transfer invoices that reconcile themselves (2026-10)
+
+Manual, build-milestone, one-off and monthly care-plan invoices are collected
+by **bank transfer only** — no Stripe hosted invoice, no card fees. The
+money is matched to the invoice by its reference, not by a person.
+
+- **Reference.** Every invoice has one: `invoiceRef(tenantId, invoiceId)` =
+  `NS-<client 8>-<invoice 6>` (e.g. `NS-2E458EB1-89FAB7`). It is on the
+  invoice email (bank details block, `lib/clientEmails.ts`
+  `bankTransferBlock`), in the portal (`BankTransferDetails`) and is the
+  Xero invoice's Reference (`lib/xeroSync.ts`), so the document, the email
+  and the bank line all say one thing.
+- **Issuing.** `/admin/billing` "Issue invoice" → `lib/manualInvoice.ts`
+  `issueManualInvoice` (open row + description line, Xero mirror, client
+  email with the bank details and reference, audit `invoice.issued`).
+  `generateProjectInvoice` / `generateQuoteInvoice` do the same with no
+  Stripe leg; the Xero online invoice is linked as "View the invoice" only.
+  Monthly care-plan invoices (`invoicedPlansRun`) carry the same block.
+- **Matching.** `lib/revolut/match.ts`: a completed inbound transfer whose
+  reference/counterparty contains the invoice's own payment reference (or
+  the invoice id prefix), normalised, at exactly the invoice amount, is a
+  0.99 suggestion. When that invoice is open, bank transfer is its rail
+  (no `stripe_invoice_id` / `gc_payment_id`) and no other invoice also
+  fits, the suggestion is marked `autoConfirm`.
+- **Reconciling.** `lib/revolut/store.ts` `runMatching` confirms
+  `autoConfirm` suggestions through `lib/revolut/confirm.ts`
+  `applyMatchConfirmation` — the same implementation the Bank page's
+  Confirm button uses — so the invoice is marked paid (audit
+  `invoice.marked_paid`, via `bank_transfer_auto`), the payment mirrored
+  into Xero, and the match recorded `confirmed` with `decided_by` null and
+  audit `bank_match.auto_confirmed`. The Bank page notice reports how many
+  were reconciled automatically. Name-only, amount-only and split matches
+  still wait for a person. Tests: `tests/bank-reference.test.ts`.
+- **Xero.** If Xero's online invoice still shows a "Pay now" card button,
+  that comes from the payment services on the branding theme in Xero
+  (Settings → Invoice settings → payment services); remove them there to
+  make the document transfer-only.
+
 ## Auto-scoring (`scale_evidence`)
 
 Once a system is built it can score itself. **Analyse the system** on

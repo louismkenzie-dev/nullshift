@@ -4,12 +4,21 @@
  * movement is evidence, not an issuer").
  *
  * For each completed transaction the matcher proposes zero or more
- * suggestions. Every suggestion is `state: "suggested"`; nothing here (or
- * anywhere in the sync) confirms one. Confidence is a number in [0, 1]:
+ * suggestions. Every suggestion is `state: "suggested"`; the matcher itself
+ * never confirms one. The one exception to "a person decides" lives in the
+ * sync, not here: a suggestion marked `autoConfirm` (the transfer quotes the
+ * invoice's own payment reference, the amount is exact, the invoice is open
+ * and collected by bank transfer) is confirmed by the sync through the same
+ * path staff use, so a client who types the reference we gave them is
+ * reconciled without anyone pressing anything. Confidence is in [0, 1]:
  *
+ *   0.99  payment-reference match — amount equals an open/paid invoice AND
+ *         the transfer quotes the invoice's unique payment reference
+ *         (NS-<client>-<invoice>, or the invoice id prefix). Auto-confirmable
+ *         when the invoice is open and bank transfer is its rail.
  *   0.95  reference match  — amount equals an open/paid invoice AND the
- *         invoice reference (id prefix), obligation label or client name
- *         appears in the transaction reference / counterparty
+ *         obligation label or client name appears in the transaction
+ *         reference / counterparty
  *   0.60  amount-only match — amount equals exactly one invoice due within
  *         ±14 days of the transaction (medium)
  *   0.40  amount-only match with several candidates (each listed)
@@ -36,12 +45,22 @@ export type MatchableTransaction = {
   createdAt: string;
 };
 
+export type InvoiceRail = "transfer" | "card" | "direct_debit";
+
 export type InvoiceCandidate = {
   id: string;
   tenantId: string;
   tenantName: string;
   /** Anything a payer might quote: an id prefix, an obligation label. */
   references: readonly string[];
+  /**
+   * The invoice's own unique payment reference as printed on it and in its
+   * email (NS-<client>-<invoice>). A transfer quoting it identifies exactly
+   * this invoice. Optional for callers that predate it.
+   */
+  paymentReference?: string | null;
+  /** How the invoice is collected; only a transfer-rail invoice auto-confirms. */
+  rail?: InvoiceRail;
   amountMinor: number;
   currency: string;
   status: "draft" | "open" | "paid" | "void" | "uncollectible";
@@ -63,7 +82,15 @@ export type Suggestion = {
   /** Stable per (transaction, rule) so a re-run upserts rather than duplicates. */
   ruleKey: string;
   state: "suggested";
+  /**
+   * The sync may confirm this one without a person: exact amount, the
+   * invoice's own payment reference quoted, invoice open, bank transfer its
+   * rail, and no other invoice fits. Never set by any other rule.
+   */
+  autoConfirm: boolean;
 };
+
+export const AUTO_CONFIRM_CONFIDENCE = 0.99;
 
 export const normaliseRef = (s: string | null | undefined): string =>
   (s ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -98,6 +125,35 @@ export function referenceHit(t: MatchableTransaction, inv: InvoiceCandidate): st
   return null;
 }
 
+/**
+ * The invoice's OWN reference quoted in the transfer — the payment reference
+ * we print (NS-<client>-<invoice>) or the invoice id prefix. Banks strip
+ * punctuation and case, so both sides are normalised; a client who types
+ * "ns 2e458eb1 89fab7" still matches. Unlike `referenceHit` this never
+ * matches on the client's name or an obligation label: those can be shared
+ * by several invoices, a payment reference cannot.
+ */
+export function uniqueReferenceHit(t: MatchableTransaction, inv: InvoiceCandidate): string | null {
+  const hay = haystack(t);
+  if (hay.length < 6) return null;
+  const candidates = [inv.paymentReference ?? null, inv.id.slice(0, 8)].filter((r): r is string => !!r);
+  for (const r of candidates) {
+    const n = normaliseRef(r);
+    if (n.length >= 6 && hay.includes(n)) return r;
+  }
+  return null;
+}
+
+/**
+ * May the sync confirm this suggestion without a person? Only the
+ * payment-reference rule produces one, and only when the invoice is open and
+ * bank transfer is how it is collected (a card or Direct Debit invoice has
+ * its own rail deciding when it is paid).
+ */
+export function shouldAutoConfirm(inv: InvoiceCandidate, uniqueHit: string | null, competing: number): boolean {
+  return !!uniqueHit && inv.status === "open" && (inv.rail ?? "transfer") === "transfer" && competing === 1;
+}
+
 function withinDueWindow(t: MatchableTransaction, inv: InvoiceCandidate): boolean {
   if (!inv.dueAt) return false;
   const at = new Date(t.completedAt ?? t.createdAt).getTime();
@@ -129,7 +185,7 @@ export function suggestForTransaction(
   if (!isCompleted(t)) return [];
   const out: Suggestion[] = [];
   const hay = haystack(t);
-  const base = { transactionId: t.id, state: "suggested" as const, splitInvoiceIds: [] as string[] };
+  const base = { transactionId: t.id, state: "suggested" as const, splitInvoiceIds: [] as string[], autoConfirm: false };
 
   // Provider payouts and fees first: they are not client invoices.
   if (isInbound(t) && hay.includes("GOCARDLESS")) {
@@ -176,20 +232,26 @@ export function suggestForTransaction(
   );
   if (pool.length === 0) return out;
 
-  // High: amount equals AND reference/name names the invoice.
+  // High: amount equals AND reference/name names the invoice. Highest when
+  // the transfer quotes the invoice's own payment reference — that one the
+  // sync may confirm on its own.
   const exact = pool.filter((i) => i.amountMinor === t.amountMinor);
   const named = exact
-    .map((i) => ({ i, hit: referenceHit(t, i) }))
-    .filter((x): x is { i: InvoiceCandidate; hit: string } => x.hit !== null);
-  for (const { i, hit } of named) {
+    .map((i) => ({ i, hit: referenceHit(t, i), unique: uniqueReferenceHit(t, i) }))
+    .filter((x): x is { i: InvoiceCandidate; hit: string; unique: string | null } => x.hit !== null || x.unique !== null);
+  for (const { i, hit, unique } of named) {
+    const auto = shouldAutoConfirm(i, unique, named.length);
     out.push({
       ...base,
       kind: "invoice",
       invoiceId: i.id,
       obligationId: i.obligationId,
-      confidence: 0.95,
-      explanation: `Amount ${money(t.amountMinor, t.currency)} equals invoice ${i.id.slice(0, 8)} for ${i.tenantName}${i.status === "paid" ? " (already marked paid)" : ""}, and the transaction names "${hit}".`,
+      confidence: unique ? AUTO_CONFIRM_CONFIDENCE : 0.95,
+      explanation: unique
+        ? `Amount ${money(t.amountMinor, t.currency)} equals invoice ${i.id.slice(0, 8)} for ${i.tenantName}${i.status === "paid" ? " (already marked paid)" : ""}, and the transfer quotes its payment reference "${unique}".${auto ? " Confirmed automatically: the reference is unique to this invoice and bank transfer is how it is paid." : ""}`
+        : `Amount ${money(t.amountMinor, t.currency)} equals invoice ${i.id.slice(0, 8)} for ${i.tenantName}${i.status === "paid" ? " (already marked paid)" : ""}, and the transaction names "${hit}".`,
       ruleKey: `invoice:ref:${i.id}`,
+      autoConfirm: auto,
     });
   }
   if (named.length) return out;
@@ -257,5 +319,9 @@ export function suggestMatches(
   return out;
 }
 
-/** The matcher can only ever emit `suggested`; pinned by a test. */
+/**
+ * The matcher can only ever emit `suggested`; pinned by a test. Confirming a
+ * suggestion it marked `autoConfirm` is the sync's decision (store.ts), made
+ * through the same path staff use.
+ */
 export const canAutoConfirm = (): false => false;

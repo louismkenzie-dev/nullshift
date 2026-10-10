@@ -1,12 +1,7 @@
-import {
-  createItemisedStripeInvoice,
-  findOrCreateCustomer,
-} from "@nullshift/billing/stripe";
 import { createServiceClient } from "@nullshift/db";
 import { invoiceRef } from "@nullshift/ui/format";
 import { sendEmail } from "./sendEmail";
 import { buildInvoiceReadyEmail } from "./clientEmails";
-import { isXeroPrimary } from "@nullshift/billing/xero";
 import { syncInvoiceToXero } from "./xeroSync";
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -16,8 +11,12 @@ type Service = ReturnType<typeof createServiceClient>;
  * the admin client hub ("Generate invoice" button) and the portal accept flow
  * ("auto-draft & send on acceptance"). Service-role client only (writes
  * invoices/invoice_items which are staff-write under RLS, and looks up the
- * client's email). Stripe send is best-effort: if Stripe isn't configured the
- * invoice is still recorded as `open`.
+ * client's email).
+ *
+ * Collected by bank transfer only — no card link, no fees. The invoice is
+ * mirrored into Xero (reference = the client's payment reference) and the
+ * email leads with the bank details and that reference; the bank feed
+ * matches a transfer quoting it and confirms the payment automatically.
  */
 export async function generateProjectInvoice(
   service: Service,
@@ -91,11 +90,10 @@ export async function generateProjectInvoice(
     }))
   );
 
-  // Resolve the client's email (the client_admin member of this tenant) + the
-  // tenant's stored Stripe customer (shared with the care subscription).
+  // Resolve the client's email (the client_admin member of this tenant).
   const { data: tenantRow } = await service
     .from("tenants")
-    .select("name, contact_name, stripe_customer_id")
+    .select("name, contact_name, contact_email")
     .eq("id", tenantId)
     .maybeSingle();
   const { data: membership } = await service
@@ -111,78 +109,26 @@ export async function generateProjectInvoice(
     email = u.user?.email ?? null;
   }
 
-  // Best-effort Stripe leg: create the hosted card-payment invoice. Any
-  // failure (or Stripe simply unconfigured) still leaves the invoice open and
-  // payable by bank transfer — the email below always carries those details.
-  let payUrl: string | null = null;
-  let payVia: "xero" | "stripe" | null = null;
-  if (email) {
-    // Xero is the invoice rail when configured: raise it there first and send
-    // the client Xero's online invoice (with its Pay-now button once a payment
-    // service is connected in Xero). Stripe stays the fallback.
-    if (isXeroPrimary()) {
-      await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-      const xero = await syncInvoiceToXero(service, invoice.id);
-      if (xero.ok && xero.onlineUrl) {
-        payUrl = xero.onlineUrl;
-        payVia = "xero";
-      }
-    }
-    if (payVia) {
-      /* invoiced through Xero — no Stripe invoice */
-    } else
-      try {
-        const customerId = await findOrCreateCustomer({
-          email,
-          name: tenantRow?.name ?? undefined,
-          existingCustomerId: tenantRow?.stripe_customer_id ?? null,
-          idempotencyKey: `customer:${tenantId}`,
-        });
-        if (customerId && customerId !== tenantRow?.stripe_customer_id) {
-          await service
-            .from("tenants")
-            .update({ stripe_customer_id: customerId })
-            .eq("id", tenantId)
-            .is("stripe_customer_id", null);
-        }
-        const stripeInv = customerId
-          ? await createItemisedStripeInvoice({
-              customerId,
-              items: lines.map((l) => ({
-                name: l.name,
-                amountPence: Math.round(Number(l.amount) * 100),
-              })),
-            })
-          : null;
-        if (stripeInv) {
-          payUrl = stripeInv.url ?? null;
-          payVia = payUrl ? "stripe" : null;
-          await service
-            .from("invoices")
-            .update({
-              status: "open",
-              stripe_invoice_id: stripeInv.id,
-              hosted_invoice_url: stripeInv.url,
-            })
-            .eq("id", invoice.id);
-        } else {
-          await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-        }
-      } catch (e) {
-        console.error("Stripe invoice send failed:", e);
-        await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
-      }
+  email = email ?? tenantRow?.contact_email ?? null;
 
-    // Branded invoice email — card link (when Stripe produced one) + bank
-    // transfer details in all cases. Best-effort; complements Stripe's own email.
+  // Open, then into Xero (best-effort — logged + swallowed inside). The Xero
+  // online invoice is the document link in the email; there is no card leg.
+  await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
+  const xero = await syncInvoiceToXero(service, invoice.id);
+  const viewUrl = xero.ok && xero.onlineUrl ? xero.onlineUrl : null;
+
+  // Branded invoice email — bank details + the invoice's payment reference
+  // first, the document link second. Best-effort.
+  if (email) {
     try {
       const mail = buildInvoiceReadyEmail({
         name: tenantRow?.contact_name ?? tenantRow?.name ?? "",
         total,
-        payUrl,
-        payVia,
+        payUrl: viewUrl,
+        payVia: viewUrl ? "xero" : null,
         items: lines.map((l) => ({ name: l.name, amount: Number(l.amount) })),
         reference: invoiceRef(tenantId, invoice.id),
+        dueOn: new Date(dueAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
       });
       await sendEmail({
         purpose: "transactional",
@@ -194,12 +140,7 @@ export async function generateProjectInvoice(
     } catch (e) {
       console.error("Invoice email send failed:", e);
     }
-  } else {
-    await service.from("invoices").update({ status: "open" }).eq("id", invoice.id);
   }
-
-  // Mirror the invoice into Xero (best-effort — logged + swallowed inside).
-  await syncInvoiceToXero(service, invoice.id);
 
   return { ok: true, invoiceId: invoice.id, total };
 }

@@ -197,7 +197,7 @@ export default async function BankPage({
           {n.text}
           {notice === "not_configured" && missing ? ` Missing: ${missing}.` : ""}
           {notice === "synced"
-            ? ` ${first(sp.n) ?? "0"} transaction${first(sp.n) === "1" ? "" : "s"} in the window, ${first(sp.m) ?? "0"} new suggestion${first(sp.m) === "1" ? "" : "s"}.`
+            ? ` ${first(sp.n) ?? "0"} transaction${first(sp.n) === "1" ? "" : "s"} in the window, ${first(sp.m) ?? "0"} new suggestion${first(sp.m) === "1" ? "" : "s"}${Number(first(sp.a) ?? "0") > 0 ? `, ${first(sp.a)} reconciled automatically from the payment reference` : ""}.`
             : ""}
           {notice === "sync_failed" && first(sp.detail) ? ` ${first(sp.detail)}` : ""}
         </div>
@@ -206,7 +206,7 @@ export default async function BankPage({
       {autoSync ? (
         <div className={`${b.notice} ${autoSync.ok ? b.noticeSuccess : b.noticeDanger}`} role="status">
           {autoSync.ok
-            ? `The feed was stale, so it was pulled as the page opened: ${autoSync.transactions} transaction${autoSync.transactions === 1 ? "" : "s"} in the window, ${autoSync.suggestions} new suggestion${autoSync.suggestions === 1 ? "" : "s"}.`
+            ? `The feed was stale, so it was pulled as the page opened: ${autoSync.transactions} transaction${autoSync.transactions === 1 ? "" : "s"} in the window, ${autoSync.suggestions} new suggestion${autoSync.suggestions === 1 ? "" : "s"}${autoSync.autoConfirmed ? `, ${autoSync.autoConfirmed} reconciled automatically from the payment reference` : ""}.`
             : `The feed was stale and the pull as the page opened did not complete: ${"error" in autoSync ? autoSync.error : autoSync.skipped}.`}
         </div>
       ) : conn && isStale(conn.last_sync_at, new Date()) ? (
@@ -274,7 +274,7 @@ export default async function BankPage({
         <section className={`${s.card} ${s.span12}`} aria-labelledby="sugg">
           <div className={s.cardTitle}>
             <h2 className={s.h2} id="sugg" style={{ margin: 0 }}>Suggested matches</h2>
-            <span className={s.mono}>{suggestions.length} awaiting a decision · nothing is confirmed automatically</span>
+            <span className={s.mono}>{suggestions.length} awaiting a decision · a transfer quoting an invoice&apos;s payment reference (NS-…) is reconciled automatically; everything else waits here</span>
           </div>
           {suggestions.length ? (
             <table className={s.table}>

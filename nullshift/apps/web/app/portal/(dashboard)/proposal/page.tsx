@@ -64,6 +64,7 @@ type Invoice = {
   amount: number;
   status: string;
   hosted_invoice_url: string | null;
+  stripe_invoice_id?: string | null;
 };
 type InvItem = { invoice_id: string; name: string; amount: number; quantity: number };
 
@@ -344,7 +345,7 @@ export default async function PortalProposal() {
         .order("created_at"),
       supabase
         .from("invoices")
-        .select("id, project_id, amount, status, hosted_invoice_url")
+        .select("id, project_id, amount, status, hosted_invoice_url, stripe_invoice_id")
         .order("created_at", { ascending: false }),
       supabase.from("invoice_items").select("invoice_id, name, amount, quantity"),
     ]);
@@ -785,10 +786,10 @@ export default async function PortalProposal() {
                             href={inv.hosted_invoice_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="kb kb-primary kb-sm"
+                            className={`kb ${inv.stripe_invoice_id ? "kb-primary" : ""} kb-sm`}
                             style={{ marginTop: 14 }}
                           >
-                            Pay by card
+                            {inv.stripe_invoice_id ? "Pay by card" : "View invoice"}
                             <span className="k-arrow" aria-hidden>
                               →
                             </span>
@@ -797,7 +798,7 @@ export default async function PortalProposal() {
                         <BankTransferDetails
                           reference={invoiceRef(project.tenant_id, inv.id)}
                           amount={Number(inv.amount)}
-                          only={!inv.hosted_invoice_url}
+                          only={!inv.stripe_invoice_id}
                         />
                       </>
                     )}
