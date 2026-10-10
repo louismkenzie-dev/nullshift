@@ -32,6 +32,14 @@
     {
       "path": "/api/cron/social-publish",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/watch-tick",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/watch-report",
+      "schedule": "0 8 1 * *"
     }
   ]
 }
