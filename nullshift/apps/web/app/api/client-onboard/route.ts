@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     const siteUrl = (
       process.env.NEXT_PUBLIC_SITE_URL || "https://nullshift.co.uk"
     ).replace(/\/$/, "");
-    const pipelineLink = `${siteUrl}/admin/pipeline`;
+    const clientsLink = `${siteUrl}/admin/clients`;
 
     const timeLabels: Record<string, string> = {
       morning: "Morning (9am–12pm)",
@@ -112,15 +112,15 @@ export async function POST(request: Request) {
         to: notify,
         replyTo: email.trim(),
         subject: `New call booked — ${name.trim()}`,
-        text: `A new call has been booked via nullshift.co.uk:\n\n${textLines}\n\nView in the Pipeline:\n${pipelineLink}`,
+        text: `A new call has been booked via nullshift.co.uk:\n\n${textLines}\n\nOpen the clients board:\n${clientsLink}`,
         html: `
 <div style="background:#0A0B0F;color:#F2F4F8;font-family:system-ui,sans-serif;padding:40px;max-width:580px;margin:0 auto;border-radius:12px;border:1px solid #2A2D38;">
   <div style="margin-bottom:8px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#10b981;">New call booked</div>
   <h1 style="margin:0 0 24px;font-size:26px;font-weight:600;letter-spacing:-0.02em;">${name.trim()}</h1>
   <table style="width:100%;border-collapse:collapse;margin-bottom:32px;">${tableRows}</table>
-  <a href="${pipelineLink}"
+  <a href="${clientsLink}"
      style="display:inline-block;background:#10b981;color:#0A0B0F;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">
-    View in the Pipeline →
+    Open the clients board →
   </a>
 </div>`,
       });

@@ -6,13 +6,13 @@ import { Search } from "lucide-react";
 import { T } from "@nullshift/ui/tokens";
 import { StatusChip } from "@/components/app/AppKit";
 import type { TileKey, Tone } from "@/lib/hub/rules";
-import { openLead } from "./pipeline/actions";
+import { openLead } from "./leadActions";
 
 /**
  * The client grid body — a search box, a count strip, the Enquiries row, the
  * client blocks and the Platform row. Pure presentation over the rows the
  * server page folded; the only interaction that reaches the server is the
- * openLead form on an enquiry block (the pipeline's existing action).
+ * openLead form on an enquiry block (the shared lead action).
  */
 
 export type GridBlock = {
@@ -193,21 +193,20 @@ function LeadCard({ lead }: { lead: GridLead }) {
           {lead.requestedDate ? ` · call ${dateGB(lead.requestedDate)}` : ""}
         </span>
         <span style={{ color: T.danger }}>
-          {lead.canOpen ? "Open as client →" : "No email · pipeline →"}
+          {lead.canOpen ? "Open as client →" : "No email on record"}
         </span>
       </span>
     </>
   );
   if (!lead.canOpen)
     return (
-      <Link
-        href="/admin/pipeline"
-        className="k-kard k-kard-h"
+      <div
+        className="k-kard"
         style={blockStyle("danger")}
-        title="This enquiry has no email address — manage it on the pipeline"
+        title="This enquiry has no email address, so it cannot be opened as a client"
       >
         {inner}
-      </Link>
+      </div>
     );
   return (
     <form action={openLead} className="h-full">
