@@ -195,6 +195,74 @@ const bioText: React.CSSProperties = {
   maxWidth: "52ch",
 };
 
+/**
+ * The dark portrait stage. A background-free cut-out stands on the site's
+ * dark surface with one soft emerald glow behind the head, a masked grid and
+ * a fade into the base at the bottom, so the edges of the cut-out never show.
+ * The caller supplies the panel (its borders differ per side).
+ */
+function PortraitStage({
+  src,
+  srcSet,
+  alt,
+  role,
+  name,
+}: {
+  src: string;
+  srcSet: string;
+  alt: string;
+  role: string;
+  name: string;
+}) {
+  return (
+    <>
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(60% 55% at 50% 38%, color-mix(in oklab, var(--k-accent) 22%, transparent) 0%, transparent 70%), radial-gradient(90% 60% at 50% 100%, color-mix(in oklab, var(--k-accent) 8%, transparent) 0%, transparent 60%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(var(--k-border) 1px, transparent 1px), linear-gradient(90deg, var(--k-border) 1px, transparent 1px)",
+          backgroundSize: "56px 56px",
+          opacity: 0.35,
+          maskImage: "radial-gradient(70% 70% at 50% 45%, #000 0%, transparent 100%)",
+          WebkitMaskImage: "radial-gradient(70% 70% at 50% 45%, #000 0%, transparent 100%)",
+        }}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        srcSet={srcSet}
+        sizes="(min-width: 768px) 50vw, 100vw"
+        loading="lazy"
+        decoding="async"
+        alt={alt}
+        className="absolute inset-x-0 bottom-0 mx-auto h-[94%] w-auto max-w-none object-contain object-bottom"
+        style={{
+          filter:
+            "drop-shadow(0 30px 60px rgba(0,0,0,0.55)) drop-shadow(0 0 1px rgba(0,0,0,0.6))",
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(to top, var(--k-bg) 0%, color-mix(in oklab, var(--k-bg) 75%, transparent) 16%, transparent 42%)",
+        }}
+      />
+      <PortraitCaption role={role} name={name} />
+    </>
+  );
+}
+
 function CompareList({
   items,
   tone,
@@ -508,30 +576,24 @@ export default function AboutPage() {
           {/* Louis — portrait left, words right */}
           <div className="grid md:grid-cols-2">
             <Reveal className="relative">
+              {/* Dark portrait stage: the cutout sits on the site's dark surface
+                  with one soft emerald glow behind the head and a fade into the
+                  base at the bottom, so the edges of the cutout never show. */}
               <div
-                className="relative h-full min-h-[420px] md:min-h-[600px]"
+                className="k-dark relative h-full min-h-[420px] md:min-h-[600px] overflow-hidden"
                 style={{
+                  background: "var(--k-bg)",
                   borderBottom: "1px solid var(--k-border)",
                   borderRight: "1px solid var(--k-border)",
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/louis-mckenzie.jpg"
-                  loading="lazy"
-                  decoding="async"
-                  alt="Louis McKenzie — Co-Founder & Lead Developer of Nullshift"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  style={{ objectPosition: "center 25%" }}
+                <PortraitStage
+                  src="/louis-mckenzie-cutout.webp"
+                  srcSet="/louis-mckenzie-cutout-800.webp 800w, /louis-mckenzie-cutout.webp 1122w"
+                  alt="Louis McKenzie — Co-Founder of Nullshift"
+                  role="Louis McKenzie · Co-Founder"
+                  name="Louis McKenzie"
                 />
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background:
-                      "linear-gradient(to top, var(--k-bg) 0%, transparent 45%), linear-gradient(to right, transparent 60%, color-mix(in oklab, var(--k-bg) 70%, transparent) 100%)",
-                  }}
-                />
-                <PortraitCaption role="Co-Founder · Lead developer" name="Louis McKenzie" />
               </div>
             </Reveal>
 
@@ -572,47 +634,21 @@ export default function AboutPage() {
           {/* Chris — words left, portrait right (portrait first on a phone) */}
           <div className="grid md:grid-cols-2">
             <Reveal className="relative md:order-2">
+              {/* The same dark stage as Louis's, mirrored to the right-hand side. */}
               <div
-                className="relative h-full min-h-[420px] md:min-h-[600px] overflow-hidden"
+                className="k-dark relative h-full min-h-[420px] md:min-h-[600px] overflow-hidden"
                 style={{
+                  background: "var(--k-bg)",
                   borderBottom: "1px solid var(--k-border)",
-                  /* A cut-out portrait needs a ground: a soft studio sweep that
-                     darkens behind the head and settles into the paper. */
-                  background:
-                    "radial-gradient(120% 90% at 50% 0%, color-mix(in oklab, var(--k-fg) 9%, var(--k-bg)) 0%, var(--k-bg) 70%)",
                 }}
               >
-                {/* A cut-out is shown whole, standing on the bottom edge, so the
-                    name lockup lands on the shoulders rather than the chin. The
-                    frame matches the photo's own aspect so its straight sides can
-                    be feathered where the jumper meets the edge. */}
-                <div
-                  className="absolute inset-y-0 left-1/2 h-full -translate-x-1/2 max-w-full"
-                  style={{
-                    aspectRatio: "1122 / 1402",
-                    maskImage:
-                      "linear-gradient(to right, transparent, #000 18%, #000 82%, transparent)",
-                    WebkitMaskImage:
-                      "linear-gradient(to right, transparent, #000 18%, #000 82%, transparent)",
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/chris-melsa.webp"
-                    loading="lazy"
-                    decoding="async"
-                    alt="Chris Melsa — Co-Founder & Lead Consultant of Nullshift"
-                    className="w-full h-full object-contain object-bottom"
-                  />
-                </div>
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background:
-                      "linear-gradient(to top, var(--k-bg) 0%, transparent 45%), linear-gradient(to left, transparent 60%, color-mix(in oklab, var(--k-bg) 70%, transparent) 100%)",
-                  }}
+                <PortraitStage
+                  src="/chris-melsa.webp"
+                  srcSet="/chris-melsa-800.webp 800w, /chris-melsa.webp 1122w"
+                  alt="Chris Melsa — Co-Founder & Lead Consultant of Nullshift"
+                  role="Chris Melsa · Co-Founder & Lead Consultant"
+                  name="Chris Melsa"
                 />
-                <PortraitCaption role="Co-Founder · Lead consultant" name="Chris Melsa" />
               </div>
             </Reveal>
 

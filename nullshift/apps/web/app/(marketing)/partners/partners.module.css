@@ -1,0 +1,380 @@
+/* Partner programme — page-specific pieces on top of the kyma kit.
+   Everything themed through --k-* so the dark/cream bands stay in step. */
+
+.models {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--k-border);
+  border-left: 1px solid var(--k-border);
+  margin-top: 48px;
+}
+.model {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(28px, 3.5vw, 44px);
+  border-right: 1px solid var(--k-border);
+  border-bottom: 1px solid var(--k-border);
+  position: relative;
+}
+.modelFeatured {
+  background: var(--k-surface);
+}
+.modelTag {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+}
+.modelName {
+  font: 500 0.72rem/1.4 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--k-accent);
+}
+.modelHeadline {
+  margin-top: 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.modelFigure {
+  font: 800 clamp(2rem, 3.2vw, 2.8rem) / 1 var(--font-sans);
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  color: var(--k-fg);
+}
+.modelUnit {
+  font: 400 0.78rem/1.4 var(--font-mono);
+  text-transform: uppercase;
+  color: var(--k-muted);
+}
+.modelDesc {
+  margin-top: 16px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--k-muted);
+  max-width: 46ch;
+}
+.modelList {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modelList li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--k-fg);
+}
+.modelList li::before {
+  content: "▸";
+  color: var(--k-accent);
+  flex-shrink: 0;
+}
+.modelFoot {
+  margin-top: auto;
+  padding-top: 28px;
+  font: 400 0.72rem/1.7 var(--font-mono);
+  letter-spacing: 0.02em;
+  color: var(--k-muted);
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--k-border);
+  border-left: 1px solid var(--k-border);
+  margin-top: 48px;
+}
+.step {
+  padding: 28px 28px 32px;
+  border-right: 1px solid var(--k-border);
+  border-bottom: 1px solid var(--k-border);
+}
+.stepIndex {
+  font: 500 0.72rem/1.4 var(--font-mono);
+  letter-spacing: 0.1em;
+  color: var(--k-accent);
+}
+.step h3 {
+  margin: 18px 0 0;
+  font: 700 1.05rem/1.25 var(--font-sans);
+  letter-spacing: -0.015em;
+  color: var(--k-fg);
+}
+.step p {
+  margin: 12px 0 0;
+  font-size: 0.89rem;
+  line-height: 1.65;
+  color: var(--k-muted);
+}
+
+.stories {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.applyLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: clamp(36px, 6vw, 96px);
+  align-items: start;
+  margin-top: 48px;
+}
+.applyAside {
+  position: sticky;
+  top: 112px;
+}
+.applyPromises {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 24px 0 0;
+  border-top: 1px solid var(--k-border);
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+.applyPromises li::before {
+  content: "↗";
+  margin-right: 14px;
+  color: var(--k-accent);
+}
+.applyScope {
+  margin-top: 22px;
+  max-width: 46ch;
+  color: var(--k-muted);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+.applyScope a {
+  color: var(--k-fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Form card ─────────────────────────────────────────────── */
+.card {
+  min-width: 0;
+  padding: clamp(20px, 3vw, 36px);
+  background: var(--k-surface);
+  border: 1px solid var(--k-border);
+  border-radius: 16px;
+}
+.card h2 {
+  margin: 0 0 12px;
+  font: 500 clamp(1.5rem, 2.2vw, 1.9rem) / 1.2 var(--font-sans);
+  letter-spacing: -0.025em;
+}
+.card h2:focus {
+  outline: none;
+}
+.helper {
+  color: var(--k-muted);
+  font-size: 0.85rem;
+  line-height: 1.65;
+  margin: 12px 0 22px;
+}
+.card fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.legend {
+  display: block;
+  margin: 28px 0 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--k-border);
+  font: 500 0.68rem/1.4 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--k-muted);
+}
+.legend:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.field {
+  display: block;
+  margin-bottom: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.field > span:not(.fieldError) {
+  color: var(--k-muted);
+  font-weight: 400;
+}
+.field input,
+.field textarea,
+.field select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-top: 9px;
+  padding: 12px 14px;
+  min-height: 48px;
+  color: var(--k-fg);
+  background: var(--k-bg);
+  border: 1px solid var(--k-border-strong, #46534b);
+  border-radius: 6px;
+  font: 400 1rem/1.5 var(--font-sans);
+  color-scheme: dark;
+}
+.field textarea {
+  resize: vertical;
+}
+.field textarea::placeholder {
+  color: var(--k-muted);
+  font-size: 0.9rem;
+}
+.field input:focus-visible,
+.field textarea:focus-visible,
+.field select:focus-visible,
+.card button:focus-visible,
+.card a:focus-visible {
+  outline: 2px solid var(--k-accent);
+  outline-offset: 3px;
+}
+.field [aria-invalid="true"] {
+  border-color: #ffa5a0;
+}
+.fieldError {
+  display: block;
+  color: #ffa5a0;
+  font-size: 0.8rem;
+  margin-top: 8px;
+}
+.fieldPair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex: 1;
+  min-height: 52px;
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 20px;
+  font: 600 0.95rem/1.5 var(--font-sans);
+  cursor: pointer;
+  background: var(--k-accent);
+  color: #08100d;
+}
+.submit:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.privacy,
+.contact {
+  font-size: 0.75rem;
+  color: var(--k-muted);
+  line-height: 1.7;
+}
+.privacy {
+  margin: 20px 0 0;
+}
+.contact {
+  margin: 28px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--k-border);
+}
+.privacy a,
+.contact a,
+.received a {
+  color: var(--k-fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.preview {
+  padding: 12px;
+  border: 1px solid var(--k-border);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--k-accent);
+  margin: 0 0 24px;
+}
+.error {
+  border-left: 2px solid #ffa5a0;
+  padding: 12px;
+  color: #ffa5a0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.trap {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.eyebrow {
+  font: 500 0.7rem/1.6 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--k-muted);
+  margin: 0 0 20px;
+}
+.received > p:not(.eyebrow):not(.helper) {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--k-muted);
+  overflow-wrap: anywhere;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 16px;
+  background: transparent;
+  color: var(--k-fg);
+  border: 0;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+
+@media (max-width: 1024px) {
+  .steps {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stories {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 900px) {
+  .models,
+  .applyLayout {
+    grid-template-columns: 1fr;
+  }
+  .applyAside {
+    position: static;
+  }
+}
+@media (max-width: 560px) {
+  .steps {
+    grid-template-columns: 1fr;
+  }
+  .fieldPair {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

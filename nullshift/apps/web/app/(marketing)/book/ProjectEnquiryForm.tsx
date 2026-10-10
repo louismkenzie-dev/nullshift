@@ -354,19 +354,33 @@ export function ProjectEnquiryForm({
           {calendarUrl && !previewResult ? (
             <div className={styles.calendar}>
               <h3>Choose your call time</h3>
-              <p className={styles.helper}>
-                Complete your booking below. Cal.com will show and send your booking
-                confirmation. Your enquiry alone does not reserve a slot.
-              </p>
-              <iframe
-                src={calendarUrl + "?theme=dark"}
-                title="Choose a project call time with Nullshift"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
-              <a href={calendarUrl} target="_blank" rel="noopener noreferrer">
-                Calendar not loading? Open it in a new tab ↗
-              </a>
+              {calendarUrl.startsWith("/") ? (
+                <>
+                  <p className={styles.helper}>
+                    Pick a slot that suits you and we’ll send a calendar invite with the
+                    video link. Your enquiry alone does not reserve a slot.
+                  </p>
+                  <Link className={styles.submit} href={calendarUrl}>
+                    Choose a time <span aria-hidden="true">↗</span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className={styles.helper}>
+                    Complete your booking below. The calendar will show and send your
+                    booking confirmation. Your enquiry alone does not reserve a slot.
+                  </p>
+                  <iframe
+                    src={calendarUrl + "?theme=dark"}
+                    title="Choose a project call time with Nullshift"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                  />
+                  <a href={calendarUrl} target="_blank" rel="noopener noreferrer">
+                    Calendar not loading? Open it in a new tab ↗
+                  </a>
+                </>
+              )}
             </div>
           ) : (
             <p className={styles.helper}>
