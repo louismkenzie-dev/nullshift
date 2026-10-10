@@ -129,6 +129,72 @@ const SKILLS = [
   "AI Optimisation",
 ];
 
+const CONSULTING = [
+  "Discovery & Deep Dive",
+  "Process Mapping",
+  "Scoping & Pricing",
+  "Automation Strategy",
+  "Client Delivery",
+  "Account Lead",
+];
+
+/** The accent pill row under each founder's bio. */
+function TagRow({ tags }: { tags: readonly string[] }) {
+  return (
+    <div className="flex flex-wrap gap-2 mt-8">
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="inline-flex items-center"
+          style={{
+            fontFamily: T.mono,
+            fontWeight: 500,
+            fontSize: "0.72rem",
+            height: 28,
+            paddingInline: 12,
+            background: "color-mix(in oklab, var(--k-accent) 12%, transparent)",
+            color: "var(--k-accent)",
+            borderRadius: 999,
+            border: "1px solid color-mix(in oklab, var(--k-accent) 32%, transparent)",
+          }}
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Name and role lockup over the bottom of a founder portrait. */
+function PortraitCaption({ role, name }: { role: string; name: string }) {
+  return (
+    <div className="absolute bottom-0 left-0 p-6 md:p-8">
+      <Eyebrow label={role} />
+      <div
+        className="mt-3"
+        style={{
+          fontFamily: T.sans,
+          fontWeight: 800,
+          fontSize: "clamp(1.75rem,3vw,2.5rem)",
+          letterSpacing: "-0.03em",
+          textTransform: "uppercase",
+          color: "var(--k-fg)",
+        }}
+      >
+        {name}
+      </div>
+    </div>
+  );
+}
+
+const bioText: React.CSSProperties = {
+  fontFamily: T.sans,
+  fontSize: "0.95rem",
+  lineHeight: 1.65,
+  color: "var(--k-muted)",
+  maxWidth: "52ch",
+};
+
 function CompareList({
   items,
   tone,
@@ -437,8 +503,9 @@ export default function AboutPage() {
           </div>
         </Section>
 
-        {/* ═══════════════ 05 — FOUNDER (cream) ═══════════════ */}
+        {/* ═══════════════ 05 — FOUNDERS (cream) ═══════════════ */}
         <Section theme="cream" pad="none" topBorder bare>
+          {/* Louis — portrait left, words right */}
           <div className="grid md:grid-cols-2">
             <Reveal className="relative">
               <div
@@ -453,7 +520,7 @@ export default function AboutPage() {
                   src="/louis-mckenzie.jpg"
                   loading="lazy"
                   decoding="async"
-                  alt="Louis McKenzie — Founder & Lead Developer of Nullshift"
+                  alt="Louis McKenzie — Co-Founder & Lead Developer of Nullshift"
                   className="absolute inset-0 w-full h-full object-cover"
                   style={{ objectPosition: "center 25%" }}
                 />
@@ -464,22 +531,7 @@ export default function AboutPage() {
                       "linear-gradient(to top, var(--k-bg) 0%, transparent 45%), linear-gradient(to right, transparent 60%, color-mix(in oklab, var(--k-bg) 70%, transparent) 100%)",
                   }}
                 />
-                <div className="absolute bottom-0 left-0 p-6 md:p-8">
-                  <Eyebrow label="Co-Founder · Lead developer" />
-                  <div
-                    className="mt-3"
-                    style={{
-                      fontFamily: T.sans,
-                      fontWeight: 800,
-                      fontSize: "clamp(1.75rem,3vw,2.5rem)",
-                      letterSpacing: "-0.03em",
-                      textTransform: "uppercase",
-                      color: "var(--k-fg)",
-                    }}
-                  >
-                    Louis McKenzie
-                  </div>
-                </div>
+                <PortraitCaption role="Co-Founder · Lead developer" name="Louis McKenzie" />
               </div>
             </Reveal>
 
@@ -490,20 +542,11 @@ export default function AboutPage() {
               <Reveal>
                 <Eyebrow index="05" label="Who builds it" />
                 <Display size="md" className="mt-6 mb-6">
-                  Meet the <span style={{ color: "var(--k-accent)" }}>maker.</span>
+                  Meet the <span style={{ color: "var(--k-accent)" }}>makers.</span>
                 </Display>
-                <div
-                  className="flex flex-col gap-5"
-                  style={{
-                    fontFamily: T.sans,
-                    fontSize: "0.95rem",
-                    lineHeight: 1.65,
-                    color: "var(--k-muted)",
-                    maxWidth: "52ch",
-                  }}
-                >
+                <div className="flex flex-col gap-5" style={bioText}>
                   <p>
-                    Nullshift is led by{" "}
+                    Nullshift is co-founded and built by{" "}
                     <span style={{ color: "var(--k-fg)" }}>Louis McKenzie</span> — a
                     Newcastle University student with a rich background in brand creation
                     and site development.
@@ -521,29 +564,91 @@ export default function AboutPage() {
                     cares how it looks and how it works.
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-8">
-                  {SKILLS.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center"
-                      style={{
-                        fontFamily: T.mono,
-                        fontWeight: 500,
-                        fontSize: "0.72rem",
-                        height: 28,
-                        paddingInline: 12,
-                        background:
-                          "color-mix(in oklab, var(--k-accent) 12%, transparent)",
-                        color: "var(--k-accent)",
-                        borderRadius: 999,
-                        border:
-                          "1px solid color-mix(in oklab, var(--k-accent) 32%, transparent)",
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                <TagRow tags={SKILLS} />
+              </Reveal>
+            </div>
+          </div>
+
+          {/* Chris — words left, portrait right (portrait first on a phone) */}
+          <div className="grid md:grid-cols-2">
+            <Reveal className="relative md:order-2">
+              <div
+                className="relative h-full min-h-[420px] md:min-h-[600px] overflow-hidden"
+                style={{
+                  borderBottom: "1px solid var(--k-border)",
+                  /* A cut-out portrait needs a ground: a soft studio sweep that
+                     darkens behind the head and settles into the paper. */
+                  background:
+                    "radial-gradient(120% 90% at 50% 0%, color-mix(in oklab, var(--k-fg) 9%, var(--k-bg)) 0%, var(--k-bg) 70%)",
+                }}
+              >
+                {/* A cut-out is shown whole, standing on the bottom edge, so the
+                    name lockup lands on the shoulders rather than the chin. The
+                    frame matches the photo's own aspect so its straight sides can
+                    be feathered where the jumper meets the edge. */}
+                <div
+                  className="absolute inset-y-0 left-1/2 h-full -translate-x-1/2 max-w-full"
+                  style={{
+                    aspectRatio: "1122 / 1402",
+                    maskImage:
+                      "linear-gradient(to right, transparent, #000 18%, #000 82%, transparent)",
+                    WebkitMaskImage:
+                      "linear-gradient(to right, transparent, #000 18%, #000 82%, transparent)",
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/chris-melsa.webp"
+                    loading="lazy"
+                    decoding="async"
+                    alt="Chris Melsa — Co-Founder & Lead Consultant of Nullshift"
+                    className="w-full h-full object-contain object-bottom"
+                  />
                 </div>
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background:
+                      "linear-gradient(to top, var(--k-bg) 0%, transparent 45%), linear-gradient(to left, transparent 60%, color-mix(in oklab, var(--k-bg) 70%, transparent) 100%)",
+                  }}
+                />
+                <PortraitCaption role="Co-Founder · Lead consultant" name="Chris Melsa" />
+              </div>
+            </Reveal>
+
+            <div
+              className="p-8 md:p-14 flex flex-col justify-center md:order-1"
+              style={{
+                borderBottom: "1px solid var(--k-border)",
+                borderRight: "1px solid var(--k-border)",
+              }}
+            >
+              <Reveal>
+                <Eyebrow label="Who scopes it" />
+                <Display size="md" className="mt-6 mb-6">
+                  The <span style={{ color: "var(--k-accent)" }}>consultant.</span>
+                </Display>
+                <div className="flex flex-col gap-5" style={bioText}>
+                  <p>
+                    <span style={{ color: "var(--k-fg)" }}>Chris Melsa</span>{" "}is
+                    Nullshift&apos;s co-founder and lead consultant — the first person
+                    you&apos;ll speak to, and the one who works out what should actually be
+                    built.
+                  </p>
+                  <p>
+                    He leads the deep dive: sitting with you to map how the operation
+                    really runs, where the hours and the money go, and which of it a system
+                    should take off your hands. That becomes a tightly scoped plan with a
+                    fixed price before anything is built.
+                  </p>
+                  <p>
+                    Through the build and beyond, Chris stays your{" "}
+                    <span style={{ color: "var(--k-fg)" }}>point of contact</span> — so the
+                    person who understood the problem is the same person checking the
+                    system solves it.
+                  </p>
+                </div>
+                <TagRow tags={CONSULTING} />
               </Reveal>
             </div>
           </div>

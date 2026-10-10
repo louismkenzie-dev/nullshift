@@ -155,8 +155,15 @@ const jsonLd = {
       "@type": "Person",
       "@id": `${SITE_URL}/#cofounder`,
       name: "Christopher Melsa",
-      jobTitle: "Co-Founder & Director",
+      alternateName: "Chris Melsa",
+      jobTitle: "Co-Founder & Lead Consultant",
       worksFor: { "@id": `${SITE_URL}/#organization` },
+      url: `${SITE_URL}/about`,
+      knowsAbout: [
+        "business operations consulting",
+        "process mapping and automation scoping",
+        "client delivery",
+      ],
     },
     {
       "@type": "WebSite",
