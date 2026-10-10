@@ -113,7 +113,7 @@ function composeContent(row: SignatureRequestRow, clientName: string, issuedAt: 
   };
 }
 
-function totalLabel(content: SigningContent): string | null {
+export function totalLabel(content: SigningContent): string | null {
   const c = content.commercial;
   if (c.totalMinor === null) return null;
   return `Total: ${formatMinor(c.totalMinor, c.currency)}${c.note ? ` — ${c.note}` : ""}`;

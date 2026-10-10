@@ -115,7 +115,7 @@ const h1 = (s: string) =>
   `<h1 style="margin:22px 0 10px;font-family:${FONT};font-size:24px;line-height:1.25;letter-spacing:-0.02em;color:${C.fg}">${s}</h1>`;
 
 const slotBox = (b: BookingForEmail, meetingLink: string | null) =>
-  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 20px;background:${C.surface2};border:1px solid ${C.border}"><tr><td style="padding:16px 18px">
+  `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 20px;background-color:${C.surface2};border:1px solid ${C.border}"><tr><td style="padding:16px 18px">
     <p style="margin:0 0 6px;font-family:${FONT};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${C.muted}">${esc(callTitle(b.kind))}</p>
     <p style="margin:0;font-family:${FONT};font-size:17px;font-weight:600;color:${C.fg}">${esc(describeSlot(b.starts_at, b.ends_at))}</p>
     ${

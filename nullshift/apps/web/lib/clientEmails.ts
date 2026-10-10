@@ -78,7 +78,7 @@ export function agreementReadyEmail(opts: {
       <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, Order Form ${esc(reference)} is in your portal, together with the Master Services Agreement it sits under. Please read both and sign when you are happy — nothing is charged and no payments run through your Stripe account until you have.</p>
       ${feeHtml}
     </td></tr>
-    <tr><td style="padding:22px 32px 6px">${button(portalUrl + "/legal", "Read &amp; sign the agreement →")}</td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(portalUrl + "/legal", "Read & sign the agreement →")}</td></tr>
     <tr><td style="padding:0 32px 8px">
       <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Signing records the scope, the fees and the versions of every document you agreed to.</p>
     </td></tr>`;
@@ -110,7 +110,7 @@ export function documentsReadyEmail(opts: { name: string; portalUrl: string }): 
       <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">Your proposal is ready to review</h1>
       <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, we've sent your proposal and Data Processing Agreement to your portal. Please open them, give them a read, and add your signature so we can get started.</p>
     </td></tr>
-    <tr><td style="padding:22px 32px 6px">${button(portalUrl, "Review &amp; sign your documents →")}</td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(portalUrl, "Review & sign your documents →")}</td></tr>
     <tr><td style="padding:0 32px 8px">
       <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Signing confirms the scope, price and care plan, and accepts the DPA so we can begin.</p>
     </td></tr>`;
@@ -222,7 +222,7 @@ export function proposalSignedEmail(opts: {
       <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">They've signed the proposal${planLabel ? " and care plan" : ""}${" "}and accepted the agreement. The lead is now <strong style="color:${C.fg}">Won</strong>, and the itemised build invoice has been drafted.</p>
     </td></tr>
     <tr><td style="padding:20px 32px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.surface2};border:1px solid ${C.border};border-radius:0">
         <tr><td style="padding:6px 20px 6px">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             ${row("Reference", reference)}
@@ -473,9 +473,9 @@ export function planInviteEmail(opts: {
       <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, your plan options are ready. These are priced for your system — pick whichever suits, and it's collected monthly by Direct Debit. Cancel any time.</p>
     </td></tr>
     <tr><td style="padding:18px 32px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:0">${rows}</table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.surface2};border:1px solid ${C.border};border-radius:0">${rows}</table>
     </td></tr>
-    <tr><td style="padding:22px 32px 6px">${button(url, firstSignIn ? "Choose your password &amp; pick a plan →" : "Sign in &amp; pick a plan →")}</td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(url, firstSignIn ? "Choose your password & pick a plan →" : "Sign in & pick a plan →")}</td></tr>
     <tr><td style="padding:0 32px 8px">
       <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">${
         firstSignIn
@@ -616,7 +616,7 @@ export function signatureRequestEmail(opts: {
       ${message ? `<p style="margin:12px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.fg};padding-left:14px;border-left:2px solid ${C.primary}">${esc(message)}</p>` : ""}
       ${totalLabel ? `<p style="margin:12px 0 0;font-family:${FONT};font-size:14px;color:${C.muted}">${esc(totalLabel)}</p>` : ""}
     </td></tr>
-    <tr><td style="padding:22px 32px 6px">${button(url, "Review &amp; sign →")}</td></tr>
+    <tr><td style="padding:22px 32px 6px">${button(url, "Review & sign →")}</td></tr>
     <tr><td style="padding:0 32px 8px">
       <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">The link expires on ${esc(expiresOn)}. ${SIGN_FOOT}</p>
     </td></tr>`;
@@ -688,7 +688,7 @@ export function signatureCompletedEmail(opts: {
       <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, this document is now signed by both parties and is in force.</p>
     </td></tr>
     <tr><td style="padding:16px 32px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border}">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.surface2};border:1px solid ${C.border}">
         <tr><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.muted}">Signed by</td><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.fg}">${esc(signedBy)} · ${esc(signedAt)}</td></tr>
         <tr><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.muted};border-top:1px solid ${C.border}">Countersigned by</td><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.fg};border-top:1px solid ${C.border}">${esc(countersignedBy)} · ${esc(countersignedAt)}</td></tr>
       </table>
@@ -760,7 +760,7 @@ export function signatureStaffNoticeEmail(opts: {
       <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">${esc(lead)}</p>
       ${detail ? `<p style="margin:10px 0 0;font-family:${FONT};font-size:14px;line-height:1.6;color:${C.fg};padding-left:14px;border-left:2px solid ${C.border}">${esc(detail)}</p>` : ""}
     </td></tr>
-    <tr><td style="padding:22px 32px 6px">${button(adminUrl, what === "signed" ? "Open &amp; countersign →" : "Open in admin →", false)}</td></tr>`;
+    <tr><td style="padding:22px 32px 6px">${button(adminUrl, what === "signed" ? "Open & countersign →" : "Open in admin →", false)}</td></tr>`;
   const html = wrap(inner, lead);
   const text = `${lead}\n${detail ? `\n${detail}\n` : ""}\n${adminUrl}\n`;
   return { subject, html, text };

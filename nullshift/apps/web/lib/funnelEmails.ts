@@ -43,7 +43,7 @@ function esc(s: string): string {
 function logo(): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
     <td style="padding-right:8px;vertical-align:middle">
-      <span style="display:inline-block;width:9px;height:22px;background:#d6d6d6;border-radius:3px;vertical-align:middle"></span><span style="display:inline-block;width:9px;height:22px;background:${C.primary};border-radius:3px;margin-left:3px;vertical-align:middle"></span>
+      <span style="display:inline-block;width:9px;height:22px;background:#d6d6d6;border-radius:3px;vertical-align:middle"></span><span style="display:inline-block;width:9px;height:22px;background-color:${C.primary};border-radius:3px;margin-left:3px;vertical-align:middle"></span>
     </td>
     <td style="vertical-align:middle"><span style="font-family:${FONT};font-weight:800;font-size:16px;letter-spacing:0.04em;color:${C.fg}">NULLSHIFT</span></td>
   </tr></table>`;
@@ -70,11 +70,11 @@ function button(href: string, label: string, primary = true): string {
 /** Outer shell with preheader + footer. */
 function wrap(inner: string, preheader: string): string {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"></head>
-<body style="margin:0;padding:0;background:${C.bg}">
+<body style="margin:0;padding:0;background-color:${C.bg}">
 <span style="display:none!important;opacity:0;color:transparent;height:0;width:0;overflow:hidden">${esc(preheader)}</span>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.bg}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.bg}">
   <tr><td align="center" style="padding:32px 16px">
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:${C.surface};border:1px solid ${C.border};border-radius:18px;overflow:hidden">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:${C.surface};border:1px solid ${C.border};border-radius:18px;overflow:hidden">
       <tr><td style="padding:26px 32px 0">${logo()}</td></tr>
       ${inner}
       <tr><td style="padding:24px 32px 30px;border-top:1px solid ${C.border}">
@@ -118,7 +118,7 @@ export function clientEmail(opts: {
     </td></tr>
 
     <tr><td style="padding:22px 32px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:14px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.surface2};border:1px solid ${C.border};border-radius:14px">
         <tr><td style="padding:18px 20px 4px">
           <p style="margin:0 0 4px;font-family:${FONT};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${C.faint}">What we'd build</p>
           <p style="margin:0;font-family:${FONT};font-weight:600;font-size:17px;line-height:1.4;color:${C.fg}">${esc(recommendation.planSuggestion)}</p>
@@ -185,7 +185,7 @@ export function scalingPlanEmail(opts: {
     </td></tr>
 
     <tr><td style="padding:20px 32px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:14px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.surface2};border:1px solid ${C.border};border-radius:14px">
         <tr><td style="padding:16px 20px 6px">
           <p style="margin:0 0 4px;font-family:${FONT};font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:${C.faint}">Software you could stop renting</p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${cut}</table>
@@ -254,7 +254,7 @@ export function ownerEmail(opts: {
     </td></tr>
 
     <tr><td style="padding:18px 32px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.surface2};border:1px solid ${C.border};border-radius:14px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${C.surface2};border:1px solid ${C.border};border-radius:14px">
         <tr><td style="padding:8px 20px 16px">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${summaryRows(answers)}</table>
         </td></tr>

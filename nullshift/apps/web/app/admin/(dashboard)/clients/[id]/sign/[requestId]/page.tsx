@@ -33,6 +33,7 @@ import { staffLabels } from "@/lib/legalReview";
 import {
   countersignSignatureRequest,
   deleteSignatureDraft,
+  emailMeSignatureCopy,
   issueSignatureRequest,
   resendSignatureLink,
   saveSignatureDraft,
@@ -152,6 +153,14 @@ export default async function SignatureRequestPage({
             <a href={certificateUrl(row.id).replace(/^https?:\/\/[^/]+/, "")} style={{ ...btn("transparent", "var(--k-fg)"), display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
               PDF ↓
             </a>
+          )}
+          {!isDraft && (
+            <form action={emailMeSignatureCopy}>
+              {hid}
+              <SubmitButton style={btn("transparent", "var(--k-fg)")} pendingLabel="Sending…">
+                Email me a copy
+              </SubmitButton>
+            </form>
           )}
         </div>
       </div>

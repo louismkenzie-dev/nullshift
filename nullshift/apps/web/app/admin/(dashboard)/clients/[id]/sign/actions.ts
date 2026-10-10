@@ -18,9 +18,19 @@ import {
   countersignRequest,
   issueRequest,
   resendRequest,
+  totalLabel,
   voidRequest,
 } from "@/lib/signing/engine";
-import { loadSignatureRequest, requestEvidence } from "@/lib/signing/data";
+import {
+  adminSigningUrl,
+  contentOf,
+  dateGB,
+  loadSignatureRequest,
+  requestEvidence,
+} from "@/lib/signing/data";
+import { signatureRequestEmail } from "@/lib/clientEmails";
+import { sendEmail } from "@/lib/sendEmail";
+import { portalReplyTo } from "@/lib/portalAccess";
 
 /**
  * Staff actions for e-signature requests (migration 0068). Each one: staff
@@ -222,6 +232,76 @@ export async function resendSignatureLink(formData: FormData): Promise<void> {
     result.ok
       ? withNotice(detailPath(tenantId, id), "notice", "A fresh signing link has been emailed. The old one no longer works.")
       : withNotice(detailPath(tenantId, id), "error", result.error)
+  );
+}
+
+/**
+ * A copy of the signer's email to the staff member's own inbox, through the
+ * same pipeline (same sender, same template, same words) so it can be seen
+ * as the signer saw it. The one difference: the button opens this admin
+ * record, because the signer's single-use link cannot be reproduced without
+ * invalidating it. Nothing about the request changes.
+ */
+export async function emailMeSignatureCopy(formData: FormData): Promise<void> {
+  const staff = await guard();
+  if (!staff) return;
+  const id = str(formData.get("id"));
+  const tenantId = str(formData.get("tenant_id"));
+  if (!UUID_RE.test(id) || !UUID_RE.test(tenantId)) return;
+
+  const service = createServiceClient();
+  const row = await loadSignatureRequest(service, id);
+  if (!row || row.tenant_id !== tenantId || row.status === "draft") {
+    redirect(withNotice(detailPath(tenantId, id), "error", "Only an issued document has an email to copy."));
+  }
+  const content = contentOf(row);
+  if (!content) {
+    redirect(withNotice(detailPath(tenantId, id), "error", "This record has no issued content to copy."));
+  }
+
+  // The note staff typed when it was last sent, so the copy carries it too.
+  const { data: last } = await service
+    .from("signature_events")
+    .select("meta")
+    .eq("request_id", id)
+    .in("kind", ["issued", "resent"])
+    .order("at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const message = (last?.meta as { message?: string } | null)?.message ?? null;
+
+  const mail = signatureRequestEmail({
+    name: content.signer.name,
+    title: content.title,
+    reference: row.reference,
+    clientName: content.client.name,
+    url: adminSigningUrl(tenantId, id),
+    expiresOn: row.expires_at ? dateGB(row.expires_at) : "the date shown on the record",
+    message,
+    totalLabel: totalLabel(content),
+  });
+  const sent = await sendEmail({
+    purpose: "transactional",
+    to: staff.email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+    replyTo: portalReplyTo(),
+  });
+  await logAudit({
+    action: "signature_request.copy_emailed",
+    target: `signature_request:${id}`,
+    tenantId,
+    metadata: { reference: row.reference, to: staff.email, emailed: sent },
+  });
+  redirect(
+    sent
+      ? withNotice(
+          detailPath(tenantId, id),
+          "notice",
+          `A copy of the email ${row.signer_name} received is on its way to ${staff.email}. Its button opens this record rather than the signing link.`
+        )
+      : withNotice(detailPath(tenantId, id), "error", "The copy could not be sent — email is not configured on this deployment.")
   );
 }
 

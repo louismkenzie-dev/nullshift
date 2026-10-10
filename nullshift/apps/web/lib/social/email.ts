@@ -47,11 +47,11 @@ export function manualPostEmail(input: {
     </td></tr>
     <tr><td style="padding:0 32px">
       <p style="margin:0 0 6px;font-family:${FONT};font-size:12px;color:${C.faint}">Caption${input.pillar ? ` · ${esc(input.pillar)}` : ""}</p>
-      <div style="padding:14px 16px;background:${C.surface2};border:1px solid ${C.border};font-family:${FONT};font-size:14px;line-height:1.6;color:${C.fg};white-space:pre-wrap">${esc(input.caption) || "<em>(no caption)</em>"}</div>
+      <div style="padding:14px 16px;background-color:${C.surface2};border:1px solid ${C.border};font-family:${FONT};font-size:14px;line-height:1.6;color:${C.fg};white-space:pre-wrap">${esc(input.caption) || "<em>(no caption)</em>"}</div>
       ${
         input.firstComment
           ? `<p style="margin:14px 0 6px;font-family:${FONT};font-size:12px;color:${C.faint}">First comment</p>
-      <div style="padding:12px 16px;background:${C.surface2};border:1px solid ${C.border};font-family:${FONT};font-size:14px;line-height:1.6;color:${C.fg};white-space:pre-wrap">${esc(input.firstComment)}</div>`
+      <div style="padding:12px 16px;background-color:${C.surface2};border:1px solid ${C.border};font-family:${FONT};font-size:14px;line-height:1.6;color:${C.fg};white-space:pre-wrap">${esc(input.firstComment)}</div>`
           : ""
       }
       <p style="margin:14px 0 6px;font-family:${FONT};font-size:12px;color:${C.faint}">Media</p>
