@@ -386,6 +386,35 @@ which is what `contractedMrr()` and the Direct Debits board read. The board show
 
 Audit: `scale_evidence.collected` (trigger, sources read, nsi, band, mau, dependencies).
 
+## Invoiced care plans (migration 0072)
+
+For the client who will not set up a Direct Debit, a care plan can be billed by a
+monthly invoice instead. On the client's Care Plan tile, **Invoice monthly instead**
+(folded under the pending Direct Debit, or under the plan options) takes the plan,
+the monthly amount, the first period start, the payment terms and a note, and puts
+the plan on `provider = manual`, `invoicing = monthly`, status active. A pending
+Direct Debit row is reused (and its GoCardless billing request cancelled), so the
+history stays on one subscription; a provider-collected plan that is already live is
+refused so nobody is billed twice.
+
+Each period (anchored on the start date's day of the month, clamped) raises one
+`invoices` row (type `care_plan`, open, due after the terms, one per
+`(subscription, period_start)` by unique index), pushes it to Xero as an authorised
+sales invoice whose online link becomes the client's `hosted_invoice_url`, and emails
+the client (`carePlanInvoiceEmail`). Payment is recognised three ways: Xero says PAID
+(`reconcileXeroInvoices`, audit `invoice.paid_via_xero`), the transfer is confirmed on
+the Bank feed (a transfer-paid invoice is marked paid on confirmation and mirrored to
+Xero), or staff press **Mark paid — transfer** on Billing. Overdue invoices get three
+reminders at 3, 10 and 17 days (`care_plan.invoice_reminder_sent`, counted from the
+audit trail), then `care_plan.invoice_reminder_escalated` once and it is staff's; at 14
+days overdue the plan goes `past_due` (`care_plan.invoice_past_due`), which lights the
+client's attention row and Today's exceptions, and returns to active when nothing is
+overdue (`care_plan.invoice_recovered`).
+
+The whole pass (`tickInvoicedPlans`) runs daily from `/api/cron/care-plan-invoices`,
+when the client's Care Plan page opens (bounded to nine seconds, so it does not depend
+on the scheduler), and from **Check now** on that page. Every write is idempotent.
+
 ## Xero invoicing
 
 **Xero is the invoice rail when configured.** Build and quote invoices are raised in

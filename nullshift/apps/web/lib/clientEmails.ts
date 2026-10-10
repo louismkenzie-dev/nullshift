@@ -585,6 +585,117 @@ keep sending these.
   return { subject, html, text };
 }
 
+/* ── Invoiced care plans (migration 0072) ─────────────────────────────────── */
+
+const gbpFull = (n: number) =>
+  new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n);
+
+/**
+ * The month's invoice, the day its period starts. Links to the invoice in
+ * Xero's online view when there is one (view, download, pay by card or bank
+ * where a payment service is connected), else to the portal's payments page.
+ */
+export function carePlanInvoiceEmail(opts: {
+  name: string;
+  planLabel: string;
+  periodLabel: string;
+  amount: number;
+  dueOn: string;
+  reference: string;
+  url: string | null;
+  note?: string | null;
+}): { subject: string; html: string; text: string } {
+  const { name, planLabel, periodLabel, amount, dueOn, reference, url, note } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const subject = `Invoice: ${planLabel} care plan — ${periodLabel} (${gbpFull(amount)})`;
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Care plan invoice · ${esc(reference)}</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">${esc(planLabel)} care plan — ${esc(periodLabel)}</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, here is this month's invoice for your <strong style="color:${C.fg}">${esc(planLabel)}</strong> care plan.</p>
+    </td></tr>
+    <tr><td style="padding:16px 32px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.surface2}" style="background-color:${C.surface2};border:1px solid ${C.border}">
+        <tr><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.muted}">Amount</td><td align="right" style="padding:10px 14px;font-family:${FONT};font-size:15px;font-weight:600;color:${C.fg}">${esc(gbpFull(amount))}</td></tr>
+        <tr><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.muted};border-top:1px solid ${C.border}">Period</td><td align="right" style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.fg};border-top:1px solid ${C.border}">${esc(periodLabel)}</td></tr>
+        <tr><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.muted};border-top:1px solid ${C.border}">Due</td><td align="right" style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.fg};border-top:1px solid ${C.border}">${esc(dueOn)}</td></tr>
+        <tr><td style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.muted};border-top:1px solid ${C.border}">Reference</td><td align="right" style="padding:10px 14px;font-family:${FONT};font-size:13px;color:${C.fg};border-top:1px solid ${C.border}">${esc(reference)}</td></tr>
+      </table>
+    </td></tr>
+    ${note ? `<tr><td style="padding:14px 32px 0"><p style="margin:0;font-family:${FONT};font-size:14px;line-height:1.6;color:${C.fg};padding-left:14px;border-left:2px solid ${C.primary}">${esc(note)}</p></td></tr>` : ""}
+    <tr><td style="padding:22px 32px 6px">${url ? button(url, "View and pay the invoice →") : ""}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">${
+        url
+          ? "The link opens the invoice with the bank details for a transfer, and a card option where one is offered. Please quote the reference with your payment."
+          : "Please pay by bank transfer quoting the reference above; the invoice document follows from our accounts system."
+      } Invoiced monthly by agreement, instead of a Direct Debit. Reply if anything looks wrong — a real person reads these.</p>
+    </td></tr>`;
+  const html = wrap(inner, `${planLabel} care plan — ${periodLabel}: ${gbpFull(amount)} due ${dueOn}.`);
+  const text = `Hi ${first},
+
+Here is this month's invoice for your ${planLabel} care plan.
+
+Amount: ${gbpFull(amount)}
+Period: ${periodLabel}
+Due: ${dueOn}
+Reference: ${reference}
+${note ? `\n${note}\n` : ""}${url ? `\nView and pay the invoice:\n${url}\n` : "\nPlease pay by bank transfer quoting the reference above; the invoice document follows from our accounts system.\n"}
+Invoiced monthly by agreement, instead of a Direct Debit. Reply if anything looks wrong.
+
+— Nullshift`;
+  return { subject, html, text };
+}
+
+/** Overdue chaser: three steps, each a little firmer, then staff take over. */
+export function carePlanInvoiceReminderEmail(opts: {
+  name: string;
+  planLabel: string;
+  periodLabel: string;
+  amount: number;
+  dueOn: string;
+  daysOverdue: number;
+  reference: string;
+  url: string | null;
+  tone: "nudge" | "check" | "final";
+}): { subject: string; html: string; text: string } {
+  const { name, planLabel, periodLabel, amount, dueOn, daysOverdue, reference, url, tone } = opts;
+  const first = name.split(" ")[0] || name || "there";
+  const subject =
+    tone === "nudge"
+      ? `A gentle reminder: ${planLabel} care plan invoice — ${periodLabel}`
+      : tone === "final"
+        ? `Final reminder: ${planLabel} care plan invoice — ${periodLabel}`
+        : `Still open: ${planLabel} care plan invoice — ${periodLabel}`;
+  const heading =
+    tone === "nudge" ? "Did this one slip past?" : tone === "final" ? "One last nudge from us" : "Still open";
+  const opening =
+    tone === "nudge"
+      ? `the ${planLabel} care plan invoice for ${periodLabel} (${gbpFull(amount)}) was due on ${dueOn} and we have not seen it yet. No problem if it is already on its way.`
+      : tone === "final"
+        ? `the ${planLabel} care plan invoice for ${periodLabel} (${gbpFull(amount)}) is now ${daysOverdue} days past its due date of ${dueOn}. This is the last automatic reminder — after this one of us will get in touch directly.`
+        : `the ${planLabel} care plan invoice for ${periodLabel} (${gbpFull(amount)}) is ${daysOverdue} days past its due date of ${dueOn}. Could you check it has gone through?`;
+  const inner = `
+    <tr><td style="padding:22px 32px 0">
+      <p style="margin:0 0 10px;font-family:${FONT};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${C.primary}">Care plan invoice · ${esc(reference)}</p>
+      <h1 style="margin:0;font-family:${FONT};font-weight:700;font-size:26px;line-height:1.18;letter-spacing:-0.02em;color:${C.fg}">${esc(heading)}</h1>
+      <p style="margin:14px 0 0;font-family:${FONT};font-size:15px;line-height:1.65;color:${C.muted}">Hi ${esc(first)}, ${esc(opening)}</p>
+    </td></tr>
+    <tr><td style="padding:22px 32px 6px">${url ? button(url, "View and pay the invoice →") : ""}</td></tr>
+    <tr><td style="padding:0 32px 8px">
+      <p style="margin:8px 0 0;font-family:${FONT};font-size:12px;line-height:1.6;color:${C.faint}">Please quote ${esc(reference)} with your payment. If you have paid already, or something is wrong with the invoice, just reply and we will sort it.</p>
+    </td></tr>`;
+  const html = wrap(inner, `${planLabel} care plan — ${periodLabel}: ${gbpFull(amount)} was due ${dueOn}.`);
+  const text = `Hi ${first},
+
+${opening}
+${url ? `\nView and pay the invoice:\n${url}\n` : ""}
+Please quote ${reference} with your payment. If you have paid already, or something is wrong with the invoice, just reply and we will sort it.
+
+— Nullshift`;
+  return { subject, html, text };
+}
+
 /* ── E-signature (signature_requests, migration 0068) ─────────────────────── */
 
 const SIGN_FOOT = `This link is personal to you and expires. If it has run out, reply to this email and we will send a fresh one. Nothing is agreed until you sign, and you can decline from the same page.`;

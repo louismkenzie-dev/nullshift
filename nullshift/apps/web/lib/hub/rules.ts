@@ -120,7 +120,7 @@ const providerWord = (p: string | null) =>
     : p === "stripe"
       ? "card"
       : p === "manual"
-        ? "standing order"
+        ? "monthly invoice"
         : "plan";
 
 const stageWord = (stage: string | null) => (stage ?? "unknown").replace(/_/g, " ");

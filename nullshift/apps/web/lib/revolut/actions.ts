@@ -22,6 +22,7 @@ import { requireStaff } from "@nullshift/auth/guards";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { allocationCeiling, spreadPayment, type OpenDebt } from "@/lib/billing/allocation";
+import { markInvoicePaidOutOfBand } from "@/lib/markInvoicePaid";
 import { revokeConnection, runSync, type SyncOutcome } from "./store";
 
 export type DecisionResult =
@@ -86,9 +87,19 @@ export async function confirmMatch(matchId: string): Promise<DecisionResult> {
     const invoiceIds = [match.invoice_id, ...(match.split_invoice_ids ?? [])].filter((x): x is string => !!x);
     const { data: invs } = await supabase
       .from("invoices")
-      .select("id, tenant_id, obligation_id, amount, due_at")
+      .select("id, tenant_id, obligation_id, amount, due_at, status, stripe_invoice_id, gc_payment_id, subscription_id")
       .in("id", invoiceIds);
-    const invoices = (invs ?? []) as { id: string; tenant_id: string; obligation_id: string | null; amount: string | number; due_at: string | null }[];
+    const invoices = (invs ?? []) as {
+      id: string;
+      tenant_id: string;
+      obligation_id: string | null;
+      amount: string | number;
+      due_at: string | null;
+      status: string;
+      stripe_invoice_id: string | null;
+      gc_payment_id: string | null;
+      subscription_id: string | null;
+    }[];
     if (invoices.length !== invoiceIds.length)
       return { ok: false, reason: "not_found", message: "An invoice in this suggestion no longer exists." };
     tenantId = invoices[0]?.tenant_id ?? null;
@@ -186,6 +197,18 @@ export async function confirmMatch(matchId: string): Promise<DecisionResult> {
         if (error) return { ok: false, reason: "db_error", message: error.message };
         if (row) allocationIds.push((row as { id: string }).id);
       }
+    }
+
+    // An invoice collected by bank transfer (a monthly-invoiced care plan, or
+    // any invoice with no card or Direct Debit rail) has the bank as its rail:
+    // confirming its transfer IS the payment decision, so it is marked paid
+    // here, with the Xero mirror. Card and Direct Debit invoices are left to
+    // their own rails as before.
+    const transferPaid = invoices.filter(
+      (i) => i.status === "open" && !i.stripe_invoice_id && !i.gc_payment_id && (i.subscription_id || !i.obligation_id)
+    );
+    for (const inv of transferPaid) {
+      await markInvoicePaidOutOfBand({ tenantId: inv.tenant_id, invoiceId: inv.id });
     }
   }
 

@@ -87,6 +87,14 @@ export function referenceHit(t: MatchableTransaction, inv: InvoiceCandidate): st
   }
   const name = normaliseRef(inv.tenantName);
   if (name.length >= 4 && hay.includes(name)) return inv.tenantName;
+  // A bank counterparty is often the trading name without its suffix
+  // ("SUFFOLK TENNIS" for "Suffolk Tennis LTA"): the first two words still
+  // identify the client when they are distinctive enough.
+  const words = inv.tenantName.trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    const lead = normaliseRef(words.slice(0, 2).join(" "));
+    if (lead.length >= 8 && hay.includes(lead)) return words.slice(0, 2).join(" ");
+  }
   return null;
 }
 

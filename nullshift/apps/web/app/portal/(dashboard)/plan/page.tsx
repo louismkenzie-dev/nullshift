@@ -61,7 +61,11 @@ const SUB_LABEL: Record<string, string> = {
 const subLabel = (s: Sub) =>
   s.status === "incomplete" && s.provider === "gocardless"
     ? "Awaiting Direct Debit"
-    : (SUB_LABEL[s.status] ?? s.status.replace(/_/g, " "));
+    : s.status === "active" && s.provider === "manual"
+      ? "Active · invoiced monthly"
+      : s.status === "past_due" && s.provider === "manual"
+        ? "Invoice overdue"
+        : (SUB_LABEL[s.status] ?? s.status.replace(/_/g, " "));
 const INV_TONE: Record<string, Tone> = {
   open: "warning",
   paid: "success",

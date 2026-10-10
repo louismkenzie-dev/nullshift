@@ -1,10 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SubmitButton } from "@/components/admin/SubmitButton";
-import { createClient } from "@nullshift/db";
+import { createClient, createServiceClient } from "@nullshift/db";
 import { requireStaff } from "@nullshift/auth/guards";
 import { T } from "@nullshift/ui/tokens";
-import { carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
+import { SELLABLE_PLANS, carePlan, currentPeriodStart, remainingAllowance } from "@/lib/carePlans";
+import { tickInvoicedPlans } from "@/lib/billing/invoicedPlansRun";
+import {
+  INVOICE_TERMS_DEFAULT_DAYS,
+  daysOverdue,
+  nextPeriodStart,
+  periodLabel,
+  suggestedInvoicedFrom,
+} from "@/lib/billing/invoicedPlans";
+import { runCarePlanInvoicingNow, switchToMonthlyInvoicing } from "./actions";
 import { isGoCardlessConfigured } from "@nullshift/billing/gocardless";
 import { planChoiceOpen } from "@/lib/planGate";
 import { contractedPrices } from "@/lib/pricing/contracted";
@@ -27,12 +36,182 @@ import {
   dateGB,
   gbp,
   h2,
+  inp,
   loadTenantAndProjects,
   monoLink,
   type Invoice,
   type Item,
   type Sub,
 } from "../_shared";
+
+type PlanSub = Sub & {
+  invoicing?: string | null;
+  invoiced_from?: string | null;
+  invoice_terms_days?: number | null;
+  invoice_note?: string | null;
+};
+
+type PlanInvoice = {
+  id: string;
+  amount: number;
+  status: string;
+  due_at: string | null;
+  paid_at: string | null;
+  period_start: string | null;
+  hosted_invoice_url: string | null;
+  xero_invoice_id: string | null;
+  subscription_id: string | null;
+};
+
+const mono11: React.CSSProperties = {
+  fontFamily: T.mono,
+  fontSize: 11,
+  letterSpacing: "0.04em",
+  color: "var(--k-muted)",
+};
+
+/**
+ * The switch to a monthly invoice, for the client who will not set up a
+ * Direct Debit. Folded away so the Direct Debit path stays the obvious one.
+ */
+function InvoiceSwitch({
+  tenantId,
+  planId,
+  mrr,
+}: {
+  tenantId: string;
+  planId: string | null;
+  mrr: number | null;
+}) {
+  const plans = SELLABLE_PLANS;
+  const defaultPlan = planId && plans.some((p) => p.id === planId) ? planId : (plans[0]?.id ?? "");
+  return (
+    <details style={{ marginTop: 14, borderTop: "1px solid var(--k-border)", paddingTop: 12 }}>
+      <summary style={{ ...mono11, cursor: "pointer", color: "var(--k-fg)" }}>
+        Invoice monthly instead (client will not use Direct Debit)
+      </summary>
+      <p style={{ fontFamily: T.sans, fontSize: "0.82rem", color: "var(--k-faint)", margin: "10px 0 12px", maxWidth: "60ch" }}>
+        An invoice is raised in Xero on the first day of each period and emailed to the client, with
+        a reminder at 3, 10 and 17 days overdue. The plan shows past due after 14 days. Paying it in
+        Xero, confirming the bank transfer on the Bank feed, or marking it paid here all settle it.
+      </p>
+      <form action={switchToMonthlyInvoicing} className="flex flex-col gap-3" style={{ maxWidth: 520 }}>
+        <input type="hidden" name="tenant_id" value={tenantId} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label>
+            <span style={mono11}>Plan</span>
+            <select name="plan" defaultValue={defaultPlan} style={{ ...inp, width: "100%", marginTop: 4 }}>
+              {plans.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span style={mono11}>Monthly amount (£)</span>
+            <input name="mrr" type="number" min="1" step="0.01" defaultValue={mrr ?? ""} required style={{ ...inp, width: "100%", marginTop: 4 }} />
+          </label>
+          <label>
+            <span style={mono11}>First period starts</span>
+            <input name="invoiced_from" type="date" defaultValue={suggestedInvoicedFrom()} required style={{ ...inp, width: "100%", marginTop: 4 }} />
+          </label>
+          <label>
+            <span style={mono11}>Payment terms (days)</span>
+            <input name="terms_days" type="number" min="0" max="90" defaultValue={INVOICE_TERMS_DEFAULT_DAYS} style={{ ...inp, width: "100%", marginTop: 4 }} />
+          </label>
+        </div>
+        <label>
+          <span style={mono11}>Why this route (for the history)</span>
+          <input name="note" placeholder="Client declined Direct Debit; invoiced monthly from Xero" style={{ ...inp, width: "100%", marginTop: 4 }} />
+        </label>
+        <div>
+          <SubmitButton style={btn("var(--k-accent)", "var(--k-on-accent)")} pendingLabel="Switching…">
+            Switch to monthly invoicing
+          </SubmitButton>
+        </div>
+      </form>
+    </details>
+  );
+}
+
+function InvoicedPlanPanel({
+  tenantId,
+  sub,
+  invoices,
+  now,
+}: {
+  tenantId: string;
+  sub: PlanSub;
+  invoices: PlanInvoice[];
+  now: Date;
+}) {
+  const from = sub.invoiced_from ?? null;
+  const terms = sub.invoice_terms_days ?? INVOICE_TERMS_DEFAULT_DAYS;
+  const next = from ? nextPeriodStart(from, now.toISOString().slice(0, 10)) : null;
+  const mine = invoices.filter((i) => i.subscription_id === sub.id);
+  return (
+    <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--k-border)" }}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p style={{ ...mono11, margin: 0, textTransform: "uppercase" }}>
+          Invoiced monthly{from ? ` · from ${dateGB(from)}` : ""} · {terms}-day terms
+          {next ? ` · next invoice ${dateGB(next)}` : ""}
+        </p>
+        <form action={runCarePlanInvoicingNow}>
+          <input type="hidden" name="tenant_id" value={tenantId} />
+          <SubmitButton style={btn("var(--k-surface)", "var(--k-fg)")} pendingLabel="Checking…" title="Raise any period that has started, mirror Xero payments, send any reminder that is due">
+            Check now
+          </SubmitButton>
+        </form>
+      </div>
+      {sub.invoice_note ? (
+        <p style={{ fontFamily: T.sans, fontSize: "0.8rem", color: "var(--k-faint)", margin: "8px 0 0" }}>{sub.invoice_note}</p>
+      ) : null}
+      {mine.length === 0 ? (
+        <p style={{ fontFamily: T.sans, fontSize: "0.82rem", color: "var(--k-faint)", margin: "10px 0 0" }}>
+          No invoice raised yet — the first goes out on the first period start.
+        </p>
+      ) : (
+        <table style={{ width: "100%", marginTop: 10, borderCollapse: "collapse", fontFamily: T.sans, fontSize: "0.85rem" }}>
+          <thead>
+            <tr style={{ ...mono11, textTransform: "uppercase", fontSize: 10 }}>
+              <th style={{ textAlign: "left", padding: "6px 0", fontWeight: 500 }}>Period</th>
+              <th style={{ textAlign: "right", padding: "6px 0", fontWeight: 500 }}>Amount</th>
+              <th style={{ textAlign: "left", padding: "6px 0 6px 16px", fontWeight: 500 }}>Due</th>
+              <th style={{ textAlign: "left", padding: "6px 0 6px 16px", fontWeight: 500 }}>Status</th>
+              <th style={{ textAlign: "right", padding: "6px 0", fontWeight: 500 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {mine.map((inv) => {
+              const late = inv.status === "open" ? daysOverdue(inv.due_at, now) : 0;
+              const tone = inv.status === "paid" ? T.success : late > 0 ? T.danger : T.warning;
+              const label = inv.status === "paid" ? `Paid${inv.paid_at ? ` ${dateGB(inv.paid_at)}` : ""}` : late > 0 ? `Overdue ${late}d` : inv.status === "open" ? "Open" : inv.status;
+              return (
+                <tr key={inv.id} style={{ borderTop: "1px solid var(--k-border)" }}>
+                  <td style={{ padding: "8px 0", color: "var(--k-fg)" }}>{inv.period_start ? periodLabel(inv.period_start) : "—"}</td>
+                  <td style={{ padding: "8px 0", textAlign: "right", color: "var(--k-fg)" }}>{gbp(Number(inv.amount))}</td>
+                  <td style={{ padding: "8px 0 8px 16px", color: "var(--k-muted)" }}>{inv.due_at ? dateGB(inv.due_at) : "—"}</td>
+                  <td style={{ padding: "8px 0 8px 16px" }}>
+                    <span style={{ ...mono11, color: tone, textTransform: "uppercase" }}>{label}</span>
+                    {inv.status === "open" && !inv.xero_invoice_id ? <span style={{ ...mono11, color: T.warning }}> · not in Xero</span> : null}
+                  </td>
+                  <td style={{ padding: "8px 0", textAlign: "right" }}>
+                    {inv.hosted_invoice_url ? (
+                      <a href={inv.hosted_invoice_url} target="_blank" rel="noreferrer" style={monoLink}>
+                        Open ↗
+                      </a>
+                    ) : null}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
 
 /**
  * Care Plan tile — the client's chosen plan and where its Direct Debit is:
@@ -69,8 +248,24 @@ const CARE_HISTORY_ACTIONS = [
   "subscription.recorded_manually",
   "subscription.canceled",
   "build_credit.topup",
+  "care_plan.invoicing_enabled",
+  "care_plan.invoice_raised",
+  "care_plan.invoice_reminder_sent",
+  "care_plan.invoice_reminder_escalated",
+  "care_plan.invoice_past_due",
+  "care_plan.invoice_recovered",
+  "invoice.paid_via_xero",
+  "invoice.marked_paid",
 ];
 const HISTORY_LABEL: Record<string, string> = {
+  "care_plan.invoicing_enabled": "Switched to monthly invoicing",
+  "care_plan.invoice_raised": "Monthly invoice raised",
+  "care_plan.invoice_reminder_sent": "Invoice reminder sent",
+  "care_plan.invoice_reminder_escalated": "Invoice reminders exhausted — over to staff",
+  "care_plan.invoice_past_due": "Invoice 14 days overdue — plan past due",
+  "care_plan.invoice_recovered": "Overdue invoice settled — plan active again",
+  "invoice.paid_via_xero": "Invoice paid (seen in Xero)",
+  "invoice.marked_paid": "Invoice marked paid",
   "care_plan.plan_invite_sent": "Plan options sent",
   "care_plan.dd_setup_sent": "Direct Debit link sent",
   "care_plan.dd_started": "Client started Direct Debit set-up",
@@ -120,11 +315,26 @@ const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "muted"> = 
 
 export default async function ClientCarePlanPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { id: tenantId } = await params;
+  const sp = (await searchParams) ?? {};
+  const pick = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? null;
+  const notice = pick(sp.notice);
+  const error = pick(sp.error);
   if (!(await requireStaff()).ok) notFound();
+  const now = new Date();
+
+  // A monthly-invoiced plan is raised, reconciled and chased as this page
+  // opens, within a budget, so it does not depend on the scheduler.
+  await Promise.race([
+    tickInvoicedPlans(createServiceClient(), { tenantId, now }).catch(() => null),
+    new Promise((resolve) => setTimeout(resolve, 8000)),
+  ]);
+
   const [{ tenant, project }, block] = await Promise.all([
     loadTenantAndProjects(tenantId),
     loadClientBlock(tenantId),
@@ -139,10 +349,11 @@ export default async function ClientCarePlanPage({
     { data: invs },
     { data: historyRows },
     { data: creditRows },
+    { data: planInvRows },
   ] = await Promise.all([
     supabase
       .from("subscriptions")
-      .select("id, plan, mrr, status, provider")
+      .select("id, plan, mrr, status, provider, invoicing, invoiced_from, invoice_terms_days, invoice_note")
       .eq("tenant_id", tenantId)
       .neq("status", "canceled")
       .order("created_at", { ascending: false }),
@@ -176,8 +387,18 @@ export default async function ClientCarePlanPage({
       .select("delta")
       .eq("tenant_id", tenantId)
       .eq("period", currentPeriodStart()),
+    // Invoices raised by a monthly-invoiced plan (none carry a project).
+    supabase
+      .from("invoices")
+      .select("id, amount, status, due_at, paid_at, period_start, hosted_invoice_url, xero_invoice_id, subscription_id")
+      .eq("tenant_id", tenantId)
+      .not("subscription_id", "is", null)
+      .neq("status", "void")
+      .order("period_start", { ascending: false })
+      .limit(24),
   ]);
-  const subList = (subs ?? []) as Sub[];
+  const subList = (subs ?? []) as PlanSub[];
+  const planInvoices = (planInvRows ?? []) as PlanInvoice[];
   const history = (historyRows ?? []) as HistoryRow[];
   const creditDelta = ((creditRows ?? []) as { delta: number }[]).reduce(
     (sum, e) => sum + (Number(e.delta) || 0),
@@ -258,6 +479,21 @@ export default async function ClientCarePlanPage({
         </>
       }
     >
+      {notice || error ? (
+        <p
+          role="status"
+          style={{
+            fontFamily: T.mono,
+            fontSize: 12,
+            color: error ? T.danger : "var(--k-accent)",
+            border: `1px solid color-mix(in oklab, ${error ? T.danger : "var(--k-accent)"} 35%, transparent)`,
+            padding: "10px 14px",
+            marginBottom: 16,
+          }}
+        >
+          {error ?? notice}
+        </p>
+      ) : null}
       {/* Contracted prices — the three options the client sees, at their bracket. */}
       <Reveal>
         <section style={card}>
@@ -414,6 +650,7 @@ export default async function ClientCarePlanPage({
           </div>
 
           {activeSub ? (
+            <>
             <div
               className="flex items-center justify-between flex-wrap gap-2"
               style={{ marginTop: 14 }}
@@ -453,6 +690,10 @@ export default async function ClientCarePlanPage({
                 </form>
               </div>
             </div>
+            {activeSub.invoicing === "monthly" ? (
+              <InvoicedPlanPanel tenantId={tenantId} sub={activeSub} invoices={planInvoices} now={now} />
+            ) : null}
+            </>
           ) : pendingSub ? (
             <div style={{ marginTop: 14 }}>
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -519,6 +760,7 @@ export default async function ClientCarePlanPage({
                     : "Resend sign-up"}
                 </SubmitButton>
               </form>
+              <InvoiceSwitch tenantId={tenantId} planId={pendingSub.plan} mrr={Number(pendingSub.mrr) || null} />
             </div>
           ) : (
             <div style={{ marginTop: 14 }}>
@@ -644,6 +886,13 @@ export default async function ClientCarePlanPage({
                         </SubmitButton>
                       </form>
                     )}
+                    {billingAgreed ? (
+                      <InvoiceSwitch
+                        tenantId={tenantId}
+                        planId={chosen?.id ?? null}
+                        mrr={chosenPrice?.priced ? (chosenPrice.mrr ?? null) : null}
+                      />
+                    ) : null}
                   </>
                 );
               })()}
