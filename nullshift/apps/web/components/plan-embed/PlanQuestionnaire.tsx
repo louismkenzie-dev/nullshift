@@ -58,7 +58,10 @@ export function PlanQuestionnaire({
   const [phase, setPhase] = useState<"form" | "generating" | "ready" | "failed">("form");
   const [planUrl, setPlanUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const startedAt = useRef(Date.now());
+  const startedAt = useRef(0);
+  useEffect(() => {
+    startedAt.current = Date.now();
+  }, []);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

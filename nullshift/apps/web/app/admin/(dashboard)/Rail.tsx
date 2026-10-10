@@ -44,6 +44,7 @@ const ADVANCED: Item[] = [
   { label: "Agent Studio", href: "/admin/ai/studio", sub: true },
   { label: "Pipeline", href: "/admin/pipeline" },
   { label: "Billing & Direct Debits", href: "/admin/billing" },
+  { label: "Products (self-serve)", href: "/admin/products" },
   { label: "Compliance", href: "/admin/compliance" },
   { label: "SOC 2 Readiness", href: "/admin/soc2" },
   { label: "Security", href: "/admin/security" },

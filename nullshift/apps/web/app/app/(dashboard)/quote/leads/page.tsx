@@ -27,6 +27,7 @@ export default async function LeadsPage() {
             <Link href="/app/quote" className="kb kb-outline">
               Back to widgets
             </Link>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route-handler download; must not be prefetched */}
             <a href="/app/quote/leads/export" className="kb kb-primary">
               Export CSV
             </a>

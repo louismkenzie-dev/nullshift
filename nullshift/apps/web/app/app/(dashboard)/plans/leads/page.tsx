@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { T } from "@nullshift/ui/tokens";
-import { PageHeader, Panel, StatusChip } from "@/components/app/AppKit";
+import { PageHeader, Panel } from "@/components/app/AppKit";
 import { ProductGate } from "@/components/products/ProductGate";
 import { requireProduct } from "@/lib/products/session";
 import { listLeads } from "@/lib/plan-embed/data";
@@ -26,6 +26,7 @@ export default async function PlanLeadsPage() {
             <Link href="/app/plans" className="kb kb-outline">
               Generators
             </Link>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- route-handler download; must not be prefetched */}
             <a href="/app/plans/leads/export" className="kb kb-primary">
               Export CSV
             </a>

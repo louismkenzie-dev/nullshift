@@ -51,7 +51,7 @@ export function QuoteWidget({
     highPence: number;
     includesVat: boolean;
   } | null>(null);
-  const startedAt = useRef(Date.now());
+  const startedAt = useRef(0);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const service: Service | undefined = config.services.find((s) => s.id === serviceId);
@@ -82,8 +82,8 @@ export function QuoteWidget({
   }, [embedded, publicKey, step]);
 
   useEffect(() => {
-    if (service?.mode === "per_unit") setQuantity(service.minQty ?? 1);
-  }, [service]);
+    startedAt.current = Date.now();
+  }, []);
 
   const dark = config.brand.dark;
   const c = {
@@ -268,7 +268,10 @@ export function QuoteWidget({
               <button
                 key={s.id}
                 type="button"
-                onClick={() => setServiceId(s.id)}
+                onClick={() => {
+                  setServiceId(s.id);
+                  if (s.mode === "per_unit") setQuantity(s.minQty ?? 1);
+                }}
                 style={option(s.id === serviceId)}
               >
                 <span

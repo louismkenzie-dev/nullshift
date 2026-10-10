@@ -32,6 +32,7 @@ export function AppHeader({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- close the sheet on route change (same pattern as PortalHeader)
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";

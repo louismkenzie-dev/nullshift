@@ -32,7 +32,7 @@ export default async function ClientInvoicePage({
         <InvoiceDocument inv={inv} profile={hit.profile} client={hit.client} />
       </div>
       <p style={{ marginTop: 16, fontSize: 13, color: "#9ca3af" }}>
-        Use your browser's print option to save this invoice as a PDF.
+        Use your browser&apos;s print option to save this invoice as a PDF.
       </p>
     </ClientShell>
   );

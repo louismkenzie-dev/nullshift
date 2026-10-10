@@ -131,7 +131,7 @@ export function ProposalEditor({ p, vatPct }: { p: ProposalRow; vatPct: number }
             <span
               style={{ fontFamily: T.sans, fontSize: "0.82rem", color: "var(--k-muted)" }}
             >
-              Already sent — saved changes are live at the client's link immediately.
+              Already sent — saved changes are live at the client&apos;s link immediately.
             </span>
           )}
         </div>

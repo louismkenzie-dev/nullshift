@@ -9,6 +9,9 @@ import { addSiteAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+const daysUntil = (iso: string | null) =>
+  iso ? Math.floor((new Date(iso).getTime() - Date.now()) / 86_400_000) : null;
+
 const ago = (iso: string | null) => {
   if (!iso) return "never";
   const m = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
@@ -63,11 +66,7 @@ export default async function WatchHome({
             </thead>
             <tbody>
               {sites.map((s) => {
-                const sslDays = s.ssl_expires_at
-                  ? Math.floor(
-                      (new Date(s.ssl_expires_at).getTime() - Date.now()) / 86_400_000
-                    )
-                  : null;
+                const sslDays = daysUntil(s.ssl_expires_at);
                 return (
                   <tr key={s.id}>
                     <td>

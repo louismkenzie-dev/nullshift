@@ -14,6 +14,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const daysUntil = (iso: string | null) =>
+  iso ? Math.floor((new Date(iso).getTime() - Date.now()) / 86_400_000) : null;
+
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-GB", {
     day: "numeric",
@@ -42,9 +45,7 @@ export default async function WatchSitePage({
     recentChecks(s.id, undefined, 60),
     recentChecks(s.id, "speed", 12),
   ]);
-  const sslDays = s.ssl_expires_at
-    ? Math.floor((new Date(s.ssl_expires_at).getTime() - Date.now()) / 86_400_000)
-    : null;
+  const sslDays = daysUntil(s.ssl_expires_at);
 
   return (
     <div className="flex flex-col gap-8">

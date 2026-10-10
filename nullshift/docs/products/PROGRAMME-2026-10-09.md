@@ -61,3 +61,40 @@ All additive. Nothing touches bespoke client tables, billing obligations or deli
 Built on `feat/admin-redesign`. Self-serve billing is new authority over live
 Stripe: the owner applies migrations 0072–0077 and confirms the Stripe webhook
 before this goes to production. See the handoff at the end of this file.
+
+## Handoff — what was built (2026-10-10)
+
+Commits on `feat/admin-redesign`: foundation `cb8960c`, Quote `e0a0773`, Legal `7bca47e`,
+Watch `57f1dd4`, Plans `5632ad6`, Studio `86cc693`, admin view (this commit).
+Typecheck clean; 1,155 unit tests pass (new: estimator engine, legal generator, watch
+helpers, studio money).
+
+### Before this goes live (owner)
+
+1. **Apply migrations 0072–0077** in order against production (all additive; each file
+   carries its rollback). Record them in `schema_migrations`.
+2. **Stripe webhook**: the existing endpoint `/api/stripe/webhook` now also handles
+   product subscriptions via `metadata.product`. No new endpoint; make sure
+   `checkout.session.completed` and `customer.subscription.*` are on its event list
+   (they already are for care plans).
+3. **Env on Vercel** (optional): `PAGESPEED_API_KEY`, `PLANS_MODEL`. `ANTHROPIC_API_KEY`
+   must be present for Plans to write anything; without it the hosted form returns a
+   clear 503 and the lead is still captured.
+4. **Crons**: `vercel.json` gained `watch-tick` (\*/15) and `watch-report` (1st, 08:00).
+   Confirm Vercel picks up the root `vercel.json` (same open question as the existing crons).
+5. **Not deployed by this session.** Self-serve card billing is new authority over the
+   live Stripe account, and the branch carries other sessions' uncommitted work, so
+   this was pushed as a branch only.
+
+### Smoke test after deploy
+
+- `/products` and `/products/quote` render; "Start free trial" → `/app/signup` → `/app`
+  with Quote trialing.
+- `/app/quote`: create from the Plumber template, open the live widget at `/w/qw_…`,
+  submit a lead; it appears at `/app/quote/leads` and two emails go out.
+- `/app/legal`: fill the form, publish, open `/l/<slug>/privacy`.
+- `/app/watch`: add `nullshift.co.uk`; first checks run inline; run `watch-tick` by hand.
+- `/app/plans`: open `/p/pl_…`, complete the form; plan appears within a minute.
+- `/app/studio`: add a client, send a proposal, accept it at `/c/<token>/proposal/…`,
+  create a deposit invoice.
+- `/app/billing`: "Add a card" → Stripe Checkout (test mode) → status becomes `active`.

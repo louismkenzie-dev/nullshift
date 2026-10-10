@@ -8,6 +8,33 @@ import { saveProfileAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
+function F({
+  name,
+  label,
+  value,
+  type = "text",
+  span = false,
+}: {
+  name: string;
+  label: string;
+  value: string | number | null | undefined;
+  type?: string;
+  span?: boolean;
+}) {
+  return (
+    <label className={`flex flex-col gap-1.5 ${span ? "sm:col-span-2" : ""}`}>
+      <span className="k-label">{label}</span>
+      <input
+        name={name}
+        type={type}
+        defaultValue={value ?? ""}
+        className="k-input"
+        style={type === "color" ? { padding: 4 } : undefined}
+      />
+    </label>
+  );
+}
+
 export default async function StudioSettings({
   searchParams,
 }: {
@@ -21,30 +48,6 @@ export default async function StudioSettings({
   if (!entitlement.entitled)
     return <ProductGate product="studio" entitlement={entitlement} />;
   const p = await getProfile(workspace.tenantId, workspace.tenantName, email);
-  const F = ({
-    name,
-    label,
-    value,
-    type = "text",
-    span = false,
-  }: {
-    name: string;
-    label: string;
-    value: string | number | null | undefined;
-    type?: string;
-    span?: boolean;
-  }) => (
-    <label className={`flex flex-col gap-1.5 ${span ? "sm:col-span-2" : ""}`}>
-      <span className="k-label">{label}</span>
-      <input
-        name={name}
-        type={type}
-        defaultValue={value ?? ""}
-        className="k-input"
-        style={type === "color" ? { padding: 4 } : undefined}
-      />
-    </label>
-  );
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
