@@ -2,7 +2,13 @@ import Link from "next/link";
 import { createClient } from "@nullshift/db";
 import { isRevolutConfigured, readRevolutEnv } from "@/lib/revolut/client";
 import { connectionHealth } from "@/lib/revolut/sync";
-import { confirmMatchForm, disconnectRevolutForm, rejectMatchForm } from "@/lib/revolut/actions";
+import { runSync, type SyncOutcome } from "@/lib/revolut/store";
+import {
+  confirmMatchForm,
+  disconnectRevolutForm,
+  rejectMatchForm,
+  syncRevolutNowForm,
+} from "@/lib/revolut/actions";
 import s from "../shell.module.css";
 import b from "./bank.module.css";
 
@@ -58,8 +64,18 @@ const money = (minor: number, ccy: string) =>
 const when = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/London" }) : "—";
 
+/** A feed older than this is pulled again when the page opens. */
+const STALE_AFTER_MS = 30 * 60 * 1000;
+/** How long the page waits for an on-load sync before rendering without it. */
+const AUTO_SYNC_BUDGET_MS = 9000;
+
+const isStale = (lastSyncAt: string | null, now: Date) =>
+  !lastSyncAt || now.getTime() - new Date(lastSyncAt).getTime() > STALE_AFTER_MS;
+
 const NOTICES: Record<string, { tone: "success" | "warning" | "danger"; text: string }> = {
-  connected: { tone: "success", text: "Revolut connected. The first sync runs on the next cron tick (every 30 minutes)." },
+  connected: { tone: "success", text: "Revolut connected. The first sync runs as this page opens, or press Sync now." },
+  synced: { tone: "success", text: "Synced just now." },
+  sync_failed: { tone: "danger", text: "The sync did not complete." },
   bad_state: { tone: "danger", text: "The consent round trip could not be verified (state expired or did not match). Start again." },
   no_code: { tone: "danger", text: "Revolut returned without an authorisation code." },
   no_refresh_token: { tone: "danger", text: "Revolut did not issue a refresh token; check the API certificate settings." },
@@ -82,10 +98,30 @@ export default async function BankPage({
   const environment = env.ok ? env.value.environment : null;
   const supabase = await createClient();
 
-  const { data: connRow } = environment
-    ? await supabase.from("revolut_connections").select("*").eq("environment", environment).eq("status", "active").maybeSingle()
-    : { data: null };
-  const conn = (connRow as Connection | null) ?? null;
+  const loadConnection = async (): Promise<Connection | null> => {
+    if (!environment) return null;
+    const { data } = await supabase
+      .from("revolut_connections")
+      .select("*")
+      .eq("environment", environment)
+      .eq("status", "active")
+      .maybeSingle();
+    return (data as Connection | null) ?? null;
+  };
+  let conn = await loadConnection();
+
+  // The scheduled import is a Vercel cron, and crons have not been firing on
+  // this project. So the page pulls the feed itself whenever it is stale
+  // (never synced, or older than 30 minutes), within a fixed budget so a slow
+  // Revolut call cannot hang the page. Sync now (below) runs it unbounded.
+  let autoSync: SyncOutcome | null = null;
+  if (conn && notice !== "synced" && notice !== "sync_failed" && isStale(conn.last_sync_at, new Date())) {
+    autoSync = await Promise.race([
+      runSync().catch((e): SyncOutcome => ({ ok: false, connectionId: conn!.id, error: e instanceof Error ? e.message : "sync failed" })),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), AUTO_SYNC_BUDGET_MS)),
+    ]);
+    if (autoSync) conn = await loadConnection();
+  }
   const health = connectionHealth(conn);
 
   // Transactions (paginated) with their match state.
@@ -136,6 +172,11 @@ export default async function BankPage({
         </div>
         <div className={b.actions}>
           {conn ? (
+            <form action={syncRevolutNowForm}>
+              <button type="submit" className={s.btn}>Sync now</button>
+            </form>
+          ) : null}
+          {conn ? (
             <form action={disconnectRevolutForm}>
               <input type="hidden" name="connectionId" value={conn.id} />
               <button type="submit" className={s.btn}>Disconnect</button>
@@ -155,6 +196,22 @@ export default async function BankPage({
         <div className={`${b.notice} ${n.tone === "success" ? b.noticeSuccess : n.tone === "warning" ? b.noticeWarning : b.noticeDanger}`} role="status">
           {n.text}
           {notice === "not_configured" && missing ? ` Missing: ${missing}.` : ""}
+          {notice === "synced"
+            ? ` ${first(sp.n) ?? "0"} transaction${first(sp.n) === "1" ? "" : "s"} in the window, ${first(sp.m) ?? "0"} new suggestion${first(sp.m) === "1" ? "" : "s"}.`
+            : ""}
+          {notice === "sync_failed" && first(sp.detail) ? ` ${first(sp.detail)}` : ""}
+        </div>
+      ) : null}
+
+      {autoSync ? (
+        <div className={`${b.notice} ${autoSync.ok ? b.noticeSuccess : b.noticeDanger}`} role="status">
+          {autoSync.ok
+            ? `The feed was stale, so it was pulled as the page opened: ${autoSync.transactions} transaction${autoSync.transactions === 1 ? "" : "s"} in the window, ${autoSync.suggestions} new suggestion${autoSync.suggestions === 1 ? "" : "s"}.`
+            : `The feed was stale and the pull as the page opened did not complete: ${"error" in autoSync ? autoSync.error : autoSync.skipped}.`}
+        </div>
+      ) : conn && isStale(conn.last_sync_at, new Date()) ? (
+        <div className={`${b.notice} ${b.noticeWarning}`} role="status">
+          The feed is being pulled in the background and took longer than this page waits. Reload in a moment, or press Sync now.
         </div>
       ) : null}
       {!configured ? (

@@ -17,11 +17,12 @@
  */
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireStaff } from "@nullshift/auth/guards";
 import { createClient, createServiceClient } from "@nullshift/db";
 import { logAudit } from "@nullshift/db/audit";
 import { allocationCeiling, spreadPayment, type OpenDebt } from "@/lib/billing/allocation";
-import { revokeConnection } from "./store";
+import { revokeConnection, runSync, type SyncOutcome } from "./store";
 
 export type DecisionResult =
   | { ok: true; allocations: number }
@@ -252,4 +253,34 @@ export async function disconnectRevolut(connectionId: string): Promise<{ ok: boo
 }
 export async function disconnectRevolutForm(formData: FormData): Promise<void> {
   await disconnectRevolut(String(formData.get("connectionId") ?? ""));
+}
+
+/**
+ * Pull the feed now. The scheduled import is a Vercel cron, and crons have
+ * not been running on this project, so staff can run the same sync by hand
+ * (and the Bank page runs it on load when the feed is stale). Nothing here
+ * differs from the cron: refresh the token if needed, import the window,
+ * upsert, suggest matches. Never moves money.
+ */
+export async function syncRevolutNow(): Promise<SyncOutcome> {
+  const staff = await requireStaff();
+  if (!staff.ok) return { ok: false, connectionId: null, error: "Staff only." };
+  const outcome = await runSync();
+  await logAudit({
+    action: "revolut.sync_requested",
+    target: outcome.connectionId ? `revolut_connection:${outcome.connectionId}` : "revolut",
+    metadata: outcome.ok
+      ? { ok: true, transactions: outcome.transactions, legs: outcome.legs, suggestions: outcome.suggestions }
+      : { ok: false, error: "error" in outcome ? outcome.error : outcome.skipped },
+  });
+  revalidatePath("/admin/bank");
+  return outcome;
+}
+export async function syncRevolutNowForm(): Promise<void> {
+  const outcome = await syncRevolutNow();
+  redirect(
+    outcome.ok
+      ? `/admin/bank?notice=synced&n=${outcome.transactions}&m=${outcome.suggestions}`
+      : `/admin/bank?notice=sync_failed&detail=${encodeURIComponent("error" in outcome ? outcome.error : outcome.skipped)}`
+  );
 }

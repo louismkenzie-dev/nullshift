@@ -75,7 +75,7 @@ Set the five `REVOLUT_*` names (production scope) and apply `0067` in Supabase. 
 
 ### 5. Cron
 
-`vercel.json` runs `/api/cron/revolut-sync` every 30 minutes. First run imports 90 days; later runs import from (last sync − 2 days) and upsert, so re-running is harmless. To trigger manually:
+`vercel.json` runs `/api/cron/revolut-sync` every 30 minutes. Because the project's crons have not been firing, the Bank page also pulls the feed itself when it opens and the feed is stale (never synced, or more than 30 minutes old), within a nine-second budget, and staff can press **Sync now** to run it unbounded. First run imports 90 days; later runs import from (last sync − 2 days) and upsert, so re-running is harmless. To trigger manually:
 
 ```sh
 curl -H "Authorization: Bearer $CRON_SECRET" https://nullshift.co.uk/api/cron/revolut-sync
