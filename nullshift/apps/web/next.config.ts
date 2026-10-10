@@ -27,6 +27,23 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Public embeds (/w quote widget, /p plan generator) are designed to be
+  // framed by customers' websites. Everything else keeps the default.
+  async headers() {
+    return [
+      {
+        source: "/(w|p)/:path*",
+        headers: [{ key: "Content-Security-Policy", value: "frame-ancestors *" }],
+      },
+      {
+        source: "/widget.js",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Cache-Control", value: "public, max-age=3600" },
+        ],
+      },
+    ];
+  },
   experimental: {
     serverActions: {
       // Portal issue reports carry phone screenshots (1.5–4MB is normal);
