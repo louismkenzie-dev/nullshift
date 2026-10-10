@@ -355,6 +355,55 @@ authorisation flow use GoCardless's test bank details (sort code `20-00-00`, acc
 `55779911`); mandates activate within minutes and webhooks fire for the full lifecycle,
 so the whole choose → authorise → activate loop is testable without moving money.
 
+## Direct Debit guard rails (migration 0073, 2026-10)
+
+Why: in October 2026 a £850 payment was taken under The Dance Exclusive's
+mandate (plan £180). Nothing in this system set it, but the webhook booked it
+as "Max care plan — October 2026" and pushed a £850 paid invoice to Xero
+because `recordCarePlanPayment` never checked the amount. The invariant now
+enforced everywhere: **money leaves a client's account under their mandate
+only as the plan we hold — our GoCardless subscription, at the contracted
+MRR.**
+
+- `lib/billing/directDebit.ts` (pure, tested in `tests/direct-debit.test.ts`):
+  `classifyCollection(payment, sub)` → `plan` or `off_plan` (reason `amount`,
+  `subscription`, `mandate`); `directDebitFindings` compares the live
+  GoCardless subscription (amount, status), mandate (status) and recent
+  payments with the plan → findings `amount_drift`, `off_plan_pending`
+  (still cancellable), `off_plan_in_flight`, `off_plan_collected`,
+  `subscription_inactive`, `mandate_inactive`.
+- `lib/carePlanInvoice.ts` `recordCarePlanPayment` runs the guard itself
+  (every caller, every path — the legacy webhook and the flagged inbox): an
+  off-plan collection is **never** booked as a care-plan invoice and nothing
+  goes to Xero; it becomes an urgent `finance_exceptions` row of kind
+  `unexpected_collection` (one per GoCardless payment id, `external_ref`)
+  plus audit `care_plan.unexpected_collection` and one staff email to
+  `ENQUIRY_NOTIFY_EMAIL`.
+- Webhook (`/api/gocardless/webhook`): `payments.created` is now handled —
+  GoCardless sends it days before the bank submission, so an off-plan
+  payment is flagged while it can still be cancelled. `subscriptions.amended`
+  re-reads the live amount; drift opens `direct_debit_drift` (one per
+  GoCardless subscription id), resolved automatically once the amounts agree.
+- Care-plan page (`/admin/clients/[id]/care-plan`): the "Direct Debit · live
+  from GoCardless" panel shows what it collects vs the plan, next charge,
+  mandate state, last plan payment, every recent payment labelled plan /
+  off plan, and the findings with their one action each: **Cancel this
+  collection** (only while `pending_submission`, re-verified against
+  GoCardless first) and **Mark as handled** (after a refund or an invoice).
+  "Check GoCardless now" re-runs it.
+- Sweep: `auditDirectDebits` runs for the client when their care-plan page
+  opens, for every live Direct Debit when Finance opens (at most every six
+  hours, stamp `care_plan.dd_sweep` in `audit_log`) and from the daily
+  `/api/cron/care-plan-invoices` route.
+- New GoCardless client reads (`packages/billing/src/gocardless.ts`):
+  `getSubscription`, `getMandate`, `listMandatePayments`, `cancelPayment`,
+  `gocardlessDashboardUrl`; `getPayment` now returns description, metadata
+  and created_at.
+
+What this does not do: refund. A collected off-plan payment is refunded from
+the GoCardless dashboard (or the client is invoiced for what it was), then
+marked handled.
+
 ## Auto-scoring (`scale_evidence`)
 
 Once a system is built it can score itself. **Analyse the system** on

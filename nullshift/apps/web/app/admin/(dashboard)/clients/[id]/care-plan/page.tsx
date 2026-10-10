@@ -14,6 +14,8 @@ import {
   suggestedInvoicedFrom,
 } from "@/lib/billing/invoicedPlans";
 import { runCarePlanInvoicingNow, switchToMonthlyInvoicing } from "./actions";
+import { DirectDebitPanel } from "./DirectDebitPanel";
+import { auditDirectDebits, type DirectDebitCheck } from "@/lib/billing/directDebitRun";
 import { isGoCardlessConfigured } from "@nullshift/billing/gocardless";
 import { planChoiceOpen } from "@/lib/planGate";
 import { contractedPrices } from "@/lib/pricing/contracted";
@@ -49,6 +51,8 @@ type PlanSub = Sub & {
   invoiced_from?: string | null;
   invoice_terms_days?: number | null;
   invoice_note?: string | null;
+  gc_subscription_id?: string | null;
+  gc_mandate_id?: string | null;
 };
 
 type PlanInvoice = {
@@ -256,6 +260,10 @@ const CARE_HISTORY_ACTIONS = [
   "care_plan.invoice_recovered",
   "invoice.paid_via_xero",
   "invoice.marked_paid",
+  "care_plan.unexpected_collection",
+  "care_plan.dd_amount_drift",
+  "care_plan.collection_cancelled",
+  "care_plan.collection_handled",
 ];
 const HISTORY_LABEL: Record<string, string> = {
   "care_plan.invoicing_enabled": "Switched to monthly invoicing",
@@ -273,6 +281,10 @@ const HISTORY_LABEL: Record<string, string> = {
   "care_plan.dd_cancelled": "Direct Debit cancelled",
   "care_plan.payment_failed": "Direct Debit payment failed",
   "care_plan.payment_recovered": "Direct Debit payment recovered",
+  "care_plan.unexpected_collection": "Off-plan collection flagged",
+  "care_plan.dd_amount_drift": "Direct Debit amount drifted from the plan",
+  "care_plan.collection_cancelled": "Off-plan collection cancelled",
+  "care_plan.collection_handled": "Off-plan collection marked handled",
   "care_plan.terms_accepted": "Client accepted care-plan terms",
   "care_plan.chosen": "Client chose a plan",
   "subscription.signup_sent": "Card sign-up sent",
@@ -296,6 +308,8 @@ function historyDetail(action: string, meta: Record<string, unknown>): string {
         ? (carePlan(planKey)?.label ?? planKey)
         : null,
     typeof meta.amountPence === "number" ? gbp(meta.amountPence / 100) : null,
+    typeof meta.expectedPence === "number" ? `plan ${gbp(meta.expectedPence / 100)}` : null,
+    typeof meta.paymentId === "string" ? meta.paymentId : null,
     typeof meta.email === "string" ? meta.email : null,
     typeof meta.delta === "number" ? `+${meta.delta} items` : null,
     typeof meta.cause === "string" ? meta.cause : null,
@@ -329,10 +343,19 @@ export default async function ClientCarePlanPage({
   const now = new Date();
 
   // A monthly-invoiced plan is raised, reconciled and chased as this page
-  // opens, within a budget, so it does not depend on the scheduler.
-  await Promise.race([
-    tickInvoicedPlans(createServiceClient(), { tenantId, now }).catch(() => null),
-    new Promise((resolve) => setTimeout(resolve, 8000)),
+  // opens, within a budget, so it does not depend on the scheduler. In the
+  // same breath the client's Direct Debit is re-read from GoCardless and
+  // compared with the plan (amount, mandate, every recent payment) — the
+  // guard rail that stops an off-plan collection going unnoticed.
+  const [, ddAudit] = await Promise.all([
+    Promise.race([
+      tickInvoicedPlans(createServiceClient(), { tenantId, now }).catch(() => null),
+      new Promise((resolve) => setTimeout(resolve, 8000)),
+    ]),
+    Promise.race([
+      auditDirectDebits(createServiceClient(), { tenantId, now }).catch(() => null),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 7000)),
+    ]),
   ]);
 
   const [{ tenant, project }, block] = await Promise.all([
@@ -353,7 +376,7 @@ export default async function ClientCarePlanPage({
   ] = await Promise.all([
     supabase
       .from("subscriptions")
-      .select("id, plan, mrr, status, provider, invoicing, invoiced_from, invoice_terms_days, invoice_note")
+      .select("id, plan, mrr, status, provider, invoicing, invoiced_from, invoice_terms_days, invoice_note, gc_subscription_id, gc_mandate_id")
       .eq("tenant_id", tenantId)
       .neq("status", "canceled")
       .order("created_at", { ascending: false }),
@@ -412,6 +435,16 @@ export default async function ClientCarePlanPage({
   const activeSub =
     subList.find((s) => ["active", "trialing", "past_due"].includes(s.status)) ?? null;
   const pendingSub = subList.find((s) => s.status === "incomplete") ?? null;
+  // The live GoCardless picture for the active Direct Debit plan: undefined
+  // when GoCardless is not configured, null when it did not answer in time.
+  const ddCheck: DirectDebitCheck | null | undefined =
+    activeSub?.provider === "gocardless" && (activeSub.gc_subscription_id || activeSub.gc_mandate_id)
+      ? ddAudit === null
+        ? null
+        : !ddAudit.configured
+          ? undefined
+          : (ddAudit.results.find((r) => r.sub.id === activeSub.id) ?? null)
+      : undefined;
   const mrr = subList
     .filter((s) => s.status === "active")
     .reduce((s, x) => s + Number(x.mrr), 0);
@@ -692,6 +725,8 @@ export default async function ClientCarePlanPage({
             </div>
             {activeSub.invoicing === "monthly" ? (
               <InvoicedPlanPanel tenantId={tenantId} sub={activeSub} invoices={planInvoices} now={now} />
+            ) : ddCheck !== undefined ? (
+              <DirectDebitPanel tenantId={tenantId} check={ddCheck} />
             ) : null}
             </>
           ) : pendingSub ? (

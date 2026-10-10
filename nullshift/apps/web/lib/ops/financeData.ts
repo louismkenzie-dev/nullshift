@@ -589,6 +589,8 @@ export type ExceptionKind =
   | "link_closure_failed"
   | "unmatched_payout"
   | "missing_activation_gate"
+  | "unexpected_collection"
+  | "direct_debit_drift"
   | "overdue_invoice"
   | "other";
 
@@ -602,6 +604,8 @@ export const EXCEPTION_KIND_LABEL: Record<ExceptionKind, string> = {
   link_closure_failed: "Link closure failed",
   unmatched_payout: "Unmatched payout",
   missing_activation_gate: "Missing activation gate",
+  unexpected_collection: "Unexpected collection",
+  direct_debit_drift: "Direct Debit drift",
   overdue_invoice: "Overdue invoice",
   other: "Other",
 };

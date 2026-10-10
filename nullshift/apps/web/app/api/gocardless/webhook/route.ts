@@ -10,6 +10,12 @@ import { logAuditAsService } from "@nullshift/db/audit";
 import { carePlan } from "@/lib/carePlans";
 import { contractedMrr } from "@/lib/pricing/contracted";
 import { recordCarePlanPayment } from "@/lib/carePlanInvoice";
+import { classifyCollection } from "@/lib/billing/directDebit";
+import {
+  auditDirectDebits,
+  planSubscriptionFromRow,
+  recordUnexpectedCollection,
+} from "@/lib/billing/directDebitRun";
 import { flagOn } from "@/lib/flags";
 import { handleGoCardlessWebhookInbox } from "@/lib/integrations/webhook";
 
@@ -23,6 +29,11 @@ import { handleGoCardlessWebhookInbox } from "@/lib/integrations/webhook";
  *   • subscriptions cancelled/finished  → subscription row → canceled.
  *   • payments failed → subscription row → past_due (recovers to active on a
  *     later confirmed/paid_out payment).
+ *   • payments created/confirmed → checked against the plan FIRST (our
+ *     subscription id, the contracted amount): only the plan is booked as a
+ *     care-plan invoice; anything else opens an urgent exception and alerts
+ *     staff, while it can still be cancelled when the event is `created`.
+ *   • subscriptions amended → the live amount is re-read and compared.
  * HMAC signature-verified. Verified events always get a 200 — even when no row
  * matched (logged) — so GoCardless doesn't retry forever; a processing error
  * returns 500 so it does retry (the writes are re-delivery safe).
@@ -260,9 +271,27 @@ export async function POST(req: Request) {
           break;
         }
         case "subscriptions": {
-          if (!["cancelled", "finished"].includes(event.action)) break;
           const subscriptionId = event.links?.subscription;
           if (!subscriptionId) break;
+          // The amount (or schedule) was changed outside this system: re-read
+          // what GoCardless will now collect and compare it with the plan.
+          // Drift opens an urgent exception and alerts staff; agreement
+          // resolves any earlier drift exception.
+          if (event.action === "amended") {
+            const { data: amended } = await supabase
+              .from("subscriptions")
+              .select("tenant_id")
+              .eq("gc_subscription_id", subscriptionId)
+              .limit(1)
+              .maybeSingle();
+            if (amended?.tenant_id)
+              await auditDirectDebits(supabase, {
+                tenantId: amended.tenant_id,
+                source: "webhook subscriptions.amended",
+              }).catch((e) => console.error("dd audit after amendment failed:", e));
+            break;
+          }
+          if (!["cancelled", "finished"].includes(event.action)) break;
           const { data: updated, error } = await supabase
             .from("subscriptions")
             .update({ status: "canceled" })
@@ -299,52 +328,106 @@ export async function POST(req: Request) {
           // mandate) come from the payment itself.
           const FAILS = ["failed", "late_failure_settled", "charged_back"];
           const RECOVERS = ["confirmed", "paid_out"];
-          if (!FAILS.includes(event.action) && !RECOVERS.includes(event.action)) break;
+          // `created` arrives days before the bank submission — the one
+          // moment an off-plan collection can still be cancelled.
+          const CREATED = ["created"];
+          if (
+            !FAILS.includes(event.action) &&
+            !RECOVERS.includes(event.action) &&
+            !CREATED.includes(event.action)
+          )
+            break;
           const paymentId = event.links?.payment;
           if (!paymentId) break;
           const payment = await getPayment(paymentId);
           const gcSubId = payment?.subscriptionId ?? event.links?.subscription ?? null;
           const mandateId = payment?.mandateId ?? null;
           if (!gcSubId && !mandateId) break;
-          const target = supabase.from("subscriptions").update({
-            status: FAILS.includes(event.action) ? "past_due" : "active",
-          });
-          const scoped = gcSubId
-            ? target.eq("gc_subscription_id", gcSubId)
-            : target.eq("gc_mandate_id", mandateId!);
-          const { data: updated, error } = await scoped
-            .eq("status", FAILS.includes(event.action) ? "active" : "past_due")
-            .select("id, tenant_id");
+          // The plan this payment lands on: by our subscription id first, else
+          // by the mandate (a one-off payment carries no subscription link).
+          const subQuery = supabase
+            .from("subscriptions")
+            .select("id, tenant_id, plan, mrr, status, gc_subscription_id, gc_mandate_id, tenants(name)")
+            .in("status", ["active", "trialing", "past_due"])
+            .limit(1);
+          const { data: subRow } = await (
+            gcSubId ? subQuery.eq("gc_subscription_id", gcSubId) : subQuery.eq("gc_mandate_id", mandateId!)
+          ).maybeSingle();
+          const { data: byMandate } =
+            !subRow && gcSubId && mandateId
+              ? await supabase
+                  .from("subscriptions")
+                  .select("id, tenant_id, plan, mrr, status, gc_subscription_id, gc_mandate_id, tenants(name)")
+                  .in("status", ["active", "trialing", "past_due"])
+                  .eq("gc_mandate_id", mandateId)
+                  .limit(1)
+                  .maybeSingle()
+              : { data: null };
+          const sub = subRow ?? byMandate;
+          const tenantOf = (s: { tenants?: { name: string | null } | { name: string | null }[] | null }) => {
+            const t = Array.isArray(s.tenants) ? s.tenants[0] : s.tenants;
+            return t?.name ?? "Client";
+          };
+
+          // THE guard: is this payment the plan we hold — our subscription,
+          // at the contracted amount? Anything else is never booked as the
+          // plan; it becomes an urgent exception with a staff alert.
+          const verdict = sub && payment ? classifyCollection(payment, planSubscriptionFromRow(sub)) : null;
+          if (sub && payment && verdict?.kind === "off_plan" && payment.amountPence > 0) {
+            try {
+              await recordUnexpectedCollection(supabase, {
+                sub: planSubscriptionFromRow(sub),
+                tenantName: tenantOf(sub),
+                payment,
+                verdict,
+                source: `webhook payments.${event.action}`,
+              });
+            } catch (e) {
+              console.error("unexpected collection record failed:", e);
+            }
+          }
+          if (CREATED.includes(event.action)) break;
+
+          // Only the plan's own payment moves the plan between active and
+          // past_due.
+          const { data: updated, error } =
+            verdict?.kind === "plan" || !sub
+              ? await (() => {
+                  const target = supabase.from("subscriptions").update({
+                    status: FAILS.includes(event.action) ? "past_due" : "active",
+                  });
+                  const scoped = gcSubId
+                    ? target.eq("gc_subscription_id", gcSubId)
+                    : target.eq("gc_mandate_id", mandateId!);
+                  return scoped
+                    .eq("status", FAILS.includes(event.action) ? "active" : "past_due")
+                    .select("id, tenant_id");
+                })()
+              : { data: [] as { id: string; tenant_id: string }[], error: null };
           if (error) {
             console.error(`gocardless payments.${event.action} update failed:`, error);
             return new Response("db error", { status: 500 });
           }
-          // A confirmed collection is revenue: raise the paid care-plan invoice
-          // here and in Xero (idempotent on the payment id, so the later
-          // paid_out event and any retry are no-ops).
-          if (RECOVERS.includes(event.action) && payment && payment.amountPence > 0) {
-            const subQuery = supabase
-              .from("subscriptions")
-              .select("id, tenant_id, plan")
-              .limit(1);
-            const { data: sub } = await (
-              gcSubId
-                ? subQuery.eq("gc_subscription_id", gcSubId)
-                : subQuery.eq("gc_mandate_id", mandateId!)
-            ).maybeSingle();
-            if (sub) {
-              try {
-                await recordCarePlanPayment(supabase, {
-                  tenantId: sub.tenant_id,
-                  subscriptionId: sub.id,
-                  plan: sub.plan,
-                  paymentId,
-                  amountPence: payment.amountPence,
-                  chargeDate: payment.chargeDate,
-                });
-              } catch (e) {
-                console.error("care plan invoice failed:", e);
-              }
+          // A confirmed PLAN collection is revenue: raise the paid care-plan
+          // invoice here and in Xero (idempotent on the payment id, so the
+          // later paid_out event and any retry are no-ops).
+          if (RECOVERS.includes(event.action) && payment && payment.amountPence > 0 && sub && verdict?.kind === "plan") {
+            try {
+              await recordCarePlanPayment(supabase, {
+                tenantId: sub.tenant_id,
+                subscriptionId: sub.id,
+                plan: sub.plan,
+                paymentId,
+                amountPence: payment.amountPence,
+                chargeDate: payment.chargeDate,
+                paymentSubscriptionId: payment.subscriptionId,
+                paymentMandateId: payment.mandateId,
+                paymentStatus: payment.status,
+                paymentDescription: payment.description,
+                source: `webhook payments.${event.action}`,
+              });
+            } catch (e) {
+              console.error("care plan invoice failed:", e);
             }
           }
           for (const row of updated ?? [])

@@ -531,7 +531,12 @@ async function payment(ctx: ProcessContext, event: EventRow): Promise<Outcome> {
         paymentId: ref,
         amountPence: p.amountMinor,
         chargeDate: p.chargeDate,
-      });
+        paymentSubscriptionId: p.subscriptionRef,
+        paymentMandateRef: undefined,
+        paymentMandateId: p.mandateRef,
+        paymentStatus: p.status,
+        source: "inbox payments",
+      } as Parameters<typeof ledger.legacy.recordCarePlanPayment>[0]);
       for (const row of rows)
         await ctx.store.audit({
           action: "care_plan.payment_recovered",

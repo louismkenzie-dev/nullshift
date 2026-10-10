@@ -283,38 +283,173 @@ async function gcGet<T>(path: string): Promise<T | null> {
   return (await res.json()) as T;
 }
 
-/**
- * Fetch a payment. Payment events carry only `links.payment`, so the webhook
- * needs this hop to find the subscription (and mandate) a failed or confirmed
- * collection belongs to.
- */
-export async function getPayment(id: string): Promise<{
+/** A GoCardless payment as the guard rails see it. */
+export type GoCardlessPayment = {
   id: string;
   status: string;
   amountPence: number;
   chargeDate: string | null;
+  createdAt: string | null;
+  description: string | null;
+  metadata: Record<string, string>;
   subscriptionId: string | null;
   mandateId: string | null;
-} | null> {
-  const data = await gcGet<{
-    payments: {
-      id: string;
-      status: string;
-      amount: number;
-      charge_date?: string;
-      links?: { subscription?: string; mandate?: string };
-    };
-  }>(`/payments/${id}`);
-  if (!data) return null;
-  const p = data.payments;
+};
+
+type RawPayment = {
+  id: string;
+  status: string;
+  amount: number;
+  charge_date?: string;
+  created_at?: string;
+  description?: string | null;
+  metadata?: Record<string, string>;
+  links?: { subscription?: string; mandate?: string };
+};
+
+function paymentFromRaw(p: RawPayment): GoCardlessPayment {
   return {
     id: p.id,
     status: p.status,
     amountPence: p.amount,
     chargeDate: p.charge_date ?? null,
+    createdAt: p.created_at ?? null,
+    description: p.description ?? null,
+    metadata: p.metadata ?? {},
     subscriptionId: p.links?.subscription ?? null,
     mandateId: p.links?.mandate ?? null,
   };
+}
+
+/**
+ * Fetch a payment. Payment events carry only `links.payment`, so the webhook
+ * needs this hop to find the subscription (and mandate) a failed or confirmed
+ * collection belongs to — and to check the amount against the plan before
+ * anything is booked.
+ */
+export async function getPayment(id: string): Promise<GoCardlessPayment | null> {
+  const data = await gcGet<{ payments: RawPayment }>(`/payments/${id}`);
+  if (!data) return null;
+  return paymentFromRaw(data.payments);
+}
+
+/**
+ * Every payment taken (or scheduled) against a mandate, newest first. The
+ * authoritative answer to "what has this client actually been charged" —
+ * one-off payments created in the GoCardless dashboard or by another
+ * integration show up here even though they never touched our subscription.
+ */
+export async function listMandatePayments(
+  mandateId: string,
+  limit = 12
+): Promise<GoCardlessPayment[] | null> {
+  const data = await gcGet<{ payments: RawPayment[] }>(
+    `/payments?mandate=${encodeURIComponent(mandateId)}&limit=${Math.min(Math.max(limit, 1), 100)}`
+  );
+  if (!data) return null;
+  return (data.payments ?? []).map(paymentFromRaw);
+}
+
+/** The live GoCardless subscription — amount, status and what it will take next. */
+export async function getSubscription(id: string): Promise<{
+  id: string;
+  status: string;
+  amountPence: number;
+  name: string | null;
+  mandateId: string | null;
+  createdAt: string | null;
+  upcomingPayments: { chargeDate: string; amountPence: number }[];
+} | null> {
+  const data = await gcGet<{
+    subscriptions: {
+      id: string;
+      status: string;
+      amount: number;
+      name?: string | null;
+      created_at?: string;
+      upcoming_payments?: { charge_date: string; amount: number }[];
+      links?: { mandate?: string };
+    };
+  }>(`/subscriptions/${id}`);
+  if (!data) return null;
+  const s = data.subscriptions;
+  return {
+    id: s.id,
+    status: s.status,
+    amountPence: s.amount,
+    name: s.name ?? null,
+    mandateId: s.links?.mandate ?? null,
+    createdAt: s.created_at ?? null,
+    upcomingPayments: (s.upcoming_payments ?? []).map((u) => ({
+      chargeDate: u.charge_date,
+      amountPence: u.amount,
+    })),
+  };
+}
+
+/** The live mandate state (active, pending_submission, cancelled, failed…). */
+export async function getMandate(id: string): Promise<{
+  id: string;
+  status: string;
+  reference: string | null;
+  nextPossibleChargeDate: string | null;
+  createdAt: string | null;
+} | null> {
+  const data = await gcGet<{
+    mandates: {
+      id: string;
+      status: string;
+      reference?: string | null;
+      next_possible_charge_date?: string | null;
+      created_at?: string;
+    };
+  }>(`/mandates/${id}`);
+  if (!data) return null;
+  const m = data.mandates;
+  return {
+    id: m.id,
+    status: m.status,
+    reference: m.reference ?? null,
+    nextPossibleChargeDate: m.next_possible_charge_date ?? null,
+    createdAt: m.created_at ?? null,
+  };
+}
+
+/**
+ * Cancel a payment that has not yet been submitted to the bank — the one
+ * window in which an off-plan collection can be stopped before it leaves the
+ * client's account. GoCardless refuses once the payment is submitted; the
+ * caller then needs a refund instead. Throws on API errors other than an
+ * "already cancelled" repeat.
+ */
+export async function cancelPayment(id: string): Promise<boolean> {
+  if (!isGoCardlessConfigured()) return false;
+  try {
+    await gcPost(`/payments/${id}/actions/cancel`, { data: {} });
+    return true;
+  } catch (e) {
+    const message = (e as Error).message;
+    if (/cancel/i.test(message) && /already|status/i.test(message)) return true;
+    throw e;
+  }
+}
+
+/** Deep link into the GoCardless dashboard for a resource id (SB…, PM…, MD…). */
+export function gocardlessDashboardUrl(resourceId: string): string {
+  const host =
+    process.env.GOCARDLESS_ENVIRONMENT === "live"
+      ? "https://manage.gocardless.com"
+      : "https://manage-sandbox.gocardless.com";
+  const path = resourceId.startsWith("SB")
+    ? "subscriptions"
+    : resourceId.startsWith("PM")
+      ? "payments"
+      : resourceId.startsWith("MD")
+        ? "mandates"
+        : resourceId.startsWith("CU")
+          ? "customers"
+          : "";
+  return path ? `${host}/${path}/${resourceId}` : host;
 }
 
 /**

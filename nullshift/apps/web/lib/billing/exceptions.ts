@@ -48,6 +48,8 @@ export const EXCEPTION_KINDS = [
   "link_closure_failed",
   "unmatched_payout",
   "missing_activation_gate",
+  "unexpected_collection",
+  "direct_debit_drift",
   "other",
 ] as const;
 export type ExceptionKind = (typeof EXCEPTION_KINDS)[number];
@@ -68,6 +70,8 @@ export const EXCEPTION_KIND_LABEL: Record<ExceptionKind, string> = {
   link_closure_failed: "Payment-link closure failed",
   unmatched_payout: "Unmatched payout",
   missing_activation_gate: "Missing activation gate",
+  unexpected_collection: "Unexpected collection",
+  direct_debit_drift: "Direct Debit drift",
   other: "Other",
 };
 

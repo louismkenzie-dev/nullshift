@@ -253,6 +253,11 @@ export type LegacyMirror = {
     paymentId: string;
     amountPence: number;
     chargeDate: string | null;
+    /** The payment's own links, so the plan guard can check more than the amount. */
+    paymentSubscriptionId?: string | null;
+    paymentMandateId?: string | null;
+    paymentStatus?: string | null;
+    source?: string;
   }): Promise<void>;
 };
 

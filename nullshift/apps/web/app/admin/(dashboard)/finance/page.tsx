@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { createServiceClient } from "@nullshift/db";
 import {
   EXCEPTION_KIND_LABEL,
   fmtDate,
   formatMoney,
   loadFinanceOverview,
 } from "@/lib/ops/financeData";
+import { sweepDirectDebitsIfStale } from "@/lib/billing/directDebitRun";
 import { Amount, ExceptionStateChip, SourceNote } from "./ui";
 import s from "../shell.module.css";
 import f from "./finance.module.css";
@@ -15,6 +17,11 @@ import f from "./finance.module.css";
  * detail tabs read so they cannot disagree.
  */
 export default async function FinanceOverview() {
+  // Every live Direct Debit is re-read from GoCardless and compared with its
+  // plan at most every six hours as this page opens (the scheduler cannot
+  // be relied on), so an amended amount or an off-plan collection surfaces
+  // in the exceptions below without anyone opening the client's page.
+  await sweepDirectDebitsIfStale(createServiceClient(), { budgetMs: 8000, source: "finance page" }).catch(() => null);
   const { metrics, openExceptions, asAt } = await loadFinanceOverview();
 
   return (
