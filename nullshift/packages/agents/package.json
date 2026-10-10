@@ -5,7 +5,9 @@
   "type": "module",
   "exports": {
     "./consultation": "./src/consultation.ts",
-    "./runs": "./src/runs.ts"
+    "./runs": "./src/runs.ts",
+    "./partnerPlan": "./src/partnerPlan.ts",
+    "./client": "./src/client.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",
